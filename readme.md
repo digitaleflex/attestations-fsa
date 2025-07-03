@@ -219,6 +219,7 @@ model Attestation {
 
 }
 ```
+
 ---
 
 # 🚀 Stack Technique Officielle – Projet Attestation FSA V1
