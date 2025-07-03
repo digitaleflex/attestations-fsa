@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AttestationStatus {
+  PENDING
+  VALIDATED
+  REJECTED
+}
+
+enum AttestationType {
+  FORMATION
+  STAGE
+  CERTIFICATION
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+}
+
+model Formation {
+  id           String      @id @default(uuid())
+  name         String
+  category     String
+  description  String?
+  skills       String[]
+  createdAt    DateTime    @default(now())
+
+  attestations Attestation[]
+}
+
+model Attestation {
+  id             String            @id @default(uuid())
+  code           String            @unique
+  issuedAt       DateTime          @default(now())
+  type           AttestationType   @default(FORMATION)
+  fullName       String
+  birthDate      DateTime
+  birthPlace     String
+  formationId    String
+  formation      Formation         @relation(fields: [formationId], references: [id])
+  startDate      DateTime
+  endDate        DateTime
+  location       String
+  instructor     String
+  issuingCompany String
+  status         AttestationStatus @default(PENDING)
+  pdfUrl         String?
+}

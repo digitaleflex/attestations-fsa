@@ -128,64 +128,95 @@ app/
 
 prisma shema  
 
+// 🎯 Générateur du client Prisma
 generator client {
   provider = "prisma-client-js"
 }
 
+// 🗃️ Source de données : PostgreSQL via variable d’environnement
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+//
+// 📘 ENUMS
+//
+
+// ✅ Statut de l’attestation
 enum AttestationStatus {
-  PENDING
-  VALIDATED
-  REJECTED
+  PENDING      // En attente de validation
+  VALIDATED    // Attestation validée
+  REJECTED     // Attestation refusée ou annulée
 }
+
+// ✅ Type d’attestation délivrée
+enum AttestationType {
+  FORMATION       // Attestation de formation
+  STAGE           // Attestation de stage
+  CERTIFICATION   // Certificat officiel
+}
+
+//
+// 👤 Utilisateur Admin (Backoffice uniquement)
+//
 
 model Admin {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // Stocké avec bcrypt
-  name      String?
-  createdAt DateTime @default(now())
+  id        String   @id @default(uuid())       // ID unique
+  email     String   @unique                    // Email de connexion
+  password  String                              // Mot de passe hashé avec bcrypt
+  name      String?                             // Nom de l’admin (optionnel)
+  createdAt DateTime @default(now())            // Date de création du compte
 }
 
-model Formation {
-  id           String      @id @default(uuid())
-  name         String
-  category     String
-  description  String?
-  skills       String[]    // Liste des compétences acquises
-  createdAt    DateTime    @default(now())
+//
+// 🎓 Formation
+//
 
+model Formation {
+  id           String       @id @default(uuid())  // ID unique
+  name         String                               // Nom de la formation
+  category     String                               // Catégorie (ex : aquaculture, transformation, etc.)
+  description  String?                              // Description facultative
+  skills       String[]                             // Compétences acquises (array de string)
+  createdAt    DateTime     @default(now())         // Date de création
+
+  // 🔗 Relation : Une formation peut avoir plusieurs attestations
   attestations Attestation[]
 }
 
+//
+// 📄 Attestation
+//
+
 model Attestation {
-  id             String             @id @default(uuid())
-  code           String             @unique   // Ex : FSA-2025-M07-00001-3f8b6
-  issuedAt       DateTime           @default(now())
+  id             String            @id @default(uuid())   // ID unique
+  code           String            @unique                // Code formaté : FSA-2025-M07-00001-3f8b6
+  issuedAt       DateTime          @default(now())        // Date d’émission
 
-  // Informations du bénéficiaire
-  fullName       String
-  birthDate      DateTime
-  birthPlace     String
+  // 🏷 Type d’attestation
+  type           AttestationType   @default(FORMATION)    // Par défaut : FORMATION
 
-  // Relation avec la formation suivie
+  // 👤 Informations du bénéficiaire
+  fullName       String                                    // Nom complet
+  birthDate      DateTime                                  // Date de naissance
+  birthPlace     String                                    // Lieu de naissance
+
+  // 📚 Détails de la formation suivie
   formationId    String
-  formation      Formation          @relation(fields: [formationId], references: [id])
+  formation      Formation         @relation(fields: [formationId], references: [id])
 
-  // Détails de la formation
-  startDate      DateTime
-  endDate        DateTime
-  location       String             // Lieu de la formation
-  instructor     String             // Nom du formateur
+  startDate      DateTime                                   // Date de début de la formation
+  endDate        DateTime                                   // Date de fin
+  location       String                                     // Lieu de la formation
+  instructor     String                                     // Nom du formateur
 
-  // Informations administratives
-  issuingCompany String             // Nom de l’entreprise ou organisation
-  status         AttestationStatus  @default(PENDING)
-  pdfUrl         String?            // Lien vers le PDF généré (facultatif pour la V1)
+  // 🏢 Informations administratives
+  issuingCompany String                                     // Nom de l'organisation ou entreprise délivrant
+  status         AttestationStatus  @default(PENDING)       // Statut de validation
+  pdfUrl         String?                                    // URL du PDF généré (optionnel en V1)
+}
+
 }
 ```
 ---
