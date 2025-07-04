@@ -8,11 +8,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import "@/components/ui/input-style.css";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Loader2, Eye, Pencil, Trash2 } from "lucide-react";
 
 export default function AttestationsListPage() {
   const [attestations, setAttestations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string|null>(null);
+  const [showConfirm, setShowConfirm] = useState<string|null>(null);
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await fetch(`/api/attestations/${id}`, { method: 'DELETE' });
+      setAttestations((prev) => prev.filter((a) => a.id !== id));
+      setShowConfirm(null);
+    } catch {
+      alert("Erreur lors de la suppression");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     fetch("/api/attestations")
@@ -75,7 +91,7 @@ export default function AttestationsListPage() {
                   <TableHead>Type</TableHead>
                   <TableHead>Date émission</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -88,9 +104,58 @@ export default function AttestationsListPage() {
                     <TableCell>{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>{a.status}</TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`/admin/attestations/${a.id}`}>Détail</a>
-                      </Button>
+                      <div className="flex gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" asChild>
+                              <a href={`/admin/attestations/${a.id}`} aria-label="Détail">
+                                <Eye className="w-4 h-4" />
+                              </a>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Voir le détail</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" asChild>
+                              <a href={`/admin/attestations/${a.id}/edit`} aria-label="Modifier">
+                                <Pencil className="w-4 h-4" />
+                              </a>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Modifier</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={deletingId === a.id}
+                              onClick={() => setShowConfirm(a.id)}
+                              aria-label="Supprimer"
+                            >
+                              {deletingId === a.id ? <Loader2 className="animate-spin w-4 h-4" /> : <Trash2 className="w-4 h-4 text-red-600" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Supprimer</TooltipContent>
+                        </Tooltip>
+                      </div>
+                      {/* Dialogue de confirmation */}
+                      {showConfirm === a.id && (
+                        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+                          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+                            <div className="mb-4 text-lg font-semibold">Confirmer la suppression</div>
+                            <div className="mb-6 text-sm text-muted-foreground">Voulez-vous vraiment supprimer cette attestation ? Cette action est irréversible.</div>
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" onClick={() => setShowConfirm(null)}>Annuler</Button>
+                              <Button variant="destructive" onClick={() => handleDelete(a.id)} disabled={deletingId === a.id}>
+                                {deletingId === a.id ? <Loader2 className="animate-spin w-4 h-4 mr-1" /> : null}
+                                Supprimer
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
