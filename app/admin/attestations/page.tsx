@@ -88,8 +88,8 @@ export default function AttestationsListPage() {
                     <TableCell>{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>{a.status}</TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" disabled /* à implémenter */>
-                        Détail
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={`/admin/attestations/${a.id}`}>Détail</a>
                       </Button>
                     </TableCell>
                   </TableRow>
