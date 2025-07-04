@@ -4,6 +4,18 @@ import { customAlphabet } from 'nanoid'
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
 
+export async function GET() {
+  try {
+    const attestations = await prisma.attestation.findMany({
+      orderBy: { issuedAt: 'desc' },
+      include: { formation: { select: { name: true } } }
+    });
+    return NextResponse.json(attestations);
+  } catch (error) {
+    return NextResponse.json({ message: "Erreur lors de la récupération des attestations" }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()

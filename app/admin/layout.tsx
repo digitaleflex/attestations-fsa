@@ -58,6 +58,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
+                <a href="/admin/formations/new">Nouvelle formation</a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
                 <a href="/admin/attestations">Liste des attestations</a>
               </SidebarMenuButton>
             </SidebarMenuItem>
