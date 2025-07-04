@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Eye, Pencil, Trash2, Loader2 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [isAuth, setIsAuth] = useState(false);
@@ -14,6 +16,10 @@ export default function AdminDashboard() {
   const [userCount, setUserCount] = useState<number|null>(null);
   const [docCount, setDocCount] = useState<number|null>(null);
   const [loading, setLoading] = useState(true);
+  const [formations, setFormations] = useState<any[]>([]);
+  const [loadingFormations, setLoadingFormations] = useState(true);
+  const [deletingId, setDeletingId] = useState<string|null>(null);
+  const [showConfirm, setShowConfirm] = useState<string|null>(null);
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -38,6 +44,14 @@ export default function AdminDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    setLoadingFormations(true);
+    fetch('/api/formations')
+      .then(res => res.json())
+      .then(data => setFormations(Array.isArray(data) ? data : []))
+      .finally(() => setLoadingFormations(false));
+  }, []);
+
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/auth/logout', {
@@ -49,6 +63,19 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await fetch(`/api/formations/${id}`, { method: 'DELETE' });
+      setFormations((prev) => prev.filter((f) => f.id !== id));
+      setShowConfirm(null);
+    } catch {
+      alert("Erreur lors de la suppression");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -77,6 +104,11 @@ export default function AdminDashboard() {
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <a href="/admin/formations/new">Nouvelle formation</a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <a href="/admin/dashboard">Liste des formations</a>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
