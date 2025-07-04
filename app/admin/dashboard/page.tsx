@@ -1,38 +1,33 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import AdminRoute from '@/components/auth/AdminRoute'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LogOut } from 'lucide-react'
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession()
+  const [isAuth, setIsAuth] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/admin/login')
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie.split(';').map(c => c.trim())
+      const session = cookies.find(c => c.startsWith('admin_session='))
+      if (!session) {
+        router.push('/admin/login')
+      } else {
+        setIsAuth(true)
+      }
     }
-  }, [status, router])
-
-  if (status === 'loading') {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    )
-  }
+  }, [router])
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/signout', {
+      const response = await fetch('/api/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
-      
       if (response.ok) {
         router.push('/admin/login')
       }
@@ -41,57 +36,53 @@ export default function AdminDashboard() {
     }
   }
 
+  if (!isAuth) {
+    return null // ou un loader
+  }
+
   return (
-    <AdminRoute>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Tableau de bord administrateur</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Connecté en tant que <span className="font-medium">{session?.user?.email}</span>
-              </span>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Déconnexion
-              </Button>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord administrateur</h1>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Déconnexion
+            </Button>
           </div>
-        </header>
-
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Utilisateurs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">0</p>
-                <p className="text-sm text-gray-500">Utilisateurs enregistrés</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Documents</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">0</p>
-                <p className="text-sm text-gray-500">Documents enregistrés</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Activité récente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500">Aucune activité récente</p>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </div>
-    </AdminRoute>
+        </div>
+      </header>
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Utilisateurs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">0</p>
+              <p className="text-sm text-gray-500">Utilisateurs enregistrés</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">0</p>
+              <p className="text-sm text-gray-500">Documents enregistrés</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Activité récente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-500">Aucune activité récente</p>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
   )
 }

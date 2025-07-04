@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Mail, Lock, User } from 'lucide-react'
@@ -12,6 +12,11 @@ export default function AdminRegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const [year, setYear] = useState<number | null>(null)
+
+  useEffect(() => {
+    setYear(new Date().getFullYear())
+  }, [])
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -28,23 +33,15 @@ export default function AdminRegisterPage() {
         body: JSON.stringify({ email, password, name }),
       })
 
-      const contentType = res.headers.get('content-type')
-      let errorData
-      
-      if (contentType && contentType.includes('application/json')) {
-        errorData = await res.json()
-      } else {
-        const text = await res.text()
-        console.error('Réponse non-JSON reçue:', text.substring(0, 200)) // Affiche les 200 premiers caractères
-        throw new Error(`Le serveur a répondu avec le statut ${res.status} et un contenu inattendu`)
-      }
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(errorData.message || `Erreur ${res.status}: Échec de l'inscription`)
+        throw new Error(data.message || `Erreur ${res.status}: Échec de l'inscription`)
       }
 
       // Rediriger vers la page de connexion après inscription réussie
       router.push('/admin/login?registered=true')
+      return
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
       setIsLoading(false)
@@ -178,7 +175,7 @@ export default function AdminRegisterPage() {
           
           <div className="bg-gray-50 px-8 py-6 rounded-b-2xl text-center">
             <p className="text-sm text-gray-600">
-              © {new Date().getFullYear()} Attestation FSA. Tous droits réservés.
+              © {year ?? ''} Attestation FSA. Tous droits réservés.
             </p>
           </div>
         </div>

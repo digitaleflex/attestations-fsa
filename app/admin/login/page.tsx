@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Lock, Mail } from 'lucide-react'
@@ -11,6 +11,11 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const [year, setYear] = useState<number | null>(null)
+
+  useEffect(() => {
+    setYear(new Date().getFullYear())
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -18,32 +23,23 @@ export default function AdminLoginPage() {
     setError('')
     
     try {
-      const res = await fetch('/api/auth/signin/email-password', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          redirect: false
-        }),
+        body: JSON.stringify({ email, password }),
       })
 
       const data = await res.json()
       
       if (!res.ok) {
-        throw new Error(data.error || 'Échec de la connexion')
+        throw new Error(data.message || 'Échec de la connexion')
       }
 
-      // Si la connexion est réussie, rediriger vers le tableau de bord
-      if (data.redirectTo) {
-        window.location.href = data.redirectTo
-        return
-      }
-      
-      // Redirection par défaut si pas d'URL de redirection
+      // Redirection directe après succès
       router.push('/admin/dashboard')
+      return
     } catch (err) {
       console.error('Erreur de connexion:', err)
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -154,7 +150,7 @@ export default function AdminLoginPage() {
           
           <div className="bg-gray-50 px-8 py-6 rounded-b-2xl text-center">
             <p className="text-sm text-gray-600">
-              © {new Date().getFullYear()} Attestation FSA. Tous droits réservés.
+              © {year ?? ''} Attestation FSA. Tous droits réservés.
             </p>
           </div>
         </div>
