@@ -3,49 +3,49 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Lock, Mail } from 'lucide-react'
+import { Mail, Lock, User } from 'lucide-react'
 
-export default function AdminLoginPage() {
+export default function AdminRegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setError('')
     
     try {
-      const res = await fetch('/api/auth/signin/email-password', {
+      console.log('Tentative d\'inscription avec:', { email, name })
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          redirect: false
-        }),
+        body: JSON.stringify({ email, password, name }),
       })
 
-      const data = await res.json()
+      const contentType = res.headers.get('content-type')
+      let errorData
       
-      if (!res.ok) {
-        throw new Error(data.error || 'Échec de la connexion')
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await res.json()
+      } else {
+        const text = await res.text()
+        console.error('Réponse non-JSON reçue:', text.substring(0, 200)) // Affiche les 200 premiers caractères
+        throw new Error(`Le serveur a répondu avec le statut ${res.status} et un contenu inattendu`)
       }
 
-      // Si la connexion est réussie, rediriger vers le tableau de bord
-      if (data.redirectTo) {
-        window.location.href = data.redirectTo
-        return
+      if (!res.ok) {
+        throw new Error(errorData.message || `Erreur ${res.status}: Échec de l'inscription`)
       }
-      
-      // Redirection par défaut si pas d'URL de redirection
-      router.push('/admin/dashboard')
+
+      // Rediriger vers la page de connexion après inscription réussie
+      router.push('/admin/login?registered=true')
     } catch (err) {
-      console.error('Erreur de connexion:', err)
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
       setIsLoading(false)
     }
@@ -54,25 +54,50 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <motion.div 
-        className="w-full max-w-md space-y-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
       >
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="p-8">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Bienvenue</h1>
-              <p className="text-gray-600">Connectez-vous à votre espace d'administration</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Créer un compte admin</h1>
+              <p className="text-gray-600">Remplissez le formulaire pour créer un compte administrateur</p>
             </div>
 
             {error && (
-              <div className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100">
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100"
+              >
                 {error}
-              </div>
+              </motion.div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleRegister} className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom complet
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900"
+                    placeholder="Votre nom"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Adresse email
@@ -96,14 +121,9 @@ export default function AdminLoginPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Mot de passe
-                  </label>
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-500">
-                    Mot de passe oublié ?
-                  </a>
-                </div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Mot de passe
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-gray-400" />
@@ -112,14 +132,18 @@ export default function AdminLoginPage() {
                     id="password"
                     name="password"
                     type="password"
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     required
+                    minLength={8}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900"
                     placeholder="••••••••"
                   />
                 </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Le mot de passe doit contenir au moins 8 caractères
+                </p>
               </div>
 
               <div>
@@ -135,21 +159,21 @@ export default function AdminLoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Connexion...
+                      Création du compte...
                     </>
-                  ) : 'Se connecter'}
+                  ) : 'Créer le compte'}
                 </motion.button>
               </div>
-
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Pas encore de compte?{' '}
-                  <a href="/admin/register" className="font-medium text-blue-600 hover:text-blue-500">
-                    Créer un compte
-                  </a>
-                </p>
-              </div>
             </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Vous avez déjà un compte?{' '}
+                <a href="/admin/login" className="font-medium text-blue-600 hover:text-blue-500">
+                  Connectez-vous ici
+                </a>
+              </p>
+            </div>
           </div>
           
           <div className="bg-gray-50 px-8 py-6 rounded-b-2xl text-center">

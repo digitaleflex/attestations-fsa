@@ -19,12 +19,71 @@ enum AttestationType {
   CERTIFICATION
 }
 
+// Modèles pour Better Auth
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  user              User     @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
+  admin             Admin?   @relation("AdminAccounts", fields: [userId], references: [id], onDelete: Cascade, map: "Account_adminId_fkey")
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
+  admin        Admin?   @relation("AdminSessions", fields: [userId], references: [id], onDelete: Cascade, map: "Session_adminId_fkey")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  accounts      Account[] @relation("UserAccounts")
+  sessions      Session[]  @relation("UserSessions")
+  role          String    @default("USER")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Modèle Admin pour l'authentification
 model Admin {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String
+  role          String    @default("ADMIN")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations nécessaires pour Better Auth
+  accounts      Account[] @relation("AdminAccounts")
+  sessions      Session[]  @relation("AdminSessions")
 }
 
 model Formation {
@@ -34,7 +93,6 @@ model Formation {
   description  String?
   skills       String[]
   createdAt    DateTime    @default(now())
-
   attestations Attestation[]
 }
 
