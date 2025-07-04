@@ -41,7 +41,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">Tableau de bord administrateur</h1>
@@ -55,30 +55,30 @@ export default function AdminDashboard() {
       </header>
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
+          <Card className="bg-white border border-gray-300 shadow-md">
             <CardHeader>
-              <CardTitle>Utilisateurs</CardTitle>
+              <CardTitle className="text-gray-900 font-bold">Utilisateurs</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">0</p>
-              <p className="text-sm text-gray-500">Utilisateurs enregistrés</p>
+              <p className="text-3xl font-bold text-gray-900">0</p>
+              <p className="text-sm text-gray-700">Utilisateurs enregistrés</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-300 shadow-md">
             <CardHeader>
-              <CardTitle>Documents</CardTitle>
+              <CardTitle className="text-gray-900 font-bold">Documents</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">0</p>
-              <p className="text-sm text-gray-500">Documents enregistrés</p>
+              <p className="text-3xl font-bold text-gray-900">0</p>
+              <p className="text-sm text-gray-700">Documents enregistrés</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-300 shadow-md">
             <CardHeader>
-              <CardTitle>Activité récente</CardTitle>
+              <CardTitle className="text-gray-900 font-bold">Activité récente</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-500">Aucune activité récente</p>
+              <p className="text-sm text-gray-700">Aucune activité récente</p>
             </CardContent>
           </Card>
         </div>
