@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,13 @@ export default function VerifierPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (showConfetti) {
+      const timeout = setTimeout(() => setShowConfetti(false), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [showConfetti]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
