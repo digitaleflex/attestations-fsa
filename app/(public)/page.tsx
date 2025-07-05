@@ -42,6 +42,15 @@ export default function Home() {
           >
             Vérifier une attestation <ArrowRight className="w-5 h-5" />
           </Link>
+          {/* Nouveau bouton pour scan QR */}
+          <Link
+            href="/verifier-qr"
+            className="mt-4 inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-white/80 border-2 border-green-600 text-green-700 font-bold text-base shadow hover:bg-green-50 hover:scale-105 focus:scale-105 transition-transform duration-150 focus:outline-none focus:ring-2 focus:ring-green-600"
+            aria-label="Vérifier par scan QR"
+          >
+            <ShieldCheck className="w-5 h-5 text-green-600" />
+            Vérifier par scan QR
+          </Link>
           <span className="text-green-700 text-sm mt-1">Service gratuit, instantané et sans collecte de données sensibles.</span>
         </div>
       </div>
