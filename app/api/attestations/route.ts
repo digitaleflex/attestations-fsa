@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
+import { isAdminAuthenticated } from '@/lib/auth';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
 
 export async function GET(request: Request) {
-  // Si query ?count=1, retourner juste le nombre d'attestations
-  if (request && request.url && request.url.includes('count=1')) {
+  if (!isAdminAuthenticated()) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+  }
+  const url = new URL(request.url);
+  const status = url.searchParams.get('status');
+  const countOnly = url.searchParams.get('count') === '1';
+  const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
+  const order = url.searchParams.get('order') === 'asc' ? 'asc' : 'desc';
+
+  // Filtre dynamique
+  const where: any = {};
+  if (status) where.status = status;
+
+  if (countOnly) {
     try {
-      const count = await prisma.attestation.count();
+      const count = await prisma.attestation.count({ where });
       return NextResponse.json({ count });
     } catch (error) {
       return NextResponse.json({ message: "Erreur lors du comptage des attestations" }, { status: 500 });
@@ -16,8 +29,10 @@ export async function GET(request: Request) {
   }
   try {
     const attestations = await prisma.attestation.findMany({
-      orderBy: { issuedAt: 'desc' },
-      include: { formation: { select: { name: true } } }
+      where,
+      orderBy: { issuedAt: order },
+      include: { formation: { select: { name: true } } },
+      ...(limit ? { take: limit } : {})
     });
     return NextResponse.json(attestations);
   } catch (error) {
@@ -26,6 +41,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!isAdminAuthenticated()) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+  }
   try {
     const body = await request.json()
     const {

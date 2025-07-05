@@ -2,25 +2,36 @@
 
 import { ReactNode, useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
+import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const [isAuth, setIsAuth] = useState(false);
+  const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = vérification en cours
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === '/admin/login') return; // Ne rien faire sur la page login
     if (typeof document !== "undefined") {
+      // Log pour debug
+      console.log("[AdminLayout] Cookies:", document.cookie);
+      // Recherche robuste du cookie admin_session
       const cookies = document.cookie.split(';').map(c => c.trim());
-      const session = cookies.find(c => c.startsWith('admin_session='));
+      const session = cookies.find(c => c.toLowerCase().startsWith('admin_session='));
       if (!session) {
+        setIsAuth(false);
         router.push('/admin/login');
       } else {
         setIsAuth(true);
       }
     }
-  }, [router]);
+  }, [router, pathname]);
+
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
   const handleLogout = async () => {
     try {
@@ -36,13 +47,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   };
 
+  if (isAuth === null) {
+    // Affiche un message d'attente pendant la vérification
+    return <div className="flex items-center justify-center min-h-screen">Vérification de l'authentification...</div>;
+  }
   if (!isAuth) return null;
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <span className="text-lg font-bold">Admin</span>
+          <span className="text-lg font-bold">Admin FSA</span>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -72,6 +87,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <a href="/admin/stats">Statistiques</a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <a href="/admin/settings">Paramètres</a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Déconnexion
@@ -81,7 +106,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <main className="p-8 min-h-screen bg-gray-100">
+        <main className="p-8 min-h-screen bg-gray-100 flex flex-col w-full">
           <Suspense fallback={<div>Chargement...</div>}>
             {children}
           </Suspense>

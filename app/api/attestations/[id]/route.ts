@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAdminAuthenticated } from '@/lib/auth';
 
 export async function GET(request: Request, context: { params: { id: string } }) {
   const { params } = context;
+  if (!isAdminAuthenticated()) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+  }
   try {
     const attestation = await prisma.attestation.findUnique({
       where: { id: params.id },
@@ -21,6 +25,9 @@ export async function GET(request: Request, context: { params: { id: string } })
 
 export async function PATCH(request: Request, context: { params: { id: string } }) {
   const { params } = context;
+  if (!isAdminAuthenticated()) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+  }
   try {
     const body = await request.json();
     const allowedTypes = ['FORMATION', 'STAGE', 'CERTIFICATION'];

@@ -114,3 +114,11 @@ model Attestation {
   status         AttestationStatus @default(PENDING)
   pdfUrl         String?
 }
+
+model Settings {
+  id              String  @id @default(uuid())
+  institutionName String
+  logoUrl         String?
+  replyTo         String?
+  updatedAt       DateTime @updatedAt
+}

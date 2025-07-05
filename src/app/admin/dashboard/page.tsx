@@ -5,7 +5,7 @@ export default function AdminDashboard() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <span className="text-lg font-bold">Admin</span>
+          <span className="text-lg font-bold">Admin FSA</span>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>

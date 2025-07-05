@@ -87,36 +87,25 @@ export default function NewAttestationPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <Card className="bg-white rounded-xl shadow-md p-8">
-        <div className="flex items-center gap-3 mb-6">
+    <div className="w-full p-8">
+      <Card className="bg-white rounded-2xl shadow-lg px-12 py-12 w-full">
+        <div className="flex items-center gap-3 mb-8">
           <span className="text-3xl">🧾</span>
-          <h2 className="text-2xl font-semibold">Nouvelle attestation</h2>
+          <h2 className="text-3xl font-semibold">Nouvelle attestation</h2>
         </div>
         {error && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-6">
             <AlertTitle>Erreur</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         {success && (
-          <>
-            <Alert className="mb-4">
-              <AlertTitle>Succès</AlertTitle>
-              <AlertDescription>Attestation créée avec succès !</AlertDescription>
-            </Alert>
-            {generatedCode && (
-              <div className="mb-6">
-                <Label htmlFor="attestationCode">Code de l'attestation</Label>
-                <div className="flex gap-2 items-center mt-1">
-                  <Input id="attestationCode" value={generatedCode} readOnly className="font-mono input-style" />
-                  <Button type="button" variant="outline" onClick={() => {navigator.clipboard.writeText(generatedCode)}}>Copier</Button>
-                </div>
-              </div>
-            )}
-          </>
+          <Alert className="mb-6">
+            <AlertTitle>Succès</AlertTitle>
+            <AlertDescription>Attestation créée avec succès !</AlertDescription>
+          </Alert>
         )}
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleSubmit} autoComplete="off">
+        <form className="grid grid-cols-1 md:grid-cols-2 gap-8" onSubmit={handleSubmit} autoComplete="off">
           <div>
             <Label htmlFor="fullName">Nom complet</Label>
             <Input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} required placeholder="Nom et prénom du bénéficiaire" className="input-style" />
@@ -181,8 +170,8 @@ export default function NewAttestationPage() {
             <Label htmlFor="instructor">Formateur</Label>
             <Input id="instructor" name="instructor" value={form.instructor} onChange={handleChange} required placeholder="Nom du formateur" className="input-style" />
           </div>
-          <div className="md:col-span-2 mt-4">
-            <Button type="submit" className="w-full md:w-auto px-8 py-2 text-base" disabled={loading}>
+          <div className="md:col-span-2 mt-6">
+            <Button type="submit" className="w-full md:w-auto px-10 py-3 text-base" disabled={loading}>
               {loading ? "Création..." : "Créer l'attestation"}
             </Button>
           </div>

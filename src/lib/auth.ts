@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { prismaAdapter } from "better-auth/adapters/prisma"
 import { nextCookies } from "better-auth/next-js"
 import type { PrismaClient } from '@prisma/client/edge'
+import { cookies } from 'next/headers';
 
 // Vérifiez que la clé secrète est définie
 if (!process.env.AUTH_SECRET) {
@@ -203,6 +204,13 @@ export const getAuth = async () => {
   }
   return authInstance;
 };
+
+// Vérification d'authentification admin pour les handlers API
+export function isAdminAuthenticated() {
+  const cookieStore = cookies();
+  const session = cookieStore.get('admin_session');
+  return !!session;
+}
 
 // Gestion des erreurs globales
 process.on('unhandledRejection', (reason: unknown) => {

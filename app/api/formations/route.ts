@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAdminAuthenticated } from '@/lib/auth';
 
 export async function GET() {
+  if (!isAdminAuthenticated()) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+  }
   try {
     const formations = await prisma.formation.findMany({
       select: { id: true, name: true }
@@ -13,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isAdminAuthenticated()) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+  }
   try {
     const body = await request.json();
     const { name, category, description, skills } = body;
