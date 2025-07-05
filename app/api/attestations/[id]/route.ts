@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 
 export async function GET(request: Request) {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   // Récupérer l'id depuis l'URL
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   // Récupérer l'id depuis l'URL

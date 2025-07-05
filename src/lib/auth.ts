@@ -206,10 +206,10 @@ export const getAuth = async () => {
 };
 
 // Vérification d'authentification admin pour les handlers API
-export function isAdminAuthenticated() {
-  const cookieStore = cookies();
+export async function isAdminAuthenticated() {
+  const cookieStore = await cookies();
   const session = cookieStore.get('admin_session');
-  return !!session;
+  return !!(session && session.value);
 }
 
 // Gestion des erreurs globales

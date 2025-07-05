@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 
 export async function GET() {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   try {
@@ -17,7 +17,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   try {

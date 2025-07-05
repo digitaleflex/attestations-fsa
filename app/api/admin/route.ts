@@ -5,7 +5,7 @@ import { isAdminAuthenticated } from '@/lib/auth';
 
 // GET /api/admin
 export async function GET() {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   const admin = await prisma.admin.findFirst({ select: { id: true, name: true, email: true } });
@@ -14,7 +14,7 @@ export async function GET() {
 
 // PATCH /api/admin
 export async function PATCH(request: Request) {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   const body = await request.json();

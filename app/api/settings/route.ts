@@ -11,7 +11,7 @@ const settingsSchema = z.object({
 
 // GET /api/settings
 export async function GET() {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
@@ -25,7 +25,7 @@ export async function GET() {
 
 // PATCH /api/settings
 export async function PATCH(request: Request) {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {

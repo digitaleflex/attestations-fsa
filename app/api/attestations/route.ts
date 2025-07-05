@@ -6,7 +6,7 @@ import { isAdminAuthenticated } from '@/lib/auth';
 const nanoid = customAlphabet('1234567890abcdef', 5)
 
 export async function GET(request: Request) {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   const url = new URL(request.url);
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAdminAuthenticated()) {
+  if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   try {
