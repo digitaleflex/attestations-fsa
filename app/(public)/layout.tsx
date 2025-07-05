@@ -19,11 +19,17 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <span className="text-xl font-bold text-gray-900">Ferme St André</span>
           </div>
           {/* Desktop nav */}
-          <nav className="hidden sm:flex gap-2">
+          <nav className="hidden sm:flex gap-2 items-center">
             <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-gray-800 hover:bg-gray-200 transition">
               Accueil
             </Link>
-            <Link href="/verifier" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-black text-white font-semibold hover:bg-gray-900 transition">
+            <Link href="/faq" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-blue-700 hover:bg-blue-100 transition">
+              FAQ
+            </Link>
+            <Link href="/signalement" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-red-700 hover:bg-red-100 transition">
+              Signaler
+            </Link>
+            <Link href="/verifier" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black text-white font-bold hover:bg-gray-900 transition ml-4 shadow-lg">
               <ShieldCheck className="w-5 h-5" />
               Vérifier une attestation
             </Link>
@@ -40,7 +46,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           {/* Mobile menu */}
           {open && (
             <div
-              className="sm:hidden absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border z-50 animate-fade-in"
+              className="sm:hidden absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border z-50 animate-fade-in"
               tabIndex={-1}
               role="menu"
               aria-label="Menu navigation mobile"
@@ -54,13 +60,29 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 Accueil
               </Link>
               <Link
+                href="/faq"
+                className="block px-6 py-4 text-blue-700 font-semibold hover:bg-blue-100 border-t"
+                onClick={() => setOpen(false)}
+                role="menuitem"
+              >
+                FAQ
+              </Link>
+              <Link
+                href="/signalement"
+                className="block px-6 py-4 text-red-700 font-semibold hover:bg-red-100 border-t"
+                onClick={() => setOpen(false)}
+                role="menuitem"
+              >
+                Signaler
+              </Link>
+              <Link
                 href="/verifier"
-                className="block px-6 py-4 text-gray-900 font-semibold hover:bg-gray-100 rounded-b-xl border-t"
+                className="block px-6 py-4 text-white font-bold bg-black hover:bg-gray-900 border-t rounded-b-xl mt-2 shadow-lg"
                 onClick={() => setOpen(false)}
                 role="menuitem"
               >
                 <span className="inline-flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-green-600" /> Vérifier une attestation
+                  <ShieldCheck className="w-5 h-5 text-green-400" /> Vérifier une attestation
                 </span>
               </Link>
             </div>

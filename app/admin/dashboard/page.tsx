@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Users, FileText, CheckCircle, Clock, PlusCircle, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
@@ -67,6 +67,10 @@ export default function AdminDashboard() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
+          {/* Bouton hamburger mobile */}
+          <div className="md:hidden mb-2">
+            <SidebarTrigger />
+          </div>
           <span className="text-lg font-bold">Admin</span>
         </SidebarHeader>
         <SidebarContent>
@@ -109,10 +113,10 @@ export default function AdminDashboard() {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <main className="w-full p-8 min-h-screen bg-gray-100 flex flex-col">
+        <main className="w-full p-4 md:p-8 min-h-screen bg-gray-100 flex flex-col">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 w-full">
             <h1 className="text-3xl font-bold text-center md:text-left w-full">Tableau de bord administrateur</h1>
-            <div className="flex gap-2 justify-center md:justify-end w-full">
+            <div className="flex flex-col sm:flex-row gap-2 justify-center md:justify-end items-center w-full">
               <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => router.push('/admin/attestations/new')}>
                 <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une attestation
               </Button>
@@ -195,8 +199,8 @@ export default function AdminDashboard() {
                       <TableHead>Code</TableHead>
                       <TableHead>Nom complet</TableHead>
                       <TableHead>Statut</TableHead>
-                      <TableHead>Date émission</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="hidden md:table-cell">Date émission</TableHead>
+                      <TableHead className="hidden md:table-cell">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -205,8 +209,8 @@ export default function AdminDashboard() {
                         <TableCell className="font-mono text-xs">{a.code}</TableCell>
                         <TableCell>{a.fullName}</TableCell>
                         <TableCell>{a.status}</TableCell>
-                        <TableCell>{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}</TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <Button variant="ghost" size="icon" asChild aria-label="Voir le détail de l’attestation">
                             <a href={`/admin/attestations/${a.id}`} aria-label="Voir le détail de l’attestation">
                               <FileText className="w-4 h-4" aria-hidden="true" />

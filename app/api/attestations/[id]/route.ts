@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 
-export async function GET(request: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function GET(request: Request) {
   if (!isAdminAuthenticated()) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
+  // Récupérer l'id depuis l'URL
+  const url = new URL(request.url);
+  const id = url.pathname.split("/").pop();
   try {
     const attestation = await prisma.attestation.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         formation: { select: { name: true, category: true, description: true, skills: true } }
       }
@@ -23,11 +25,13 @@ export async function GET(request: Request, context: { params: { id: string } })
   }
 }
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function PATCH(request: Request) {
   if (!isAdminAuthenticated()) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
+  // Récupérer l'id depuis l'URL
+  const url = new URL(request.url);
+  const id = url.pathname.split("/").pop();
   try {
     const body = await request.json();
     const allowedTypes = ['FORMATION', 'STAGE', 'CERTIFICATION'];
@@ -94,7 +98,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
     if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
     // Mise à jour
     const attestation = await prisma.attestation.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
     return NextResponse.json(attestation);

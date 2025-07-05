@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from 'next/navigation';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
@@ -57,6 +57,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
+          {/* Bouton d'ouverture de la sidebar sur mobile */}
+          <div className="md:hidden mb-2">
+            <SidebarTrigger />
+          </div>
           <span className="text-lg font-bold">Admin FSA</span>
         </SidebarHeader>
         <SidebarContent>
@@ -97,6 +101,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <a href="/admin/signalements">Signalements</a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Déconnexion
@@ -106,7 +115,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <main className="p-8 min-h-screen bg-gray-100 flex flex-col w-full">
+        <main className="p-4 md:p-8 min-h-screen bg-gray-100 flex flex-col w-full">
           <Suspense fallback={<div>Chargement...</div>}>
             {children}
           </Suspense>

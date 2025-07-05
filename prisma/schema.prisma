@@ -122,3 +122,13 @@ model Settings {
   replyTo         String?
   updatedAt       DateTime @updatedAt
 }
+
+model Report {
+  id              String   @id @default(uuid())
+  codeAttestation String?  // Code de l’attestation signalée (optionnel)
+  motif           String   // Motif du signalement
+  message         String   // Message détaillée
+  email           String?  // Email du déclarant (optionnel)
+  createdAt       DateTime @default(now())
+  status          String   @default("NOUVEAU") // Statut du traitement
+}
