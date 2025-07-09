@@ -1,17 +1,23 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { z } from 'zod'
+
+// Schéma de validation pour l'inscription admin
+const RegisterSchema = z.object({
+  email: z.string().email('Email invalide'),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
+  name: z.string().optional(),
+});
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, password, name } = body
-    if (!email || !password) {
-      return NextResponse.json({ message: 'Email et mot de passe sont requis' }, { status: 400 })
+    const parse = RegisterSchema.safeParse(body)
+    if (!parse.success) {
+      return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 })
     }
-    if (password.length < 8) {
-      return NextResponse.json({ message: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 })
-    }
+    const { email, password, name } = parse.data
     // Vérifier si l'admin existe déjà
     const existingAdmin = await prisma.admin.findUnique({ where: { email } })
     if (existingAdmin) {

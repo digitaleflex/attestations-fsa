@@ -6,7 +6,7 @@ type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
 
 // Create a type-safe Prisma client with extensions
 declare global {
-  // eslint-disable-next-line no-var
+   
   var prisma: ExtendedPrismaClient | undefined;
 }
 

@@ -46,7 +46,7 @@ npm run dev
 
 ### Accès
 - Espace public : http://localhost:3000
-- Espace admin : http://localhost:3000/admin
+- Espace admin : http://localhost:3000/admin/login
 
 ---
 

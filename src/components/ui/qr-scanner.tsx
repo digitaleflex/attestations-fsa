@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 declare global {
   interface Window {
     BarcodeDetector?: any;
@@ -114,7 +114,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onScan, onError, style, cl
           ctx.drawImage(img, 0, 0);
           // OpenCV : prétraitement
           const src = cv.imread(canvas);
-          let dst = new cv.Mat();
+          const dst = new cv.Mat();
           cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
           cv.GaussianBlur(dst, dst, new cv.Size(3, 3), 0, 0, cv.BORDER_DEFAULT);
           cv.adaptiveThreshold(dst, dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);

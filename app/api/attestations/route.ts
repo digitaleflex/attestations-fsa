@@ -2,8 +2,23 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
 import { isAdminAuthenticated } from '@/lib/auth';
+import { z } from 'zod';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
+
+// Schéma de validation pour la création d'une attestation
+const AttestationSchema = z.object({
+  fullName: z.string().min(1, 'Le nom complet est requis.'),
+  birthDate: z.string().min(1, 'La date de naissance est requise.'),
+  birthPlace: z.string().min(1, 'Le lieu de naissance est requis.'),
+  formation: z.string().min(1, 'La formation est requise.'),
+  startDate: z.string().min(1, 'La date de début est requise.'),
+  endDate: z.string().min(1, 'La date de fin est requise.'),
+  location: z.string().min(1, 'Le lieu est requis.'),
+  instructor: z.string().min(1, 'Le formateur est requis.'),
+  issuingCompany: z.string().min(1, 'La société émettrice est requise.'),
+  type: z.enum(['FORMATION', 'STAGE', 'CERTIFICATION'], { required_error: 'Le type est requis.' }),
+});
 
 export async function GET(request: Request) {
   if (!(await isAdminAuthenticated())) {
@@ -46,12 +61,13 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
+    const parse = AttestationSchema.safeParse(body)
+    if (!parse.success) {
+      return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 })
+    }
     const {
       fullName, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type
-    } = body
-    if (!fullName || !birthDate || !birthPlace || !formation || !startDate || !endDate || !location || !instructor || !issuingCompany || !type) {
-      return NextResponse.json({ message: 'Tous les champs sont requis.' }, { status: 400 })
-    }
+    } = parse.data
 
     // Chercher ou créer la formation par son nom
     let formationRecord = await prisma.formation.findFirst({ where: { name: formation } })

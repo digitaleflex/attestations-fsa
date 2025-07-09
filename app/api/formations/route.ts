@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
+import { z } from 'zod';
+
+// Schéma de validation pour la création d'une formation
+const FormationSchema = z.object({
+  name: z.string().min(1, 'Le nom est requis.'),
+  category: z.string().min(1, 'La catégorie est requise.'),
+  description: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+});
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -22,10 +31,11 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json();
-    const { name, category, description, skills } = body;
-    if (!name || !category) {
-      return NextResponse.json({ message: 'Le nom et la catégorie sont requis.' }, { status: 400 });
+    const parse = FormationSchema.safeParse(body);
+    if (!parse.success) {
+      return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
     }
+    const { name, category, description, skills } = parse.data;
     const formation = await prisma.formation.create({
       data: {
         name,
