@@ -1,6 +1,3 @@
-
----
-
 # 📘 Cahier de Projet – Version 1  
 
 ## 🐟 Application de Gestion Simplifiée des Attestations  
