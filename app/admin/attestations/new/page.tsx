@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -17,8 +16,21 @@ const ATTESTATION_TYPES = [
   { value: "CERTIFICATION", label: "Certification" },
 ];
 
+type NewAttestationForm = {
+  fullName: string;
+  birthDate: string;
+  birthPlace: string;
+  formation: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  instructor: string;
+  issuingCompany: string;
+  type: "FORMATION" | "STAGE" | "CERTIFICATION";
+};
+
 export default function NewAttestationPage() {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<NewAttestationForm>({
     fullName: "",
     birthDate: "",
     birthPlace: "",
@@ -33,17 +45,15 @@ export default function NewAttestationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState("");
   const [formations, setFormations] = useState<string[]>([]);
   useEffect(() => {
     fetch("/api/formations")
       .then((res) => res.json())
-      .then((data) => setFormations(Array.isArray(data) ? data.map((f: any) => f.name) : []))
+      .then((data) => setFormations(Array.isArray(data) ? data.map((f: { name: string }) => f.name) : []))
       .catch(() => setFormations([]));
   }, []);
-  const router = useRouter();
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -52,12 +62,11 @@ export default function NewAttestationPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccess(false);
-    setGeneratedCode("");
     try {
       const res = await fetch("/api/attestations", {
         method: "POST",
@@ -65,25 +74,16 @@ export default function NewAttestationPage() {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error("Erreur lors de la création de l'attestation");
-      const data = await res.json();
       setSuccess(true);
-      setGeneratedCode(data.code || "");
-      setForm({
-        fullName: "",
-        birthDate: "",
-        birthPlace: "",
-        formation: "",
-        startDate: "",
-        endDate: "",
-        location: "",
-        instructor: "",
-        issuingCompany: "La Ferme Agro Piscicole Cité St André",
-        type: "FORMATION",
-      });
       toast.success("Attestation créée avec succès !");
-    } catch (err: any) {
-      setError(err.message || "Erreur inconnue");
-      toast.error(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Erreur inconnue");
+        toast.error(err.message || "Erreur inconnue");
+      } else {
+        setError("Erreur inconnue");
+        toast.error("Erreur inconnue");
+      }
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export default function NewAttestationPage() {
             <Input id="birthPlace" name="birthPlace" value={form.birthPlace} onChange={handleChange} required placeholder="Ville, pays..." className="input-style" />
           </div>
           <div>
-            <Label htmlFor="type">Type d'attestation</Label>
+            <Label htmlFor="type">Type d&apos;attestation</Label>
             <Select value={form.type} onValueChange={(v) => handleSelect("type", v)} required>
               <SelectTrigger id="type" name="type" className="input-style">
                 <SelectValue placeholder="Sélectionner un type" />

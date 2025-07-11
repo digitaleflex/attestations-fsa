@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,12 +13,31 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+// Définition du type Attestation pour le typage strict
+
+type AttestationStatus = "PENDING" | "VALIDATED" | "REJECTED";
+type AttestationType = "FORMATION" | "STAGE" | "CERTIFICATION";
+
+interface Attestation {
+  fullName: string;
+  type: AttestationType;
+  status: AttestationStatus;
+  startDate: string;
+  endDate: string;
+  location: string;
+  instructor: string;
+  formation?: {
+    name?: string;
+    category?: string;
+  };
+}
+
 export default function VerifierPage() {
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Attestation | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema)
   });
 
@@ -33,11 +52,15 @@ export default function VerifierPage() {
         const err = await res.json();
         throw new Error(err.error || "Erreur serveur");
       }
-      const { attestation } = await res.json();
+      const { attestation }: { attestation: Attestation } = await res.json();
       setResult(attestation);
       setTimeout(() => setShowConfetti(true), 200); // petit délai pour l'effet
-    } catch (e: any) {
-      setError(e.message || "Erreur inconnue");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message || "Erreur inconnue");
+      } else {
+        setError("Erreur inconnue");
+      }
     } finally {
       setLoading(false);
     }

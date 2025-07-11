@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
@@ -11,11 +12,11 @@ const FormationSchema = z.object({
   skills: z.array(z.string()).optional(),
 });
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
-  const { id } = params;
   try {
     const body = await request.json();
     const parse = FormationSchema.safeParse(body);
@@ -38,24 +39,25 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
-  const { id } = params;
   try {
     await prisma.formation.delete({ where: { id } });
     return NextResponse.json({ message: 'Formation supprimée' });
+   
   } catch (error) {
     return NextResponse.json({ message: "Erreur lors de la suppression de la formation" }, { status: 500 });
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
-  const { id } = params;
   try {
     const formation = await prisma.formation.findUnique({ where: { id } });
     if (!formation) {
