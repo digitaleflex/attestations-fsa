@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
     const code = `FSA-${year}-${month}-${seq}-${hash}`
 
     // Création de l'attestation
-    const attestation = await prisma.attestation.create({
+    await prisma.attestation.create({
       data: {
         code,
         fullName,

@@ -12,6 +12,7 @@ const FormationSchema = z.object({
   skills: z.array(z.string()).optional(),
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function PATCH(request: NextRequest, context: any) {
   const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
@@ -53,8 +54,9 @@ export async function DELETE(request: NextRequest, context: any) {
     return NextResponse.json({ message: "Erreur lors de la suppression de la formation" }, { status: 500 });
   }
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function GET(request: NextRequest, context: any) {
   const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
