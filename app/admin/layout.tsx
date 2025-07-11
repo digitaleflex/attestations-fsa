@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { FileText, LogOut, Home, GraduationCap, BarChart2, Settings, AlertCircle } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = vérification en cours
@@ -65,52 +65,52 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={false}>
-                <a href="/admin/dashboard">Dashboard</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/attestations/new">Nouvelle attestation</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/formations/new">Nouvelle formation</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/attestations">Liste des attestations</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/formations">Liste des formations</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/stats">Statistiques</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/settings">Paramètres</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/signalements">Signalements</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Déconnexion
-              </Button>
-            </SidebarMenuItem>
+            <SidebarMenuItem
+              icon={<Home />}
+              label="Dashboard"
+              href="/admin/dashboard"
+            />
+            <SidebarMenuItem
+              icon={<FileText />}
+              label="Nouvelle attestation"
+              href="/admin/attestations/new"
+            />
+            <SidebarMenuItem
+              icon={<GraduationCap />}
+              label="Nouvelle formation"
+              href="/admin/formations/new"
+            />
+            <SidebarMenuItem
+              icon={<FileText />}
+              label="Liste des attestations"
+              href="/admin/attestations"
+            />
+            <SidebarMenuItem
+              icon={<GraduationCap />}
+              label="Liste des formations"
+              href="/admin/formations"
+            />
+            <SidebarMenuItem
+              icon={<BarChart2 />}
+              label="Statistiques"
+              href="/admin/stats"
+            />
+            <SidebarMenuItem
+              icon={<Settings />}
+              label="Paramètres"
+              href="/admin/settings"
+            />
+            <SidebarMenuItem
+              icon={<AlertCircle />}
+              label="Signalements"
+              href="/admin/signalements"
+            />
+            <SidebarMenuItem
+              icon={<LogOut />}
+              label="Déconnexion"
+              href="#"
+              onClick={handleLogout}
+            />
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>

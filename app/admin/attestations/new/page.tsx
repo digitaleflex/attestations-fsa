@@ -9,6 +9,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import "@/components/ui/input-style.css";
+import { toast } from "sonner";
 
 const ATTESTATION_TYPES = [
   { value: "FORMATION", label: "Formation" },
@@ -24,8 +25,8 @@ export default function NewAttestationPage() {
     formation: "",
     startDate: "",
     endDate: "",
-    location: "",
-    instructor: "",
+    location: "Abomey-Calavi, Bénin",
+    instructor: "M. SPERO HOUNYEME",
     issuingCompany: "La Ferme Agro Piscicole Cité St André",
     type: "FORMATION",
   });
@@ -79,8 +80,10 @@ export default function NewAttestationPage() {
         issuingCompany: "La Ferme Agro Piscicole Cité St André",
         type: "FORMATION",
       });
+      toast.success("Attestation créée avec succès !");
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur inconnue");
     } finally {
       setLoading(false);
     }

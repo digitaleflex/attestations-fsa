@@ -10,32 +10,39 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import "@/components/ui/input-style.css";
 import clsx from "clsx";
+import { toast } from "sonner";
+import { useQuery } from '@tanstack/react-query';
 
 export default function EditFormationPage() {
   const { id } = useParams();
   const router = useRouter();
   const [form, setForm] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<any>({});
 
+  // Chargement rapide via React Query
+  const { data: formationData, isLoading: formationLoading, error: formationError } = useQuery({
+    queryKey: ['formation', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/formations/${id}`);
+      if (!res.ok) throw new Error('Erreur lors du chargement de la formation');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/formations/${id}`)
-      .then(res => res.json())
-      .then((formation) => {
-        setForm({
-          name: formation.name,
-          category: formation.category,
-          description: formation.description,
-          skills: Array.isArray(formation.skills) ? formation.skills.join(", ") : "",
-        });
-      })
-      .catch(() => setError("Erreur lors du chargement de la formation."))
-      .finally(() => setLoading(false));
-  }, [id]);
+    if (formationData) {
+      setForm({
+        name: formationData.name,
+        category: formationData.category,
+        description: formationData.description,
+        skills: Array.isArray(formationData.skills) ? formationData.skills.join(", ") : "",
+      });
+    }
+    if (formationError) setError("Erreur lors du chargement de la formation.");
+  }, [formationData, formationError]);
 
   const validate = (values: any) => {
     const errors: any = {};
@@ -81,18 +88,21 @@ export default function EditFormationPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.message || "Erreur lors de la mise à jour de la formation");
+        toast.error(data.message || "Erreur lors de la mise à jour de la formation");
         return;
       }
       setSuccess(true);
+      toast.success("Formation modifiée avec succès !");
       setTimeout(() => router.push(`/admin/formations/${id}`), 1200);
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur inconnue");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading || !form) {
+  if (formationLoading || !form) {
     return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin w-8 h-8 text-muted-foreground" /></div>;
   }
 

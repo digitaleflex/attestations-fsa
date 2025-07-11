@@ -1,19 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, FileDown, Printer } from 'lucide-react';
+import { CheckCircle, XCircle, FileDown, Printer, Copy } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { useRef } from "react";
 import { QRCodeSVG } from 'qrcode.react';
+import Image from "next/image";
+import { toast } from "sonner";
+
+// Composant utilitaire pour afficher une date formatée côté client uniquement
+function DateLocale({ date, options }: { date: string | Date, options?: Intl.DateTimeFormatOptions }) {
+  const [formatted, setFormatted] = useState("");
+  useEffect(() => {
+    if (date) {
+      setFormatted(new Date(date).toLocaleDateString('fr-FR', options));
+    }
+  }, [date, options]);
+  return <span>{formatted}</span>;
+}
 
 export default function AttestationDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,6 +45,14 @@ export default function AttestationDetailPage() {
       .catch(() => setError("Attestation non trouvée ou erreur serveur."))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Déclenchement auto du PDF si ?pdf=1
+  useEffect(() => {
+    if (!loading && data && searchParams.get("pdf") === "1") {
+      setTimeout(() => handleDownloadPDF(), 400);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, data, searchParams]);
 
   const handleStatus = async (status: 'VALIDATED' | 'REJECTED') => {
     setActionLoading(true);
@@ -74,6 +96,11 @@ export default function AttestationDetailPage() {
         .then(() => setPdfMsg("PDF téléchargé avec succès !"))
         .catch(() => setPdfMsg("Erreur lors de la génération du PDF."));
     }
+  };
+
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success("Code copié !");
   };
 
   if (loading) {
@@ -149,7 +176,7 @@ export default function AttestationDetailPage() {
           }}>FSA</div>
           {/* Logo et bannière */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24, zIndex: 1 }}>
-            <img src="/logo-fsa.png" alt="Logo FSA" style={{ height: 64, marginRight: 16 }} />
+            <Image src="/logo-fsa.png" alt="Logo FSA" width={64} height={64} style={{ marginRight: 16 }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ fontSize: 28, fontWeight: 700, color: '#2563eb', letterSpacing: 1 }}>ATTESTATION OFFICIELLE</div>
               <div style={{ fontSize: 16, color: '#666', marginTop: 4 }}>Ferme Agro Piscicole St André</div>
@@ -159,7 +186,10 @@ export default function AttestationDetailPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, zIndex: 1 }}>
             <div>
               <div style={{ fontSize: 14, color: '#888' }}>Code attestation</div>
-              <div style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, color: '#2563eb' }}>{data.code}</div>
+              <div style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {data.code}
+                {/* Bouton de copie supprimé */}
+              </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 14, color: '#888' }}>Statut</div>
@@ -169,32 +199,89 @@ export default function AttestationDetailPage() {
           <div style={{ background: '#fff', borderRadius: 8, padding: 24, marginBottom: 24, border: '1px solid #e5e7eb', zIndex: 1 }}>
             <div style={{ fontSize: 18, fontWeight: 600, color: '#16a34a', marginBottom: 8 }}>Délivré à</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#222', marginBottom: 8 }}>{data.fullName}</div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Né(e) le {new Date(data.birthDate).toLocaleDateString()} à {data.birthPlace}</div>
+            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Né(e) le <DateLocale date={data.birthDate} /> à {data.birthPlace}</div>
             <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Type : {data.type}</div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Période : du {new Date(data.startDate).toLocaleDateString()} au {new Date(data.endDate).toLocaleDateString()}</div>
+            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Période : du <DateLocale date={data.startDate} /> au <DateLocale date={data.endDate} /></div>
             <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Lieu : {data.location}</div>
             <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Formateur : {data.instructor}</div>
             <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Société émettrice : {data.issuingCompany}</div>
           </div>
           {/* Détails formation */}
-          <div style={{ background: '#f0fdf4', borderRadius: 8, padding: 20, marginBottom: 24, border: '1px solid #bbf7d0', zIndex: 1 }}>
-            <div style={{ fontWeight: 700, color: '#16a34a', fontSize: 16, marginBottom: 4 }}>{data.formation?.name || '-'}</div>
-            <div style={{ color: '#166534', fontSize: 14, marginBottom: 2 }}>Catégorie : {data.formation?.category || '-'}</div>
-            <div style={{ color: '#166534', fontSize: 14, marginBottom: 2 }}>Description : {data.formation?.description || '-'}</div>
-            <div style={{ color: '#166534', fontSize: 14 }}>Compétences : {Array.isArray(data.formation?.skills) ? data.formation.skills.join(', ') : '-'}</div>
+          <div style={{ background: '#f0fdf4', borderRadius: 8, padding: 24, marginBottom: 32, border: '1px solid #bbf7d0', zIndex: 1 }}>
+            <div style={{ fontWeight: 700, color: '#16a34a', fontSize: 18, marginBottom: 12, letterSpacing: 0.5 }}>{data.formation?.name || '-'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 15, color: '#166534', marginBottom: 4 }}>
+                <span style={{ fontWeight: 700 }}>Catégorie :</span> {data.formation?.category || '-'}
+              </div>
+              <div style={{ fontSize: 15, color: '#166534', marginBottom: 4 }}>
+                <span style={{ fontWeight: 700 }}>Description :</span> {data.formation?.description || '-'}
+              </div>
+              <div style={{ fontSize: 15, color: '#166534' }}>
+                <span style={{ fontWeight: 700 }}>Compétences :</span> {Array.isArray(data.formation?.skills) ? data.formation.skills.join(', ') : '-'}
+              </div>
+            </div>
           </div>
           {/* QR code et signature */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 32, zIndex: 1 }}>
             <div>
               <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>Signature du responsable</div>
-              <div style={{ width: 220, height: 40, borderBottom: '2px solid #aaa', marginBottom: 8 }}></div>
-              <div style={{ fontSize: 13, color: '#888' }}>Date : {new Date(data.issuedAt).toLocaleDateString()}</div>
+              <div style={{ width: 220, height: 40, borderBottom: '2px solid #b91c1c', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
+                <Image src="/signature-responsable.png" alt="Signature du responsable" fill style={{ objectFit: 'contain', maxWidth: '100%', maxHeight: '100%', left: 0, bottom: 0, position: 'absolute', filter: 'grayscale(0.2)' }} />
+              </div>
+              <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>Date : <DateLocale date={data.issuedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /></div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <QRCodeSVG value={`${siteUrl}/verify/${data.code}`} size={80} level="M" includeMargin={true} />
-              <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Vérification</div>
+              <QRCodeSVG value={`https://verifier.fermestandre.com/${data.code}`} size={80} level="M" includeMargin={true} />
+              <div style={{ fontSize: 13, color: '#b91c1c', marginTop: 4, fontWeight: 700 }}>
+                Vérification
+              </div>
             </div>
           </div>
+          {/* Formule officielle */}
+          <div style={{ marginTop: 18, textAlign: 'center', color: '#111', fontSize: 11, fontStyle: 'italic', lineHeight: 1.35, fontFamily: 'Georgia, Times, serif', maxWidth: 500, marginLeft: 'auto', marginRight: 'auto', letterSpacing: 0.01 }}>
+            La présente attestation est établie en toute bonne foi, sous la responsabilité de <span style={{ fontWeight: 700, color: '#b91c1c' }}>LA FERME AGRO PISCICOLE CITE ST ANDRE</span>, pour servir et faire valoir ce que de droit auprès de toute autorité ou organisme qui en fera la demande. Toute altération ou falsification de ce document expose son auteur à des poursuites conformément à la loi.<br />
+            <span style={{ fontWeight: 700 }}>
+              Fait à Abomey-Calavi, le <DateLocale date={data.issuedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} />.
+            </span>
+          </div>
+          {/* Encadré informations légales & contact */}
+          <div style={{
+            marginTop: 10,
+            padding: 8,
+            border: '1px solid #b91c1c',
+            borderRadius: 6,
+            background: '#fff',
+            fontSize: 10,
+            color: '#111',
+            fontFamily: 'Arial, Helvetica, sans-serif',
+            fontWeight: 500,
+            boxShadow: '0 1px 4px #0001',
+            maxWidth: 380,
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            letterSpacing: 0.01
+          }}>
+            Cette attestation est strictement personnelle et ne peut être cédée à un tiers.<br />
+            Pour toute vérification, contactez : <a href="mailto:security@fermestandre.com" style={{ color: '#b91c1c', textDecoration: 'underline' }}>security@fermestandre.com</a>
+            <div style={{ fontSize: 9, color: '#b91c1c', marginTop: 4, fontWeight: 600, textAlign: 'center', letterSpacing: 0.01 }}>
+              Vérifiez l’authenticité de ce document sur verifier.fermestandre.com
+            </div>
+          </div>
+        </div>
+        {/* Pied de page vérification */}
+        <div style={{
+          textAlign: 'center',
+          fontSize: 12,
+          color: '#b91c1c',
+          marginTop: 24,
+          fontWeight: 500,
+          letterSpacing: 0.5,
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          opacity: 0.85
+        }}>
+          Vérifiez l’authenticité de ce document sur <span style={{ fontWeight: 700 }}>verifier.fermestandre.com</span>
         </div>
         <Button variant="outline" onClick={() => router.push("/admin/attestations")}>Retour à la liste</Button>
       </Card>

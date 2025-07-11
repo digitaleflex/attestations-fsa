@@ -11,13 +11,28 @@ const FormationSchema = z.object({
   skills: z.array(z.string()).optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
+  const url = new URL(request.url);
+  const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
+  const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
+  const search = url.searchParams.get('search') || '';
   try {
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { category: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
     const formations = await prisma.formation.findMany({
-      select: { id: true, name: true }
+      where,
+      select: { id: true, name: true, category: true, description: true },
+      ...(limit ? { take: limit } : {}),
+      skip: offset,
     });
     return NextResponse.json(formations);
   } catch (error) {

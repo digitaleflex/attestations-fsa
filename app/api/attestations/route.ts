@@ -29,10 +29,20 @@ export async function GET(request: Request) {
   const countOnly = url.searchParams.get('count') === '1';
   const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
   const order = url.searchParams.get('order') === 'asc' ? 'asc' : 'desc';
+  const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
+  const search = url.searchParams.get('search') || '';
 
   // Filtre dynamique
   const where: any = {};
   if (status) where.status = status;
+  if (search) {
+    where.OR = [
+      { fullName: { contains: search, mode: 'insensitive' } },
+      { code: { contains: search, mode: 'insensitive' } },
+      { type: { contains: search, mode: 'insensitive' } },
+      { formation: { name: { contains: search, mode: 'insensitive' } } },
+    ];
+  }
 
   if (countOnly) {
     try {
@@ -47,7 +57,8 @@ export async function GET(request: Request) {
       where,
       orderBy: { issuedAt: order },
       include: { formation: { select: { name: true } } },
-      ...(limit ? { take: limit } : {})
+      ...(limit ? { take: limit } : {}),
+      skip: offset,
     });
     return NextResponse.json(attestations);
   } catch (error) {

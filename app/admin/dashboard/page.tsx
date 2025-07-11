@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Users, FileText, CheckCircle, Clock, PlusCircle, GraduationCap } from 'lucide-react';
+import { Home, FileText, GraduationCap, AlertCircle, LogOut, ChevronLeft, ChevronRight, CheckCircle, Clock, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
@@ -21,6 +21,8 @@ export default function AdminDashboard() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [lastAttestations, setLastAttestations] = useState<any[]>([]);
   const [loadingLast, setLoadingLast] = useState(true);
+  const [signalementsCount, setSignalementsCount] = useState<number>(0);
+  const { state, toggleSidebar } = useSidebar();
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -59,6 +61,12 @@ export default function AdminDashboard() {
       .finally(() => setLoadingLast(false));
   }, []);
 
+  useEffect(() => {
+    fetch('/api/signalement?countOnly=1')
+      .then(res => res.json())
+      .then(data => setSignalementsCount(data.count || 0));
+  }, []);
+
   if (!isAuth) {
     return null;
   }
@@ -67,48 +75,25 @@ export default function AdminDashboard() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          {/* Bouton hamburger mobile */}
-          <div className="md:hidden mb-2">
-            <SidebarTrigger />
-          </div>
+          <button
+            onClick={toggleSidebar}
+            aria-label={state === 'expanded' ? 'Réduire la sidebar' : 'Développer la sidebar'}
+            className="p-2 rounded hover:bg-gray-100 transition ml-auto mb-2"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {state === 'expanded' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+          </button>
           <span className="text-lg font-bold">Admin</span>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={true}>
-                <a href="/admin/dashboard">Dashboard</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/attestations/new">Nouvelle attestation</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/formations/new">Nouvelle formation</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/formations">Liste des formations</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="/admin/attestations">Liste des attestations</a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <Button variant="outline" className="w-full justify-start" onClick={() => {
-                fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-                  .then(() => router.push('/admin/login'));
-              }}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Déconnexion
-              </Button>
-            </SidebarMenuItem>
+            <SidebarMenuItem icon={<Home className="w-5 h-5" />} label="Dashboard" href="/admin/dashboard" />
+            <SidebarMenuItem icon={<FileText className="w-5 h-5" />} label="Attestations" href="/admin/attestations" />
+            <SidebarMenuItem icon={<GraduationCap className="w-5 h-5" />} label="Formations" href="/admin/formations" />
+            <SidebarMenuItem icon={<AlertCircle className="w-5 h-5" />} label="Signalements" href="/admin/signalements" badge={signalementsCount > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse">{signalementsCount}</span>
+            )} />
+            <SidebarMenuItem icon={<LogOut className="w-5 h-5" />} label="Déconnexion" href="/admin/logout" />
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>

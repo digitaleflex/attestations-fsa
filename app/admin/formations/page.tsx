@@ -4,45 +4,115 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Eye, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Loader2, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useRef, useCallback } from 'react';
 
 export default function FormationsListPage() {
-  const [formations, setFormations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const router = useRouter();
 
+  const LIMIT = 20;
+
+  // Infinite Query pour les formations
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ['formations', search],
+    queryFn: async ({ pageParam = 0 }) => {
+      const res = await fetch(`/api/formations?limit=${LIMIT}&offset=${pageParam}&search=${encodeURIComponent(search)}`);
+      if (!res.ok) throw new Error('Erreur lors du chargement');
+      return res.json();
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < LIMIT) return undefined;
+      return allPages.flat().length;
+    },
+    initialPageParam: 0,
+  });
+
+  // Fusionner toutes les pages
+  const formations = data ? data.pages.flat() : [];
+
+  // Infinite scroll: observer
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/formations")
-      .then((res) => res.json())
-      .then((data) => setFormations(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false));
-  }, []);
+    const option = { root: null, rootMargin: '20px', threshold: 1.0 };
+    const observer = new window.IntersectionObserver(handleObserver, option);
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => { if (loaderRef.current) observer.unobserve(loaderRef.current); };
+  }, [handleObserver]);
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
       await fetch(`/api/formations/${id}`, { method: "DELETE" });
-      setFormations((prev) => prev.filter((f) => f.id !== id));
+      refetch();
       setShowConfirm(null);
+      toast.success("Formation supprimée avec succès !");
     } catch {
-      alert("Erreur lors de la suppression");
+      toast.error("Erreur lors de la suppression");
     } finally {
       setDeletingId(null);
     }
   };
 
+  // Fonction utilitaire pour exporter en CSV
+  const exportCSV = () => {
+    const headers = [
+      "Nom",
+      "Catégorie",
+      "Description",
+      "Compétences"
+    ];
+    const rows = formations.map((f) => [
+      f.name,
+      f.category,
+      f.description,
+      Array.isArray(f.skills) ? f.skills.join(", ") : ""
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "formations.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Export CSV généré !");
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Card className="bg-white rounded-xl shadow-md p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-3xl">📚</span>
-          <h2 className="text-2xl font-semibold">Liste des formations</h2>
+        <div className="flex items-center gap-3 mb-6 justify-between flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">📚</span>
+            <h2 className="text-2xl font-semibold">Liste des formations</h2>
+          </div>
+          <Button onClick={exportCSV} variant="outline" className="gap-2">
+            <Download className="w-4 h-4" /> Exporter CSV
+          </Button>
         </div>
-        {loading ? (
+        {isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : formations.length === 0 ? (
           <div className="text-center text-muted-foreground py-12">Aucune formation trouvée.</div>
@@ -103,6 +173,8 @@ export default function FormationsListPage() {
                 ))}
               </tbody>
             </table>
+            <div ref={loaderRef} />
+            {isFetchingNextPage && <div className="text-center py-4"><Loader2 className="animate-spin mx-auto" /></div>}
           </div>
         )}
       </Card>
