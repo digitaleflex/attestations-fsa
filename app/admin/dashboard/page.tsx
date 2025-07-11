@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, FileText, GraduationCap, AlertCircle, LogOut, ChevronLeft, ChevronRight, CheckCircle, Clock, PlusCircle } from 'lucide-react';

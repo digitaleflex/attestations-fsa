@@ -2,6 +2,7 @@
 
 import NextError from "next/error";
 import { useEffect } from "react";
+import * as React from "react"
 
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   // Sentry supprimé : plus de capture automatique

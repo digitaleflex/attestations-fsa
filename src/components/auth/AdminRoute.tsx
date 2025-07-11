@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import type { User } from 'next-auth';
+import * as React from "react"
 
 export default function AdminRoute({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();

@@ -55,21 +55,6 @@ function useSidebar() {
   return context
 }
 
-// Hook pour charger le nombre de signalements
-function useSignalementsCount() {
-  return useQuery({
-    queryKey: ['signalementsCount'],
-    queryFn: async () => {
-      const res = await fetch('/api/signalement?countOnly=1');
-      if (!res.ok) throw new Error('Erreur chargement signalements');
-      const data = await res.json();
-      return data.count || 0;
-    },
-    staleTime: 60 * 1000, // 1 min de cache
-    refetchOnWindowFocus: false,
-  });
-}
-
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {

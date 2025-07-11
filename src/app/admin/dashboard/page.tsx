@@ -1,3 +1,4 @@
+import * as React from "react"
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
 
 export default function AdminDashboard() {
@@ -9,22 +10,22 @@ export default function AdminDashboard() {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
+            <SidebarMenuItem label={""} href={""} icon={undefined}>
               <SidebarMenuButton asChild isActive={true}>
                 <a href="/admin/dashboard">Dashboard</a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            <SidebarMenuItem label={""} href={""} icon={undefined}>
               <SidebarMenuButton asChild>
                 <a href="/admin/attestations/new">Nouvelle attestation</a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            <SidebarMenuItem label={""} href={""} icon={undefined}>
               <SidebarMenuButton asChild>
                 <a href="/admin/attestations">Liste des attestations</a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            <SidebarMenuItem label={""} href={""} icon={undefined}>
               <SidebarMenuButton asChild>
                 <a href="/admin/logout">Déconnexion</a>
               </SidebarMenuButton>

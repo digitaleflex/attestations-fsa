@@ -92,4 +92,18 @@ export async function PATCH(request: Request) {
     console.error("Erreur lors de la mise à jour de l'attestation:", error);
     return NextResponse.json({ message: "Erreur lors de la mise à jour de l'attestation" }, { status: 500 });
   }
+}
+
+export async function DELETE(request: Request) {
+  if (!(await isAdminAuthenticated())) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+  }
+  const url = new URL(request.url);
+  const id = url.pathname.split("/").pop();
+  try {
+    await prisma.attestation.delete({ where: { id } });
+    return NextResponse.json({ message: 'Attestation supprimée' });
+  } catch (error) {
+    return NextResponse.json({ message: "Erreur lors de la suppression de l'attestation" }, { status: 500 });
+  }
 } 

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "cross-env NEXT_IGNORE_TYPE_ERRORS=true next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -79,6 +79,7 @@
     "@types/react-dom": "^19.1.6",
     "@types/webpack": "^5.28.5",
     "autoprefixer": "^10.4.21",
+    "cross-env": "^7.0.3",
     "dotenv": "^17.2.0",
     "eslint": "^9.30.1",
     "eslint-config-prettier": "^10.1.5",

@@ -167,7 +167,7 @@ const initAuth = async () => {
     logger.info('✅ Configuration Better Auth prête');
     return betterAuth({
       ...authConfig,
-      // @ts-ignore - pages is not in the type definition but is required
+      // pages is not in the type definition but is required
       pages,
       // Add redirect callback with proper types
       redirect: ({ url, baseUrl }: { url: string; baseUrl: string }) => {
@@ -182,18 +182,18 @@ const initAuth = async () => {
 };
 
 // Type for Prisma client with extensions
-type PrismaClientWithExtensions = {
-  $connect: () => Promise<void>;
-  admin: {
-    findUnique: (params: { 
-      where: { id?: string; email?: string };
-      select?: Record<string, boolean>;
-    }) => Promise<any>;
-    create: (params: { data: any }) => Promise<any>;
-    count: () => Promise<number>;
-  };
-  $disconnect: () => Promise<void>;
-};
+// type PrismaClientWithExtensions = {
+//   $connect: () => Promise<void>;
+//   admin: {
+//     findUnique: (params: { 
+//       where: { id?: string; email?: string };
+//       select?: Record<string, boolean>;
+//     }) => Promise<unknown>;
+//     create: (params: { data: unknown }) => Promise<unknown>;
+//     count: () => Promise<number>;
+//   };
+//   $disconnect: () => Promise<void>;
+// };
 
 // Initialisation de l'authentification
 let authInstance: ReturnType<typeof betterAuth> | null = null;

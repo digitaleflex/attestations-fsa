@@ -1,3 +1,4 @@
+import * as React from "react"
 import { prisma } from "@/lib/prisma";
 import { AlertCircle } from "lucide-react";
 
