@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { z } from 'zod'
+
+// Schéma de validation pour la connexion admin
+const LoginSchema = z.object({
+  email: z.string().email('Email invalide'),
+  password: z.string().min(1, 'Le mot de passe est requis'),
+});
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json()
-    if (!email || !password) {
-      return NextResponse.json({ message: 'Email et mot de passe requis' }, { status: 400 })
+    const body = await request.json()
+    const parse = LoginSchema.safeParse(body)
+    if (!parse.success) {
+      return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 })
     }
+    const { email, password } = parse.data
     const admin = await prisma.admin.findUnique({ where: { email } })
     if (!admin) {
       return NextResponse.json({ message: 'Aucun compte admin trouvé' }, { status: 401 })

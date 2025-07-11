@@ -1,11 +1,13 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import Image from "next/image";
 
 export default function SettingsPage() {
   // États
@@ -166,7 +168,7 @@ export default function SettingsPage() {
             <div>
               <Label htmlFor="logo">Logo</Label>
               <Input id="logo" type="file" accept="image/*" onChange={handleLogoChange} className="input-style" ref={logoInputRef} />
-              {logo && <img src={logo} alt="Logo institution" className="mt-2 h-16 rounded shadow" />}
+              {logo && <Image src={logo} alt="Logo institution" width={64} height={64} className="mt-2 h-16 rounded shadow" />}
             </div>
             <div>
               <Label htmlFor="email">Email reply-to</Label>

@@ -1,9 +1,11 @@
 'use client'
 
+import * as React from "react"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Lock, Mail } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -12,6 +14,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const router = useRouter()
   const [year, setYear] = useState<number | null>(null)
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setYear(new Date().getFullYear())
@@ -86,7 +89,7 @@ export default function AdminLoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900"
+                    className={`block w-full pl-10 pr-3 py-3 border ${error ? 'border-red-500' : 'border-gray-300'} rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900`}
                     placeholder="votre@email.com"
                   />
                 </div>
@@ -113,7 +116,7 @@ export default function AdminLoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900"
+                    className={`block w-full pl-10 pr-3 py-3 border ${error ? 'border-red-500' : 'border-gray-300'} rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900`}
                     placeholder="••••••••"
                   />
                 </div>
@@ -122,9 +125,11 @@ export default function AdminLoginPage() {
               <div>
                 <motion.button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !email || !password}
                   whileTap={{ scale: 0.98 }}
-                  className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${isLoading ? 'opacity-80 cursor-not-allowed' : ''}`}
+                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['dashboard'], queryFn: () => fetch('/admin/dashboard').then(res => res.text()) })}
+                  onFocus={() => queryClient.prefetchQuery({ queryKey: ['dashboard'], queryFn: () => fetch('/admin/dashboard').then(res => res.text()) })}
+                  className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${isLoading || !email || !password ? 'opacity-80 cursor-not-allowed' : ''}`}
                 >
                   {isLoading ? (
                     <>

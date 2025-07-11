@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,12 +13,31 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+// Définition du type Attestation pour le typage strict
+
+type AttestationStatus = "PENDING" | "VALIDATED" | "REJECTED";
+type AttestationType = "FORMATION" | "STAGE" | "CERTIFICATION";
+
+interface Attestation {
+  fullName: string;
+  type: AttestationType;
+  status: AttestationStatus;
+  startDate: string;
+  endDate: string;
+  location: string;
+  instructor: string;
+  formation?: {
+    name?: string;
+    category?: string;
+  };
+}
+
 export default function VerifierPage() {
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Attestation | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema)
   });
 
@@ -33,11 +52,15 @@ export default function VerifierPage() {
         const err = await res.json();
         throw new Error(err.error || "Erreur serveur");
       }
-      const { attestation } = await res.json();
+      const { attestation }: { attestation: Attestation } = await res.json();
       setResult(attestation);
       setTimeout(() => setShowConfetti(true), 200); // petit délai pour l'effet
-    } catch (e: any) {
-      setError(e.message || "Erreur inconnue");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message || "Erreur inconnue");
+      } else {
+        setError("Erreur inconnue");
+      }
     } finally {
       setLoading(false);
     }
@@ -81,41 +104,69 @@ export default function VerifierPage() {
         </form>
         {/* Résultat */}
         {result && (
-          <div className="w-full animate-fade-in-up rounded-xl border border-green-200 bg-white/70 backdrop-blur-md p-6 mt-2 text-green-900 relative overflow-hidden">
-            {/* Confetti SVG simple */}
-            {showConfetti && (
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 400 120" fill="none">
-                <circle cx="40" cy="30" r="6" fill="#16a34a" opacity="0.7" />
-                <circle cx="120" cy="20" r="4" fill="#facc15" opacity="0.7" />
-                <circle cx="200" cy="35" r="7" fill="#2563eb" opacity="0.7" />
-                <circle cx="300" cy="25" r="5" fill="#f59e42" opacity="0.7" />
-                <circle cx="360" cy="40" r="6" fill="#16a34a" opacity="0.7" />
-                <circle cx="80" cy="60" r="5" fill="#f59e42" opacity="0.7" />
-                <circle cx="250" cy="60" r="4" fill="#facc15" opacity="0.7" />
-                <circle cx="340" cy="70" r="6" fill="#2563eb" opacity="0.7" />
-              </svg>
-            )}
-            {/* Illustration de succès */}
-            <div className="flex items-center gap-4 mb-4">
-              <svg viewBox="0 0 60 60" width={60} height={60} aria-hidden className="drop-shadow-lg">
-                <circle cx="30" cy="30" r="28" fill="#f0fdf4" stroke="#16a34a" strokeWidth="3" />
-                <ShieldCheck x="15" y="15" width="30" height="30" color="#16a34a" />
-                <Sparkles x="38" y="10" width="16" height="16" color="#facc15" />
-              </svg>
-              <div>
-                <span className="inline-block px-3 py-1 rounded-full bg-green-600 text-white text-sm font-bold animate-pulse">Attestation valide</span>
-                <div className="text-lg font-bold text-green-800 mt-1">Félicitations !</div>
+          (() => {
+            let color = "green";
+            let message = "Attestation validée";
+            let subtitle = "Félicitations !";
+            let badgeClass = "bg-green-600";
+            let textClass = "text-green-900";
+            let borderClass = "border-green-200";
+            let infoClass = "text-green-700";
+            if (result.status === "PENDING") {
+              color = "yellow";
+              message = "Attestation en attente de validation";
+              subtitle = "Cette attestation n'a pas encore été validée.";
+              badgeClass = "bg-yellow-500";
+              textClass = "text-yellow-900";
+              borderClass = "border-yellow-300";
+              infoClass = "text-yellow-700";
+            } else if (result.status === "REJECTED") {
+              color = "red";
+              message = "Attestation rejetée";
+              subtitle = "Cette attestation a été refusée.";
+              badgeClass = "bg-red-600";
+              textClass = "text-red-900";
+              borderClass = "border-red-200";
+              infoClass = "text-red-700";
+            }
+            return (
+              <div className={`w-full animate-fade-in-up rounded-xl ${borderClass} bg-white/70 backdrop-blur-md p-6 mt-2 ${textClass} relative overflow-hidden`}>
+                {/* Confetti SVG simple */}
+                {showConfetti && color === "green" && (
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 400 120" fill="none">
+                    <circle cx="40" cy="30" r="6" fill="#16a34a" opacity="0.7" />
+                    <circle cx="120" cy="20" r="4" fill="#facc15" opacity="0.7" />
+                    <circle cx="200" cy="35" r="7" fill="#2563eb" opacity="0.7" />
+                    <circle cx="300" cy="25" r="5" fill="#f59e42" opacity="0.7" />
+                    <circle cx="360" cy="40" r="6" fill="#16a34a" opacity="0.7" />
+                    <circle cx="80" cy="60" r="5" fill="#f59e42" opacity="0.7" />
+                    <circle cx="250" cy="60" r="4" fill="#facc15" opacity="0.7" />
+                    <circle cx="340" cy="70" r="6" fill="#2563eb" opacity="0.7" />
+                  </svg>
+                )}
+                {/* Illustration de succès/attente/refus */}
+                <div className="flex items-center gap-4 mb-4">
+                  <svg viewBox="0 0 60 60" width={60} height={60} aria-hidden className="drop-shadow-lg">
+                    <circle cx="30" cy="30" r="28" fill="#f0fdf4" stroke={color === "green" ? "#16a34a" : color === "yellow" ? "#facc15" : "#dc2626"} strokeWidth="3" />
+                    <ShieldCheck x="15" y="15" width="30" height="30" color={color === "green" ? "#16a34a" : color === "yellow" ? "#facc15" : "#dc2626"} />
+                    {color === "green" && <Sparkles x="38" y="10" width="16" height="16" color="#facc15" />}
+                  </svg>
+                  <div>
+                    <span className={`inline-block px-3 py-1 rounded-full ${badgeClass} text-white text-sm font-bold animate-pulse`}>{message}</span>
+                    <div className={`text-lg font-bold mt-1 ${textClass}`}>{subtitle}</div>
+                  </div>
+                </div>
+                <div className="mb-1"><span className="font-semibold">Nom :</span> {result.fullName}</div>
+                <div className="mb-1"><span className="font-semibold">Formation :</span> {result.formation?.name || '-'} </div>
+                <div className="mb-1"><span className="font-semibold">Type :</span> {result.type}</div>
+                <div className="mb-1"><span className="font-semibold">Dates :</span> {new Date(result.startDate).toLocaleDateString()} - {new Date(result.endDate).toLocaleDateString()}</div>
+                <div className="mb-1"><span className="font-semibold">Lieu :</span> {result.location}</div>
+                <div className="mb-1"><span className="font-semibold">Formateur :</span> {result.instructor}</div>
+                <div className="mb-1"><span className="font-semibold">Statut :</span> <span className={`inline-block px-2 py-1 rounded ${badgeClass} text-white text-xs ml-1`}>{result.status}</span></div>
+                <div className={`mt-4 ${infoClass} text-sm italic`}>La Ferme St André s’engage pour la confiance et la transparence de vos parcours professionnels.</div>
               </div>
-            </div>
-            <div className="mb-1"><span className="font-semibold">Nom :</span> {result.fullName}</div>
-            <div className="mb-1"><span className="font-semibold">Formation :</span> {result.formation?.name || '-'}</div>
-            <div className="mb-1"><span className="font-semibold">Type :</span> {result.type}</div>
-            <div className="mb-1"><span className="font-semibold">Dates :</span> {new Date(result.startDate).toLocaleDateString()} - {new Date(result.endDate).toLocaleDateString()}</div>
-            <div className="mb-1"><span className="font-semibold">Lieu :</span> {result.location}</div>
-            <div className="mb-1"><span className="font-semibold">Formateur :</span> {result.instructor}</div>
-            <div className="mb-1"><span className="font-semibold">Statut :</span> <span className="inline-block px-2 py-1 rounded bg-green-600 text-white text-xs ml-1">{result.status}</span></div>
-            <div className="mt-4 text-green-700 text-sm italic">La Ferme St André s’engage pour la confiance et la transparence de vos parcours professionnels.</div>
-          </div>
+            );
+          })()
         )}
         {error && (
           <div className="w-full animate-fade-in rounded-xl border border-red-200 bg-red-50 p-6 mt-2 text-red-900 flex items-center gap-2">

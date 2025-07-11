@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import "@/components/ui/input-style.css";
+import { toast } from "sonner";
 
 export default function NewFormationPage() {
   const [form, setForm] = useState({
@@ -43,9 +45,11 @@ export default function NewFormationPage() {
       if (!res.ok) throw new Error("Erreur lors de la création de la formation");
       setSuccess(true);
       setForm({ name: "", category: "", description: "", skills: "" });
+      toast.success("Formation créée avec succès !");
       setTimeout(() => router.push("/admin/attestations/new"), 1200);
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur inconnue");
     } finally {
       setLoading(false);
     }

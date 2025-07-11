@@ -45,3 +45,6 @@ next-env.d.ts
 
 #Ignore cursor AI rules
 .cursor\rules\codacy.mdc
+
+# Sentry Config File
+.env.sentry-build-plugin

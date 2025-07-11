@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { isAdminAuthenticated } from '@/lib/auth';
+import { z } from 'zod';
+
+// Schéma de validation pour la modification admin
+const AdminPatchSchema = z.object({
+  name: z.string().min(1, 'Le nom est requis.').optional(),
+  oldPassword: z.string().min(8, 'L\'ancien mot de passe doit contenir au moins 8 caractères').optional(),
+  newPassword: z.string().min(8, 'Le nouveau mot de passe doit contenir au moins 8 caractères').optional(),
+});
 
 // GET /api/admin
 export async function GET() {
@@ -18,7 +26,11 @@ export async function PATCH(request: Request) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   const body = await request.json();
-  const { name, oldPassword, newPassword } = body;
+  const parse = AdminPatchSchema.safeParse(body);
+  if (!parse.success) {
+    return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
+  }
+  const { name, oldPassword, newPassword } = parse.data;
   let admin = await prisma.admin.findFirst();
   if (!admin) return NextResponse.json({ message: 'Admin introuvable' }, { status: 404 });
 

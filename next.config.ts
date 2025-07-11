@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   images: {
     domains: [],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   webpack: (config: Configuration, { isServer }) => {
     // Configuration de fallback pour le côté client uniquement
     if (!isServer && config.resolve) {

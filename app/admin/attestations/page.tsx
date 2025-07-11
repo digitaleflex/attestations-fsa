@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,49 +9,112 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import "@/components/ui/input-style.css";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Loader2, Eye, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Eye, Pencil, Trash2, FileDown, Download, Copy } from "lucide-react";
+import { toast } from "sonner";
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useRef, useCallback } from 'react';
 
 export default function AttestationsListPage() {
-  const [attestations, setAttestations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string|null>(null);
   const [showConfirm, setShowConfirm] = useState<string|null>(null);
 
+  const LIMIT = 20;
+
+  // Infinite Query pour les attestations
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ['attestations', search],
+    queryFn: async ({ pageParam = 0 }) => {
+      const res = await fetch(`/api/attestations?limit=${LIMIT}&order=desc&offset=${pageParam}&search=${encodeURIComponent(search)}`);
+      if (!res.ok) throw new Error('Erreur lors du chargement');
+      return res.json();
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < LIMIT) return undefined;
+      return allPages.flat().length;
+    },
+    initialPageParam: 0,
+  });
+
+  // Fusionner toutes les pages
+  const attestations = data ? data.pages.flat() : [];
+
+  // Infinite scroll: observer
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    const option = { root: null, rootMargin: '20px', threshold: 1.0 };
+    const observer = new window.IntersectionObserver(handleObserver, option);
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => { if (loaderRef.current) observer.unobserve(loaderRef.current); };
+  }, [handleObserver]);
+
+  // Suppression (inchangée)
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
       await fetch(`/api/attestations/${id}`, { method: 'DELETE' });
-      setAttestations((prev) => prev.filter((a) => a.id !== id));
+      refetch();
       setShowConfirm(null);
+      toast.success("Attestation supprimée avec succès !");
     } catch {
-      alert("Erreur lors de la suppression");
+      toast.error("Erreur lors de la suppression");
     } finally {
       setDeletingId(null);
     }
   };
 
-  useEffect(() => {
-    fetch("/api/attestations")
-      .then((res) => res.json())
-      .then((data) => setAttestations(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false));
-  }, []);
+  // Filtrage côté client (optionnel, si search côté API)
+  // const filtered = attestations.filter(...)
 
-  const filtered = attestations.filter((a) => {
-    const q = search.toLowerCase();
-    if (q.length === 5) {
-      // Recherche sur le hash final du code
-      return a.code?.toLowerCase().endsWith('-' + q);
-    }
-    // Recherche globale classique
-    return (
-      a.fullName?.toLowerCase().includes(q) ||
-      a.code?.toLowerCase().includes(q) ||
-      a.formation?.name?.toLowerCase().includes(q) ||
-      a.type?.toLowerCase().includes(q)
-    );
-  });
+  // Fonction utilitaire pour exporter en CSV
+  const exportCSV = () => {
+    const headers = [
+      "Code",
+      "Nom complet",
+      "Formation",
+      "Type",
+      "Date émission",
+      "Status"
+    ];
+    const rows = attestations.map((a) => [
+      a.code,
+      a.fullName,
+      a.formation?.name || "-",
+      a.type,
+      a.issuedAt ? new Date(a.issuedAt).toLocaleDateString('fr-FR') : "-",
+      a.status
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "attestations.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Export CSV généré !");
+  };
+
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success("Code copié !");
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -59,7 +123,7 @@ export default function AttestationsListPage() {
           <span className="text-3xl">📄</span>
           <h2 className="text-2xl font-semibold">Liste des attestations</h2>
         </div>
-        <div className="mb-6">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -75,10 +139,13 @@ export default function AttestationsListPage() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          <Button onClick={exportCSV} variant="outline" className="gap-2">
+            <Download className="w-4 h-4" /> Exporter CSV
+          </Button>
         </div>
-        {loading ? (
+        {isLoading ? (
           <Skeleton className="h-32 w-full" />
-        ) : filtered.length === 0 ? (
+        ) : attestations.length === 0 ? (
           <div className="text-center text-muted-foreground py-12">Aucune attestation trouvée.</div>
         ) : (
           <div className="overflow-x-auto">
@@ -95,9 +162,14 @@ export default function AttestationsListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((a) => (
+                {attestations.map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-mono text-xs">{a.code}</TableCell>
+                    <TableCell className="font-mono text-xs flex items-center gap-1">
+                      {a.code}
+                      <button type="button" onClick={() => handleCopy(a.code)} aria-label="Copier le code" className="ml-1 p-1 rounded hover:bg-gray-100">
+                        <Copy className="w-4 h-4 text-gray-400 hover:text-blue-600 transition-colors" />
+                      </button>
+                    </TableCell>
                     <TableCell>{a.fullName}</TableCell>
                     <TableCell>{a.formation?.name || "-"}</TableCell>
                     <TableCell>{a.type}</TableCell>
@@ -124,6 +196,25 @@ export default function AttestationsListPage() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Modifier</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                            >
+                              <a
+                                href={`/admin/attestations/${a.id}?pdf=1`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="Télécharger PDF"
+                              >
+                                <FileDown className="w-4 h-4 text-green-700" />
+                              </a>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Télécharger PDF</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -161,6 +252,8 @@ export default function AttestationsListPage() {
                 ))}
               </TableBody>
             </Table>
+            <div ref={loaderRef} />
+            {isFetchingNextPage && <div className="text-center py-4"><Loader2 className="animate-spin mx-auto" /></div>}
           </div>
         )}
       </Card>

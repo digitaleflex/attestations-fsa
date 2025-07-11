@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -11,6 +12,8 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import "@/components/ui/input-style.css";
 import clsx from "clsx";
+import { toast } from "sonner";
+import { useQuery } from '@tanstack/react-query';
 
 const ATTESTATION_TYPES = [
   { value: "FORMATION", label: "Formation" },
@@ -22,7 +25,6 @@ export default function EditAttestationPage() {
   const { id } = useParams();
   const router = useRouter();
   const [form, setForm] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,30 +32,46 @@ export default function EditAttestationPage() {
   const [fieldErrors, setFieldErrors] = useState<any>({});
   const allowedTypes = ["FORMATION", "STAGE", "CERTIFICATION"];
 
+  // Chargement rapide via React Query
+  const { data: attData, isLoading: attLoading, error: attError } = useQuery({
+    queryKey: ['attestation', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/attestations/${id}`);
+      if (!res.ok) throw new Error('Erreur lors du chargement de l\'attestation');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: formationsData, isLoading: formationsLoading, error: formationsError } = useQuery({
+    queryKey: ['formations', 'all'],
+    queryFn: async () => {
+      const res = await fetch('/api/formations');
+      if (!res.ok) throw new Error('Erreur lors du chargement des formations');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
   useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      fetch(`/api/attestations/${id}`).then(res => res.json()),
-      fetch("/api/formations").then(res => res.json())
-    ])
-      .then(([att, formationsData]) => {
-        setForm({
-          fullName: att.fullName,
-          birthDate: att.birthDate?.slice(0, 10),
-          birthPlace: att.birthPlace,
-          formation: att.formation?.name || "",
-          startDate: att.startDate?.slice(0, 10),
-          endDate: att.endDate?.slice(0, 10),
-          location: att.location,
-          instructor: att.instructor,
-          issuingCompany: att.issuingCompany,
-          type: allowedTypes.includes(att.type) ? att.type : "FORMATION",
-        });
-        setFormations(Array.isArray(formationsData) ? formationsData.map((f: any) => f.name) : []);
-      })
-      .catch(() => setError("Erreur lors du chargement de l'attestation."))
-      .finally(() => setLoading(false));
-  }, [id]);
+    if (attData) {
+      setForm({
+        fullName: attData.fullName,
+        birthDate: attData.birthDate?.slice(0, 10),
+        birthPlace: attData.birthPlace,
+        formation: attData.formation?.name || "",
+        startDate: attData.startDate?.slice(0, 10),
+        endDate: attData.endDate?.slice(0, 10),
+        location: attData.location,
+        instructor: attData.instructor,
+        issuingCompany: attData.issuingCompany,
+        type: allowedTypes.includes(attData.type) ? attData.type : "FORMATION",
+      });
+    }
+    if (formationsData) {
+      setFormations(Array.isArray(formationsData) ? formationsData.map((f: any) => f.name) : []);
+    }
+    if (attError) setError("Erreur lors du chargement de l'attestation.");
+    if (formationsError) setError("Erreur lors du chargement des formations.");
+  }, [attData, formationsData, attError, formationsError]);
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
@@ -111,7 +129,6 @@ export default function EditAttestationPage() {
       return;
     }
     try {
-      console.log("Type envoyé:", form.type);
       const res = await fetch(`/api/attestations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -123,24 +140,27 @@ export default function EditAttestationPage() {
           setFieldErrors((prev: any) => ({ ...prev, [data.field]: data.message }));
         } else {
           setError(data.message || "Erreur lors de la mise à jour de l'attestation");
+          toast.error(data.message || "Erreur lors de la mise à jour de l'attestation");
         }
         return;
       }
       setSuccess(true);
+      toast.success("Attestation modifiée avec succès !");
       setTimeout(() => router.push(`/admin/attestations/${id}`), 1200);
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur inconnue");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading || !form) {
+  if (attLoading || formationsLoading || !form) {
     return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin w-8 h-8 text-muted-foreground" /></div>;
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="w-full mx-auto p-6">
       <Card className="bg-white rounded-xl shadow-md p-8">
         <div className="flex items-center gap-3 mb-6">
           <span className="text-3xl">✏️</span>
