@@ -127,8 +127,8 @@ export default function AdminLoginPage() {
                   type="submit"
                   disabled={isLoading || !email || !password}
                   whileTap={{ scale: 0.98 }}
-                  onMouseEnter={() => queryClient.prefetchQuery(['dashboard'], () => fetch('/admin/dashboard').then(res => res.text()))}
-                  onFocus={() => queryClient.prefetchQuery(['dashboard'], () => fetch('/admin/dashboard').then(res => res.text()))}
+                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['dashboard'], queryFn: () => fetch('/admin/dashboard').then(res => res.text()) })}
+                  onFocus={() => queryClient.prefetchQuery({ queryKey: ['dashboard'], queryFn: () => fetch('/admin/dashboard').then(res => res.text()) })}
                   className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${isLoading || !email || !password ? 'opacity-80 cursor-not-allowed' : ''}`}
                 >
                   {isLoading ? (

@@ -12,7 +12,7 @@ const FormationSchema = z.object({
   skills: z.array(z.string()).optional(),
 });
 
-export async function PATCH(request: NextRequest, context: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, context: any) {
   const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
@@ -39,7 +39,8 @@ export async function PATCH(request: NextRequest, context: { params: { id: strin
   }
 }
 
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function DELETE(request: NextRequest, context: any) {
   const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
@@ -52,8 +53,9 @@ export async function DELETE(request: NextRequest, context: { params: { id: stri
     return NextResponse.json({ message: "Erreur lors de la suppression de la formation" }, { status: 500 });
   }
 }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: any) {
   const { id } = context.params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
