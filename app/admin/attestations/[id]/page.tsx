@@ -7,11 +7,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, FileDown, Printer, Copy } from 'lucide-react';
+import { CheckCircle, XCircle, FileDown, Printer } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { useRef } from "react";
 import { QRCodeSVG } from 'qrcode.react';
-import Image from "next/image";
 import { toast } from "sonner";
 
 // Composant utilitaire pour afficher une date formatée côté client uniquement
@@ -25,11 +24,32 @@ function DateLocale({ date, options }: { date: string | Date, options?: Intl.Dat
   return <span>{formatted}</span>;
 }
 
+type Attestation = {
+  code: string;
+  status: string;
+  fullName: string;
+  birthDate: string;
+  birthPlace: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  instructor: string;
+  issuingCompany: string;
+  issuedAt: string;
+  formation?: {
+    name?: string;
+    category?: string;
+    description?: string;
+    skills?: string[];
+  };
+};
+
 export default function AttestationDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<Attestation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -52,7 +72,7 @@ export default function AttestationDetailPage() {
     if (!loading && data && searchParams.get("pdf") === "1") {
       setTimeout(() => handleDownloadPDF(), 400);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [loading, data, searchParams]);
 
   const handleStatus = async (status: 'VALIDATED' | 'REJECTED') => {
@@ -69,6 +89,7 @@ export default function AttestationDetailPage() {
       const updated = await res.json();
       setData(updated);
       setActionMsg(status === 'VALIDATED' ? "Attestation validée !" : "Attestation rejetée.");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       setActionError("Impossible de mettre à jour le statut.");
     } finally {
@@ -79,26 +100,24 @@ export default function AttestationDetailPage() {
     window.print();
   };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ton-domaine.com';
-
   const handleDownloadPDF = () => {
     setPdfMsg("");
-    if (pdfRef.current) {
-      html2pdf()
-        .set({
-          filename: `attestation-${data.code}.pdf`,
-          margin: [4, 16, 4, 16],
-          html2canvas: { scale: 2 },
-          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-          pagebreak: { mode: ['avoid-all'] }
-        })
-        .from(pdfRef.current)
-        .save()
-        .then(() => setPdfMsg("PDF téléchargé avec succès !"))
-        .catch(() => setPdfMsg("Erreur lors de la génération du PDF."));
-    }
+    if (!data || !pdfRef.current) return;
+    html2pdf()
+      .set({
+        filename: `attestation-${data.code}.pdf`,
+        margin: [4, 16, 4, 16],
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+        pagebreak: { mode: ['avoid-all'] }
+      })
+      .from(pdfRef.current)
+      .save()
+      .then(() => setPdfMsg("PDF téléchargé avec succès !"))
+      .catch(() => setPdfMsg("Erreur lors de la génération du PDF."));
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("Code copié !");
@@ -124,7 +143,7 @@ export default function AttestationDetailPage() {
       <Card className="bg-white rounded-xl shadow-lg p-8">
         <div className="flex items-center gap-4 mb-8">
           <span className="text-3xl">📄</span>
-          <h2 className="text-2xl font-bold">Détail de l'attestation</h2>
+          <h2 className="text-2xl font-bold">Détail de l&rsquo;attestation</h2>
         </div>
         <div className="flex flex-wrap gap-4 mb-8">
           <Button
@@ -177,7 +196,7 @@ export default function AttestationDetailPage() {
           }}>FSA</div>
           {/* Logo et bannière */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24, zIndex: 1 }}>
-            <Image src="/logo-fsa.png" alt="Logo FSA" width={64} height={64} style={{ marginRight: 16 }} />
+            <img src="/logo-fsa.png" alt="Logo FSA" width={64} height={64} style={{ marginRight: 16 }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ fontSize: 28, fontWeight: 700, color: '#2563eb', letterSpacing: 1 }}>ATTESTATION OFFICIELLE</div>
               <div style={{ fontSize: 16, color: '#666', marginTop: 4 }}>Ferme Agro Piscicole St André</div>
@@ -218,7 +237,8 @@ export default function AttestationDetailPage() {
                 <span style={{ fontWeight: 700 }}>Description :</span> {data.formation?.description || '-'}
               </div>
               <div style={{ fontSize: 15, color: '#166534' }}>
-                <span style={{ fontWeight: 700 }}>Compétences :</span> {Array.isArray(data.formation?.skills) ? data.formation.skills.join(', ') : '-'}
+                <span style={{ fontWeight: 700 }}>Compétences :</span>{' '}
+                {data.formation && Array.isArray(data.formation.skills) ? data.formation.skills.join(', ') : '-'}
               </div>
             </div>
           </div>
@@ -227,7 +247,7 @@ export default function AttestationDetailPage() {
             <div>
               <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>Signature du responsable</div>
               <div style={{ width: 220, height: 40, borderBottom: '2px solid #b91c1c', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
-                <Image src="/signature-responsable.png" alt="Signature du responsable" fill style={{ objectFit: 'contain', maxWidth: '100%', maxHeight: '100%', left: 0, bottom: 0, position: 'absolute', filter: 'grayscale(0.2)' }} />
+                {/* <Image src="/signature-responsable.png" alt="Signature du responsable" fill style={{ objectFit: 'contain', maxWidth: '100%', maxHeight: '100%', left: 0, bottom: 0, position: 'absolute', filter: 'grayscale(0.2)' }} /> */}
               </div>
               <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>Date : <DateLocale date={data.issuedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /></div>
             </div>

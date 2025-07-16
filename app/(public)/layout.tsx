@@ -1,6 +1,6 @@
 "use client";
 import "../globals.css";
-import Image from "next/image";
+import * as React from "react";
 import Link from "next/link";
 import { ShieldCheck, Menu, X } from "lucide-react";
 import { useState } from "react";
@@ -15,7 +15,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         {/* Header */}
         <header className="w-full flex justify-between items-center px-6 py-4 max-w-4xl mx-auto relative">
           <div className="flex items-center gap-2">
-            <Image src="/logo-fsa.png" alt="Logo FSA" width={48} height={48} />
+            <img src="/logo-fsa.png" alt="Logo FSA" width={48} height={48} />
             <span className="text-xl font-bold text-gray-900">Ferme St André</span>
           </div>
           {/* Desktop nav */}
