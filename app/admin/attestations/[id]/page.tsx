@@ -246,8 +246,18 @@ export default function AttestationDetailPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 32, zIndex: 1 }}>
             <div>
               <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>Signature du responsable</div>
-              <div style={{ width: 220, height: 40, borderBottom: '2px solid #b91c1c', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
-                {/* <Image src="/signature-responsable.png" alt="Signature du responsable" fill style={{ objectFit: 'contain', maxWidth: '100%', maxHeight: '100%', left: 0, bottom: 0, position: 'absolute', filter: 'grayscale(0.2)' }} /> */}
+              <div style={{ width: 260, height: 60, borderBottom: '2px solid #b91c1c', marginBottom: 8, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <img
+                  src="/signature-responsable.png"
+                  alt="Signature du responsable"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                    display: 'block',
+                    margin: '0 auto',
+                  }}
+                />
               </div>
               <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>Date : <DateLocale date={data.issuedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /></div>
             </div>
@@ -260,7 +270,7 @@ export default function AttestationDetailPage() {
           </div>
           {/* Formule officielle */}
           <div style={{ marginTop: 18, textAlign: 'center', color: '#111', fontSize: 11, fontStyle: 'italic', lineHeight: 1.35, fontFamily: 'Georgia, Times, serif', maxWidth: 500, marginLeft: 'auto', marginRight: 'auto', letterSpacing: 0.01 }}>
-            La présente attestation est établie en toute bonne foi, sous la responsabilité de <span style={{ fontWeight: 700, color: '#b91c1c' }}>LA FERME AGRO PISCICOLE CITE ST ANDRE</span>, pour servir et faire valoir ce que de droit auprès de toute autorité ou organisme qui en fera la demande. Toute altération ou falsification de ce document expose son auteur à des poursuites conformément à la loi.<br />
+            La présente attestation est établie en toute bonne foi, sous la responsabilité de <span style={{ fontWeight: 700, color: '#b91c1c' }}>LA FERME AGRO PISCICOLE ST ANDRE</span>, pour servir et faire valoir ce que de droit auprès de toute autorité ou organisme qui en fera la demande. Toute altération ou falsification de ce document expose son auteur à des poursuites conformément à la loi.<br />
             <span style={{ fontWeight: 700 }}>
               Fait à Abomey-Calavi, le <DateLocale date={data.issuedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} />.
             </span>
