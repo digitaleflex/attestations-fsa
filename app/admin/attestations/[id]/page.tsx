@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, FileDown, Printer } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
+// import html2pdf from 'html2pdf.js'; // Dynamically imported
 import { useRef } from "react";
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from "sonner";
@@ -89,7 +89,7 @@ export default function AttestationDetailPage() {
       const updated = await res.json();
       setData(updated);
       setActionMsg(status === 'VALIDATED' ? "Attestation validée !" : "Attestation rejetée.");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       setActionError("Impossible de mettre à jour le statut.");
     } finally {
@@ -100,21 +100,32 @@ export default function AttestationDetailPage() {
     window.print();
   };
 
-  const handleDownloadPDF = () => {
+
+  const handleDownloadPDF = async () => {
     setPdfMsg("");
     if (!data || !pdfRef.current) return;
-    html2pdf()
-      .set({
-        filename: `attestation-${data.code}.pdf`,
-        margin: [4, 16, 4, 16],
-        html2canvas: { scale: 2 },
-        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-        pagebreak: { mode: ['avoid-all'] }
-      })
-      .from(pdfRef.current)
-      .save()
-      .then(() => setPdfMsg("PDF téléchargé avec succès !"))
-      .catch(() => setPdfMsg("Erreur lors de la génération du PDF."));
+
+    try {
+      setPdfMsg("Préparation du PDF...");
+      // Dynamic import for performance
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      await html2pdf()
+        .set({
+          filename: `attestation-${data.code}.pdf`,
+          margin: [4, 16, 4, 16],
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+          pagebreak: { mode: ['avoid-all'] }
+        })
+        .from(pdfRef.current)
+        .save();
+
+      setPdfMsg("PDF téléchargé avec succès !");
+    } catch (error) {
+      console.error(error);
+      setPdfMsg("Erreur lors de la génération du PDF.");
+    }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
