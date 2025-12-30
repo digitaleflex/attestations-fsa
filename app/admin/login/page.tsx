@@ -4,7 +4,7 @@ import * as React from "react"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Lock, Mail } from 'lucide-react'
+import { Lock, Mail, AlertCircle } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function AdminLoginPage() {
@@ -24,7 +24,7 @@ export default function AdminLoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError('')
-    
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -36,7 +36,7 @@ export default function AdminLoginPage() {
       })
 
       const data = await res.json()
-      
+
       if (!res.ok) {
         throw new Error(data.message || 'Échec de la connexion')
       }
@@ -52,34 +52,43 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-      <motion.div 
-        className="w-full max-w-md space-y-8"
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 relative overflow-hidden">
+      {/* Animated Background Mesh */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-amber-500 opacity-20 blur-3xl transform scale-150 animate-pulse duration-10000"></div>
+      <div className="absolute inset-0 bg-white/40 backdrop-blur-3xl"></div>
+
+      <motion.div
+        className="w-full max-w-md relative z-10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-8">
+        <div className="glass-panel rounded-2xl overflow-hidden border-t-4 border-t-indigo-500 shadow-2xl">
+          <div className="p-8 md:p-10">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Bienvenue</h1>
-              <p className="text-gray-600">Connectez-vous à votre espace d'administration</p>
+              <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-xl mb-4 shadow-lg">
+                F
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Bienvenue</h1>
+              <p className="text-slate-500 text-sm">Connectez-vous à la plateforme d'administration FSA</p>
             </div>
 
             {error && (
-              <div className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100">
+              <div className="mb-6 p-3 bg-rose-50 text-rose-700 text-sm rounded-lg border border-rose-100 flex items-center gap-2 animate-in slide-in-from-top-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">
                   Adresse email
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   </div>
                   <input
                     id="email"
@@ -89,24 +98,24 @@ export default function AdminLoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`block w-full pl-10 pr-3 py-3 border ${error ? 'border-red-500' : 'border-gray-300'} rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900`}
-                    placeholder="votre@email.com"
+                    className={`block w-full pl-10 pr-3 py-3 border ${error ? 'border-rose-300 focus:ring-rose-200' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'} rounded-xl bg-slate-50/50 focus:bg-white shadow-sm focus:outline-none focus:ring-4 transition-all duration-200 text-slate-900 placeholder:text-slate-400`}
+                    placeholder="admin@exemple.com"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <div className="flex items-center justify-between mb-1.5 ml-1">
+                  <label htmlFor="password" className="block text-sm font-medium text-slate-700">
                     Mot de passe
                   </label>
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-500">
+                  <a href="#" className="text-xs font-medium text-indigo-600 hover:text-indigo-500">
                     Mot de passe oublié ?
                   </a>
                 </div>
-                <div className="relative">
+                <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   </div>
                   <input
                     id="password"
@@ -116,27 +125,24 @@ export default function AdminLoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`block w-full pl-10 pr-3 py-3 border ${error ? 'border-red-500' : 'border-gray-300'} rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900`}
+                    className={`block w-full pl-10 pr-3 py-3 border ${error ? 'border-rose-300 focus:ring-rose-200' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'} rounded-xl bg-slate-50/50 focus:bg-white shadow-sm focus:outline-none focus:ring-4 transition-all duration-200 text-slate-900 placeholder:text-slate-400`}
                     placeholder="••••••••"
                   />
                 </div>
               </div>
 
-              <div>
+              <div className="pt-2">
                 <motion.button
                   type="submit"
                   disabled={isLoading || !email || !password}
                   whileTap={{ scale: 0.98 }}
                   onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['dashboard'], queryFn: () => fetch('/admin/dashboard').then(res => res.text()) })}
                   onFocus={() => queryClient.prefetchQuery({ queryKey: ['dashboard'], queryFn: () => fetch('/admin/dashboard').then(res => res.text()) })}
-                  className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${isLoading || !email || !password ? 'opacity-80 cursor-not-allowed' : ''}`}
+                  className={`w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-indigo-100 transition-all duration-200 ${isLoading || !email || !password ? 'opacity-70 cursor-not-allowed grayscale' : ''}`}
                 >
                   {isLoading ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
                       Connexion...
                     </>
                   ) : 'Se connecter'}
@@ -144,18 +150,18 @@ export default function AdminLoginPage() {
               </div>
 
               <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-500">
                   Pas encore de compte?{' '}
-                  <a href="/admin/register" className="font-medium text-blue-600 hover:text-blue-500">
+                  <a href="/admin/register" className="font-semibold text-indigo-600 hover:text-indigo-500 hover:underline decoration-2 underline-offset-2">
                     Créer un compte
                   </a>
                 </p>
               </div>
             </form>
           </div>
-          
-          <div className="bg-gray-50 px-8 py-6 rounded-b-2xl text-center">
-            <p className="text-sm text-gray-600">
+
+          <div className="bg-slate-50/80 px-8 py-4 border-t border-slate-100 text-center backdrop-blur-sm">
+            <p className="text-xs text-slate-400 font-medium">
               © {year ?? ''} Attestation FSA. Tous droits réservés.
             </p>
           </div>

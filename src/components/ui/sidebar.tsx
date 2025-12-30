@@ -523,7 +523,7 @@ const SidebarMenuItem = React.forwardRef<
       {...props}
     >
       <SidebarMenuButton asChild>
-        <a href={href} className="flex items-center gap-3 px-2 py-2 rounded transition hover:bg-gray-100 focus:bg-gray-100">
+        <a href={href} className="flex items-center gap-3 px-2 py-2 rounded transition-colors w-full">
           {icon}
           {state === 'expanded' && <span className="truncate">{label}</span>}
           {badge && <span className="ml-auto">{badge}</span>}
@@ -637,7 +637,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className
       )}
       {...props}

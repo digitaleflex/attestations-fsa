@@ -47,14 +47,17 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div className="w-full flex flex-col space-y-8">
+    <div className="w-full flex flex-col space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
-        <h1 className="text-3xl font-bold text-center md:text-left text-gray-800">Tableau de bord</h1>
+        <div>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">Tableau de bord</h1>
+          <p className="text-slate-500 mt-1">Vue d'ensemble de l'activité de la plateforme.</p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-end items-center w-full md:w-auto">
-          <Button variant="default" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => router.push('/admin/attestations/new')}>
+          <Button variant="default" className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg transition-all" onClick={() => router.push('/admin/attestations/new')}>
             <PlusCircle className="w-4 h-4 mr-2" /> Attestation
           </Button>
-          <Button variant="default" className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white shadow-sm" onClick={() => router.push('/admin/formations/new')}>
+          <Button variant="outline" className="w-full sm:w-auto border-indigo-200 text-indigo-700 hover:bg-indigo-50" onClick={() => router.push('/admin/formations/new')}>
             <PlusCircle className="w-4 h-4 mr-2" /> Formation
           </Button>
         </div>
@@ -62,152 +65,165 @@ export default function AdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-        <Card className="bg-blue-50 border-blue-100 shadow-sm hover:shadow-md transition-all">
+        <Card className="glass-card border-l-4 border-l-indigo-500 cursor-default">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900">Total Attestations</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" aria-hidden="true" />
+            <CardTitle className="text-sm font-medium text-slate-500">Total Attestations</CardTitle>
+            <div className="p-2 bg-indigo-50 rounded-full">
+              <FileText className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-blue-900">{stats.attestations}</div>}
-            <p className="text-xs text-blue-700 mt-1">Enregistrées</p>
+            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-slate-900">{stats.attestations}</div>}
+            <p className="text-xs text-slate-400 mt-1">+2 depuis hier (simulé)</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-yellow-50 border-yellow-100 shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => router.push('/admin/attestations?status=PENDING')}>
+        <Card className="glass-card border-l-4 border-l-amber-500 cursor-pointer hover:bg-amber-50/10" onClick={() => router.push('/admin/attestations?status=PENDING')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-900">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" aria-hidden="true" />
+            <CardTitle className="text-sm font-medium text-slate-500">En attente</CardTitle>
+            <div className="p-2 bg-amber-50 rounded-full">
+              <Clock className="h-4 w-4 text-amber-600" aria-hidden="true" />
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-yellow-900">{stats.attestationsPending}</div>}
-            <p className="text-xs text-yellow-700 mt-1">À valider</p>
+            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-slate-900">{stats.attestationsPending}</div>}
+            <p className="text-xs text-amber-600 mt-1 font-medium">Action requise</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-green-50 border-green-100 shadow-sm hover:shadow-md transition-all">
+        <Card className="glass-card border-l-4 border-l-emerald-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900">Validées</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
+            <CardTitle className="text-sm font-medium text-slate-500">Validées</CardTitle>
+            <div className="p-2 bg-emerald-50 rounded-full">
+              <CheckCircle className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-green-900">{stats.attestationsValidated}</div>}
-            <p className="text-xs text-green-700 mt-1">Approuvées</p>
+            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-slate-900">{stats.attestationsValidated}</div>}
+            <p className="text-xs text-slate-400 mt-1">Dossiers clos</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-purple-50 border-purple-100 shadow-sm hover:shadow-md transition-all">
+        <Card className="glass-card border-l-4 border-l-purple-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900">Formations</CardTitle>
-            <GraduationCap className="h-4 w-4 text-purple-600" aria-hidden="true" />
+            <CardTitle className="text-sm font-medium text-slate-500">Formations</CardTitle>
+            <div className="p-2 bg-purple-50 rounded-full">
+              <GraduationCap className="h-4 w-4 text-purple-600" aria-hidden="true" />
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-purple-900">{stats.formations}</div>}
-            <p className="text-xs text-purple-700 mt-1">Disponibles</p>
+            {loadingStats ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-slate-900">{stats.formations}</div>}
+            <p className="text-xs text-slate-400 mt-1">Actives</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-        <Card className="shadow-sm border-gray-100 hover:shadow-md transition-all cursor-pointer" onClick={() => router.push('/admin/stats')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-semibold text-gray-800">Taux de validation</CardTitle>
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs">%</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+        <Card className="col-span-1 lg:col-span-2 glass-panel border-0">
+          <CardHeader className="border-b border-slate-100/50 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-800">Dernières attestations</CardTitle>
+                <p className="text-sm text-slate-500">Les 5 dernières demandes reçues.</p>
+              </div>
+              <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-full text-xs font-semibold" onClick={() => router.push('/admin/attestations')}>
+                Voir tout
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            {loadingStats || stats.attestations === 0 ? <Skeleton className="h-8 w-20" /> : (
-              <div className="flex flex-col">
-                <span className="text-3xl font-bold text-indigo-900">{Math.round((stats.attestationsValidated / stats.attestations) * 100)}%</span>
-                <p className="text-xs text-gray-500 mt-1">des attestations sont validées</p>
+          <CardContent className="p-0">
+            {loadingLast ? (
+              <div className="p-6 space-y-3">
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+              </div>
+            ) : lastAttestations.length === 0 ? (
+              <div className="text-center text-slate-400 py-12 text-sm">Aucune donnée disponible.</div>
+            ) : (
+              <div className="w-full">
+                {/* Mobile View */}
+                <div className="block md:hidden">
+                  {lastAttestations.map((a: any) => (
+                    <div key={a.id} className="p-4 border-b border-slate-100 last:border-0 active:bg-slate-50" onClick={() => router.push(`/admin/attestations/${a.id}`)}>
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-semibold text-slate-800 text-sm">{a.fullName}</span>
+                        <span className={`h-2 w-2 rounded-full ${a.status === 'VALIDATED' ? 'bg-emerald-500' :
+                          a.status === 'REJECTED' ? 'bg-rose-500' :
+                            'bg-amber-400'
+                          }`}></span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
+                        <span className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono">{a.code}</span>
+                        <span>{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : '-'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                        <TableHead className="w-[100px] text-xs font-semibold uppercase tracking-wider text-slate-500">Code</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Étudiant</TableHead>
+                        <TableHead className="w-[120px] text-xs font-semibold uppercase tracking-wider text-slate-500">Statut</TableHead>
+                        <TableHead className="w-[120px] text-xs font-semibold uppercase tracking-wider text-slate-500">Date</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lastAttestations.map((a: any) => (
+                        <TableRow key={a.id} className="cursor-pointer hover:bg-indigo-50/30 transition-colors border-b border-slate-50" onClick={() => router.push(`/admin/attestations/${a.id}`)}>
+                          <TableCell className="font-mono text-xs font-medium text-slate-500">{a.code}</TableCell>
+                          <TableCell className="font-medium text-slate-900">{a.fullName}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${a.status === 'VALIDATED' ? 'bg-emerald-100 text-emerald-700' :
+                              a.status === 'REJECTED' ? 'bg-rose-100 text-rose-700' :
+                                'bg-amber-100 text-amber-700'
+                              }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${a.status === 'VALIDATED' ? 'bg-emerald-500' :
+                                a.status === 'REJECTED' ? 'bg-rose-500' :
+                                  'bg-amber-500'
+                                }`}></span>
+                              {a.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-slate-500 text-xs">{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <FileText className="w-4 h-4 text-slate-300" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
-        {/* Placeholder for future specific stats or quick actions */}
-        <div className="hidden lg:block"></div>
-      </div>
 
+        <Card className="glass-card shadow-sm border-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-b from-indigo-600 to-purple-700 text-white relative overflow-hidden">
+          {/* Decorative circles */}
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
 
-      {/* Recent Attestations Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-6 w-full">
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div className="flex items-center gap-2">
-            <FileText className="text-blue-600 w-5 h-5" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-gray-800">Dernières attestations</h2>
-          </div>
-          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => router.push('/admin/attestations')}>
-            Voir tout
-          </Button>
-        </div>
-
-        {loadingLast ? (
-          <div className="space-y-3">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : lastAttestations.length === 0 ? (
-          <div className="text-center text-gray-400 py-8 text-sm">Aucune attestation récente.</div>
-        ) : (
-          <div className="rounded-md border border-gray-100 overflow-hidden">
-            {/* Mobile View: Cards */}
-            <div className="block md:hidden">
-              {lastAttestations.map((a: any) => (
-                <div key={a.id} className="p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors" onClick={() => router.push(`/admin/attestations/${a.id}`)}>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-medium text-gray-900">{a.fullName}</span>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${a.status === 'VALIDATED' ? 'bg-green-100 text-green-700' :
-                        a.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                          'bg-yellow-100 text-yellow-800'
-                      }`}>
-                      {a.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs text-gray-500">
-                    <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-600">{a.code}</span>
-                    <span>{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : '-'}</span>
-                  </div>
-                </div>
-              ))}
+          <div className="relative z-10 w-full">
+            <div className="mx-auto w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur mb-4">
+              <span className="text-2xl font-bold">%</span>
             </div>
+            <h3 className="text-lg font-semibold mb-2 text-white">Taux de validation</h3>
 
-            {/* Desktop View: Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead className="w-[120px]">Code</TableHead>
-                    <TableHead>Nom complet</TableHead>
-                    <TableHead className="w-[120px]">Statut</TableHead>
-                    <TableHead className="w-[120px]">Date</TableHead>
-                    <TableHead className="w-[50px] text-right"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lastAttestations.map((a: any) => (
-                    <TableRow key={a.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/admin/attestations/${a.id}`)}>
-                      <TableCell className="font-mono text-xs font-medium text-gray-600">{a.code}</TableCell>
-                      <TableCell className="font-medium text-gray-900">{a.fullName}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ring-1 ring-inset ${a.status === 'VALIDATED' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                            a.status === 'REJECTED' ? 'bg-red-50 text-red-700 ring-red-600/20' :
-                              'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
-                          }`}>
-                          {a.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-gray-500 text-sm">{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="p-2 text-gray-400">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            {loadingStats || stats.attestations === 0 ? <Skeleton className="h-10 w-24 mx-auto bg-white/20" /> : (
+              <div className="text-5xl font-bold mb-2 tracking-tight">{Math.round((stats.attestationsValidated / stats.attestations) * 100)}%</div>
+            )}
+            <p className="text-indigo-100 text-xs mb-6">Attestations approuvées sur le total.</p>
+            <Button variant="secondary" className="w-full bg-white text-indigo-600 hover:bg-indigo-50 border-0" onClick={() => router.push('/admin/stats')}>
+              Voir les détails
+            </Button>
           </div>
-        )}
+        </Card>
       </div>
     </div>
   );
