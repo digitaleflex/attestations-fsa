@@ -93,18 +93,29 @@ export async function POST(request: Request) {
     const now = new Date()
     const year = now.getFullYear()
     const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`
+
+    // Debug log
+    console.log(`[POST /api/attestations] Generating sequence for ${year}-${month}`);
+
     // Compter le nombre d'attestations ce mois pour le numéro séquentiel
+    const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+    const startOfNextMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+
+    console.log(`[POST /api/attestations] Counting records between ${startOfMonth.toISOString()} and ${startOfNextMonth.toISOString()}`);
+
     const count = await prisma.attestation.count({
       where: {
         issuedAt: {
-          gte: new Date(`${year}-${String(now.getMonth() + 1).padStart(2, '0')}-01T00:00:00.000Z`),
-          lt: new Date(`${year}-${String(now.getMonth() + 2).padStart(2, '0')}-01T00:00:00.000Z`)
+          gte: startOfMonth,
+          lt: startOfNextMonth
         }
       }
     })
     const seq = String(count + 1).padStart(5, '0')
     const hash = nanoid()
     const code = `FSA-${year}-${month}-${seq}-${hash}`
+
+    console.log('[POST /api/attestations] Creating record with code:', code);
 
     // Création de l'attestation
     await prisma.attestation.create({
@@ -123,8 +134,16 @@ export async function POST(request: Request) {
         status: 'PENDING',
       }
     })
+    console.log('[POST /api/attestations] Success');
     return NextResponse.json({ message: 'Attestation créée', code }, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ message: 'Erreur lors de la création de l\'attestation' }, { status: 500 })
+    console.error('[POST /api/attestations] FATAL ERROR:', error);
+    if (error instanceof z.ZodError) {
+      console.error('Validation details:', error.errors);
+    }
+    return NextResponse.json({
+      message: 'Erreur lors de la création de l\'attestation',
+      debug: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 } 

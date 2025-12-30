@@ -51,7 +51,8 @@ export default function AdminLoginPage() {
     }
   }
 
-  return (
+
+  // Rendering the login page
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 relative overflow-hidden">
       {/* Animated Background Mesh */}
