@@ -8,9 +8,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import "@/components/ui/input-style.css";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Loader2, Eye, Pencil, Trash2, FileDown, Download, Copy, Search, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Loader2, Eye, Pencil, Trash2, FileDown, Download, Copy, Search, CheckCircle2, Clock, XCircle, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useInfiniteQuery } from '@tanstack/react-query';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function AttestationsListPage() {
   const [search, setSearch] = useState("");
@@ -72,17 +83,21 @@ export default function AttestationsListPage() {
     }
   };
 
+  const getExportData = () => {
+    return attestations.map((a) => ({
+      Code: a.code,
+      "Nom complet": a.fullName,
+      Formation: a.formation?.name || "-",
+      Type: a.type,
+      "Date émission": a.issuedAt ? new Date(a.issuedAt).toLocaleDateString('fr-FR') : "-",
+      Status: a.status
+    }));
+  };
+
   const exportCSV = () => {
-    const headers = ["Code", "Nom complet", "Formation", "Type", "Date émission", "Status"];
-    const rows = attestations.map((a) => [
-      a.code,
-      a.fullName,
-      a.formation?.name || "-",
-      a.type,
-      a.issuedAt ? new Date(a.issuedAt).toLocaleDateString('fr-FR') : "-",
-      a.status
-    ]);
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const data = getExportData();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -93,6 +108,39 @@ export default function AttestationsListPage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast.success("Export CSV généré !");
+  };
+
+  const exportExcel = () => {
+    const data = getExportData();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Attestations");
+    XLSX.writeFile(workbook, "attestations.xlsx");
+    toast.success("Export Excel généré !");
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const tableColumn = ["Code", "Nom complet", "Formation", "Type", "Date", "Status"];
+    const tableRows = attestations.map((a) => [
+      a.code,
+      a.fullName,
+      a.formation?.name || "-",
+      a.type,
+      a.issuedAt ? new Date(a.issuedAt).toLocaleDateString('fr-FR') : "-",
+      a.status
+    ]);
+
+    doc.text("Liste des Attestations", 14, 15);
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [67, 56, 202] }, // Indigo-700
+    });
+    doc.save("attestations.pdf");
+    toast.success("Export PDF généré !");
   };
 
   const handleCopy = (code: string) => {
@@ -134,10 +182,28 @@ export default function AttestationsListPage() {
           <p className="text-slate-500 mt-1">Gérez et suivez toutes les attestations délivrées.</p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={exportCSV} variant="outline" className="bg-white/50 backdrop-blur-sm border-slate-200 hover:bg-white hover:text-indigo-600 transition-all shadow-sm">
-            <Download className="w-4 h-4 mr-2" />
-            Exporter CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="bg-white/50 backdrop-blur-sm border-slate-200 hover:bg-white hover:text-indigo-600 transition-all shadow-sm">
+                <Download className="w-4 h-4 mr-2" />
+                Exporter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Choisir le format</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={exportCSV}>
+                <FileText className="w-4 h-4 mr-2" /> CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportExcel}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportPDF}>
+                <FileDown className="w-4 h-4 mr-2" /> PDF (Liste)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 transition-all" asChild>
             <a href="/admin/attestations/new">Nouvelle Attestation</a>
           </Button>
@@ -312,4 +378,4 @@ export default function AttestationsListPage() {
       </div>
     </div>
   );
-} 
+}
