@@ -12,6 +12,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = vérification en cours
   const router = useRouter();
   const pathname = usePathname();
+  const [signalementsCount, setSignalementsCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (isAuth) {
+      fetch('/api/signalement?countOnly=1')
+        .then(res => res.json())
+        .then(data => setSignalementsCount(data.count || 0))
+        .catch(err => console.error(err));
+    }
+  }, [isAuth]);
 
   useEffect(() => {
     if (pathname === '/admin/login') return; // Ne rien faire sur la page login
@@ -58,7 +68,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          {/* Bouton d'ouverture de la sidebar sur mobile */}
           <div className="md:hidden mb-2">
             <SidebarTrigger />
           </div>
@@ -105,6 +114,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               icon={<AlertCircle />}
               label="Signalements"
               href="/admin/signalements"
+              badge={signalementsCount > 0 && (
+                <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse">{signalementsCount}</span>
+              )}
             />
             <SidebarMenuItem
               icon={<LogOut />}
@@ -116,6 +128,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4 md:hidden">
+          <SidebarTrigger className="-ml-1" />
+          <span className="font-semibold">Administration</span>
+        </header>
         <main className="p-4 md:p-8 min-h-screen bg-gray-100 flex flex-col w-full">
           <Suspense fallback={<div>Chargement...</div>}>
             {children}

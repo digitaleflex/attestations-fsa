@@ -10,7 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {
     "@auth/core": "^0.40.0",
