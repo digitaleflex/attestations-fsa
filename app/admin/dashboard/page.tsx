@@ -1,17 +1,51 @@
 import { prisma } from "@/lib/prisma";
 import Link from 'next/link';
-import { FileText, GraduationCap, AlertCircle, CheckCircle, Clock, PlusCircle } from 'lucide-react';
+import { DashboardChart } from "@/components/ui/dashboard-chart";
+import { 
+  FileText, 
+  GraduationCap, 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  PlusCircle,
+  ArrowUp,
+  ArrowDown,
+  Minus
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
 async function getStats() {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const dayBeforeYesterday = new Date(yesterday);
+  dayBeforeYesterday.setDate(yesterday.getDate() - 1);
+
+  // Data for 7-day activity chart
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    return d;
+  }).reverse();
+
+  const dailyCounts = await Promise.all(last7Days.map(day => {
+    const startOfDay = new Date(day.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(day.setHours(23, 59, 59, 999));
+    return prisma.attestation.count({
+      where: { issuedAt: { gte: startOfDay, lte: endOfDay } }
+    });
+  }));
+
   const [
     attestations,
     attestationsPending,
     attestationsValidated,
     formations,
-    lastAttestations
+    lastAttestations,
+    attestationsToday,
+    attestationsYesterday,
   ] = await Promise.all([
     prisma.attestation.count(),
     prisma.attestation.count({ where: { status: 'PENDING' } }),
@@ -27,20 +61,39 @@ async function getStats() {
         status: true,
         issuedAt: true,
       }
-    })
+    }),
+    prisma.attestation.count({ where: { issuedAt: { gte: yesterday } } }),
+    prisma.attestation.count({ where: { issuedAt: { gte: dayBeforeYesterday, lt: yesterday } } })
   ]);
+
+  const changeFromYesterday = attestationsToday - attestationsYesterday;
+
+  const chartData = last7Days.map((day, i) => ({
+    name: day.toLocaleDateString('fr-FR', { weekday: 'short' }),
+    total: dailyCounts[i],
+  }));
 
   return {
     attestations,
     attestationsPending,
     attestationsValidated,
     formations,
-    lastAttestations
+    lastAttestations,
+    changeFromYesterday,
+    chartData
   };
 }
 
 export default async function AdminDashboard() {
-  const { attestations, attestationsPending, attestationsValidated, formations, lastAttestations } = await getStats();
+  const { 
+    attestations, 
+    attestationsPending, 
+    attestationsValidated, 
+    formations, 
+    lastAttestations,
+    changeFromYesterday,
+    chartData
+  } = await getStats();
 
   return (
     <div className="w-full flex flex-col space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -74,7 +127,11 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">{attestations}</div>
-            <p className="text-xs text-slate-400 mt-1">+2 depuis hier (simulé)</p>
+            <p className={`text-xs mt-1 flex items-center font-medium ${changeFromYesterday > 0 ? 'text-emerald-600' : changeFromYesterday < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+              {changeFromYesterday > 0 ? <ArrowUp className="w-3 h-3 mr-1" /> : changeFromYesterday < 0 ? <ArrowDown className="w-3 h-3 mr-1" /> : <Minus className="w-3 h-3 mr-1" />}
+              {changeFromYesterday > 0 ? `+${changeFromYesterday}` : changeFromYesterday}{' '}
+              depuis hier
+            </p>
           </CardContent>
         </Card>
 
@@ -124,121 +181,30 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-        <Card className="col-span-1 lg:col-span-2 glass-panel border-0">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 w-full">
+        {/* Main Chart */}
+        <Card className="col-span-1 lg:col-span-3 glass-panel border-0">
           <CardHeader className="border-b border-slate-100/50 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-bold text-slate-800">Dernières attestations</CardTitle>
-                <p className="text-sm text-slate-500">Les 5 dernières demandes reçues.</p>
-              </div>
-              <Link href="/admin/attestations">
-                <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-full text-xs font-semibold">
-                  Voir tout
-                </Button>
-              </Link>
-            </div>
+            <CardTitle className="text-lg font-bold text-slate-800">Activité récente</CardTitle>
+            <p className="text-sm text-slate-500">Attestations délivrées les 7 derniers jours.</p>
           </CardHeader>
-          <CardContent className="p-0">
-            {lastAttestations.length === 0 ? (
-              <div className="text-center text-slate-400 py-12 text-sm">Aucune donnée disponible.</div>
-            ) : (
-              <div className="w-full">
-                {/* Mobile View */}
-                <div className="block md:hidden">
-                  {lastAttestations.map((a: any) => (
-                    <Link key={a.id} href={`/admin/attestations/${a.id}`} className="block">
-                      <div className="p-4 border-b border-slate-100 last:border-0 active:bg-slate-50">
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="font-semibold text-slate-800 text-sm">{a.fullName}</span>
-                          <span className={`h-2 w-2 rounded-full ${a.status === 'VALIDATED' ? 'bg-emerald-500' :
-                            a.status === 'REJECTED' ? 'bg-rose-500' :
-                              'bg-amber-400'
-                            }`}></span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
-                          <span className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono">{a.code}</span>
-                          <span>{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : '-'}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Desktop View */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                        <TableHead className="w-[100px] text-xs font-semibold uppercase tracking-wider text-slate-500">Code</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Étudiant</TableHead>
-                        <TableHead className="w-[120px] text-xs font-semibold uppercase tracking-wider text-slate-500">Statut</TableHead>
-                        <TableHead className="w-[120px] text-xs font-semibold uppercase tracking-wider text-slate-500">Date</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lastAttestations.map((a: any) => (
-                        <TableRow key={a.id} className="cursor-pointer hover:bg-indigo-50/30 transition-colors border-b border-slate-50 group">
-                          <TableCell className="font-mono text-xs font-medium text-slate-500">
-                            <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
-                              {a.code}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="font-medium text-slate-900">
-                            <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
-                              {a.fullName}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${a.status === 'VALIDATED' ? 'bg-emerald-100 text-emerald-700' :
-                                a.status === 'REJECTED' ? 'bg-rose-100 text-rose-700' :
-                                  'bg-amber-100 text-amber-700'
-                                }`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${a.status === 'VALIDATED' ? 'bg-emerald-500' :
-                                  a.status === 'REJECTED' ? 'bg-rose-500' :
-                                    'bg-amber-500'
-                                  }`}></span>
-                                {a.status}
-                              </span>
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-slate-500 text-xs">
-                            <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
-                              {a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Link href={`/admin/attestations/${a.id}`} className="flex justify-end w-full h-full">
-                              <FileText className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors" />
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
+          <CardContent className="p-6">
+            <DashboardChart data={chartData} />
           </CardContent>
         </Card>
 
-        <Card className="glass-card shadow-sm border-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-b from-indigo-600 to-purple-700 text-white relative overflow-hidden">
-          {/* Decorative circles */}
+        {/* Validation Rate */}
+        <Card className="col-span-1 lg:col-span-2 glass-card shadow-sm border-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-b from-indigo-600 to-purple-700 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-
           <div className="relative z-10 w-full">
             <div className="mx-auto w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur mb-4">
               <span className="text-2xl font-bold">%</span>
             </div>
             <h3 className="text-lg font-semibold mb-2 text-white">Taux de validation</h3>
-
             <div className="text-5xl font-bold mb-2 tracking-tight">
               {attestations === 0 ? 0 : Math.round((attestationsValidated / attestations) * 100)}%
             </div>
-
             <p className="text-indigo-100 text-xs mb-6">Attestations approuvées sur le total.</p>
             <Link href="/admin/stats" className="w-full block">
               <Button variant="secondary" className="w-full bg-white text-indigo-600 hover:bg-indigo-50 border-0">
@@ -248,6 +214,97 @@ export default async function AdminDashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Last Attestations Table */}
+      <Card className="glass-panel border-0">
+        <CardHeader className="border-b border-slate-100/50 pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold text-slate-800">Dernières demandes</CardTitle>
+              <p className="text-sm text-slate-500">Les 5 plus récentes.</p>
+            </div>
+            <Link href="/admin/attestations">
+              <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-full text-xs font-semibold">
+                Voir tout
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {lastAttestations.length === 0 ? (
+            <div className="text-center text-slate-400 py-12 text-sm">Aucune donnée disponible.</div>
+          ) : (
+            <div className="w-full">
+              {/* Mobile View */}
+              <div className="block md:hidden">
+                {lastAttestations.map((a: any) => (
+                  <Link key={a.id} href={`/admin/attestations/${a.id}`} className="block">
+                    <div className="p-4 border-b border-slate-100 last:border-0 active:bg-slate-50">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-semibold text-slate-800 text-sm">{a.fullName}</span>
+                        <span className={`h-2 w-2 rounded-full ${a.status === 'VALIDATED' ? 'bg-emerald-500' : a.status === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-400'}`}></span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
+                        <span className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono">{a.code}</span>
+                        <span>{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : '-'}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                      <TableHead className="w-[100px] text-xs font-semibold uppercase tracking-wider text-slate-500">Code</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Étudiant</TableHead>
+                      <TableHead className="w-[120px] text-xs font-semibold uppercase tracking-wider text-slate-500">Statut</TableHead>
+                      <TableHead className="w-[120px] text-xs font-semibold uppercase tracking-wider text-slate-500">Date</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lastAttestations.map((a: any) => (
+                      <TableRow key={a.id} className="cursor-pointer hover:bg-indigo-50/30 transition-colors border-b border-slate-50 group">
+                        <TableCell className="font-mono text-xs font-medium text-slate-500">
+                          <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
+                            {a.code}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-900">
+                          <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
+                            {a.fullName}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${a.status === 'VALIDATED' ? 'bg-emerald-100 text-emerald-700' : a.status === 'REJECTED' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${a.status === 'VALIDATED' ? 'bg-emerald-500' : a.status === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
+                              {a.status}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-slate-500 text-xs">
+                          <Link href={`/admin/attestations/${a.id}`} className="block w-full h-full">
+                            {a.issuedAt ? new Date(a.issuedAt).toLocaleDateString() : "-"}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/admin/attestations/${a.id}`} className="flex justify-end w-full h-full">
+                            <FileText className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

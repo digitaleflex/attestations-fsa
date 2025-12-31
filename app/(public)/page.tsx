@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ShieldCheck, ArrowRight, CheckCircle, Eye } from "lucide-react";
 import { StatsDisplay } from "@/components/stats-display";
+import { HowItWorks } from "@/components/how-it-works";
+import { FaqSection } from "@/components/faq-section";
+import { AlumniSearch } from "@/components/alumni-search";
 
 export default function Home() {
   return (
@@ -67,6 +70,9 @@ export default function Home() {
           <div className="text-gray-600 text-sm">Authenticité vérifiable par tous, à tout moment.</div>
         </div>
       </div>
+      <HowItWorks />
+      <AlumniSearch />
+      <FaqSection />
     </div>
   );
 }
