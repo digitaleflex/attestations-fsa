@@ -110,6 +110,7 @@ model Formation {
   skills       String[]
   createdAt    DateTime    @default(now())
   attestations Attestation[]
+  exams        Exam[]
 }
 
 model Attestation {
@@ -201,6 +202,8 @@ model Exam {
   totalPoints     Int             @default(100)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  formationId     String?
+  formation       Formation?      @relation(fields: [formationId], references: [id])
   parts           ExamPart[]
   submissions     ExamSubmission[]
 }
