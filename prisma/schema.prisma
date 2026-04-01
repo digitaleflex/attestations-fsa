@@ -195,11 +195,30 @@ model Admin {
 
 model Exam {
   id              String          @id @default(uuid())
+  name            String
   title           String
   description     String?
   status          ExamStatus      @default(DRAFT)
-  scheduledAt     DateTime?
+  duration        Int             @default(3600) // seconds
+  passingScore    Int             @default(60) // percentage
   totalPoints     Int             @default(100)
+  
+  // Configuration des parties
+  part1Enabled    Boolean         @default(true)
+  part1Questions  Int             @default(20)
+  part1Points     Int             @default(20)
+  part2Enabled    Boolean         @default(true)
+  part2Questions  Int             @default(5)
+  part2Points     Int             @default(40)
+  part3Enabled    Boolean         @default(true)
+  part3Subject    String?         @db.Text
+  part3Points     Int             @default(40)
+  part3Mode       String          @default("digital") // "digital" or "physical"
+  
+  // Options
+  randomizeQuestions Boolean      @default(false)
+  showResults     Boolean         @default(false)
+  
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   formationId     String?
