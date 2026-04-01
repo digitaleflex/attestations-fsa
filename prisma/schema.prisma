@@ -255,6 +255,7 @@ model ExamSubmission {
   gradedAt        DateTime?
   submittedAt     DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  answers         Json?           @default("{}")
 }
 enum InternshipStatus {
   PENDING

@@ -65,10 +65,11 @@ export async function POST(request: NextRequest) {
         examId,
         userId: session.user.id,
         status: "PENDING",
-        scorePart1: Math.round(scorePart1 * 100) / 100, // Arrondi à 2 décimales
+        scorePart1: Math.round(scorePart1 * 100) / 100,
         scorePart2: 0,
         scorePart3: 0,
-        totalScore: 0, // Sera calculé par l'admin à la fin
+        totalScore: 0,
+        answers: answers || {},
       }
     });
 

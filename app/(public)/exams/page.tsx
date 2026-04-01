@@ -119,7 +119,7 @@ export default function CandidateExamsPage() {
                 </div>
                 <div className="shrink-0 flex items-center justify-end">
                   {exam.hasSubmitted ? (
-                    <Link href={`/dashboard/results?examId=${exam.id}`}>
+                    <Link href={`/exams/results?examId=${exam.id}`}>
                       <Button variant="outline" className="h-11 px-6 border-slate-200 text-slate-600 hover:bg-slate-50">
                         Voir le résultat
                       </Button>
