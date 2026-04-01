@@ -275,6 +275,19 @@ model ExamSubmission {
   submittedAt     DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   answers         Json?           @default("{}")
+  scans           CompositionScan[]
+}
+
+model CompositionScan {
+  id            String    @id @default(uuid())
+  submissionId  String
+  submission    ExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  url           String
+  pageNumber    Int       @default(1)
+  fileName      String
+  fileSize      Int       // in bytes
+  uploadedBy    String    // Admin ID
+  uploadedAt    DateTime  @default(now())
 }
 enum InternshipStatus {
   PENDING

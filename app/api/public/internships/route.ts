@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { emailService } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +24,9 @@ export async function POST(request: NextRequest) {
         status: "PENDING"
       }
     });
+
+    // Envoi de l'email de confirmation
+    await emailService.sendInternshipConfirmation(email, fullName);
 
     return NextResponse.json(internshipRequest, { status: 201 });
   } catch (error) {

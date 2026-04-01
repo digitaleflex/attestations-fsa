@@ -19,7 +19,7 @@ async function isAuthenticatedAdmin() {
 const CreateExamSchema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
   description: z.string().optional(),
-  formationId: z.string().uuid('ID de formation invalide'),
+  formationId: z.string().min(1, 'ID de formation requis'),
   duration: z.number().min(300).max(28800), // 5 min à 8 heures
   passingScore: z.number().min(0).max(100),
   part1Enabled: z.boolean().default(true),
@@ -31,7 +31,7 @@ const CreateExamSchema = z.object({
   part3Enabled: z.boolean().default(true),
   part3Subject: z.string().optional(),
   part3Points: z.number().min(0).max(100).default(40),
-  part3Mode: z.enum(['digital', 'physical']).default('digital'),
+  part3Mode: z.string().default('digital'),
   randomizeQuestions: z.boolean().default(false),
   showResults: z.boolean().default(false),
 });
@@ -100,6 +100,7 @@ export async function POST(request: Request) {
     const exam = await prisma.exam.create({
       data: {
         name,
+        title: name,
         description,
         formationId,
         duration,

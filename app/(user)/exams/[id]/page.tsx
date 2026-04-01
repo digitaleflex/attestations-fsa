@@ -290,7 +290,8 @@ export default function ExamSessionPage() {
   const questions = exam?.questions || [];
   const part1Questions = questions.filter((q: any) => q.part === 1);
   const part2Questions = questions.filter((q: any) => q.part === 2);
-  const hasPart3 = true; // Toujours une partie 3 (étude de cas)
+  const hasPart3 = exam?.part3Enabled ?? true;
+  const part3Mode = exam?.part3Mode || "digital"; // "digital" or "physical"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -522,7 +523,7 @@ export default function ExamSessionPage() {
               <div>
                 <h2 className="text-xl font-bold text-slate-800">Partie 3 - Étude de cas</h2>
                 <p className="text-sm text-slate-500">
-                  40 points • Réponse rédigée
+                  40 points • {part3Mode === "digital" ? "Réponse numérique" : "Feuilles de composition"}
                 </p>
               </div>
             </div>
@@ -535,22 +536,47 @@ export default function ExamSessionPage() {
                 <h3 className="text-xl font-bold text-slate-800 mb-3">
                   Prêt à découvrir le sujet ?
                 </h3>
-                <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                  Une fois le sujet révélé, vous devrez rédiger votre réponse sur des feuilles de composition.
-                </p>
+                
+                {part3Mode === "physical" ? (
+                  <Alert className="bg-amber-50 border-amber-200 max-w-lg mx-auto mb-6 text-left">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                    <AlertTitle className="text-amber-800">📄 Mode Physique - Feuilles de composition</AlertTitle>
+                    <AlertDescription className="text-amber-700 text-sm">
+                      <p className="mt-2">
+                        Vous allez rédiger votre réponse sur des <strong>feuilles de composition physiques</strong>.
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 mt-2">
+                        <li>Utilisez les feuilles fournies par l'administrateur</li>
+                        <li>Numérotez clairement chaque page</li>
+                        <li>Écrivez lisiblement</li>
+                        <li>Les administrateurs scanneront vos copies pour correction</li>
+                        <li>Une fois terminé, cliquez sur "J'ai terminé ma composition"</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert className="bg-blue-50 border-blue-200 max-w-lg mx-auto mb-6 text-left">
+                    <AlertCircle className="w-5 h-5 text-blue-600" />
+                    <AlertTitle className="text-blue-800">📝 Mode Numérique - Réponse en ligne</AlertTitle>
+                    <AlertDescription className="text-blue-700 text-sm">
+                      <p className="mt-2">
+                        Vous allez rédiger votre réponse <strong>directement dans cette interface</strong>.
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 mt-2">
+                        <li>Rédigez dans la zone de texte ci-dessous</li>
+                        <li>Structurez votre réponse (paragraphes, titres)</li>
+                        <li>La sauvegarde est automatique</li>
+                        <li>Les administrateurs corrigeront votre réponse en ligne</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-                <Alert className="bg-amber-50 border-amber-200 max-w-lg mx-auto mb-6 text-left">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                  <AlertTitle className="text-amber-800">📋 Instructions importantes</AlertTitle>
-                  <AlertDescription className="text-amber-700 text-sm">
-                    <ul className="list-disc list-inside space-y-1 mt-2">
-                      <li>Les administrateurs verront vos feuilles de composition</li>
-                      <li>Rédigez clairement et structurez votre réponse</li>
-                      <li>Numérotez vos pages</li>
-                      <li>Justifiez vos choix et raisonnements</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
+                <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                  {part3Mode === "digital" 
+                    ? "Une fois le sujet révélé, vous devrez rédiger votre réponse dans la zone de texte."
+                    : "Une fois le sujet révélé, préparez vos feuilles de composition."}
+                </p>
 
                 <Button
                   onClick={() => setShowPart3Subject(true)}
@@ -563,44 +589,84 @@ export default function ExamSessionPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                <Alert className="bg-amber-50 border-amber-200">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                  <AlertTitle className="text-amber-800">📝 Feuille de composition</AlertTitle>
-                  <AlertDescription className="text-amber-700 text-sm">
-                    <p className="mt-2">
-                      Rédigez votre réponse ci-dessous. Les administrateurs verront cette réponse lors de la correction.
-                    </p>
-                    <ul className="list-disc list-inside space-y-1 mt-2">
-                      <li>Soyez clair et structuré</li>
-                      <li>Développez vos arguments</li>
-                      <li>Justifiez vos choix</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
+                {part3Mode === "physical" ? (
+                  <>
+                    <Alert className="bg-amber-50 border-amber-200">
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                      <AlertTitle className="text-amber-800">📄 Instructions - Mode Physique</AlertTitle>
+                      <AlertDescription className="text-amber-700 text-sm">
+                        <p className="mt-2">
+                          Rédigez votre réponse sur les feuilles de composition fournies.
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 mt-2">
+                          <li>Inscrivez votre nom sur chaque page</li>
+                          <li>Numérotez vos pages (1/?, 2/?, ...)</li>
+                          <li>Structurez votre réponse</li>
+                          <li>Les admins corrigeront vos copies scannées</li>
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
 
-                <div className="p-4 bg-slate-50 rounded-lg">
-                  <h3 className="font-bold text-slate-800 mb-4">Sujet :</h3>
-                  <p className="text-base text-slate-700 mb-4">
-                    {exam?.part3Subject || "Sujet non disponible"}
-                  </p>
-                </div>
+                    <div className="p-4 bg-slate-50 rounded-lg">
+                      <h3 className="font-bold text-slate-800 mb-4">Sujet :</h3>
+                      <p className="text-base text-slate-700">
+                        {exam?.part3Subject || "Sujet non disponible"}
+                      </p>
+                    </div>
 
-                <div>
-                  <Label htmlFor="part3" className="text-sm font-semibold text-slate-700 mb-2 block">
-                    Votre réponse :
-                  </Label>
-                  <Textarea
-                    id="part3"
-                    value={answers.part3 || ""}
-                    onChange={(e) => handlePart3Change(e.target.value)}
-                    placeholder="Rédigez votre réponse à l'étude de cas ici..."
-                    rows={15}
-                    className="resize-none font-serif"
-                  />
-                  <p className="text-xs text-slate-400 mt-2 text-right">
-                    {(answers.part3 || "").length} caractères
-                  </p>
-                </div>
+                    <Alert className="bg-emerald-50 border-emerald-200">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      <AlertTitle className="text-emerald-800">Composition terminée ?</AlertTitle>
+                      <AlertDescription className="text-emerald-700 text-sm">
+                        <p className="mt-2">
+                          Si vous avez fini de rédiger sur vos feuilles de composition, cliquez sur "Terminer et soumettre".
+                        </p>
+                      </AlertDescription>
+                    </Alert>
+                  </>
+                ) : (
+                  <>
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <AlertCircle className="w-5 h-5 text-blue-600" />
+                      <AlertTitle className="text-blue-800">📝 Feuille de composition numérique</AlertTitle>
+                      <AlertDescription className="text-blue-700 text-sm">
+                        <p className="mt-2">
+                          Rédigez votre réponse ci-dessous. Les administrateurs verront cette réponse lors de la correction.
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 mt-2">
+                          <li>Soyez clair et structuré</li>
+                          <li>Développez vos arguments</li>
+                          <li>Justifiez vos choix</li>
+                          <li>La sauvegarde est automatique</li>
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="p-4 bg-slate-50 rounded-lg">
+                      <h3 className="font-bold text-slate-800 mb-4">Sujet :</h3>
+                      <p className="text-base text-slate-700">
+                        {exam?.part3Subject || "Sujet non disponible"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="part3" className="text-sm font-semibold text-slate-700 mb-2 block">
+                        Votre réponse :
+                      </Label>
+                      <Textarea
+                        id="part3"
+                        value={answers.part3 || ""}
+                        onChange={(e) => handlePart3Change(e.target.value)}
+                        placeholder="Rédigez votre réponse à l'étude de cas ici..."
+                        rows={15}
+                        className="resize-none font-serif"
+                      />
+                      <p className="text-xs text-slate-400 mt-2 text-right">
+                        {(answers.part3 || "").length} caractères
+                      </p>
+                    </div>
+                  </>
+                )}
 
                 <div className="flex items-center justify-between pt-4 border-t">
                   <Button
@@ -618,7 +684,7 @@ export default function ExamSessionPage() {
                   <Button
                     onClick={handleSubmit}
                     className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600"
-                    disabled={isSubmitting || !answers.part3}
+                    disabled={isSubmitting || (part3Mode === "digital" && !answers.part3)}
                   >
                     {isSubmitting ? (
                       <>
@@ -628,7 +694,7 @@ export default function ExamSessionPage() {
                     ) : (
                       <>
                         <CheckCircle className="w-4 h-4" />
-                        Terminer et soumettre
+                        {part3Mode === "physical" ? "J'ai terminé ma composition" : "Terminer et soumettre"}
                       </>
                     )}
                   </Button>

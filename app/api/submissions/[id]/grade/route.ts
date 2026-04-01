@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 import { customAlphabet } from 'nanoid';
+import { emailService } from '@/lib/email';
 
 const nanoid = customAlphabet('1234567890abcdef', 5);
 
@@ -98,6 +99,15 @@ export async function POST(
       });
       attestationCreated = true;
     }
+
+    // 5. Envoi de l'email de résultat au candidat
+    await emailService.sendExamResults(
+      submission.user.email,
+      submission.user.name || "Candidat",
+      submission.exam.title,
+      updatedSubmission.totalScore,
+      totalScore >= 12
+    );
 
     return NextResponse.json({
       message: "Note enregistrée avec succès",
