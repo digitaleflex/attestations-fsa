@@ -196,7 +196,7 @@ export default function AdminExamsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link href={`/admin/exams/${exam.id}/submissions`}>Voir les résultats</Link>
+                                <Link href={`/admin/submissions?examId=${exam.id}`}>Voir les résultats</Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleDelete(exam.id)}

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ClipboardCheck, Search, Filter, X, Eye, Clock, CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Select,
@@ -17,11 +17,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function AdminSubmissionsPage() {
+function SubmissionsList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [examFilter, setExamFilter] = useState("all");
+  const [examFilter, setExamFilter] = useState(searchParams.get("examId") || "all");
+
+  useEffect(() => {
+    const eid = searchParams.get("examId");
+    if (eid) setExamFilter(eid);
+  }, [searchParams]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-submissions"],
@@ -237,5 +243,13 @@ export default function AdminSubmissionsPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function AdminSubmissionsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SubmissionsList />
+    </Suspense>
   );
 }
