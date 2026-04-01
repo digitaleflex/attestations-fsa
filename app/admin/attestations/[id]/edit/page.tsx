@@ -9,16 +9,23 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
-import "@/components/ui/input-style.css";
-import clsx from "clsx";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, ArrowLeft, Save, CheckCircle, AlertCircle } from "lucide-react";
+import { DateInput } from "@/components/ui/date-input";
 import { toast } from "sonner";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const ATTESTATION_TYPES = [
   { value: "FORMATION", label: "Formation" },
   { value: "STAGE", label: "Stage" },
   { value: "CERTIFICATION", label: "Certification" },
+];
+
+const GENDER_OPTIONS = [
+  { value: "M", label: "Masculin" },
+  { value: "F", label: "Féminin" },
 ];
 
 export default function EditAttestationPage() {
@@ -30,123 +37,121 @@ export default function EditAttestationPage() {
   const [saving, setSaving] = useState(false);
   const [formations, setFormations] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<any>({});
-  const allowedTypes = ["FORMATION", "STAGE", "CERTIFICATION"];
 
-  // Chargement rapide via React Query
-  const { data: attData, isLoading: attLoading, error: attError } = useQuery({
-    queryKey: ['attestation', id],
+  const { data: attData, isLoading: attLoading } = useQuery({
+    queryKey: ["attestation", id],
     queryFn: async () => {
       const res = await fetch(`/api/attestations/${id}`);
-      if (!res.ok) throw new Error('Erreur lors du chargement de l\'attestation');
+      if (!res.ok) throw new Error("Erreur");
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
   });
-  const { data: formationsData, isLoading: formationsLoading, error: formationsError } = useQuery({
-    queryKey: ['formations', 'all'],
+
+  const { data: formationsData } = useQuery({
+    queryKey: ["formations", "all"],
     queryFn: async () => {
-      const res = await fetch('/api/formations');
-      if (!res.ok) throw new Error('Erreur lors du chargement des formations');
+      const res = await fetch("/api/formations");
+      if (!res.ok) throw new Error("Erreur");
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
   });
+
   useEffect(() => {
     if (attData) {
       setForm({
-        fullName: attData.fullName,
-        birthDate: attData.birthDate?.slice(0, 10),
-        birthPlace: attData.birthPlace,
+        fullName: attData.fullName || "",
+        gender: attData.gender || "",
+        birthDate: attData.birthDate?.slice(0, 10) || "",
+        birthPlace: attData.birthPlace || "",
         formation: attData.formation?.name || "",
-        startDate: attData.startDate?.slice(0, 10),
-        endDate: attData.endDate?.slice(0, 10),
-        location: attData.location,
-        instructor: attData.instructor,
-        issuingCompany: attData.issuingCompany,
-        type: allowedTypes.includes(attData.type) ? attData.type : "FORMATION",
+        startDate: attData.startDate?.slice(0, 10) || "",
+        endDate: attData.endDate?.slice(0, 10) || "",
+        location: attData.location || "",
+        instructor: attData.instructor || "",
+        issuingCompany: attData.issuingCompany || "",
+        type: attData.type || "FORMATION",
+        stageHours: attData.stageHours || "",
+        stageScore: attData.stageScore || "",
+        stageObservations: attData.stageObservations || "",
+        certificationMention: attData.certificationMention || "",
+        certificationScore: attData.certificationScore || "",
+        certificationHours: attData.certificationHours || "",
+        certificationObservations: attData.certificationObservations || "",
       });
     }
     if (formationsData) {
       setFormations(Array.isArray(formationsData) ? formationsData.map((f: any) => f.name) : []);
     }
-    if (attError) setError("Erreur lors du chargement de l'attestation.");
-    if (formationsError) setError("Erreur lors du chargement des formations.");
-  }, [attData, formationsData, attError, formationsError]);
+  }, [attData, formationsData]);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const newValue = { ...form, [name]: value };
-    setForm(newValue);
-    const errors = validate(newValue);
-    setFieldErrors((prev: any) => {
-      const next = { ...prev, [name]: errors[name] };
-      if (!errors[name]) delete next[name];
-      return next;
-    });
+    setForm((prev: any) => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) {
+      setFieldErrors((prev: any) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
 
   const handleSelect = (name: string, value: string) => {
-    const newValue = { ...form, [name]: value };
-    setForm(newValue);
-    const errors = validate(newValue);
-    setFieldErrors((prev: any) => {
-      const next = { ...prev, [name]: errors[name] };
-      if (!errors[name]) delete next[name];
-      return next;
-    });
+    setForm((prev: any) => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) {
+      setFieldErrors((prev: any) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
 
-  const validate = (values: any) => {
+  const handleNumberChange = (name: string, value: string) => {
+    const numValue = value ? parseInt(value) : undefined;
+    setForm((prev: any) => ({ ...prev, [name]: numValue }));
+  };
+
+  const validate = (data: any) => {
     const errors: any = {};
-    if (!values.fullName) errors.fullName = "Le nom complet est obligatoire.";
-    if (!values.birthDate) errors.birthDate = "La date de naissance est obligatoire.";
-    if (!values.birthPlace) errors.birthPlace = "Le lieu de naissance est obligatoire.";
-    if (!values.formation) errors.formation = "La formation est obligatoire.";
-    if (!values.startDate) errors.startDate = "La date de début est obligatoire.";
-    if (!values.endDate) errors.endDate = "La date de fin est obligatoire.";
-    if (!values.location) errors.location = "Le lieu est obligatoire.";
-    if (!values.instructor) errors.instructor = "Le formateur est obligatoire.";
-    if (!values.issuingCompany) errors.issuingCompany = "La société émettrice est obligatoire.";
-    if (values.startDate && values.endDate && values.startDate > values.endDate) errors.endDate = "La date de fin doit être postérieure à la date de début.";
-    if (values.birthDate && values.startDate && values.birthDate > values.startDate) errors.birthDate = "La date de naissance doit précéder la date de début.";
+    if (!data.fullName) errors.fullName = "Le nom est requis";
+    if (!data.birthDate) errors.birthDate = "La date de naissance est requise";
+    if (!data.birthPlace) errors.birthPlace = "Le lieu de naissance est requis";
+    if (!data.formation) errors.formation = "La formation est requise";
+    if (!data.startDate) errors.startDate = "La date de début est requise";
+    if (!data.endDate) errors.endDate = "La date de fin est requise";
+    if (data.startDate && data.endDate && new Date(data.startDate) > new Date(data.endDate)) {
+      errors.endDate = "La date de fin doit être postérieure";
+    }
     return errors;
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors = validate(form);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      toast.error("Veuillez corriger les erreurs");
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSuccess(false);
-    const errors = validate(form);
-    setFieldErrors(errors);
-    if (!allowedTypes.includes(form.type)) {
-      setFieldErrors((prev: any) => ({ ...prev, type: "Type d'attestation invalide." }));
-      setSaving(false);
-      return;
-    }
-    if (Object.keys(errors).length > 0) {
-      setSaving(false);
-      return;
-    }
+
     try {
       const res = await fetch(`/api/attestations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        if (data && data.field && data.message) {
-          setFieldErrors((prev: any) => ({ ...prev, [data.field]: data.message }));
-        } else {
-          setError(data.message || "Erreur lors de la mise à jour de l'attestation");
-          toast.error(data.message || "Erreur lors de la mise à jour de l'attestation");
-        }
-        return;
-      }
+
+      if (!res.ok) throw new Error("Erreur lors de la modification");
+
       setSuccess(true);
-      toast.success("Attestation modifiée avec succès !");
-      setTimeout(() => router.push(`/admin/attestations/${id}`), 1200);
+      toast.success("✅ Attestation modifiée avec succès !");
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
       toast.error(err.message || "Erreur inconnue");
@@ -155,128 +160,311 @@ export default function EditAttestationPage() {
     }
   };
 
-  if (attLoading || formationsLoading || !form) {
-    return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin w-8 h-8 text-muted-foreground" /></div>;
+  if (attLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin w-8 h-8 text-slate-400" />
+      </div>
+    );
   }
 
   return (
-    <div className="w-full mx-auto p-6">
-      <Card className="bg-white rounded-xl shadow-md p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-3xl">✏️</span>
-          <h2 className="text-2xl font-semibold">Éditer l'attestation</h2>
+    <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href={`/admin/attestations/${id}`}>
+              <Button variant="outline" size="sm" className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Retour
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">✏️ Modifier l'attestation</h1>
+              <p className="text-sm text-slate-500">{form?.code}</p>
+            </div>
+          </div>
         </div>
+
+        {/* Alertes */}
         {error && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive">
+            <AlertCircle className="w-4 h-4" />
             <AlertTitle>Erreur</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         {success && (
-          <Alert className="mb-4">
-            <AlertTitle>Succès</AlertTitle>
-            <AlertDescription>Attestation modifiée avec succès !</AlertDescription>
-          </Alert>
-        )}
-        {Object.values(fieldErrors).some(Boolean) && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Veuillez corriger les champs suivants :</AlertTitle>
-            <AlertDescription>
-              <ul className="list-disc pl-5">
-                {Object.entries(fieldErrors)
-                  .filter(([_, msg]) => !!msg)
-                  .map(([field, msg]) => (
-                    <li key={field}>
-                      <span className="font-semibold capitalize text-red-700">{field.replace(/([A-Z])/g, ' $1').toLowerCase()} :</span> {msg as string}
-                    </li>
-                  ))}
-              </ul>
+          <Alert className="border-emerald-200 bg-emerald-50">
+            <CheckCircle className="w-4 h-4 text-emerald-600" />
+            <AlertTitle className="text-emerald-800">Succès</AlertTitle>
+            <AlertDescription className="text-emerald-700">
+              Attestation modifiée avec succès !
             </AlertDescription>
           </Alert>
         )}
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label htmlFor="fullName">Nom complet</Label>
-            <Input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} required placeholder="Nom et prénom du bénéficiaire" className={clsx("input-style", fieldErrors.fullName && "border-red-500")}/>
-            {fieldErrors.fullName && <div className="text-red-500 text-xs mt-1">{fieldErrors.fullName}</div>}
-          </div>
-          <div>
-            <Label htmlFor="birthDate">Date de naissance</Label>
-            <Input id="birthDate" name="birthDate" type="date" value={form.birthDate} onChange={handleChange} required className={clsx("input-style", fieldErrors.birthDate && "border-red-500")}/>
-            {fieldErrors.birthDate && <div className="text-red-500 text-xs mt-1">{fieldErrors.birthDate}</div>}
-          </div>
-          <div>
-            <Label htmlFor="birthPlace">Lieu de naissance</Label>
-            <Input id="birthPlace" name="birthPlace" value={form.birthPlace} onChange={handleChange} required placeholder="Ville, pays..." className={clsx("input-style", fieldErrors.birthPlace && "border-red-500")}/>
-            {fieldErrors.birthPlace && <div className="text-red-500 text-xs mt-1">{fieldErrors.birthPlace}</div>}
-          </div>
-          <div>
-            <Label htmlFor="type">Type d'attestation</Label>
-            <Select value={form.type || "FORMATION"} onValueChange={(v) => handleSelect("type", v)} required>
-              <SelectTrigger id="type" name="type" className={clsx("input-style", fieldErrors.type && "border-red-500") }>
-                <SelectValue placeholder="Sélectionner un type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ATTESTATION_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fieldErrors.type && <div className="text-red-500 text-xs mt-1">{fieldErrors.type}</div>}
-          </div>
-          <div>
-            <Label htmlFor="formation">Formation</Label>
-            <Input
-              id="formation"
-              name="formation"
-              value={form.formation}
-              onChange={handleChange}
-              required
-              placeholder="Nom de la formation"
-              className={clsx("input-style", fieldErrors.formation && "border-red-500")}
-              list="formations-list"
-              autoComplete="off"
-            />
-            <datalist id="formations-list">
-              {formations.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-            {fieldErrors.formation && <div className="text-red-500 text-xs mt-1">{fieldErrors.formation}</div>}
-          </div>
-          <div>
-            <Label htmlFor="issuingCompany">Société émettrice</Label>
-            <Input id="issuingCompany" name="issuingCompany" value={form.issuingCompany} onChange={handleChange} required placeholder="Nom de la société" className={clsx("input-style", fieldErrors.issuingCompany && "border-red-500")}/>
-            {fieldErrors.issuingCompany && <div className="text-red-500 text-xs mt-1">{fieldErrors.issuingCompany}</div>}
-          </div>
-          <div>
-            <Label htmlFor="startDate">Date de début</Label>
-            <Input id="startDate" name="startDate" type="date" value={form.startDate} onChange={handleChange} required className={clsx("input-style", fieldErrors.startDate && "border-red-500")}/>
-            {fieldErrors.startDate && <div className="text-red-500 text-xs mt-1">{fieldErrors.startDate}</div>}
-          </div>
-          <div>
-            <Label htmlFor="endDate">Date de fin</Label>
-            <Input id="endDate" name="endDate" type="date" value={form.endDate} onChange={handleChange} required className={clsx("input-style", fieldErrors.endDate && "border-red-500")}/>
-            {fieldErrors.endDate && <div className="text-red-500 text-xs mt-1">{fieldErrors.endDate}</div>}
-          </div>
-          <div>
-            <Label htmlFor="location">Lieu</Label>
-            <Input id="location" name="location" value={form.location} onChange={handleChange} required placeholder="Lieu de la formation ou du stage" className={clsx("input-style", fieldErrors.location && "border-red-500")}/>
-            {fieldErrors.location && <div className="text-red-500 text-xs mt-1">{fieldErrors.location}</div>}
-          </div>
-          <div>
-            <Label htmlFor="instructor">Formateur</Label>
-            <Input id="instructor" name="instructor" value={form.instructor} onChange={handleChange} required placeholder="Nom du formateur" className={clsx("input-style", fieldErrors.instructor && "border-red-500")}/>
-            {fieldErrors.instructor && <div className="text-red-500 text-xs mt-1">{fieldErrors.instructor}</div>}
-          </div>
-          <div className="md:col-span-2 flex justify-end">
-            <Button type="submit" className="px-8 py-2 text-base" disabled={saving || Object.values(fieldErrors).some(Boolean)}>
-              {saving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-              Enregistrer
-            </Button>
-          </div>
-        </form>
-      </Card>
+
+        {/* Formulaire */}
+        <Card className="p-8 bg-white shadow-lg">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Informations personnelles */}
+            <div>
+              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm">1</span>
+                Informations personnelles
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="fullName" className="text-sm font-semibold text-slate-700">👤 Nom complet *</Label>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    value={form?.fullName || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5 h-11", fieldErrors.fullName && "border-red-500")}
+                  />
+                  {fieldErrors.fullName && <p className="text-xs text-red-500 mt-1">{fieldErrors.fullName}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="gender" className="text-sm font-semibold text-slate-700">⚥ Sexe</Label>
+                  <Select value={form?.gender || ""} onValueChange={(v) => handleSelect("gender", v)}>
+                    <SelectTrigger className="mt-1.5 h-11">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GENDER_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="birthDate" className="text-sm font-semibold text-slate-700">🎂 Date de naissance *</Label>
+                  <DateInput
+                    id="birthDate"
+                    name="birthDate"
+                    value={form?.birthDate || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5", fieldErrors.birthDate && "border-red-500")}
+                  />
+                  {fieldErrors.birthDate && <p className="text-xs text-red-500 mt-1">{fieldErrors.birthDate}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="birthPlace" className="text-sm font-semibold text-slate-700">📍 Lieu de naissance *</Label>
+                  <Input
+                    id="birthPlace"
+                    name="birthPlace"
+                    value={form?.birthPlace || ""}
+                    onChange={handleChange}
+                    placeholder="Ville, Pays"
+                    className={cn("mt-1.5 h-11", fieldErrors.birthPlace && "border-red-500")}
+                  />
+                  {fieldErrors.birthPlace && <p className="text-xs text-red-500 mt-1">{fieldErrors.birthPlace}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Détails de la formation */}
+            <div>
+              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-sm">2</span>
+                Détails de la formation
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="type" className="text-sm font-semibold text-slate-700">📑 Type d'attestation</Label>
+                  <Select value={form?.type || ""} onValueChange={(v) => handleSelect("type", v)}>
+                    <SelectTrigger className="mt-1.5 h-11">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ATTESTATION_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="formation" className="text-sm font-semibold text-slate-700">🎓 Formation *</Label>
+                  <Input
+                    id="formation"
+                    name="formation"
+                    value={form?.formation || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5 h-11", fieldErrors.formation && "border-red-500")}
+                    list="formations-list"
+                  />
+                  <datalist id="formations-list">
+                    {formations.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  {fieldErrors.formation && <p className="text-xs text-red-500 mt-1">{fieldErrors.formation}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="startDate" className="text-sm font-semibold text-slate-700">📅 Date de début *</Label>
+                  <DateInput
+                    id="startDate"
+                    name="startDate"
+                    value={form?.startDate || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5", fieldErrors.startDate && "border-red-500")}
+                  />
+                  {fieldErrors.startDate && <p className="text-xs text-red-500 mt-1">{fieldErrors.startDate}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="endDate" className="text-sm font-semibold text-slate-700">📅 Date de fin *</Label>
+                  <DateInput
+                    id="endDate"
+                    name="endDate"
+                    value={form?.endDate || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5", fieldErrors.endDate && "border-red-500")}
+                  />
+                  {fieldErrors.endDate && <p className="text-xs text-red-500 mt-1">{fieldErrors.endDate}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="location" className="text-sm font-semibold text-slate-700">📍 Lieu *</Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    value={form?.location || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5 h-11", fieldErrors.location && "border-red-500")}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="instructor" className="text-sm font-semibold text-slate-700">👨‍🏫 Formateur *</Label>
+                  <Input
+                    id="instructor"
+                    name="instructor"
+                    value={form?.instructor || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5 h-11", fieldErrors.instructor && "border-red-500")}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="issuingCompany" className="text-sm font-semibold text-slate-700">🏢 Société émettrice</Label>
+                  <Input
+                    id="issuingCompany"
+                    name="issuingCompany"
+                    value={form?.issuingCompany || ""}
+                    onChange={handleChange}
+                    className="mt-1.5 h-11"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Champs spécifiques */}
+            {form?.type === "STAGE" && (
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white text-sm">3</span>
+                  Informations de Stage
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="stageHours" className="text-sm font-semibold text-slate-700">⏱️ Heures de stage</Label>
+                    <Input
+                      id="stageHours"
+                      name="stageHours"
+                      type="number"
+                      value={form?.stageHours || ""}
+                      onChange={(e) => handleNumberChange("stageHours", e.target.value)}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="stageScore" className="text-sm font-semibold text-slate-700">📊 Score (0-100)</Label>
+                    <Input
+                      id="stageScore"
+                      name="stageScore"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={form?.stageScore || ""}
+                      onChange={(e) => handleNumberChange("stageScore", e.target.value)}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {form?.type === "CERTIFICATION" && (
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-sm">3</span>
+                  Informations de Certification
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="certificationHours" className="text-sm font-semibold text-slate-700">⏱️ Heures de formation</Label>
+                    <Input
+                      id="certificationHours"
+                      name="certificationHours"
+                      type="number"
+                      value={form?.certificationHours || ""}
+                      onChange={(e) => handleNumberChange("certificationHours", e.target.value)}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="certificationScore" className="text-sm font-semibold text-slate-700">📊 Score (0-100)</Label>
+                    <Input
+                      id="certificationScore"
+                      name="certificationScore"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={form?.certificationScore || ""}
+                      onChange={(e) => handleNumberChange("certificationScore", e.target.value)}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-6 border-t">
+              <Link href={`/admin/attestations/${id}`}>
+                <Button type="button" variant="outline">
+                  Annuler
+                </Button>
+              </Link>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="animate-spin w-4 h-4" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Enregistrer les modifications
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   );
-} 
+}

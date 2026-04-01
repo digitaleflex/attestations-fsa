@@ -8,7 +8,7 @@ import { ShieldCheck, XCircle, Sparkles } from "lucide-react";
 // Confetti simple (SVG fallback)
 
 const schema = z.object({
-  code: z.string().min(8, "Code requis").max(64, "Code trop long")
+  code: z.string().min(5, "Minimum 5 caractères requis").max(64, "Code trop long")
 });
 
 type FormData = z.infer<typeof schema>;
@@ -83,16 +83,17 @@ export default function VerifierPage() {
         </div>
         {/* Formulaire */}
         <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col gap-4 mb-6">
-          <label htmlFor="code" className="text-sm font-medium text-gray-700">Code d’attestation</label>
+          <label htmlFor="code" className="text-sm font-medium text-gray-700">Code d'attestation</label>
           <input
             id="code"
             type="text"
-            placeholder="FSA-2025-M07-00001-3f8b6"
+            placeholder="3f8b6 ou FSA-2025-M07-00001-3f8b6"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-lg bg-white/80 backdrop-blur"
             {...register("code")}
             autoComplete="off"
             disabled={loading}
           />
+          <p className="text-xs text-gray-500 mt-1">Vous pouvez saisir les 5 derniers caractères du code ou le code complet.</p>
           {errors.code && <span className="text-red-600 text-sm">{errors.code.message}</span>}
           <button
             type="submit"

@@ -1,332 +1,396 @@
 "use client";
 
-import * as React from "react"
 import { useEffect, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, FileDown, Printer } from 'lucide-react';
-// import html2pdf from 'html2pdf.js'; // Dynamically imported
-import { useRef } from "react";
-import { QRCodeSVG } from 'qrcode.react';
+import { Loader2, Download, Edit, ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, Calendar, MapPin, GraduationCap, Award, QrCode } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
+import html2pdf from "html2pdf.js";
+import { QRCodeSVG } from "qrcode.react";
 
-// Composant utilitaire pour afficher une date formatée côté client uniquement
-function DateLocale({ date, options }: { date: string | Date, options?: Intl.DateTimeFormatOptions }) {
-  const [formatted, setFormatted] = useState("");
-  useEffect(() => {
-    if (date) {
-      setFormatted(new Date(date).toLocaleDateString('fr-FR', options));
-    }
-  }, [date, options]);
-  return <span>{formatted}</span>;
-}
-
-type Attestation = {
+type AttestationData = {
+  id: string;
   code: string;
-  status: string;
   fullName: string;
+  gender?: string;
   birthDate: string;
   birthPlace: string;
+  formation: { name: string; category?: string };
   type: string;
+  stageHours?: number;
+  stageScore?: number;
+  certificationMention?: string;
+  certificationScore?: number;
   startDate: string;
   endDate: string;
   location: string;
   instructor: string;
   issuingCompany: string;
+  status: string;
   issuedAt: string;
-  formation?: {
-    name?: string;
-    category?: string;
-    description?: string;
-    skills?: string[];
-  };
 };
 
-export default function AttestationDetailPage() {
+function DateLocale({ date, options }: { date: string | Date; options?: Intl.DateTimeFormatOptions }) {
+  const [formatted, setFormatted] = useState("");
+  useEffect(() => {
+    if (date) {
+      setFormatted(new Date(date).toLocaleDateString("fr-FR", options));
+    }
+  }, [date, options]);
+  return <span>{formatted}</span>;
+}
+
+export default function AttestationDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [data, setData] = useState<Attestation | null>(null);
+  const [data, setData] = useState<AttestationData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionMsg, setActionMsg] = useState("");
-  const [actionError, setActionError] = useState("");
-  const pdfRef = useRef(null);
-  const [pdfMsg, setPdfMsg] = useState("");
 
   useEffect(() => {
-    setLoading(true);
     fetch(`/api/attestations/${id}`)
-      .then((res) => res.ok ? res.json() : Promise.reject(res))
-      .then((att) => setData(att))
-      .catch(() => setError("Attestation non trouvée ou erreur serveur."))
-      .finally(() => setLoading(false));
+      .then((res) => res.json())
+      .then((data) => {
+        setData(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [id]);
 
-  // Déclenchement auto du PDF si ?pdf=1
-  useEffect(() => {
-    if (!loading && data && searchParams.get("pdf") === "1") {
-      setTimeout(() => handleDownloadPDF(), 400);
-    }
-
-  }, [loading, data, searchParams]);
-
-  const handleStatus = async (status: 'VALIDATED' | 'REJECTED') => {
+  const handleStatus = async (status: "VALIDATED" | "REJECTED") => {
     setActionLoading(true);
-    setActionMsg("");
-    setActionError("");
     try {
       const res = await fetch(`/api/attestations/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Erreur lors de la mise à jour du statut");
-      const updated = await res.json();
-      setData(updated);
-      setActionMsg(status === 'VALIDATED' ? "Attestation validée !" : "Attestation rejetée.");
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
-      setActionError("Impossible de mettre à jour le statut.");
+      if (!res.ok) throw new Error("Erreur lors de la mise à jour");
+      setData((prev) => prev ? { ...prev, status } : null);
+      toast.success(status === "VALIDATED" ? "✅ Attestation validée !" : "❌ Attestation rejetée !");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur inconnue");
     } finally {
       setActionLoading(false);
     }
   };
-  const handlePrint = () => {
-    window.print();
-  };
 
-
-  const handleDownloadPDF = async () => {
-    setPdfMsg("");
-    if (!data || !pdfRef.current) return;
-
+  const handleDelete = async () => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette attestation ?")) return;
     try {
-      setPdfMsg("Préparation du PDF...");
-      // Dynamic import for performance
-      const html2pdf = (await import('html2pdf.js')).default;
-
-      await html2pdf()
-        .set({
-          filename: `attestation-${data.code}.pdf`,
-          margin: [4, 16, 4, 16],
-          html2canvas: { scale: 2 },
-          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-          pagebreak: { mode: ['avoid-all'] }
-        })
-        .from(pdfRef.current)
-        .save();
-
-      setPdfMsg("PDF téléchargé avec succès !");
-    } catch (error) {
-      console.error(error);
-      setPdfMsg("Erreur lors de la génération du PDF.");
+      const res = await fetch(`/api/attestations/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erreur lors de la suppression");
+      toast.success("Attestation supprimée !");
+      router.push("/admin/attestations");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur inconnue");
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Code copié !");
+  const handleDownload = () => {
+    const element = document.getElementById("attestation-preview");
+    if (!element) return;
+    html2pdf()
+      .from(element)
+      .set({ margin: 10, filename: `attestation-${data?.code}.pdf` })
+      .save();
+    toast.success("PDF téléchargé !");
   };
 
   if (loading) {
-    return <Skeleton className="h-96 w-full max-w-2xl mx-auto mt-12" />;
-  }
-  if (error || !data) {
     return (
-      <div className="max-w-xl mx-auto mt-12">
-        <Alert variant="destructive">
-          <AlertTitle>Erreur</AlertTitle>
-          <AlertDescription>{error || "Attestation introuvable."}</AlertDescription>
-        </Alert>
-        <Button className="mt-6" onClick={() => router.push("/admin/attestations")}>Retour à la liste</Button>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin w-8 h-8 text-slate-400" />
       </div>
     );
   }
 
+  if (!data) {
+    return (
+      <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="max-w-4xl mx-auto">
+          <Alert variant="destructive">
+            <AlertTitle>Attestation non trouvée</AlertTitle>
+            <AlertDescription>Cette attestation n'existe pas ou a été supprimée.</AlertDescription>
+          </Alert>
+          <Link href="/admin/attestations">
+            <Button className="mt-4">← Retour à la liste</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "FORMATION": return GraduationCap;
+      case "STAGE": return FileText;
+      case "CERTIFICATION": return Award;
+      default: return FileText;
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "VALIDATED": return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "REJECTED": return "bg-rose-100 text-rose-700 border-rose-200";
+      default: return "bg-amber-100 text-amber-700 border-amber-200";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "VALIDATED": return "Validée";
+      case "REJECTED": return "Rejetée";
+      default: return "En attente";
+    }
+  };
+
+  const TypeIcon = getTypeIcon(data.type);
+
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <Card className="bg-white rounded-xl shadow-lg p-8">
-        <div className="flex items-center gap-4 mb-8">
-          <span className="text-3xl">📄</span>
-          <h2 className="text-2xl font-bold">Détail de l&rsquo;attestation</h2>
-        </div>
-        <div className="flex flex-wrap gap-4 mb-8">
-          <Button
-            variant="default"
-            className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={() => handleStatus('VALIDATED')}
-            disabled={actionLoading || data.status === 'VALIDATED' || data.status === 'REJECTED'}
-          >
-            <CheckCircle className="w-4 h-4 mr-2" /> Valider
-          </Button>
-          <Button
-            variant="destructive"
-            className="bg-red-600 hover:bg-red-700 text-white"
-            onClick={() => handleStatus('REJECTED')}
-            disabled={actionLoading || data.status === 'VALIDATED' || data.status === 'REJECTED'}
-          >
-            <XCircle className="w-4 h-4 mr-2" /> Rejeter
-          </Button>
-          <Button
-            variant="outline"
-            className="border-blue-600 text-blue-700"
-            onClick={handlePrint}
-          >
-            <Printer className="w-4 h-4 mr-2" /> Imprimer / PDF
-          </Button>
-          <Button
-            variant="outline"
-            className="border-green-600 text-green-700"
-            onClick={handleDownloadPDF}
-          >
-            <FileDown className="w-4 h-4 mr-2" /> Télécharger PDF
-          </Button>
-        </div>
-        {pdfMsg && <Alert className="mb-4"><AlertTitle>{pdfMsg}</AlertTitle></Alert>}
-        {actionMsg && <Alert className="mb-4"><AlertTitle>{actionMsg}</AlertTitle></Alert>}
-        {actionError && <Alert variant="destructive" className="mb-4"><AlertTitle>{actionError}</AlertTitle></Alert>}
-        <div ref={pdfRef} className="print:bg-white print:p-8 print:w-full print:landscape" style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 8px #0001', position: 'relative', overflow: 'hidden', padding: 16, margin: 4 }}>
-          {/* Filigrane */}
-          <div style={{
-            position: 'absolute',
-            top: '40%',
-            left: '50%',
-            transform: 'translate(-50%, -50%) rotate(-20deg)',
-            fontSize: 120,
-            color: '#e5e7eb',
-            opacity: 0.18,
-            pointerEvents: 'none',
-            userSelect: 'none',
-            zIndex: 0
-          }}>FSA</div>
-          {/* Logo et bannière */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24, zIndex: 1 }}>
-            <img src="/logo-fsa.png" alt="Logo FSA" width={64} height={64} style={{ marginRight: 16 }} />
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, fontWeight: 700, color: '#2563eb', letterSpacing: 1 }}>ATTESTATION OFFICIELLE</div>
-              <div style={{ fontSize: 16, color: '#666', marginTop: 4 }}>Ferme Agro Piscicole St André</div>
-            </div>
-          </div>
-          {/* Identité et code */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, zIndex: 1 }}>
+    <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/admin/attestations">
+              <Button variant="outline" size="sm" className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Retour
+              </Button>
+            </Link>
             <div>
-              <div style={{ fontSize: 14, color: '#888' }}>Code attestation</div>
-              <div style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {data.code}
-                {/* Bouton de copie supprimé */}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 14, color: '#888' }}>Statut</div>
-              <div style={{ fontWeight: 600, color: '#f59e42', fontSize: 16 }}>{data.status}</div>
+              <h1 className="text-2xl font-bold text-slate-800">📜 Détail de l'attestation</h1>
+              <p className="text-sm text-slate-500">{data.code}</p>
             </div>
           </div>
-          <div style={{ background: '#fff', borderRadius: 8, padding: 24, marginBottom: 24, border: '1px solid #e5e7eb', zIndex: 1 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#16a34a', marginBottom: 8 }}>Délivré à</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#222', marginBottom: 8 }}>{data.fullName}</div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Né(e) le <DateLocale date={data.birthDate} /> à {data.birthPlace}</div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Type : {data.type}</div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Période : du <DateLocale date={data.startDate} /> au <DateLocale date={data.endDate} /></div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Lieu : {data.location}</div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Formateur : {data.instructor}</div>
-            <div style={{ fontSize: 15, color: '#444', marginBottom: 4 }}>Société émettrice : {data.issuingCompany}</div>
+          <div className="flex gap-2">
+            <Link href={`/admin/attestations/${id}/edit`}>
+              <Button variant="outline" className="gap-2">
+                <Edit className="w-4 h-4" />
+                Modifier
+              </Button>
+            </Link>
+            <Button onClick={handleDownload} variant="outline" className="gap-2">
+              <Download className="w-4 h-4" />
+              PDF
+            </Button>
           </div>
-          {/* Détails formation */}
-          <div style={{ background: '#f0fdf4', borderRadius: 8, padding: 24, marginBottom: 32, border: '1px solid #bbf7d0', zIndex: 1 }}>
-            <div style={{ fontWeight: 700, color: '#16a34a', fontSize: 18, marginBottom: 12, letterSpacing: 0.5 }}>{data.formation?.name || '-'}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 15, color: '#166534', marginBottom: 4 }}>
-                <span style={{ fontWeight: 700 }}>Catégorie :</span> {data.formation?.category || '-'}
+        </div>
+
+        {/* Statut */}
+        <Card className="p-4 bg-white shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <TypeIcon className="w-6 h-6 text-white" />
               </div>
-              <div style={{ fontSize: 15, color: '#166534', marginBottom: 4 }}>
-                <span style={{ fontWeight: 700 }}>Description :</span> {data.formation?.description || '-'}
-              </div>
-              <div style={{ fontSize: 15, color: '#166534' }}>
-                <span style={{ fontWeight: 700 }}>Compétences :</span>{' '}
-                {data.formation && Array.isArray(data.formation.skills) ? data.formation.skills.join(', ') : '-'}
+              <div>
+                <p className="text-sm text-slate-500">Type</p>
+                <p className="font-semibold text-slate-800">
+                  {data.type === "FORMATION" ? "Formation" : data.type === "STAGE" ? "Stage" : "Certification"}
+                </p>
               </div>
             </div>
+            <Badge className={getStatusBadgeColor(data.status)}>
+              {data.status === "VALIDATED" ? <CheckCircle className="w-3 h-3 mr-1" /> :
+               data.status === "REJECTED" ? <XCircle className="w-3 h-3 mr-1" /> :
+               <Clock className="w-3 h-3 mr-1" />}
+              {getStatusLabel(data.status)}
+            </Badge>
           </div>
-          {/* QR code et signature */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 32, zIndex: 1 }}>
-            <div>
-              <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>Signature du responsable</div>
-              <div style={{ width: 260, height: 60, borderBottom: '2px solid #b91c1c', marginBottom: 8, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                <img
-                  src="/signature-responsable.png"
-                  alt="Signature du responsable"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
-                    display: 'block',
-                    margin: '0 auto',
-                  }}
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Aperçu de l'attestation */}
+          <Card className="lg:col-span-2 p-8 bg-white shadow-lg">
+            <div id="attestation-preview" className="p-8 bg-white border-2 border-slate-200">
+              <div className="text-center mb-8">
+                <h1 className="text-2xl font-bold text-slate-800">ATTESTATION DE {data.type}</h1>
+                <p className="text-slate-600 mt-2 font-mono text-sm">{data.code}</p>
+              </div>
+
+              <div className="space-y-4 text-slate-700">
+                <p className="text-lg">
+                  Je soussigné(e), la direction de <strong>{data.issuingCompany}</strong>, atteste que :
+                </p>
+                <p className="text-xl font-semibold text-center my-6">
+                  M./Mme {data.fullName}
+                </p>
+                <p style={{ fontSize: 15, color: "#444", marginBottom: 4 }}>
+                  Né(e) le <DateLocale date={data.birthDate} /> à <strong>{data.birthPlace}</strong>
+                </p>
+                <p className="text-lg">
+                  A suivi avec succès la formation <strong>{data.formation?.name || "-"}</strong>
+                </p>
+                <p style={{ fontSize: 15, color: "#444", marginBottom: 4 }}>
+                  Période : du <DateLocale date={data.startDate} /> au <DateLocale date={data.endDate} />
+                </p>
+                <p style={{ fontSize: 15, color: "#444" }}>
+                  Lieu : <strong>{data.location}</strong>
+                </p>
+                <p style={{ fontSize: 15, color: "#444" }}>
+                  Formateur : <strong>{data.instructor}</strong>
+                </p>
+                
+                {/* Informations spécifiques */}
+                {data.type === "STAGE" && data.stageHours && (
+                  <p style={{ fontSize: 15, color: "#444" }}>
+                    Durée du stage : <strong>{data.stageHours} heures</strong>
+                    {data.stageScore && ` - Score: ${data.stageScore}/100`}
+                  </p>
+                )}
+                {data.type === "CERTIFICATION" && (
+                  <>
+                    {data.certificationHours && (
+                      <p style={{ fontSize: 15, color: "#444" }}>
+                        Durée : <strong>{data.certificationHours} heures</strong>
+                      </p>
+                    )}
+                    {data.certificationMention && (
+                      <p style={{ fontSize: 15, color: "#444" }}>
+                        Mention : <strong>{data.certificationMention}</strong>
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="mt-12 pt-8 border-t-2 border-slate-300">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <div style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+                      Statut :{" "}
+                      <span className={
+                        data.status === "VALIDATED" ? "text-emerald-600" :
+                        data.status === "REJECTED" ? "text-rose-600" : "text-amber-600"
+                      }>
+                        {data.status === "VALIDATED" ? "VALIDÉE" :
+                         data.status === "REJECTED" ? "REJETÉE" : "EN ATTENTE"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+                      Date : <DateLocale date={data.issuedAt} options={{ day: "numeric", month: "long", year: "numeric" }} />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="border-t border-slate-800 w-48 mx-auto mb-2"></div>
+                    <div className="text-sm font-semibold">La Direction</div>
+                    <div className="text-xs text-slate-500">{data.issuingCompany}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
+                Fait à {data.location.split(",")[0] || "Abomey-Calavi"}, le{" "}
+                <DateLocale date={data.issuedAt} options={{ day: "numeric", month: "long", year: "numeric" }}>.
+              </div>
+            </div>
+          </Card>
+
+          {/* Informations et actions */}
+          <div className="space-y-6">
+            {/* QR Code */}
+            <Card className="p-6 bg-white shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <QrCode className="w-5 h-5 text-blue-500" />
+                <h3 className="font-semibold text-slate-800">QR Code de vérification</h3>
+              </div>
+              <div className="flex justify-center">
+                <QRCodeSVG 
+                  value={`${window.location.origin}/verifier/${data.code}`}
+                  size={180}
+                  level="H"
                 />
               </div>
-              <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>Date : <DateLocale date={data.issuedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /></div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <QRCodeSVG value={`https://verifier.fermestandre.com/${data.code}`} size={80} level="M" includeMargin={true} />
-              <div style={{ fontSize: 13, color: '#b91c1c', marginTop: 4, fontWeight: 700 }}>
-                Vérification
+              <p className="text-xs text-slate-500 text-center mt-3">
+                Scannez pour vérifier l'authenticité
+              </p>
+            </Card>
+
+            {/* Informations détaillées */}
+            <Card className="p-6 bg-white shadow-sm">
+              <h3 className="font-semibold text-lg mb-4 text-slate-800">📋 Informations</h3>
+              <dl className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-slate-400" />
+                  <dt className="text-slate-500">Code</dt>
+                  <dd className="font-mono font-medium ml-auto">{data.code}</dd>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-slate-400" />
+                  <dt className="text-slate-500">Bénéficiaire</dt>
+                  <dd className="font-medium ml-auto">{data.fullName}</dd>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <dt className="text-slate-500">Date de naissance</dt>
+                  <dd className="ml-auto"><DateLocale date={data.birthDate} /></dd>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-slate-400" />
+                  <dt className="text-slate-500">Lieu de naissance</dt>
+                  <dd className="ml-auto">{data.birthPlace}</dd>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-slate-400" />
+                  <dt className="text-slate-500">Formation</dt>
+                  <dd className="ml-auto">{data.formation?.name || "-"}</dd>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <dt className="text-slate-500">Créée le</dt>
+                  <dd className="ml-auto"><DateLocale date={data.issuedAt} /></dd>
+                </div>
+              </dl>
+            </Card>
+
+            {/* Actions */}
+            <Card className="p-6 bg-white shadow-sm">
+              <h3 className="font-semibold text-lg mb-4 text-slate-800">⚡ Actions</h3>
+              <div className="space-y-3">
+                {data.status === "PENDING" && (
+                  <>
+                    <Button
+                      onClick={() => handleStatus("VALIDATED")}
+                      className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+                      disabled={actionLoading}
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Valider l'attestation
+                    </Button>
+                    <Button
+                      onClick={() => handleStatus("REJECTED")}
+                      variant="outline"
+                      className="w-full gap-2 border-rose-300 text-rose-600 hover:bg-rose-50"
+                      disabled={actionLoading}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Rejeter l'attestation
+                    </Button>
+                  </>
+                )}
+                <Button
+                  onClick={handleDelete}
+                  variant="destructive"
+                  className="w-full gap-2"
+                  disabled={actionLoading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Supprimer
+                </Button>
               </div>
-            </div>
-          </div>
-          {/* Formule officielle */}
-          <div style={{ marginTop: 18, textAlign: 'center', color: '#111', fontSize: 11, fontStyle: 'italic', lineHeight: 1.35, fontFamily: 'Georgia, Times, serif', maxWidth: 500, marginLeft: 'auto', marginRight: 'auto', letterSpacing: 0.01 }}>
-            La présente attestation est établie en toute bonne foi, sous la responsabilité de <span style={{ fontWeight: 700, color: '#b91c1c' }}>LA FERME AGRO PISCICOLE ST ANDRE</span>, pour servir et faire valoir ce que de droit auprès de toute autorité ou organisme qui en fera la demande. Toute altération ou falsification de ce document expose son auteur à des poursuites conformément à la loi.<br />
-            <span style={{ fontWeight: 700 }}>
-              Fait à Abomey-Calavi, le <DateLocale date={data.issuedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} />.
-            </span>
-          </div>
-          {/* Encadré informations légales & contact */}
-          <div style={{
-            marginTop: 10,
-            padding: 8,
-            border: '1px solid #b91c1c',
-            borderRadius: 6,
-            background: '#fff',
-            fontSize: 10,
-            color: '#111',
-            fontFamily: 'Arial, Helvetica, sans-serif',
-            fontWeight: 500,
-            boxShadow: '0 1px 4px #0001',
-            maxWidth: 380,
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            textAlign: 'center',
-            lineHeight: 1.35,
-            letterSpacing: 0.01
-          }}>
-            Cette attestation est strictement personnelle et ne peut être cédée à un tiers.<br />
-            Pour toute vérification, contactez : <a href="mailto:security@fermestandre.com" style={{ color: '#b91c1c', textDecoration: 'underline' }}>security@fermestandre.com</a>
-            <div style={{ fontSize: 9, color: '#b91c1c', marginTop: 4, fontWeight: 600, textAlign: 'center', letterSpacing: 0.01 }}>
-              Vérifiez l’authenticité de ce document sur verifier.fermestandre.com
-            </div>
+            </Card>
           </div>
         </div>
-        {/* Pied de page vérification */}
-        <div style={{
-          textAlign: 'center',
-          fontSize: 12,
-          color: '#b91c1c',
-          marginTop: 24,
-          fontWeight: 500,
-          letterSpacing: 0.5,
-          fontFamily: 'Arial, Helvetica, sans-serif',
-          opacity: 0.85
-        }}>
-          Vérifiez l’authenticité de ce document sur <span style={{ fontWeight: 700 }}>verifier.fermestandre.com</span>
-        </div>
-        <Button variant="outline" onClick={() => router.push("/admin/attestations")}>Retour à la liste</Button>
-      </Card>
+      </div>
     </div>
   );
 }

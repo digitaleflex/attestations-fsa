@@ -7,6 +7,7 @@ import { z } from 'zod';
 const AttestationUpdateSchema = z.object({
   type: z.enum(['FORMATION', 'STAGE', 'CERTIFICATION']).optional(),
   status: z.enum(['PENDING', 'VALIDATED', 'REJECTED']).optional(),
+  gender: z.enum(['M', 'F']).optional(),
   fullName: z.string().min(1, "Le nom complet est obligatoire.").optional(),
   birthDate: z.string().min(1, "La date de naissance est obligatoire.").optional(),
   birthPlace: z.string().min(1, "Le lieu de naissance est obligatoire.").optional(),
@@ -16,6 +17,17 @@ const AttestationUpdateSchema = z.object({
   location: z.string().min(1, "Le lieu est obligatoire.").optional(),
   instructor: z.string().min(1, "Le formateur est obligatoire.").optional(),
   issuingCompany: z.string().min(1, "La société émettrice est obligatoire.").optional(),
+  
+  // Champs spécifiques pour STAGE
+  stageHours: z.number().min(1).max(2000).optional(),
+  stageScore: z.number().min(0).max(100).optional(),
+  stageObservations: z.string().max(1000).optional(),
+  
+  // Champs spécifiques pour CERTIFICATION
+  certificationMention: z.enum(['PASSABLE', 'ASSEZ_BIEN', 'BIEN', 'TRES_BIEN', 'EXCELLENCE']).optional(),
+  certificationScore: z.number().min(0).max(100).optional(),
+  certificationHours: z.number().min(1).max(2000).optional(),
+  certificationObservations: z.string().max(1000).optional(),
 });
 
 export async function GET(request: Request) {

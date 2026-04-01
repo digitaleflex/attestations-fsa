@@ -19,7 +19,32 @@ enum AttestationType {
   CERTIFICATION
 }
 
-// Modèles pour Better Auth
+enum Gender {
+  M
+  F
+}
+
+enum CertificationMention {
+  PASSABLE
+  ASSEZ_BIEN
+  BIEN
+  TRES_BIEN
+  EXCELLENCE
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  OPEN
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -33,8 +58,7 @@ model Account {
   scope             String?
   id_token          String?  @db.Text
   session_state     String?
-  user              User     @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
-  admin             Admin?   @relation("AdminAccounts", fields: [userId], references: [id], onDelete: Cascade, map: "Account_adminId_fkey")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -44,8 +68,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
-  admin        Admin?   @relation("AdminSessions", fields: [userId], references: [id], onDelete: Cascade, map: "Session_adminId_fkey")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -55,11 +78,20 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  accounts      Account[] @relation("UserAccounts")
-  sessions      Session[]  @relation("UserSessions")
   role          String    @default("USER")
+
+  // Informations pour les attestations
+  birthDate     DateTime?
+  birthPlace    String?
+  phone         String?
+  address       String?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  submissions   ExamSubmission[]
 }
 
 model VerificationToken {
@@ -68,22 +100,6 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-}
-
-// Modèle Admin pour l'authentification
-model Admin {
-  id            String    @id @default(uuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  password      String
-  role          String    @default("ADMIN")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Relations nécessaires pour Better Auth
-  accounts      Account[] @relation("AdminAccounts")
-  sessions      Session[]  @relation("AdminSessions")
 }
 
 model Formation {
@@ -101,34 +117,161 @@ model Attestation {
   code           String            @unique
   issuedAt       DateTime          @default(now())
   type           AttestationType   @default(FORMATION)
+  
+  // Informations personnelles
   fullName       String
+  gender         Gender?           // M ou F
   birthDate      DateTime
   birthPlace     String
+  
+  // Formation associée
   formationId    String
   formation      Formation         @relation(fields: [formationId], references: [id])
+  
+  // Détails de la formation
   startDate      DateTime
   endDate        DateTime
   location       String
   instructor     String
   issuingCompany String
+  
+  // Statut
   status         AttestationStatus @default(PENDING)
+  
+  // Champs spécifiques pour STAGE
+  stageHours     Int?              // Nombre d'heures de stage
+  stageScore     Float?            // Score du stage (0-100)
+  stageObservations String?        // Observations du tuteur
+  
+  // Champs spécifiques pour CERTIFICATION
+  certificationMention CertificationMention?  // Mention obtenue
+  certificationScore Float?         // Score de certification (0-100)
+  certificationHours Int?           // Heures de formation pour certification
+  certificationObservations String? // Observations du jury
+  
+  // Métadonnées
   pdfUrl         String?
 }
 
 model Settings {
-  id              String  @id @default(uuid())
-  institutionName String
-  logoUrl         String?
-  replyTo         String?
-  updatedAt       DateTime @updatedAt
+  id                  String  @id @default(uuid())
+  institutionName     String
+  logoUrl             String?
+  replyTo             String?
+  targetInscriptions  Int     @default(100)
+  targetAttestations  Int     @default(50)
+  targetValidations   Int     @default(75)
+  updatedAt           DateTime @updatedAt
 }
 
 model Report {
   id              String   @id @default(uuid())
-  codeAttestation String?  // Code de l’attestation signalée (optionnel)
+  codeAttestation String?  // Code de l'attestation signalée (optionnel)
   motif           String   // Motif du signalement
   message         String   // Message détaillée
   email           String?  // Email du déclarant (optionnel)
   createdAt       DateTime @default(now())
   status          String   @default("NOUVEAU") // Statut du traitement
+}
+
+model Admin {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  name          String?
+  role          String    @default("ADMIN")
+  emailVerified DateTime?
+  
+  // Informations pour les attestations
+  birthDate     DateTime?
+  birthPlace    String?
+  phone         String?
+  address       String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Exam {
+  id              String          @id @default(uuid())
+  title           String
+  description     String?
+  status          ExamStatus      @default(DRAFT)
+  scheduledAt     DateTime?
+  totalPoints     Int             @default(100)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  parts           ExamPart[]
+  submissions     ExamSubmission[]
+}
+
+model ExamPart {
+  id              String          @id @default(uuid())
+  examId          String
+  exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  title           String
+  type            String          // "QCM", "OPEN", "CASE_STUDY"
+  duration        Int             // Minutes
+  points          Int             // 20, 40, or 40
+  order           Int
+  questions       Question[]
+  scenario        String?         @db.Text
+}
+
+model Question {
+  id              String          @id @default(uuid())
+  partId          String
+  part            ExamPart        @relation(fields: [partId], references: [id], onDelete: Cascade)
+  text            String          @db.Text
+  type            QuestionType    @default(SINGLE_CHOICE)
+  points          Float           @default(1)
+  order           Int
+  options         QuestionOption[]
+}
+
+model QuestionOption {
+  id              String          @id @default(uuid())
+  questionId      String
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text            String
+  isCorrect       Boolean         @default(false)
+}
+
+model ExamSubmission {
+  id              String          @id @default(uuid())
+  examId          String
+  exam            Exam            @relation(fields: [examId], references: [id])
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  status          String          @default("PENDING") // PENDING, GRADED
+  scorePart1      Float           @default(0)
+  scorePart2      Float           @default(0)
+  scorePart3      Float           @default(0)
+  totalScore      Float           @default(0)
+  gradedBy        String?         // Admin name or ID
+  gradedAt        DateTime?
+  submittedAt     DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+enum InternshipStatus {
+  PENDING
+  REVIEWING
+  ACCEPTED
+  REJECTED
+  ARCHIVED
+}
+
+model InternshipRequest {
+  id              String           @id @default(uuid())
+  fullName        String
+  email           String
+  phone           String
+  university      String?
+  level           String?          // e.g. "Bac +3"
+  position        String           // Desired internship role
+  cvUrl           String?          // Link to uploaded CV
+  message         String?          @db.Text
+  status          InternshipStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }

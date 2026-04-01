@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import "@/components/ui/input-style.css";
+import { DateInput } from "@/components/ui/date-input";
 import { toast } from "sonner";
+import { Loader2, Save, RotateCcw, Keyboard } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 const ATTESTATION_TYPES = [
   { value: "FORMATION", label: "Formation" },
@@ -16,8 +20,14 @@ const ATTESTATION_TYPES = [
   { value: "CERTIFICATION", label: "Certification" },
 ];
 
+const GENDER_OPTIONS = [
+  { value: "M", label: "Masculin" },
+  { value: "F", label: "Féminin" },
+];
+
 type NewAttestationForm = {
   fullName: string;
+  gender?: "M" | "F";
   birthDate: string;
   birthPlace: string;
   formation: string;
@@ -27,31 +37,72 @@ type NewAttestationForm = {
   instructor: string;
   issuingCompany: string;
   type: "FORMATION" | "STAGE" | "CERTIFICATION";
+  stageHours?: number;
+  stageScore?: number;
+  stageObservations?: string;
+  certificationMention?: string;
+  certificationScore?: number;
+  certificationHours?: number;
+  certificationObservations?: string;
 };
 
 export default function NewAttestationPage() {
   const [form, setForm] = useState<NewAttestationForm>({
     fullName: "",
+    gender: undefined,
     birthDate: "",
     birthPlace: "",
     formation: "",
     startDate: "",
     endDate: "",
     location: "Abomey-Calavi, Bénin",
-    instructor: "M. SPERO HOUNYEME",
+    instructor: "",
     issuingCompany: "La Ferme Agro Piscicole Cité St André",
     type: "FORMATION",
+    stageHours: undefined,
+    stageScore: undefined,
+    stageObservations: "",
+    certificationMention: undefined,
+    certificationScore: undefined,
+    certificationHours: undefined,
+    certificationObservations: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [formations, setFormations] = useState<string[]>([]);
+  const [completion, setCompletion] = useState(0);
+
   useEffect(() => {
     fetch("/api/formations")
       .then((res) => res.json())
       .then((data) => setFormations(Array.isArray(data) ? data.map((f: { name: string }) => f.name) : []))
       .catch(() => setFormations([]));
   }, []);
+
+  // Calculer la progression
+  useEffect(() => {
+    const requiredFields = ['fullName', 'gender', 'birthDate', 'birthPlace', 'formation', 'startDate', 'endDate', 'location', 'instructor'];
+    const filledFields = requiredFields.filter(field => form[field as keyof NewAttestationForm]);
+    const percentage = Math.round((filledFields.length / requiredFields.length) * 100);
+    setCompletion(percentage);
+  }, [form]);
+
+  // Raccourcis clavier
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (!loading) handleSubmit();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+        e.preventDefault();
+        handleReset();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [loading, form]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -62,8 +113,12 @@ export default function NewAttestationPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleNumberChange = (name: string, value: string) => {
+    const numValue = parseInt(value) || undefined;
+    setForm((prev) => ({ ...prev, [name]: numValue }));
+  };
+
+  const handleSubmit = async () => {
     setLoading(true);
     setError("");
     setSuccess(false);
@@ -75,111 +130,380 @@ export default function NewAttestationPage() {
       });
       if (!res.ok) throw new Error("Erreur lors de la création de l'attestation");
       setSuccess(true);
-      toast.success("Attestation créée avec succès !");
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message || "Erreur inconnue");
-        toast.error(err.message || "Erreur inconnue");
-      } else {
-        setError("Erreur inconnue");
-        toast.error("Erreur inconnue");
-      }
+      toast.success("✅ Attestation créée avec succès !");
+      handleReset();
+    } catch (err: any) {
+      setError(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur inconnue");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleReset = () => {
+    setForm({
+      fullName: "",
+      gender: undefined,
+      birthDate: "",
+      birthPlace: "",
+      formation: "",
+      startDate: "",
+      endDate: "",
+      location: "Abomey-Calavi, Bénin",
+      instructor: "",
+      issuingCompany: "La Ferme Agro Piscicole Cité St André",
+      type: "FORMATION",
+      stageHours: undefined,
+      stageScore: undefined,
+      stageObservations: "",
+      certificationMention: undefined,
+      certificationScore: undefined,
+      certificationHours: undefined,
+      certificationObservations: "",
+    });
+    setSuccess(false);
+    setError("");
+    toast.info("Formulaire réinitialisé");
+  };
+
   return (
-    <div className="w-full p-8">
-      <Card className="bg-white rounded-2xl shadow-lg px-12 py-12 w-full">
-        <div className="flex items-center gap-3 mb-8">
-          <span className="text-3xl">🧾</span>
-          <h2 className="text-3xl font-semibold">Nouvelle attestation</h2>
+    <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg">
+              <span className="text-2xl">📝</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Nouvelle Attestation</h1>
+              <p className="text-sm text-slate-500">Créez une attestation de formation, stage ou certification</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/admin/attestations">
+              <Button variant="outline">← Retour</Button>
+            </Link>
+          </div>
         </div>
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTitle>Erreur</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {success && (
-          <Alert className="mb-6">
-            <AlertTitle>Succès</AlertTitle>
-            <AlertDescription>Attestation créée avec succès !</AlertDescription>
-          </Alert>
-        )}
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-8" onSubmit={handleSubmit} autoComplete="off">
-          <div>
-            <Label htmlFor="fullName">Nom complet</Label>
-            <Input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} required placeholder="Nom et prénom du bénéficiaire" className="input-style" />
+
+        {/* Barre de progression */}
+        <Card className="mb-6 p-4 bg-white shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-700">Progression du formulaire</span>
+            </div>
+            <Badge variant={completion === 100 ? "default" : "secondary"}>{completion}%</Badge>
           </div>
-          <div>
-            <Label htmlFor="birthDate">Date de naissance</Label>
-            <Input id="birthDate" name="birthDate" type="date" value={form.birthDate} onChange={handleChange} required className="input-style" />
+          <Progress value={completion} className="h-2" />
+        </Card>
+
+        {/* Raccourcis */}
+        <Card className="mb-6 p-3 bg-white shadow-sm">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Keyboard className="w-4 h-4" />
+            <span>Raccourcis :</span>
+            <span className="font-mono bg-slate-100 px-2 py-1 rounded">Ctrl+S</span>
+            <span>Sauvegarder</span>
+            <span className="font-mono bg-slate-100 px-2 py-1 rounded">Ctrl+R</span>
+            <span>Réinitialiser</span>
           </div>
-          <div>
-            <Label htmlFor="birthPlace">Lieu de naissance</Label>
-            <Input id="birthPlace" name="birthPlace" value={form.birthPlace} onChange={handleChange} required placeholder="Ville, pays..." className="input-style" />
-          </div>
-          <div>
-            <Label htmlFor="type">Type d&apos;attestation</Label>
-            <Select value={form.type} onValueChange={(v) => handleSelect("type", v)} required>
-              <SelectTrigger id="type" name="type" className="input-style">
-                <SelectValue placeholder="Sélectionner un type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ATTESTATION_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+        </Card>
+
+        {/* Formulaire */}
+        <Card className="p-8 bg-white shadow-lg" suppressHydrationWarning>
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertTitle>Erreur</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert className="mb-6">
+              <AlertTitle>Succès</AlertTitle>
+              <AlertDescription>✅ Attestation créée avec succès !</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Nom complet */}
+            <div>
+              <Label htmlFor="fullName">👤 Nom complet *</Label>
+              <Input
+                id="fullName"
+                name="fullName"
+                value={form.fullName}
+                onChange={handleChange}
+                placeholder="Ex: Koffi Amadou"
+                className="mt-1.5 h-11"
+              />
+            </div>
+
+            {/* Sexe */}
+            <div>
+              <Label htmlFor="gender">⚥ Sexe *</Label>
+              <Select value={form.gender || ""} onValueChange={(v) => handleSelect("gender", v)}>
+                <SelectTrigger className="mt-1.5 h-11">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GENDER_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date de naissance */}
+            <div>
+              <Label htmlFor="birthDate">🎂 Date de naissance *</Label>
+              <DateInput
+                id="birthDate"
+                name="birthDate"
+                value={form.birthDate}
+                onChange={handleChange}
+                className="mt-1.5"
+              />
+            </div>
+
+            {/* Lieu de naissance */}
+            <div>
+              <Label htmlFor="birthPlace">📍 Lieu de naissance *</Label>
+              <Input
+                id="birthPlace"
+                name="birthPlace"
+                value={form.birthPlace}
+                onChange={handleChange}
+                placeholder="Ex: Cotonou, Bénin"
+                className="mt-1.5 h-11"
+              />
+            </div>
+
+            {/* Type d'attestation */}
+            <div>
+              <Label htmlFor="type">📑 Type d'attestation</Label>
+              <Select value={form.type} onValueChange={(v) => handleSelect("type", v)}>
+                <SelectTrigger className="mt-1.5 h-11">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ATTESTATION_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Formation */}
+            <div>
+              <Label htmlFor="formation">🎓 Formation *</Label>
+              <Input
+                id="formation"
+                name="formation"
+                value={form.formation}
+                onChange={handleChange}
+                placeholder="Nom de la formation"
+                className="mt-1.5 h-11"
+                list="formations-list"
+              />
+              <datalist id="formations-list">
+                {formations.map((name) => (
+                  <option key={name} value={name} />
                 ))}
-              </SelectContent>
-            </Select>
+              </datalist>
+            </div>
+
+            {/* Dates */}
+            <div>
+              <Label htmlFor="startDate">📅 Date de début *</Label>
+              <DateInput
+                id="startDate"
+                name="startDate"
+                value={form.startDate}
+                onChange={handleChange}
+                className="mt-1.5"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="endDate">📅 Date de fin *</Label>
+              <DateInput
+                id="endDate"
+                name="endDate"
+                value={form.endDate}
+                onChange={handleChange}
+                className="mt-1.5"
+              />
+            </div>
+
+            {/* Lieu */}
+            <div>
+              <Label htmlFor="location">📍 Lieu *</Label>
+              <Input
+                id="location"
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                placeholder="Lieu de la formation"
+                className="mt-1.5 h-11"
+              />
+            </div>
+
+            {/* Formateur */}
+            <div>
+              <Label htmlFor="instructor">👨‍🏫 Formateur *</Label>
+              <Input
+                id="instructor"
+                name="instructor"
+                value={form.instructor}
+                onChange={handleChange}
+                placeholder="Nom du formateur"
+                className="mt-1.5 h-11"
+              />
+            </div>
+
+            {/* Société émettrice */}
+            <div className="md:col-span-2">
+              <Label htmlFor="issuingCompany">🏢 Société émettrice</Label>
+              <Input
+                id="issuingCompany"
+                name="issuingCompany"
+                value={form.issuingCompany}
+                onChange={handleChange}
+                className="mt-1.5 h-11"
+              />
+            </div>
+
+            {/* Champs spécifiques STAGE */}
+            {form.type === "STAGE" && (
+              <>
+                <div className="md:col-span-2 mt-4 border-t pt-4">
+                  <h3 className="text-lg font-bold text-blue-600 mb-4">📋 Informations de Stage</h3>
+                </div>
+                <div>
+                  <Label htmlFor="stageHours">⏱️ Heures de stage</Label>
+                  <Input
+                    id="stageHours"
+                    name="stageHours"
+                    type="number"
+                    value={form.stageHours || ""}
+                    onChange={(e) => handleNumberChange("stageHours", e.target.value)}
+                    placeholder="120"
+                    className="mt-1.5 h-11"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="stageScore">📊 Score du stage (0-100)</Label>
+                  <Input
+                    id="stageScore"
+                    name="stageScore"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.stageScore || ""}
+                    onChange={(e) => handleNumberChange("stageScore", e.target.value)}
+                    placeholder="85"
+                    className="mt-1.5 h-11"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="stageObservations">💬 Observations du tuteur</Label>
+                  <textarea
+                    id="stageObservations"
+                    name="stageObservations"
+                    value={form.stageObservations || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, stageObservations: e.target.value }))}
+                    placeholder="Décrivez le déroulement du stage..."
+                    className="w-full min-h-[100px] px-4 py-3 rounded-md border border-blue-200 bg-blue-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mt-1.5"
+                    maxLength={1000}
+                  />
+                  <div className="text-right text-xs text-blue-400 mt-1">{form.stageObservations?.length || 0}/1000</div>
+                </div>
+              </>
+            )}
+
+            {/* Champs spécifiques CERTIFICATION */}
+            {form.type === "CERTIFICATION" && (
+              <>
+                <div className="md:col-span-2 mt-4 border-t pt-4">
+                  <h3 className="text-lg font-bold text-amber-600 mb-4">🏆 Informations de Certification</h3>
+                </div>
+                <div>
+                  <Label htmlFor="certificationHours">⏱️ Heures de formation</Label>
+                  <Input
+                    id="certificationHours"
+                    name="certificationHours"
+                    type="number"
+                    value={form.certificationHours || ""}
+                    onChange={(e) => handleNumberChange("certificationHours", e.target.value)}
+                    placeholder="200"
+                    className="mt-1.5 h-11"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="certificationScore">📊 Score (0-100)</Label>
+                  <Input
+                    id="certificationScore"
+                    name="certificationScore"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.certificationScore || ""}
+                    onChange={(e) => handleNumberChange("certificationScore", e.target.value)}
+                    placeholder="90"
+                    className="mt-1.5 h-11"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="certificationObservations">💬 Observations du jury</Label>
+                  <textarea
+                    id="certificationObservations"
+                    name="certificationObservations"
+                    value={form.certificationObservations || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, certificationObservations: e.target.value }))}
+                    placeholder="Évaluez la prestation du candidat..."
+                    className="w-full min-h-[100px] px-4 py-3 rounded-md border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none mt-1.5"
+                    maxLength={1000}
+                  />
+                  <div className="text-right text-xs text-amber-400 mt-1">{form.certificationObservations?.length || 0}/1000</div>
+                </div>
+              </>
+            )}
           </div>
-          <div>
-            <Label htmlFor="formation">Formation</Label>
-            <Input
-              id="formation"
-              name="formation"
-              value={form.formation}
-              onChange={handleChange}
-              required
-              placeholder="Nom de la formation"
-              className="input-style"
-              list="formations-list"
-              autoComplete="off"
-            />
-            <datalist id="formations-list">
-              {formations.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-          </div>
-          <div>
-            <Label htmlFor="issuingCompany">Société émettrice</Label>
-            <Input id="issuingCompany" name="issuingCompany" value={form.issuingCompany} onChange={handleChange} required placeholder="Nom de la société" className="input-style" />
-          </div>
-          <div>
-            <Label htmlFor="startDate">Date de début</Label>
-            <Input id="startDate" name="startDate" type="date" value={form.startDate} onChange={handleChange} required className="input-style" />
-          </div>
-          <div>
-            <Label htmlFor="endDate">Date de fin</Label>
-            <Input id="endDate" name="endDate" type="date" value={form.endDate} onChange={handleChange} required className="input-style" />
-          </div>
-          <div>
-            <Label htmlFor="location">Lieu</Label>
-            <Input id="location" name="location" value={form.location} onChange={handleChange} required placeholder="Lieu de la formation ou du stage" className="input-style" />
-          </div>
-          <div>
-            <Label htmlFor="instructor">Formateur</Label>
-            <Input id="instructor" name="instructor" value={form.instructor} onChange={handleChange} required placeholder="Nom du formateur" className="input-style" />
-          </div>
-          <div className="md:col-span-2 mt-6">
-            <Button type="submit" className="w-full md:w-auto px-10 py-3 text-base" disabled={loading}>
-              {loading ? "Création..." : "Créer l'attestation"}
+
+          {/* Footer avec actions */}
+          <div className="flex gap-3 mt-8 pt-6 border-t">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleReset}
+              disabled={loading}
+              className="gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Réinitialiser
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleSubmit}
+              disabled={loading}
+              className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin w-4 h-4" />
+                  Création...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Créer l'attestation
+                </>
+              )}
             </Button>
           </div>
-        </form>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

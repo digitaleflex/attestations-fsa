@@ -1,78 +1,247 @@
-import Image from "next/image";
+"use client";
 import Link from "next/link";
-import { ShieldCheck, ArrowRight, CheckCircle, Eye } from "lucide-react";
-import { StatsDisplay } from "@/components/stats-display";
-import { HowItWorks } from "@/components/how-it-works";
-import { FaqSection } from "@/components/faq-section";
-import { AlumniSearch } from "@/components/alumni-search";
+import { 
+  ShieldCheck, 
+  ArrowRight, 
+  CheckCircle, 
+  Eye, 
+  ClipboardCheck, 
+  Briefcase, 
+  GraduationCap, 
+  Users2, 
+  Sprout, 
+  MapPin, 
+  ArrowUpRight,
+  Fish,
+  Droplets,
+  Waves
+} from "lucide-react";
+import { StatsDisplay } from '@/components/stats-display';
+import { HowItWorks } from '@/components/how-it-works';
+import { FaqSection } from '@/components/faq-section';
+
+import { useEffect, useState } from "react";
+
+function TypewriterEffect({ messages }: { messages: string[] }) {
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [currentText, setCurrentText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [typingSpeed, setTypingSpeed] = useState(100);
+
+  useEffect(() => {
+    const handleTyping = () => {
+      const fullMessage = messages[currentMessageIndex];
+      
+      if (!isDeleting) {
+        setCurrentText(fullMessage.substring(0, currentText.length + 1));
+        setTypingSpeed(70);
+
+        if (currentText === fullMessage) {
+          setTimeout(() => setIsDeleting(true), 2500);
+          setTypingSpeed(100);
+        }
+      } else {
+        setCurrentText(fullMessage.substring(0, currentText.length - 1));
+        setTypingSpeed(40);
+
+        if (currentText === "") {
+          setIsDeleting(false);
+          setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
+          setTypingSpeed(100);
+        }
+      }
+    };
+
+    const timer = setTimeout(handleTyping, typingSpeed);
+    return () => clearTimeout(timer);
+  }, [currentText, isDeleting, messages, currentMessageIndex, typingSpeed]);
+
+  return (
+    <p className="text-xl md:text-2xl text-slate-500 max-w-2xl mx-auto leading-relaxed min-h-[4rem] px-4">
+      {currentText}
+      <span className="inline-block w-[2px] h-6 bg-emerald-500 ml-1 animate-pulse" />
+    </p>
+  );
+}
 
 export default function Home() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 w-full animate-fade-in-up">
-      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-8 sm:gap-12 mb-8">
-        {/* Illustration personnalisée : certificat FSA + stagiaire heureux */}
-        <div className="hidden sm:block flex-1">
-          <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden className="w-56 h-48 mx-auto">
-            {/* Certificat */}
-            <rect x="30" y="40" width="120" height="80" rx="14" fill="#fff" stroke="#16a34a" strokeWidth="3" filter="url(#shadow)" />
-            <rect x="45" y="60" width="90" height="12" rx="4" fill="#bbf7d0" />
-            <rect x="45" y="80" width="60" height="8" rx="4" fill="#dbeafe" />
-            <circle cx="130" cy="100" r="10" fill="#facc15" stroke="#f59e42" strokeWidth="2" />
-            <path d="M130 105 l5 8 l-10 0z" fill="#f59e42" />
-            {/* Stagiaire */}
-            <ellipse cx="170" cy="120" rx="22" ry="28" fill="#f0fdf4" />
-            <circle cx="170" cy="110" r="12" fill="#2563eb" />
-            <ellipse cx="170" cy="130" rx="10" ry="14" fill="#16a34a" />
-            <rect x="165" y="120" width="10" height="8" rx="3" fill="#fff" />
-            {/* Ombre */}
-            <ellipse cx="90" cy="140" rx="70" ry="10" fill="#000" opacity="0.07" />
-            <defs>
-              <filter id="shadow" x="0" y="20" width="180" height="120" filterUnits="userSpaceOnUse">
-                <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000" floodOpacity="0.10" />
-              </filter>
-            </defs>
-          </svg>
-        </div>
-        {/* Section héro */}
-        <div className="flex-1 flex flex-col items-center gap-6 animate-fade-in-up delay-100">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight font-display">Vérifiez une attestation FSA</h1>
-          <p className="text-base sm:text-lg text-gray-600 mb-2 uppercase tracking-wider">Formations • Stages • Certifications</p>
-          <p className="text-lg text-gray-700 mb-2 max-w-md">Ce service vous permet de vérifier l’authenticité des attestations délivrées par la <span className="font-bold text-green-700">Ferme St André</span> lors de nos formations, stages et certifications professionnelles.</p>
-          <p className="text-sm text-gray-500 mb-2 italic">La confiance et la transparence sont au cœur de notre mission.</p>
-          <Link
-            href="/verifier"
-            className="inline-flex items-center gap-2 px-10 py-4 rounded-xl bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold text-lg shadow-xl hover:scale-105 hover:shadow-2xl focus:scale-105 transition-transform duration-150 focus:outline-none focus:ring-2 focus:ring-green-600"
-            aria-label="Vérifier une attestation"
-          >
-            Vérifier une attestation <ArrowRight className="w-5 h-5" />
-          </Link>
-          {/* Nouveau bouton pour scan QR */}
+  const heroMessages = [
+    "Spécialistes en Pisciculture, Agriculture et Élevage à la Cité St André.",
+    "Développez vos compétences avec nos formations certifiantes de haut niveau.",
+    "Rejoignez notre programme de stage pour une immersion pratique d'excellence.",
+    "Votre avenir professionnel dans l'agro-pisciculture commence ici.",
+    "Vérifiez l'authenticité de vos certificats en un clic sur ce portail."
+  ];
 
-          <span className="text-green-700 text-sm mt-1">Service gratuit, instantané et sans collecte de données sensibles.</span>
-          <StatsDisplay />
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center w-full space-y-24 pb-24 overflow-x-hidden relative">
+      
+      {/* --- BACKGROUND ANIMATED ELEMENTS --- */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        {/* Animated Orbs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-200/20 blur-[120px] rounded-full animate-float opacity-50" />
+        <div className="absolute bottom-[20%] right-[-5%] w-[30%] h-[30%] bg-blue-200/20 blur-[100px] rounded-full animate-float delay-1000 opacity-50" />
+        
+        {/* Floating Icons (Pisciculture/Agriculture) */}
+        <div className="absolute top-20 left-[15%] text-emerald-100/40 animate-float duration-[8s]">
+          <Fish className="w-16 h-16 rotate-12" />
+        </div>
+        <div className="absolute top-40 right-[10%] text-blue-100/40 animate-float delay-700 duration-[10s]">
+          <Waves className="w-20 h-20" />
+        </div>
+        <div className="absolute bottom-40 left-[5%] text-emerald-100/30 animate-float delay-500 duration-[12s]">
+          <Sprout className="w-24 h-24 -rotate-12" />
+        </div>
+        <div className="absolute top-1/2 right-[15%] text-blue-100/30 animate-float delay-200 duration-[9s]">
+          <Droplets className="w-12 h-12" />
         </div>
       </div>
-      {/* Avantages avec effet glassmorphism */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto animate-fade-in-up delay-200">
-        <div className="flex flex-col items-center bg-white/60 backdrop-blur-md border border-green-100 rounded-xl shadow p-6 transition-all duration-200 hover:shadow-2xl hover:-translate-y-1 group focus-within:shadow-2xl focus-within:-translate-y-1" tabIndex={0} aria-label="Simplicité">
-          <CheckCircle className="w-8 h-8 text-green-500 mb-2 group-hover:text-green-700 group-focus:text-green-700 transition-colors" />
-          <div className="font-bold text-gray-900 mb-1 flex items-center">Simplicité <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-bold">Nouveau</span></div>
-          <div className="text-gray-600 text-sm">Vérification instantanée par code unique ou QR code.</div>
+
+      {/* --- HERO SECTION --- */}
+      <section className="max-w-6xl w-full pt-12 md:pt-20 flex flex-col items-center text-center space-y-12 relative px-4">
+        
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-emerald-50/80 backdrop-blur-md border border-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-top-4 duration-1000 shadow-sm">
+            <Sprout className="w-3 h-3" />
+            Portail Officiel • Côte St André
+          </div>
+          
+          <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter leading-[0.9] max-w-5xl mx-auto">
+            <span className="block animate-in fade-in slide-in-from-left-8 duration-700 delay-100 fill-mode-both">
+               L'excellence de la
+            </span>
+            <span className="relative inline-block mt-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
+               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-blue-600 animate-gradient-x px-2">
+                 Pisciculture
+               </span>
+               <div className="absolute -bottom-2 left-0 w-full h-1 bg-emerald-200/50 rounded-full scale-x-0 animate-in slide-in-from-left-0 duration-1000 delay-1000 fill-mode-both" />
+            </span>
+            <br />
+            <span className="block mt-2 text-slate-400/50 animate-in fade-in zoom-in-95 duration-1000 delay-500 fill-mode-both">
+               & de l'Agriculture.
+            </span>
+          </h1>
+          
+          <TypewriterEffect messages={heroMessages} />
         </div>
-        <div className="flex flex-col items-center bg-white/60 backdrop-blur-md border border-blue-100 rounded-xl shadow p-6 transition-all duration-200 hover:shadow-2xl hover:-translate-y-1 group focus-within:shadow-2xl focus-within:-translate-y-1" tabIndex={0} aria-label="Sécurité">
-          <ShieldCheck className="w-8 h-8 text-blue-500 mb-2 group-hover:text-blue-700 group-focus:text-blue-700 transition-colors" />
-          <div className="font-bold text-gray-900 mb-1">Sécurité</div>
-          <div className="text-gray-600 text-sm">Données protégées, aucune information sensible affichée.</div>
+
+        {/* --- THREE PILLARS (QUICK ACCESS) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl pt-4 animate-in fade-in slide-in-from-bottom-12 delay-1000 duration-1000 fill-mode-both">
+          {/* Link 1: Verification */}
+          <Link href="/verifier" className="group">
+             <CardPillar 
+               icon={ShieldCheck} 
+               title="Certificats" 
+               desc="Authentifiez instantanément vos attestations via QR code ou numéro unique."
+               color="emerald"
+             />
+          </Link>
+          
+          {/* Link 2: Exams */}
+          <Link href="/exams" className="group">
+             <CardPillar 
+               icon={ClipboardCheck} 
+               title="Examen Portal" 
+               desc="Espace dédié pour vos sessions d'évaluations et le suivi de vos résultats."
+               color="blue"
+             />
+          </Link>
+          
+          {/* Link 3: Internship */}
+          <Link href="/demande-stage" className="group">
+             <CardPillar 
+               icon={Briefcase} 
+               title="Postes de Stage" 
+               desc="Rejoignez notre cité pour une immersion pratique d'excellence sur le terrain."
+               color="rose"
+             />
+          </Link>
         </div>
-        <div className="flex flex-col items-center bg-white/60 backdrop-blur-md border border-emerald-100 rounded-xl shadow p-6 transition-all duration-200 hover:shadow-2xl hover:-translate-y-1 group focus-within:shadow-2xl focus-within:-translate-y-1" tabIndex={0} aria-label="Transparence">
-          <Eye className="w-8 h-8 text-emerald-500 mb-2 group-hover:text-emerald-700 group-focus:text-emerald-700 transition-colors" />
-          <div className="font-bold text-gray-900 mb-1">Transparence</div>
-          <div className="text-gray-600 text-sm">Authenticité vérifiable par tous, à tout moment.</div>
+        
+        <div className="pt-8 animate-in fade-in delay-[1500ms] duration-1000 fill-mode-both">
+           <StatsDisplay />
         </div>
+      </section>
+
+      {/* --- PROMISES / ADVANTAGES --- */}
+      <section className="w-full max-w-7xl px-6 md:px-12">
+        <div className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[4rem] shadow-2xl p-12 md:p-20 grid grid-cols-1 md:grid-cols-3 gap-16 relative overflow-hidden group">
+           <div className="absolute top-[-50%] left-[-20%] w-[100%] h-[150%] bg-gradient-to-br from-emerald-100/20 to-blue-100/20 rotate-12 -z-10 group-hover:rotate-0 transition-transform duration-[2s]" />
+           
+           <Advantage 
+             icon={CheckCircle} 
+             title="Innovation" 
+             desc="Techniques modernes de pisciculture en circuit fermé et agriculture durable." 
+             color="emerald"
+           />
+           <Advantage 
+             icon={ShieldCheck} 
+             title="Sécurité" 
+             desc="Données cryptées et traçabilité totale des certificats délivrés." 
+             color="blue"
+           />
+           <Advantage 
+             icon={Users2} 
+             title="Proximité" 
+             desc="Un accompagnement personnalisé au cœur de la Cité St André." 
+             color="teal"
+           />
+        </div>
+      </section>
+
+      {/* --- HOW IT WORKS / FAQ --- */}
+      <div className="w-full max-w-7xl animate-in slide-in-from-bottom-12 duration-1000">
+        <HowItWorks />
       </div>
-      <HowItWorks />
-      <AlumniSearch />
-      <FaqSection />
+
+      <div className="w-full max-w-5xl py-12 border-t border-slate-200/50">
+        <FaqSection />
+      </div>
+    </div>
+  );
+}
+
+function CardPillar({ icon: Icon, title, desc, color }: { icon: any, title: string, desc: string, color: string }) {
+  const colors: Record<string, string> = {
+    emerald: 'bg-emerald-50/50 border-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
+    blue: 'bg-blue-50/50 border-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white',
+    rose: 'bg-rose-50/50 border-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white',
+  };
+
+  return (
+    <div className="h-full p-10 bg-white/70 backdrop-blur-md border border-white/80 rounded-[3rem] shadow-xl shadow-slate-200/10 hover:shadow-2xl hover:shadow-emerald-900/5 hover:-translate-y-3 transition-all duration-700 text-left relative overflow-hidden isolate">
+      <div className="absolute top-6 right-10 opacity-0 group-hover:opacity-20 group-hover:translate-x-2 group-hover:-translate-y-2 transition-all duration-700 -z-10 scale-150">
+        <Icon className="w-12 h-12" />
+      </div>
+      
+      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 mb-10 shadow-sm ${colors[color]}`}>
+        <Icon className="w-8 h-8" />
+      </div>
+      
+      <h3 className="text-3xl font-black text-slate-800 mb-4 tracking-tight leading-none group-hover:text-emerald-700 transition-colors uppercase italic underline decoration-slate-100 decoration-8 underline-offset-4 pointer-events-none">
+        {title}
+      </h3>
+      <p className="text-slate-500 group-hover:text-slate-700 leading-relaxed font-medium text-lg">
+        {desc}
+      </p>
+    </div>
+  );
+}
+
+function Advantage({ icon: Icon, title, desc, color }: { icon: any, title: string, desc: string, color: string }) {
+  return (
+    <div className="flex flex-col items-center text-center space-y-6 group/item">
+      <div className={`w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center text-${color}-600 shadow-xl border border-slate-100 group-hover/item:scale-110 group-hover/item:rotate-12 transition-transform duration-500`}>
+        <Icon className="w-10 h-10" />
+      </div>
+      <div className="space-y-2">
+        <h4 className="text-2xl font-black text-slate-900 italic uppercase">
+          {title}
+        </h4>
+        <p className="text-slate-400 text-base font-medium leading-relaxed max-w-xs mx-auto">
+          {desc}
+        </p>
+      </div>
     </div>
   );
 }

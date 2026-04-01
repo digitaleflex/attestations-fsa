@@ -4,6 +4,8 @@ import { Providers } from "./providers";
 import { PwaInstallButton } from "@/components/pwa-install-button";
 import * as React from "react";
 
+import NextTopLoader from 'nextjs-toploader';
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
@@ -19,6 +21,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#16a34a" />
       </head>
       <body className={inter.className}>
+        <NextTopLoader 
+          color="#16a34a"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+          shadow="0 0 10px #16a34a,0 0 5px #16a34a"
+        />
         <Providers>
           {children}
           <PwaInstallButton />

@@ -1,171 +1,215 @@
-'use client';
+"use client";
 
-import * as React from "react";
-import { ReactNode, useEffect, useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { 
+  SidebarProvider, 
+  Sidebar, 
+  SidebarContent, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuItem, 
+  SidebarInset, 
+  SidebarFooter, 
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+  SidebarMenuButton,
+  SidebarRail
+} from '@/components/ui/sidebar';
+import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard,
+  FileText,
+  GraduationCap,
+  Users,
+  Settings,
+  AlertCircle,
+  BarChart3,
+  LogOut,
+  Home,
+  ClipboardCheck,
+  Briefcase
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { FileText, LogOut, Home, GraduationCap, BarChart2, Settings, AlertCircle } from "lucide-react";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = vérification en cours
-  const router = useRouter();
+const menuItems = [
+  { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+  { href: '/admin/stats', label: 'Statistiques', icon: BarChart3 },
+  { href: '/admin/attestations', label: 'Attestations', icon: FileText },
+  { href: '/admin/formations', label: 'Formations', icon: GraduationCap },
+  { href: '/admin/exams', label: 'Examens', icon: ClipboardCheck },
+  { href: '/admin/internships', label: 'Stages', icon: Briefcase },
+  { href: '/admin/users', label: 'Utilisateurs', icon: Users },
+  { href: '/admin/signalements', label: 'Signalements', icon: AlertCircle },
+  { href: '/admin/profile', label: 'Mon Profil', icon: Home },
+  { href: '/admin/settings', label: 'Paramètres', icon: Settings },
+];
+
+function SidebarMenuContent() {
   const pathname = usePathname();
-  const [signalementsCount, setSignalementsCount] = useState<number>(0);
 
-  useEffect(() => {
-    if (isAuth) {
-      fetch('/api/signalement?countOnly=1')
-        .then(res => res.json())
-        .then(data => setSignalementsCount(data.count || 0))
-        .catch(err => console.error(err));
+  return (
+    <>
+      {menuItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href));
+
+        return (
+          <SidebarMenuItem key={item.href}>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive}
+              tooltip={item.label}
+              className={`w-full ${isActive ? 'bg-red-600 text-white hover:bg-red-700 hover:text-white' : ''}`}
+            >
+              <Link href={item.href}>
+                <Icon className="w-4 h-4 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  // Ne pas afficher la sidebar pour la page de login
+  const isLoginPage = pathname === '/admin/login' || pathname?.startsWith('/admin/login/');
+
+  const { data: admin, isLoading } = useQuery({
+    queryKey: ['admin'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin');
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !isLoginPage,
+  });
+
+  // Rediriger si pas admin (sauf page de login)
+  if (!isLoginPage && !isLoading && !admin) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/admin/login';
     }
-  }, [isAuth]);
+    return null;
+  }
 
-  useEffect(() => {
-    if (pathname === '/admin/login') return; // Ne rien faire sur la page login
-    if (typeof document !== "undefined") {
-      // Log pour debug
-      console.log("[AdminLayout] Cookies:", document.cookie);
-      // Recherche robuste du cookie admin_session
-      const cookies = document.cookie.split(';').map(c => c.trim());
-      const session = cookies.find(c => c.toLowerCase().startsWith('admin_session='));
-      if (!session) {
-        setIsAuth(false);
-        router.push('/admin/login');
-      } else {
-        setIsAuth(true);
-      }
-    }
-  }, [router, pathname]);
-
-  if (pathname === '/admin/login') {
+  if (isLoginPage) {
     return <>{children}</>;
   }
 
   const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.ok) {
-        router.push('/admin/login');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-    }
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
   };
 
-  if (isAuth === null) {
-    // Affiche un message d'attente pendant la vérification
-    return <div className="flex items-center justify-center min-h-screen">Vérification de l'authentification...</div>;
-  }
-  if (!isAuth) return null;
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <AdminLayoutInner admin={admin} onLogout={handleLogout}>
+        {children}
+      </AdminLayoutInner>
+    </SidebarProvider>
+  );
+}
+
+function AdminLayoutInner({ children, admin, onLogout }: { children: React.ReactNode, admin: any, onLogout: () => void }) {
+  const { state, isMobile } = useSidebar();
+  
+  // Sur desktop, on force un padding-left égal à la largeur de la sidebar
+  const desktopPadding = state === 'expanded' ? 'md:pl-64' : 'md:pl-[3rem]';
 
   return (
-    <SidebarProvider>
-      <Sidebar className="border-r border-white/20 bg-white/50 backdrop-blur-xl shadow-lg" collapsible="icon">
-        <SidebarHeader className="border-b border-black/5 p-4">
-          <div className="flex items-center gap-2 px-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold">
-              F
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold text-slate-900">Admin FSA</span>
-              <span className="truncate text-xs text-slate-500">Platform Admin</span>
-            </div>
-          </div>
-          {/* Bouton d'ouverture de la sidebar sur mobile */}
-          <div className="md:hidden mt-2">
-            <SidebarTrigger />
-          </div>
+    <div className="flex min-h-screen w-full bg-slate-50 overflow-x-hidden">
+      <Sidebar collapsible="icon" className="border-r shadow-sm">
+        <SidebarHeader className="border-b border-slate-100 p-4">
+          <SidebarHeaderContent />
         </SidebarHeader>
-        <SidebarContent className="px-2 py-4">
-          <SidebarMenu>
-            <SidebarMenuItem
-              icon={<Home className="text-indigo-500" />}
-              label="Dashboard"
-              href="/admin/dashboard"
-              className="hover:bg-indigo-50/50 hover:text-indigo-600 transition-colors rounded-md mb-1"
-            />
-            <div className="px-4 py-2 mt-4 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Gestion</div>
-            <SidebarMenuItem
-              icon={<FileText className="text-slate-500" />}
-              label="Créer Attestation"
-              href="/admin/attestations/new"
-              className="hover:bg-slate-100 transition-colors rounded-md mb-1"
-            />
-            <SidebarMenuItem
-              icon={<GraduationCap className="text-slate-500" />}
-              label="Créer Formation"
-              href="/admin/formations/new"
-              className="hover:bg-slate-100 transition-colors rounded-md mb-1"
-            />
-            <SidebarMenuItem
-              icon={<FileText className="text-slate-500" />}
-              label="Toutes les attestations"
-              href="/admin/attestations"
-              className="hover:bg-slate-100 transition-colors rounded-md mb-1"
-            />
-            <SidebarMenuItem
-              icon={<GraduationCap className="text-slate-500" />}
-              label="Toutes les formations"
-              href="/admin/formations"
-              className="hover:bg-slate-100 transition-colors rounded-md mb-1"
-            />
 
-            <div className="px-4 py-2 mt-4 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Système</div>
-            <SidebarMenuItem
-              icon={<BarChart2 className="text-slate-500" />}
-              label="Statistiques"
-              href="/admin/stats"
-              className="hover:bg-slate-100 transition-colors rounded-md mb-1"
-            />
-            <SidebarMenuItem
-              icon={<Settings className="text-slate-500" />}
-              label="Paramètres"
-              href="/admin/settings"
-              className="hover:bg-slate-100 transition-colors rounded-md mb-1"
-            />
-            <SidebarMenuItem
-              icon={<AlertCircle className="text-slate-500" />}
-              label="Signalements"
-              href="/admin/signalements"
-              className="hover:bg-slate-100 transition-colors rounded-md mb-1"
-              badge={signalementsCount > 0 && (
-                <span className="inline-flex items-center justify-center h-5 w-5 rounded-md bg-rose-500 text-[10px] font-medium text-white shadow-sm animate-pulse">{signalementsCount}</span>
-              )}
-            />
+        <SidebarContent className="flex-1 px-2 py-4">
+          <SidebarMenu className="space-y-1">
+            <SidebarMenuContent />
           </SidebarMenu>
         </SidebarContent>
 
-        <div className="mt-auto border-t border-black/5 p-4">
+        <SidebarSeparator className="mx-4 bg-slate-100" />
+
+        <SidebarFooter className="p-4 space-y-4">
           <SidebarMenu>
-            <SidebarMenuItem
-              icon={<LogOut className="text-slate-400" />}
-              label="Déconnexion"
-              href="#"
-              onClick={handleLogout}
-              className="hover:bg-rose-50 hover:text-rose-600 transition-colors rounded-md"
-            />
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Site public">
+                <Link href="/">
+                  <Home className="w-4 h-4 shrink-0" />
+                  <span>Site public</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={onLogout} 
+                tooltip="Déconnexion"
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>Déconnexion</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
-        </div>
+
+          <AdminInfo admin={admin} />
+        </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
-      <SidebarInset className="bg-slate-50/50">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-indigo-100 bg-white/80 px-6 backdrop-blur-md md:hidden sticky top-0 z-10 shadow-sm">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger className="-ml-1 text-slate-600 hover:bg-slate-100" />
-            <span className="font-semibold text-slate-800">Admin FSA</span>
+
+      <SidebarInset className={cn(
+        "flex flex-col flex-1 transition-[padding] duration-300 ease-in-out bg-slate-50",
+        !isMobile && desktopPadding
+      )}>
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-white px-4">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <div className="h-4 w-px bg-slate-200 mx-2" />
+            <h1 className="text-sm font-medium text-slate-600">Admin | Ferme Agro-Piscicole Cité St André</h1>
           </div>
         </header>
-        <main className="flex flex-col w-full min-h-screen p-4 md:p-8 space-y-6">
-          <Suspense fallback={<div className="flex items-center justify-center p-12 text-slate-400">Chargement...</div>}>
-            {children}
-          </Suspense>
+        <main className="flex-1 overflow-y-auto">
+          {children}
         </main>
       </SidebarInset>
-    </SidebarProvider>
+    </div>
   );
-} 
+}
+
+function SidebarHeaderContent() {
+  const { state } = useSidebar();
+  return (
+    <div className="flex items-center gap-2 overflow-hidden">
+      <div className="shrink-0 w-8 h-8 bg-gradient-to-br from-red-500 to-rose-600 rounded-lg flex items-center justify-center shadow-sm">
+        <span className="text-white font-bold text-sm">FSA</span>
+      </div>
+      {state === 'expanded' && (
+        <div className="transition-all duration-300 opacity-100 translate-x-0">
+          <span className="text-lg font-bold block whitespace-nowrap text-slate-800">Admin FSA</span>
+          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold whitespace-nowrap">Gestion Centrale</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminInfo({ admin }: { admin: any }) {
+  const { state } = useSidebar();
+  if (!admin || state !== 'expanded') return null;
+
+  return (
+    <div className="mt-2 rounded-xl bg-slate-50 p-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Session active</p>
+      <p className="font-medium text-slate-700 truncate text-xs">{admin.name || admin.email}</p>
+    </div>
+  );
+}

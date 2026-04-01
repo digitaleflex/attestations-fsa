@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
-// Schéma de validation pour la connexion admin
+// Schéma de validation pour la connexion
 const LoginSchema = z.object({
   email: z.string().email('Email invalide'),
   password: z.string().min(1, 'Le mot de passe est requis'),
@@ -17,24 +17,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 })
     }
     const { email, password } = parse.data
-    const admin = await prisma.admin.findUnique({ where: { email } })
-    if (!admin) {
-      return NextResponse.json({ message: 'Aucun compte admin trouvé' }, { status: 401 })
+
+    // Vérifier la connexion à la base de données
+    await prisma.$connect()
+
+    // Chercher d'abord dans Admin, puis dans User
+    let user = await prisma.admin.findUnique({ where: { email } })
+    let userType = 'ADMIN'
+    
+    if (!user) {
+      user = await prisma.user.findUnique({ where: { email } })
+      userType = 'USER'
     }
-    const valid = await bcrypt.compare(password, admin.password)
+    
+    if (!user) {
+      return NextResponse.json({ message: 'Aucun compte trouvé avec cet email' }, { status: 401 })
+    }
+    
+    const valid = await bcrypt.compare(password, user.password)
     if (!valid) {
       return NextResponse.json({ message: 'Mot de passe incorrect' }, { status: 401 })
     }
-    // Création du cookie de session (accessible côté client)
-    const response = NextResponse.json({ message: 'Connexion réussie', admin: { id: admin.id, email: admin.email, name: admin.name } })
-    response.cookies.set('admin_session', admin.id, {
-      // httpOnly: true, // retiré pour accès JS
+    
+    // Création du cookie de session avec le rôle
+    const response = NextResponse.json({ 
+      message: 'Connexion réussie', 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name,
+        role: userType
+      } 
+    })
+    
+    response.cookies.set('admin_session', user.id, {
       path: '/',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7 // 7 jours
     })
+    
+    response.cookies.set('user_role', userType, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7
+    })
+    
     return response
-  } catch (error) {
-    return NextResponse.json({ message: 'Erreur serveur' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Erreur détaillée login:', error)
+    return NextResponse.json({
+      message: 'Erreur serveur',
+      error: error.message
+    }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
   }
-} 
+}

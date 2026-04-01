@@ -5,8 +5,11 @@ import { z } from "zod";
 
 const settingsSchema = z.object({
   institutionName: z.string().min(2).max(100),
-  logoUrl: z.string().url().optional().nullable(),
+  logoUrl: z.string().url().optional().nullable().or(z.literal("")),
   replyTo: z.string().email(),
+  targetInscriptions: z.coerce.number().int().min(1).max(10000).optional(),
+  targetAttestations: z.coerce.number().int().min(1).max(10000).optional(),
+  targetValidations: z.coerce.number().int().min(1).max(10000).optional(),
 });
 
 // GET /api/settings
@@ -34,18 +37,25 @@ export async function PATCH(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.errors }, { status: 400 });
     }
-    const { institutionName, logoUrl, replyTo } = parsed.data;
+    const { institutionName, logoUrl, replyTo, targetInscriptions, targetAttestations, targetValidations } = parsed.data;
     
     let settings = await prisma.settings.findFirst();
     
+    const data = {
+      institutionName,
+      logoUrl: logoUrl || null,
+      replyTo,
+      ...(targetInscriptions !== undefined && { targetInscriptions }),
+      ...(targetAttestations !== undefined && { targetAttestations }),
+      ...(targetValidations !== undefined && { targetValidations }),
+    };
+
     if (!settings) {
-      settings = await prisma.settings.create({ 
-        data: { institutionName, logoUrl, replyTo } 
-      });
+      settings = await prisma.settings.create({ data });
     } else {
       settings = await prisma.settings.update({
         where: { id: settings.id },
-        data: { institutionName, logoUrl, replyTo },
+        data,
       });
     }
     
@@ -54,4 +64,4 @@ export async function PATCH(request: Request) {
     console.error('Erreur lors de la mise à jour des paramètres:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
-}
+}

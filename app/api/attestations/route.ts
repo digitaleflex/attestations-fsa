@@ -11,6 +11,7 @@ const nanoid = customAlphabet('1234567890abcdef', 5)
 // Schéma de validation pour la création d'une attestation
 const AttestationSchema = z.object({
   fullName: z.string().min(1, 'Le nom complet est requis.'),
+  gender: z.enum(['M', 'F']).optional(),
   birthDate: z.string().min(1, 'La date de naissance est requise.'),
   birthPlace: z.string().min(1, 'Le lieu de naissance est requis.'),
   formation: z.string().min(1, 'La formation est requise.'),
@@ -20,6 +21,17 @@ const AttestationSchema = z.object({
   instructor: z.string().min(1, 'Le formateur est requis.'),
   issuingCompany: z.string().min(1, 'La société émettrice est requise.'),
   type: z.enum(['FORMATION', 'STAGE', 'CERTIFICATION'], { required_error: 'Le type est requis.' }),
+  
+  // Champs spécifiques pour STAGE
+  stageHours: z.number().min(1).max(2000).optional(),
+  stageScore: z.number().min(0).max(100).optional(),
+  stageObservations: z.string().max(1000).optional(),
+  
+  // Champs spécifiques pour CERTIFICATION
+  certificationMention: z.enum(['PASSABLE', 'ASSEZ_BIEN', 'BIEN', 'TRES_BIEN', 'EXCELLENCE']).optional(),
+  certificationScore: z.number().min(0).max(100).optional(),
+  certificationHours: z.number().min(1).max(2000).optional(),
+  certificationObservations: z.string().max(1000).optional(),
 });
 
 export async function GET(request: Request) {
@@ -79,7 +91,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 })
     }
     const {
-      fullName, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type
+      fullName, gender, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type,
+      stageHours, stageScore, stageObservations,
+      certificationMention, certificationScore, certificationHours, certificationObservations
     } = parse.data
 
     // Chercher ou créer la formation par son nom
@@ -117,22 +131,38 @@ export async function POST(request: Request) {
 
     console.log('[POST /api/attestations] Creating record with code:', code);
 
+    // Préparation des données
+    const attestationData: any = {
+      code,
+      fullName,
+      gender,
+      birthDate: new Date(birthDate),
+      birthPlace,
+      formationId,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      location,
+      instructor,
+      issuingCompany,
+      type,
+      status: 'PENDING',
+    };
+
+    // Ajouter les champs spécifiques selon le type
+    if (type === 'STAGE') {
+      attestationData.stageHours = stageHours;
+      attestationData.stageScore = stageScore;
+      attestationData.stageObservations = stageObservations;
+    } else if (type === 'CERTIFICATION') {
+      attestationData.certificationMention = certificationMention;
+      attestationData.certificationScore = certificationScore;
+      attestationData.certificationHours = certificationHours;
+      attestationData.certificationObservations = certificationObservations;
+    }
+
     // Création de l'attestation
     await prisma.attestation.create({
-      data: {
-        code,
-        fullName,
-        birthDate: new Date(birthDate),
-        birthPlace,
-        formationId,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        location,
-        instructor,
-        issuingCompany,
-        type,
-        status: 'PENDING',
-      }
+      data: attestationData
     })
     console.log('[POST /api/attestations] Success');
     return NextResponse.json({ message: 'Attestation créée', code }, { status: 201 })

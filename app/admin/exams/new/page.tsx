@@ -1,0 +1,22 @@
+import { ExamForm } from "@/components/exams/exam-form";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+export default function NewExamPage() {
+  return (
+    <div className="p-6 space-y-8 bg-slate-50/50 min-h-screen">
+      <div className="flex items-center justify-between max-w-4xl mx-auto">
+        <div className="flex flex-col gap-1">
+          <Link href="/admin/exams" className="text-slate-400 hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium">
+            <ChevronLeft className="w-4 h-4" /> Retour aux examens
+          </Link>
+          <h1 className="text-3xl font-bold text-slate-800">Conception de l'Examen</h1>
+          <p className="text-slate-500 font-medium">Créez un nouvel examen avec les 3 parties obligatoires.</p>
+        </div>
+      </div>
+
+      <ExamForm />
+    </div>
+  );
+}
