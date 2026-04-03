@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,16 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { 
-  Plus, X, Save, Clock, BookOpen, FileText, PenTool, 
-  AlertCircle, CheckCircle, Settings, BarChart3
+import {
+  Plus, X, Save, Clock, BookOpen, FileText, PenTool,
+  AlertCircle, CheckCircle, Settings, BarChart3, Cloud, CloudOff
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-import DOMPurify from "dompurify";
+import * as DOMPurify from "dompurify";
 import {
   Select,
   SelectContent,
@@ -36,9 +36,14 @@ import {
   Edit3
 } from "lucide-react";
 
+const STORAGE_KEY = "exam_draft";
+
 export default function CreateExamPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const isInitialMount = useRef(true);
   
   // Exam settings
   const [exam, setExam] = useState({
@@ -91,6 +96,10 @@ export default function CreateExamPage() {
     s: 0
   });
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Fetch formations
   const { data: formations, isLoading: formationsLoading } = useQuery({
     queryKey: ["formations-list"],
@@ -98,6 +107,80 @@ export default function CreateExamPage() {
       return await apiFetch("/api/formations");
     }
   });
+
+  // ✅ 1. Load draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.exam) setExam(parsed.exam);
+        if (parsed.qcmQuestions) setQcmQuestions(parsed.qcmQuestions);
+        if (parsed.openQuestions) setOpenQuestions(parsed.openQuestions);
+        if (parsed.time) setTime(parsed.time);
+        if (parsed.score20 !== undefined) setScore20(parsed.score20);
+        if (parsed.sessionMonth) setSessionMonth(parsed.sessionMonth);
+        if (parsed.sessionYear) setSessionYear(parsed.sessionYear);
+        setIsDraftLoaded(true);
+        toast.info("📝 Brouillon de l'examen restauré automatiquement");
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  // ✅ 2. Auto-save to localStorage on every change (debounced 500ms)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      try {
+        setIsSaving(true);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          exam, qcmQuestions, openQuestions, time, score20, sessionMonth, sessionYear,
+        }));
+        setIsSaving(false);
+      } catch {
+        setIsSaving(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [exam, qcmQuestions, openQuestions, time, score20, sessionMonth, sessionYear]);
+
+  // ✅ 3. Warn before leaving page with unsaved data
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasData = exam.name || qcmQuestions.some(q => q.text) || openQuestions.some(q => q.text);
+      if (hasData) {
+        e.preventDefault();
+        e.returnValue = "Des données non sauvegardées seront perdues. Voulez-vous vraiment quitter ?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [exam, qcmQuestions, openQuestions]);
+
+  const handleRestoreDraft = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.exam) setExam(parsed.exam);
+        if (parsed.qcmQuestions) setQcmQuestions(parsed.qcmQuestions);
+        if (parsed.openQuestions) setOpenQuestions(parsed.openQuestions);
+        if (parsed.time) setTime(parsed.time);
+        if (parsed.score20 !== undefined) setScore20(parsed.score20);
+        toast.info("📝 Brouillon restauré");
+      }
+    } catch {
+      toast.error("Erreur lors de la restauration du brouillon");
+    }
+  }, []);
 
   const handleTimeChange = (field: "h" | "m" | "s", bValue: string) => {
     const val = parseInt(bValue) || 0;
@@ -117,7 +200,13 @@ export default function CreateExamPage() {
   }, [sessionMonth, sessionYear]);
 
   const handleScoreChange = (val: string) => {
-    const num = parseFloat(val) || 0;
+    if (val === "" || val === ".") {
+      setScore20(val as any);
+      return;
+    }
+    const num = parseFloat(val);
+    if (isNaN(num)) return;
+    
     const clamped = Math.min(Math.max(num, 0), 20);
     setScore20(clamped);
     // Convert to percentage
@@ -142,7 +231,12 @@ export default function CreateExamPage() {
 
   const updateQcmQuestion = (index: number, field: string, value: any) => {
     const newQuestions = [...qcmQuestions];
-    newQuestions[index][field] = value;
+    if (field === "points") {
+      const num = parseFloat(value);
+      newQuestions[index][field] = isNaN(num) ? 0 : num;
+    } else {
+      newQuestions[index][field] = value;
+    }
     setQcmQuestions(newQuestions);
   };
 
@@ -171,7 +265,12 @@ export default function CreateExamPage() {
 
   const updateOpenQuestion = (index: number, field: string, value: any) => {
     const newQuestions = [...openQuestions];
-    newQuestions[index][field] = value;
+    if (field === "points") {
+      const num = parseFloat(value);
+      newQuestions[index][field] = isNaN(num) ? 0 : num;
+    } else {
+      newQuestions[index][field] = value;
+    }
     setOpenQuestions(newQuestions);
   };
 
@@ -188,11 +287,11 @@ export default function CreateExamPage() {
       // Listes à puces
       .replace(/^-\s(.*)$/gm, "<li>$1</li>")
       .replace(/<\/li>\n<li>/g, "</li><li>")
-      .replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>")
+      .replace(/(<li>[\s\S]*<\/li>)/, "<ul>$1</ul>")
       // Listes numérotées
       .replace(/^\d\.\s(.*)$/gm, "<li class='list-decimal'>$1</li>")
       .replace(/<\/li>\n<li class='list-decimal'>/g, "</li><li class='list-decimal'>")
-      .replace(/(<li class='list-decimal'>.*<\/li>)/s, "<ol class='list-decimal pl-4'>$1</ol>")
+      .replace(/(<li class='list-decimal'>[\s\S]*<\/li>)/, "<ol class='list-decimal pl-4'>$1</ol>")
       // Retours à la ligne (Paragraphes vs Sauts simples)
       .replace(/\n\n/g, "</p><p>")
       .replace(/\n/g, "<br/>");
@@ -209,7 +308,11 @@ export default function CreateExamPage() {
                .replace(/<p><ol/g, "<ol")
                .replace(/<\/ol><\/p>/g, "</ol>");
     
-    return DOMPurify.sanitize(html);
+    // Sécurisation (uniquement côté client)
+    if (typeof window !== "undefined") {
+      return (DOMPurify as any).sanitize(html);
+    }
+    return html;
   };
 
   const insertFormat = (format: string) => {
@@ -281,6 +384,8 @@ export default function CreateExamPage() {
       });
 
       toast.success("✅ Examen créé avec succès !");
+      // ✅ Clear draft after successful creation
+      localStorage.removeItem(STORAGE_KEY);
       router.push("/admin/exams");
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de la création");
@@ -295,6 +400,14 @@ export default function CreateExamPage() {
 
   const isPointsBalanced = totalPoints === 100;
 
+  const isPointsBalanced = totalPoints === 100;
+
+  if (!mounted) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <header className="bg-white border-b shadow-sm">
@@ -308,9 +421,25 @@ export default function CreateExamPage() {
               <p className="text-xs text-slate-500">Configurez tous les paramètres</p>
             </div>
           </div>
-          <Link href="/admin/exams">
-            <Button variant="outline" size="sm">← Retour</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Save indicator */}
+            <Badge variant="outline" className="gap-1.5">
+              {isSaving ? (
+                <>
+                  <CloudOff className="w-3 h-3 animate-pulse" />
+                  Sauvegarde...
+                </>
+              ) : (
+                <>
+                  <Cloud className="w-3 h-3 text-emerald-600" />
+                  Brouillon auto-sauvegardé
+                </>
+              )}
+            </Badge>
+            <Link href="/admin/exams">
+              <Button variant="outline" size="sm">← Retour</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -454,18 +583,23 @@ export default function CreateExamPage() {
               </div>
 
               <div>
-                <Label htmlFor="passingScore" className="text-sm font-semibold text-slate-700">
-                  <BarChart3 className="w-4 h-4 inline mr-1" />
-                  Moyenne de réussite (/20) *
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="passingScore" className="text-sm font-semibold text-slate-700">
+                    <BarChart3 className="w-4 h-4 inline mr-1" />
+                    Moyenne de réussite (/20) *
+                  </Label>
+                  <Badge variant={isPointsBalanced ? "outline" : "destructive"} className={isPointsBalanced ? "bg-emerald-50 text-emerald-700 h-5" : "bg-rose-50 text-rose-700 h-5"}>
+                    Barème total : {totalPoints} / 100
+                  </Badge>
+                </div>
                 <div className="relative mt-1.5 h-11">
                   <Input
                     id="passingScore"
                     type="number"
                     min="0"
                     max="20"
-                    step="0.5"
-                    value={score20}
+                    step="0.25"
+                    value={score20 || 0}
                     onChange={(e) => handleScoreChange(e.target.value)}
                     className="h-11 pr-12 text-lg font-bold"
                   />
@@ -585,9 +719,9 @@ export default function CreateExamPage() {
                                 <Input 
                                   type="number" 
                                   step="0.25"
-                                  value={q.points} 
-                                  onChange={(e) => updateQcmQuestion(qIndex, "points", parseFloat(e.target.value))}
-                                  className="h-6 w-12 p-0 px-1 border-none bg-transparent font-bold text-blue-600 text-center"
+                                  value={q.points || 0} 
+                                  onChange={(e) => updateQcmQuestion(qIndex, "points", e.target.value)}
+                                  className="h-7 w-24 px-3 border border-slate-200 rounded-lg bg-white font-bold text-blue-600 text-center shadow-sm"
                                 />
                               </div>
                             </div>
@@ -732,9 +866,10 @@ export default function CreateExamPage() {
                              Points :
                              <Input 
                                type="number" 
-                               value={q.points} 
-                               onChange={(e) => updateOpenQuestion(oIndex, "points", parseFloat(e.target.value))}
-                               className="h-6 w-12 border-none bg-transparent font-bold text-purple-600 p-0 text-center"
+                               step="0.25"
+                               value={q.points || 0} 
+                               onChange={(e) => updateOpenQuestion(oIndex, "points", e.target.value)}
+                               className="h-7 w-24 border border-slate-200 rounded-lg bg-white font-bold text-purple-600 px-3 text-center shadow-sm"
                              />
                           </div>
                         </div>
