@@ -296,6 +296,8 @@ model Question {
   points          Float           @default(1)
   order           Int
   options         QuestionOption[]
+
+  @@index([partId])
 }
 
 model QuestionOption {
@@ -305,6 +307,8 @@ model QuestionOption {
   text            String
   isCorrect       Boolean         @default(false)
   feedback        String?         // Explication/Correction pour cette option
+
+  @@index([questionId])
 }
 
 model ExamSession {
@@ -326,6 +330,11 @@ model ExamSession {
   updatedAt       DateTime        @updatedAt
   answers         Json?           @default("{}")
   scans           CompositionScan[]
+
+  // ✅ Indexes for concurrent submission performance
+  @@index([userId, examId])
+  @@index([status])
+  @@index([examId, status])
 }
 
 model CompositionScan {

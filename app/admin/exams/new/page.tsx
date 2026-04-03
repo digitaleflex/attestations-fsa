@@ -406,8 +406,11 @@ export default function CreateExamPage() {
 
       // Start progress simulation
       for (let i = 0; i < steps.length; i++) {
-        setCreationStep(steps[i].label);
-        await new Promise(r => setTimeout(r, steps[i].delay));
+        const step = steps[i];
+        if (step.label) {
+          setCreationStep(step.label);
+          await new Promise(r => setTimeout(r, step.delay));
+        }
       }
 
       await apiFetch("/api/admin/exams", {

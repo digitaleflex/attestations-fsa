@@ -71,8 +71,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           where: { examId: id }
         });
 
-        // Re-create new parts with their questions and options
-        for (const part of parts) {
+        for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+          const part = parts[pIdx];
           await tx.examPart.create({
             data: {
               examId: id,
@@ -80,14 +80,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
               type: part.type,
               duration: part.duration,
               points: part.points,
-              order: part.order,
+              order: part.order ?? (pIdx + 1),
               scenario: part.scenario,
               questions: {
-                create: part.questions?.map((q: any) => ({
+                create: part.questions?.map((q: any, qIdx: number) => ({
                   text: q.text,
                   type: q.type,
                   points: q.points,
-                  order: q.order,
+                  order: q.order ?? (qIdx + 1),
                   options: {
                     create: q.options?.map((o: any) => ({
                       text: o.text,
