@@ -36,6 +36,10 @@ type Submission = {
   exam: {
     title: string;
     parts: any[];
+    part1Points: number;
+    part2Points: number;
+    part3Points: number;
+    totalPoints: number;
   }
 };
 
@@ -63,6 +67,8 @@ export default function GradeSubmissionPage() {
   }, [id]);
 
   const handleSave = async () => {
+    if (!submission) return;
+
     const maxPart2 = submission.exam.part2Points || 40;
     const maxPart3 = submission.exam.part3Points || 40;
 
