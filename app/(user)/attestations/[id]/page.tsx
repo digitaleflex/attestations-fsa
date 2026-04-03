@@ -43,40 +43,43 @@ export default function AttestationPreviewPage() {
 
     toast.promise(
       (async () => {
-        // 1. Activer le mode impression pour la largeur fixe
-        setIsPrinting(true);
-        
-        // 2. Laisser un temps pour le re-render
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // 3. Importer la librairie côté client
-        const html2pdf = (await import("html2pdf.js")).default;
-        const element = document.getElementById(`cert-template-${att.id}`);
-        
-        if (!element) {
-            setIsPrinting(false);
-            throw new Error("Élément introuvable");
-        }
-
-        const opt = {
-          margin: 0,
-          filename: fileName,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
-            letterRendering: true,
-            width: 1120, // Forcer la capture sur la largeur fixe
-            windowWidth: 1120
-          },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        };
-
         try {
-            await html2pdf().set(opt).from(element).save();
+          // 1. Activer le mode impression pour la largeur fixe
+          setIsPrinting(true);
+          
+          // 2. Laisser un temps pour le re-render
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // 3. Importer la librairie côté client
+          const html2pdf = (await import("html2pdf.js")).default;
+          const element = document.getElementById(`cert-template-${att.id}`);
+          
+          if (!element) {
+              throw new Error("Aperçu du certificat non trouvé dans le DOM");
+          }
+
+          const opt = {
+            margin: 0,
+            filename: fileName,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+              scale: 2, 
+              useCORS: true, 
+              letterRendering: true,
+              width: 1120,
+              windowWidth: 1120
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          };
+
+          // 4. Générer et sauvegarder le PDF
+          await html2pdf().set(opt).from(element).save();
+        } catch (error: any) {
+          console.error("PDF Generation Error:", error);
+          throw error;
         } finally {
-            // 4. Désactiver le mode impression
-            setIsPrinting(false);
+          // 5. Toujours désactiver le mode impression, même en cas d'erreur
+          setIsPrinting(false);
         }
       })(),
       {

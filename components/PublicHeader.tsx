@@ -15,7 +15,7 @@ export function PublicHeader() {
     <header className="w-full flex justify-between items-center px-6 md:px-12 py-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/20 shadow-sm transition-all duration-300 hover:bg-white/90">
       <div className="flex items-center gap-3">
         <div className="relative w-10 h-10 overflow-hidden rounded-xl shadow-emerald-200/50 shadow-lg">
-           <Image src="/logo-fsa.png" alt="Logo FSA" fill className="object-cover" />
+           <Image src="/logo-fsa.png" alt="Logo FSA" fill sizes="40px" className="object-cover" />
         </div>
         <div className="flex flex-col">
             <span className="text-xs font-black text-slate-900 leading-none uppercase tracking-tighter italic">Ferme Agro-piscicole</span>

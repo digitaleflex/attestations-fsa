@@ -42,6 +42,7 @@ const menuItems = [
   { href: '/admin/internships', label: 'Stages', icon: Briefcase },
   { href: '/admin/users', label: 'Utilisateurs', icon: Users },
   { href: '/admin/signalements', label: 'Signalements', icon: AlertCircle },
+  { href: '/admin/corrections', label: 'Corrections', icon: ClipboardCheck },
   { href: '/admin/profile', label: 'Mon Profil', icon: Home },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },
 ];

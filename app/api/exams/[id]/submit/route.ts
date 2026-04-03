@@ -83,11 +83,12 @@ export async function POST(
     let scorePart1 = 0;
     if (qcmPart) {
       let correctAnswersCount = 0;
-      const totalQuestions = qcmPart.questions.length;
+      const qcm = qcmPart as any; // Cast to access included relations
+      const totalQuestions = qcm.questions.length;
 
-      for (const q of qcmPart.questions) {
+      for (const q of qcm.questions) {
         const userAnswerId = answers[q.id];
-        const correctOption = q.options.find(o => o.isCorrect);
+        const correctOption = q.options.find((o: any) => o.isCorrect);
         if (correctOption && userAnswerId === correctOption.id) {
           correctAnswersCount++;
         }

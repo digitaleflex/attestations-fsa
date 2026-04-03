@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ShieldCheck, XCircle, Sparkles, Loader2 } from "lucide-react";
-import CertificateTemplate from "@/components/CertificateTemplate";
+import OfficialDocument from "@/components/OfficialDocument";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -188,17 +188,20 @@ function VerifierContent() {
                        <p className="text-center text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperçu du certificat sécurisé</p>
                        <div className="bg-white rounded-xl overflow-hidden shadow-2xl relative group">
                           <div className="scale-[0.38] origin-top mb-[-460px] opacity-90 group-hover:opacity-100 transition-opacity">
-                              <CertificateTemplate 
+                              <OfficialDocument 
                                   data={{
+                                      id: "verification-preview",
                                       fullName: result.fullName,
                                       formationName: result.formation?.name || "Formation Professionnelle",
                                       code: codeParam || "",
                                       issuedAt: new Date().toISOString(),
                                       startDate: result.startDate,
                                       endDate: result.endDate,
-                                      type: result.type
+                                      type: result.type,
+                                      status: result.status,
+                                      score: 0 // On n'affiche pas forcément le score ici ou on le récupère si besoin
                                   }}
-                                  settings={settings}
+                                  hideStepper={true}
                               />
                           </div>
                        </div>

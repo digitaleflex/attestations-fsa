@@ -69,6 +69,11 @@ ChartJS.register(
 
 export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 1. Fetch statistics (Global)
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -223,11 +228,11 @@ export default function AdminDashboardPage() {
           </h1>
           <p className="text-slate-500 font-medium text-sm mt-1 flex items-center gap-2">
             <Calendar className="w-4 h-4" />
-            Performance de {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+            Performance de {mounted ? new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : "--"}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl shadow-premium">
+        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl shadow-premium" suppressHydrationWarning>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input

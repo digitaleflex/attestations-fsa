@@ -40,6 +40,62 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  /* Force HSL for all Tailwind color utilities to avoid oklch */
+  --color-slate-50: hsl(210 40% 98%);
+  --color-slate-100: hsl(214.3 31.8% 96%);
+  --color-slate-200: hsl(213.3 27.8% 90%);
+  --color-slate-300: hsl(212.7 26.8% 83.9%);
+  --color-slate-400: hsl(215 20.2% 65.1%);
+  --color-slate-500: hsl(215.4 16.3% 46.9%);
+  --color-slate-600: hsl(215.3 19.3% 34.5%);
+  --color-slate-700: hsl(215.3 25% 26.7%);
+  --color-slate-800: hsl(217.2 32.6% 17.5%);
+  --color-slate-900: hsl(222.2 47.4% 11.2%);
+  
+  --color-blue-50: hsl(213.8 100% 96.9%);
+  --color-blue-100: hsl(214.3 94.6% 92.7%);
+  --color-blue-200: hsl(213.3 96.9% 87.3%);
+  --color-blue-300: hsl(211.7 96.4% 78.4%);
+  --color-blue-400: hsl(213.1 93.9% 67.8%);
+  --color-blue-500: hsl(217.2 91.2% 59.8%);
+  --color-blue-600: hsl(221.2 83.2% 53.3%);
+  --color-blue-700: hsl(224.3 76.3% 48%);
+  --color-blue-800: hsl(225.9 70.7% 40.2%);
+  --color-blue-900: hsl(224.4 64.3% 32.9%);
+  
+  --color-emerald-50: hsl(152.3 76.5% 96.5%);
+  --color-emerald-100: hsl(149.3 80.4% 90%);
+  --color-emerald-200: hsl(148.5 77.2% 82.2%);
+  --color-emerald-300: hsl(151.7 72.4% 70.6%);
+  --color-emerald-400: hsl(152.4 71.4% 55.9%);
+  --color-emerald-500: hsl(160.1 84.1% 39.4%);
+  --color-emerald-600: hsl(161.4 93.5% 30.4%);
+  --color-emerald-700: hsl(162.9 93.5% 24.3%);
+  --color-emerald-800: hsl(163.1 88.1% 19.8%);
+  --color-emerald-900: hsl(164.2 85.7% 16.5%);
+  
+  --color-amber-50: hsl(48 100% 96.1%);
+  --color-amber-100: hsl(48 96.5% 88.8%);
+  --color-amber-200: hsl(48 96.6% 76.7%);
+  --color-amber-300: hsl(45.2 98.6% 64.5%);
+  --color-amber-400: hsl(37.7 92.9% 54.1%);
+  --color-amber-500: hsl(32.1 94.6% 43.7%);
+  --color-amber-600: hsl(24.6 95% 33.1%);
+  --color-amber-700: hsl(17.5 90.4% 26.1%);
+  --color-amber-800: hsl(15.2 85.5% 21.4%);
+  --color-amber-900: hsl(15.2 79.1% 17.1%);
+  
+  --color-rose-50: hsl(331.4 100% 97.3%);
+  --color-rose-100: hsl(333.3 100% 95.7%);
+  --color-rose-200: hsl(336.8 100% 92.5%);
+  --color-rose-300: hsl(340.4 100% 87.6%);
+  --color-rose-400: hsl(343.2 100% 80.8%);
+  --color-rose-500: hsl(346.8 95.6% 69.2%);
+  --color-rose-600: hsl(349.7 89.2% 60.2%);
+  --color-rose-700: hsl(352.3 85.4% 52.7%);
+  --color-rose-800: hsl(353.4 79.4% 45.9%);
+  --color-rose-900: hsl(354.7 73.2% 39.6%);
+
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-gradient-x: gradient-x 15s ease infinite;
@@ -155,6 +211,14 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  *, ::before, ::after, ::backdrop {
+    --tw-border-opacity: 1;
+    --tw-bg-opacity: 1;
+    --tw-text-opacity: 1;
   }
 }
 

@@ -45,6 +45,7 @@ export default function AdminAttestationsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Statistiques
   const stats = {
@@ -55,6 +56,11 @@ export default function AdminAttestationsPage() {
   };
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.append("search", search);
@@ -70,7 +76,7 @@ export default function AdminAttestationsPage() {
         setAttestations([]);
         setLoading(false);
       });
-  }, [search, status, type]);
+  }, [search, status, type, isMounted]);
 
   const handleCopyCode = async (code: string, id: string) => {
     try {
@@ -226,43 +232,45 @@ export default function AdminAttestationsPage() {
             <Filter className="w-4 h-4 text-slate-500" />
             <span className="text-sm font-semibold text-slate-700">Filtres</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher par nom, code ou formation..."
-                  className="pl-10 h-10"
-                />
+          {isMounted && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher par nom, code ou formation..."
+                    className="pl-10 h-10"
+                  />
+                </div>
+              </div>
+              <div>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="PENDING">En attente</option>
+                  <option value="VALIDATED">Validée</option>
+                  <option value="REJECTED">Refusée</option>
+                </select>
+              </div>
+              <div>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Tous les types</option>
+                  <option value="FORMATION">Formation</option>
+                  <option value="STAGE">Stage</option>
+                  <option value="CERTIFICATION">Certification</option>
+                </select>
               </div>
             </div>
-            <div>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Tous les statuts</option>
-                <option value="PENDING">En attente</option>
-                <option value="VALIDATED">Validée</option>
-                <option value="REJECTED">Refusée</option>
-              </select>
-            </div>
-            <div>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Tous les types</option>
-                <option value="FORMATION">Formation</option>
-                <option value="STAGE">Stage</option>
-                <option value="CERTIFICATION">Certification</option>
-              </select>
-            </div>
-          </div>
+          )}
           {(search || status || type) && (
             <div className="mt-3 flex items-center gap-2">
               <Button
@@ -349,7 +357,7 @@ export default function AdminAttestationsPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600">{a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}</span>
+                      <span className="text-slate-600">{isMounted && a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm font-mono bg-slate-100 px-2 py-1 rounded">
                       <Copy className="w-3 h-3 text-slate-400" />
@@ -428,7 +436,7 @@ export default function AdminAttestationsPage() {
                         </button>
                       </div>
                       <span className="text-sm text-slate-500 w-24 text-right">
-                        {a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}
+                        {isMounted && a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}
                       </span>
                       <div className="flex gap-1">
                         <Link href={`/admin/attestations/${a.id}`}>

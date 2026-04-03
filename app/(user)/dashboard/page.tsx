@@ -186,6 +186,55 @@ export default function UserDashboardPage() {
           </div>
         </Card>
 
+        {/* Profile Verification Module */}
+        <Card className="p-8 border-none shadow-premium bg-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+             <User size={120} />
+          </div>
+          <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+              <div className="flex-1 space-y-4">
+                 <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-100 text-blue-700 border-none px-2 py-0.5 text-[9px] uppercase font-bold">Étape Importante</Badge>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                        Vérifiez vos informations officielles
+                    </h3>
+                 </div>
+                 <p className="text-slate-500 text-sm leading-relaxed max-w-2xl">
+                   Avant que nous n'émettions vos documents officiels, assurez-vous que votre nom, date et lieu de naissance sont corrects. 
+                   <span className="font-bold text-slate-900"> Ces informations apparaîtront telles quelles sur vos diplômes.</span>
+                 </p>
+                 
+                 <div className="flex flex-wrap gap-4 py-2">
+                    <div className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                        <span className="block text-slate-400 font-bold uppercase text-[9px] mb-1">Nom complet</span>
+                        <span className="font-bold text-slate-800">{user?.name || "Non défini"}</span>
+                    </div>
+                    <div className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                        <span className="block text-slate-400 font-bold uppercase text-[9px] mb-1">Date de naissance</span>
+                        <span className="font-bold text-slate-800">{user?.birthDate ? new Date(user.birthDate).toLocaleDateString() : "--/--/----"}</span>
+                    </div>
+                    <div className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                        <span className="block text-slate-400 font-bold uppercase text-[9px] mb-1">Lieu de naissance</span>
+                        <span className="font-bold text-slate-800">{user?.birthPlace || "Non défini"}</span>
+                    </div>
+                 </div>
+
+                 <div className="flex gap-3">
+                   <Link href="/profile">
+                    <Button className="bg-blue-600 hover:bg-blue-700 h-11 px-6 rounded-xl font-bold shadow-lg shadow-blue-100">
+                        Vérifier et Valider
+                    </Button>
+                   </Link>
+                   <Link href="/support">
+                    <Button variant="outline" className="h-11 px-6 rounded-xl font-bold border-slate-200">
+                        Signaler une erreur
+                    </Button>
+                   </Link>
+                 </div>
+              </div>
+          </div>
+        </Card>
+
         {/* Claim Section */}
         {(!user?.attestations || user.attestations.length === 0) && (
           <Card className="p-8 border-none shadow-premium bg-emerald-50 relative overflow-hidden">
