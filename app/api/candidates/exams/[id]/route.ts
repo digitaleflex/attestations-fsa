@@ -1,21 +1,17 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getAuth } from '@/lib/auth';
-import { headers as getHeaders } from 'next/headers';
+import { getCurrentUser } from '@/lib/auth';
+import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({
-    headers: await getHeaders()
-  });
-
-  if (!session) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
-
-  const { id } = await params;
-
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
     const exam = await prisma.exam.findUnique({
       where: { id },
       include: {
@@ -33,7 +29,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
     });
 
-    if (!exam) return NextResponse.json({ message: "Examen non trouvé" }, { status: 404 });
+    if (!exam) {
+      throw new ApiErrorImpl('NOT_FOUND', "Examen non trouvé");
+    }
 
     // Sécurité: On ne renvoie PAS les bonnes réponses (isCorrect)
     const secureExam = {
@@ -45,7 +43,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           options: q.options?.map(o => ({
             id: o.id,
             text: o.text
-            // isCorrect est omis !
           }))
         }))
       }))
@@ -53,25 +50,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(secureExam);
   } catch (error) {
-    return NextResponse.json({ message: "Erreur" }, { status: 500 });
+    return handleApiError(error, { route: '/api/candidates/exams/[id]' });
   }
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({
-    headers: await getHeaders()
-  });
-
-  if (!session) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const body = await request.json();
-  const { answers } = body; // answers: Record<questionId, any>
-
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+    const { answers } = body; 
+
     // 1. Fetch the exam with correct options for scoring Part 1
     const exam = await prisma.exam.findUnique({
       where: { id },
@@ -88,7 +81,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     });
 
-    if (!exam) return NextResponse.json({ error: "Examen non trouvé" }, { status: 404 });
+    if (!exam) {
+      throw new ApiErrorImpl('NOT_FOUND', "Examen non trouvé");
+    }
 
     // 2. Score Part 1 (QCM) automagically
     let scorePart1 = 0;
@@ -118,18 +113,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const sessionRecord = await prisma.examSession.create({
       data: {
         examId: id,
-        userId: session.user.id,
+        userId: user.id,
         status: "PENDING",
         scorePart1,
-        scorePart2: 0, // A noter par l'admin
-        scorePart3: 0, // A noter par l'admin
-        totalScore: scorePart1 // Initial score (only QCM)
+        scorePart2: 0,
+        scorePart3: 0,
+        totalScore: scorePart1 
       }
     });
 
     return NextResponse.json(sessionRecord);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: "Erreur lors de la soumission" }, { status: 500 });
+    return handleApiError(error, { route: '/api/candidates/exams/[id]' });
   }
 }

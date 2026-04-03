@@ -30,6 +30,7 @@ import {
   Layers
 } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,11 +73,7 @@ export default function AdminDashboardPage() {
   // 1. Fetch statistics (Global)
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: async () => {
-      const res = await fetch("/api/public/stats");
-      if (!res.ok) return null;
-      return res.json();
-    },
+    queryFn: () => apiFetch("/api/public/stats"),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -84,9 +81,7 @@ export default function AdminDashboardPage() {
   const { data: usersStats } = useQuery({
     queryKey: ["users-stats"],
     queryFn: async () => {
-      const res = await fetch("/api/users");
-      if (!res.ok) return null;
-      const users = await res.json();
+      const users = await apiFetch("/api/users");
       const now = new Date();
       return {
         total: users.length,
@@ -104,11 +99,7 @@ export default function AdminDashboardPage() {
   // 3. Fetch Dash V4 Stats (Monthly & Targets)
   const { data: v4Stats, isLoading: v4Loading } = useQuery({
     queryKey: ["v4-stats"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/dashboard/stats");
-      if (!res.ok) return null;
-      return res.json();
-    },
+    queryFn: () => apiFetch("/api/admin/dashboard/stats"),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -116,9 +107,8 @@ export default function AdminDashboardPage() {
   const { data: recentAttestations } = useQuery({
     queryKey: ["recent-attestations"],
     queryFn: async () => {
-      const res = await fetch("/api/attestations?limit=5");
-      if (!res.ok) return [];
-      return res.json();
+      const data = await apiFetch("/api/attestations?limit=5");
+      return Array.isArray(data) ? data : data.attestations || [];
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -127,9 +117,7 @@ export default function AdminDashboardPage() {
   const { data: newReports } = useQuery({
     queryKey: ["new-reports-count"],
     queryFn: async () => {
-      const res = await fetch("/api/signalement");
-      if (!res.ok) return 0;
-      const reports = await res.json();
+      const reports = await apiFetch("/api/signalement");
       return Array.isArray(reports) ? reports.filter((r: any) => r.status === "NOUVEAU").length : 0;
     },
     staleTime: 2 * 60 * 1000,

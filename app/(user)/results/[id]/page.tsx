@@ -13,6 +13,7 @@ import {
   AlertCircle, History
 } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api-client";
 
 export default function ResultDetailsPage() {
   const { id } = useParams();
@@ -20,11 +21,7 @@ export default function ResultDetailsPage() {
 
   const { data: result, isLoading } = useQuery({
     queryKey: ["user-result", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/user/results/${id}`);
-      if (!res.ok) throw new Error("Résultat non trouvé");
-      return res.json();
-    }
+    queryFn: () => apiFetch(`/api/user/results/${id}`),
   });
 
   if (isLoading) {

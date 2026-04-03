@@ -16,6 +16,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-client";
 
 export default function ExamSessionPage() {
   const router = useRouter();
@@ -37,49 +38,38 @@ export default function ExamSessionPage() {
   // Fetch exam data
   const { data: exam, isLoading: examLoading } = useQuery({
     queryKey: ["exam", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/exams/${id}`);
-      if (!res.ok) throw new Error("Erreur");
-      return res.json();
-    },
+    queryFn: () => apiFetch(`/api/exams/${id}`),
     staleTime: 5 * 60 * 1000,
   });
 
   // Start exam session
   const startMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/exams/${id}/start`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Erreur");
-      return res.json();
-    },
+    mutationFn: () => apiFetch(`/api/exams/${id}/start`, { method: "POST" }),
     onSuccess: (data) => {
       setTimeRemaining(data.duration || 3600);
       startTimer();
     },
+    onError: (error: any) => {
+      toast.error(error.message || "Impossible de démarrer l'examen");
+      router.push("/exams");
+    }
   });
 
   // Submit exam
   const submitMutation = useMutation({
-    mutationFn: async (finalAnswers: any) => {
-      const res = await fetch(`/api/exams/${id}/submit`, {
+    mutationFn: (finalAnswers: any) => 
+      apiFetch(`/api/exams/${id}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: finalAnswers }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Erreur");
-      }
-      return res.json();
-    },
+      }),
     onSuccess: () => {
       toast.success("✅ Examen soumis avec succès !");
+      localStorage.removeItem(`exam-${id}-draft`);
       router.push("/results");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Erreur lors de la soumission");
+      toast.error(error.message || "Erreur lors de la soumission. Vos réponses sont sauvegardées localement.");
+      setIsSubmitting(false);
     },
   });
 
@@ -217,12 +207,20 @@ export default function ExamSessionPage() {
                 <AlertTitle className="text-emerald-800">Barème de notation</AlertTitle>
                 <AlertDescription className="text-emerald-700">
                   <ul className="list-disc list-inside space-y-1 mt-2">
-                    <li><strong>Partie 1 (QCM)</strong> : 20 points - Correction automatique</li>
-                    <li><strong>Partie 2 (Questions ouvertes)</strong> : 40 points - Correction par l'admin</li>
-                    <li><strong>Partie 3 (Étude de cas)</strong> : 40 points - Correction par l'admin</li>
+                    {exam?.part1Enabled && (
+                      <li><strong>Partie 1 (QCM)</strong> : {exam.part1Points} points - Correction automatique</li>
+                    )}
+                    {exam?.part2Enabled && (
+                      <li><strong>Partie 2 (Questions ouvertes)</strong> : {exam.part2Points} points - Correction par l'admin</li>
+                    )}
+                    {exam?.part3Enabled && (
+                      <li><strong>Partie 3 (Étude de cas)</strong> : {exam.part3Points} points - Correction par l'admin</li>
+                    )}
                   </ul>
                   <p className="mt-3 font-semibold">
-                    🎯 Note minimale requise : <span className="text-emerald-700">12/20 (60%)</span> pour obtenir l'attestation
+                    🎯 Note minimale requise : <span className="text-emerald-700">
+                      {Math.round((exam?.passingScore / 100) * exam?.totalPoints)}/{exam?.totalPoints} ({exam?.passingScore}%)
+                    </span> pour obtenir l'attestation
                   </p>
                 </AlertDescription>
               </Alert>

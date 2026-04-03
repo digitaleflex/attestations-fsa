@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api-client";
 
 type Attestation = {
   id: string;
@@ -48,8 +49,7 @@ export default function AdminAttestationsPage() {
     if (status && status !== "all") params.append("status", status);
     if (type && type !== "all") params.append("type", type);
 
-    fetch(`/api/attestations?${params}`)
-      .then((res) => res.json())
+    apiFetch(`/api/attestations?${params.toString()}`)
       .then((data) => {
         setAttestations(Array.isArray(data) ? data : []);
         setLoading(false);
@@ -74,12 +74,11 @@ export default function AdminAttestationsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette attestation ?")) return;
     try {
-      const res = await fetch(`/api/attestations/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erreur lors de la suppression");
+      await apiFetch(`/api/attestations/${id}`, { method: "DELETE" });
       setAttestations((prev) => prev.filter((a) => a.id !== id));
       toast.success("Attestation supprimée !");
     } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+      // toast is already handled by apiFetch
     }
   };
 

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-client";
 
 type Formation = {
   id: string;
@@ -28,8 +29,7 @@ export default function AdminFormationsPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
 
   useEffect(() => {
-    fetch("/api/formations")
-      .then((res) => res.json())
+    apiFetch("/api/formations")
       .then((data) => {
         setFormations(Array.isArray(data) ? data : []);
         setLoading(false);
@@ -43,12 +43,11 @@ export default function AdminFormationsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette formation ?")) return;
     try {
-      const res = await fetch(`/api/formations/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erreur lors de la suppression");
+      await apiFetch(`/api/formations/${id}`, { method: "DELETE" });
       setFormations((prev) => prev.filter((f) => f.id !== id));
       toast.success("Formation supprimée !");
     } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+      // toast is already handled by apiFetch
     }
   };
 

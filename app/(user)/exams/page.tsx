@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiFetch } from "@/lib/api-client";
 
 export default function UserExamsPage() {
   const router = useRouter();
@@ -25,12 +26,7 @@ export default function UserExamsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["user-exams"],
     queryFn: async () => {
-      const res = await fetch("/api/user/exams");
-      if (!res.ok) {
-        if (res.status === 401) router.push("/admin/login");
-        throw new Error("Non autorisé");
-      }
-      return res.json();
+      return apiFetch("/api/user/exams");
     },
     staleTime: 2 * 60 * 1000,
   });

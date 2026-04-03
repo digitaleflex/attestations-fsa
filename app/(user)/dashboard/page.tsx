@@ -58,16 +58,17 @@ export default function UserDashboardPage() {
         body: JSON.stringify({ codePart: claimCode.trim() }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
+        throw new Error(data.error || data.message || "Erreur lors de la liaison du code");
       }
 
-      await response.json();
       toast.success("Succès ! Votre dossier a été lié et votre profil a été mis à jour.");
+      // On rafraîchit les data query au lieu de recharger toute la page si possible
       window.location.reload();
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors de la liaison du code");
+      toast.error(error.message);
     } finally {
       setIsClaiming(false);
     }

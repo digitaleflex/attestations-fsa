@@ -60,7 +60,7 @@ export function handleApiError(
   error: unknown,
   context?: ErrorContext
 ): NextResponse {
-  // Logger l'erreur complète (côté serveur uniquement)
+  // Logger l'erreur complète (côté serveur uniquement) pour le debugging
   const errorDetails = {
     timestamp: new Date().toISOString(),
     route: context?.route,
@@ -74,27 +74,13 @@ export function handleApiError(
     },
   }
 
-  console.error('[API ERROR]', JSON.stringify(errorDetails, null, 2))
+  console.error('[API ERROR SEV-1]', JSON.stringify(errorDetails, null, 2))
 
-  // En développement, afficher plus de détails
-  if (process.env.NODE_ENV === 'development') {
-    return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : PUBLIC_ERROR_MESSAGE,
-        code: error instanceof Error && 'code' in error ? (error as any).code : undefined,
-        details: error instanceof Error ? error.stack : undefined,
-        context: process.env.NODE_ENV === 'development' ? context : undefined,
-      },
-      { status: 500 }
-    )
-  }
-
-  // En production, message générique uniquement
-  // Sauf pour les erreurs métier connues
+  // 1. Erreurs métier connues (Toujours sécurisées à renvoyer)
   if (error instanceof ApiErrorImpl) {
     return NextResponse.json(
       {
-        message: error.message,
+        error: error.message,
         code: error.code,
         details: error.details,
       },
@@ -102,9 +88,23 @@ export function handleApiError(
     )
   }
 
+  // 2. Gestion spécifique à l'environnement
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : PUBLIC_ERROR_MESSAGE,
+        code: 'INTERNAL_SERVER_ERROR_DEV',
+        details: error instanceof Error ? error.stack : undefined,
+        context
+      },
+      { status: 500 }
+    )
+  }
+
+  // 3. Fallback Production (Générique pour sécurité)
   return NextResponse.json(
     {
-      message: PUBLIC_ERROR_MESSAGE,
+      error: PUBLIC_ERROR_MESSAGE,
       code: 'INTERNAL_SERVER_ERROR',
     },
     { status: 500 }

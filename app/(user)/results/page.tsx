@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
+import { apiFetch } from "@/lib/api-client";
 
 export default function UserResultsPage() {
   const router = useRouter();
@@ -14,14 +15,7 @@ export default function UserResultsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["user-results"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/results");
-      if (!res.ok) {
-        if (res.status === 401) router.push("/admin/login");
-        throw new Error("Non autorisé");
-      }
-      return res.json();
-    },
+    queryFn: () => apiFetch("/api/user/results"),
     staleTime: 2 * 60 * 1000,
   });
 

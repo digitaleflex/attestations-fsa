@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 import { z } from 'zod';
+import { handleApiError, formatValidationError } from '@/lib/error-handler';
 import type { Prisma } from '@prisma/client';
 
 // Schéma de validation pour la création d'une formation
@@ -13,14 +14,15 @@ const FormationSchema = z.object({
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
   const url = new URL(request.url);
-  const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
-  const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
-  const search = url.searchParams.get('search') || '';
   try {
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
+    const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
+    const search = url.searchParams.get('search') || '';
+    
     // ✅ FIX: Use Prisma type instead of `any`
     const where: Prisma.FormationWhereInput = {};
     if (search) {
@@ -38,20 +40,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
     return NextResponse.json(formations);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erreur lors de la récupération des formations';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(error, { route: '/api/formations' });
   }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
   try {
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
     const body = await request.json();
     const parse = FormationSchema.safeParse(body);
     if (!parse.success) {
-      return NextResponse.json({ error: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
+      return NextResponse.json(formatValidationError(parse.error), { status: 400 });
     }
     const { name, category, description, skills } = parse.data;
     const formation = await prisma.formation.create({
@@ -64,7 +65,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
     return NextResponse.json(formation, { status: 201 });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erreur lors de la création de la formation';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(error, { route: '/api/formations' });
   }
 }

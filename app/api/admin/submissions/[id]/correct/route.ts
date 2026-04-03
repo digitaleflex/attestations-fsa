@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
 
 // Helper pour vérifier l'authentification admin
 async function isAuthenticatedAdmin() {
@@ -27,28 +28,9 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { part2Score, part3Score, part2Feedback, part3Feedback } = body;
+    const { part2Score, part3Score } = body;
 
-    // Validation
-    if (part2Score === undefined || part3Score === undefined) {
-      return NextResponse.json({ 
-        message: 'Les scores Partie 2 et Partie 3 sont requis' 
-      }, { status: 400 });
-    }
-
-    if (part2Score < 0 || part2Score > 40) {
-      return NextResponse.json({ 
-        message: 'Le score Partie 2 doit être entre 0 et 40' 
-      }, { status: 400 });
-    }
-
-    if (part3Score < 0 || part3Score > 40) {
-      return NextResponse.json({ 
-        message: 'Le score Partie 3 doit être entre 0 et 40' 
-      }, { status: 400 });
-    }
-
-    // Récupérer la soumission
+    // Récupérer la soumission avec l'examen
     const submission = await prisma.examSession.findUnique({
       where: { id },
       include: {
@@ -58,14 +40,31 @@ export async function POST(
     });
 
     if (!submission) {
-      return NextResponse.json({ error: 'Soumission non trouvée' }, { status: 404 });
+      throw new ApiErrorImpl('NOT_FOUND', 'Soumission non trouvée');
+    }
+
+    const { exam } = submission;
+
+    // Validation
+    if (part2Score === undefined || part3Score === undefined) {
+      throw new ApiErrorImpl('VALIDATION', 'Les scores Partie 2 et Partie 3 sont requis');
+    }
+
+    if (part2Score < 0 || part2Score > (exam.part2Points || 40)) {
+      throw new ApiErrorImpl('VALIDATION', `Le score Partie 2 doit être entre 0 et ${exam.part2Points || 40}`);
+    }
+
+    if (part3Score < 0 || part3Score > (exam.part3Points || 40)) {
+      throw new ApiErrorImpl('VALIDATION', `Le score Partie 3 doit être entre 0 et ${exam.part3Points || 40}`);
     }
 
     // Calculer le score total
     const qcmScore = submission.scorePart1 || 0;
     const totalScore = qcmScore + part2Score + part3Score;
-    const percentage = Math.round((totalScore / 100) * 100);
-    const isPassing = percentage >= 60;
+    const maxPoints = exam.totalPoints || 100;
+    const percentage = Math.round((totalScore / maxPoints) * 100);
+    const passingThreshold = exam.passingScore || 60;
+    const isPassing = percentage >= passingThreshold;
 
     // Mettre à jour la soumission
     const updatedSubmission = await prisma.examSession.update({
@@ -88,7 +87,6 @@ export async function POST(
     // Si réussi (≥ 60%), générer automatiquement l'attestation
     if (isPassing) {
       try {
-        // Générer un code unique (utilisant customAlphabet correct)
         const { customAlphabet } = await import('nanoid');
         const customNanoid = customAlphabet('1234567890abcdef', 5);
         
@@ -132,23 +130,18 @@ export async function POST(
           }
         });
 
-        console.log(`✅ Attestation générée automatiquement: ${code}`);
       } catch (error: any) {
         console.error('Erreur génération attestation:', error);
-        // On ne bloque pas la correction si la génération d'attestation échoue
       }
     }
 
     return NextResponse.json({
       message: 'Correction enregistrée avec succès',
-      submission: updatedSubmission,
+      success: true,
       attestationGenerated: isPassing,
     });
 
   } catch (error: any) {
-    console.error('Erreur correction admin:', error);
-    return NextResponse.json({ 
-      error: 'Erreur lors de la correction' 
-    }, { status: 500 });
+    return handleApiError(error, { route: '/api/admin/submissions/[id]/correct' });
   }
 }

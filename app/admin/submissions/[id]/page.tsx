@@ -63,19 +63,22 @@ export default function GradeSubmissionPage() {
   }, [id]);
 
   const handleSave = async () => {
-    if (score2 > 40 || score3 > 40) {
-      toast.error("Le score max par partie est de 40 points.");
+    const maxPart2 = submission.exam.part2Points || 40;
+    const maxPart3 = submission.exam.part3Points || 40;
+
+    if (score2 > maxPart2 || score3 > maxPart3) {
+      toast.error(`Le score max est de ${maxPart2} pour la P2 et ${maxPart3} pour la P3.`);
       return;
     }
     
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/submissions/${id}/grade`, {
+      const res = await fetch(`/api/admin/submissions/${id}/correct`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scorePart2: parseFloat(score2.toString()),
-          scorePart3: parseFloat(score3.toString()),
+          part2Score: parseFloat(score2.toString()),
+          part3Score: parseFloat(score3.toString()),
           observations: obs
         })
       });
@@ -103,7 +106,8 @@ export default function GradeSubmissionPage() {
   if (!submission) return null;
 
   const totalRaw = submission.scorePart1 + score2 + score3;
-  const finalScore = totalRaw / 5;
+  const maxTotal = submission.exam.totalPoints || 100;
+  const finalScore = (totalRaw / maxTotal) * 20; // Toujours sur 20 pour l'affichage standard
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -166,10 +170,10 @@ export default function GradeSubmissionPage() {
             </h3>
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-slate-400">Partie 2 (Max 40)</label>
+                <label className="text-xs font-bold uppercase text-slate-400">Partie 2 (Max {submission.exam.part2Points || 40})</label>
                 <Input 
                   type="number" 
-                  max={40}
+                  max={submission.exam.part2Points || 40}
                   step="0.5"
                   className="bg-slate-800 border-slate-700 text-white text-lg h-12"
                   value={score2}
@@ -177,10 +181,10 @@ export default function GradeSubmissionPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-slate-400">Partie 3 (Max 40)</label>
+                <label className="text-xs font-bold uppercase text-slate-400">Partie 3 (Max {submission.exam.part3Points || 40})</label>
                 <Input 
                   type="number" 
-                  max={40}
+                  max={submission.exam.part3Points || 40}
                    step="0.5"
                   className="bg-slate-800 border-slate-700 text-white text-lg h-12"
                   value={score3}
@@ -209,7 +213,7 @@ export default function GradeSubmissionPage() {
                   <Badge className="bg-emerald-500 text-white">Partie 1</Badge>
                   <h4 className="font-black text-slate-900 uppercase">Correction Automatique (QCM)</h4>
                 </div>
-                <p className="text-2xl font-black text-emerald-600">{submission.scorePart1} <span className="text-sm text-slate-400">/ 20</span></p>
+                <p className="text-2xl font-black text-emerald-600">{submission.scorePart1} <span className="text-sm text-slate-400">/ {submission.exam.part1Points || 20}</span></p>
               </div>
               <p className="text-sm text-slate-500 italic">Cette partie a été notée par le système lors de la soumission candidate.</p>
            </Card>
