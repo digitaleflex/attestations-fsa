@@ -14,6 +14,7 @@ import { Loader2, ArrowLeft, Save, CheckCircle, AlertCircle } from "lucide-react
 import { DateInput } from "@/components/ui/date-input";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { apiFetch, ApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -40,21 +41,13 @@ export default function EditAttestationPage() {
 
   const { data: attData, isLoading: attLoading } = useQuery({
     queryKey: ["attestation", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/attestations/${id}`);
-      if (!res.ok) throw new Error("Erreur");
-      return res.json();
-    },
+    queryFn: () => apiFetch(`/api/attestations/${id}`),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: formationsData } = useQuery({
     queryKey: ["formations", "all"],
-    queryFn: async () => {
-      const res = await fetch("/api/formations");
-      if (!res.ok) throw new Error("Erreur");
-      return res.json();
-    },
+    queryFn: () => apiFetch("/api/formations"),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -142,19 +135,49 @@ export default function EditAttestationPage() {
     setSuccess(false);
 
     try {
-      const res = await fetch(`/api/attestations/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      // Nettoyage des données pour éviter les erreurs Zod (ex: chaîne vide pour un enum optional)
+      const submitData = { ...form };
+      
+      // Nettoyer les enums optionnels s'ils sont vides
+      if (!submitData.gender) delete submitData.gender;
+      if (!submitData.certificationMention) delete submitData.certificationMention;
+      
+      // Nettoyer les champs texte optionnels vides
+      const optionalTextFields = [
+          'stageObservations', 'certificationObservations', 
+          'issuingCompany', 'location', 'instructor', 'formation'
+      ];
+      optionalTextFields.forEach(field => {
+          if (submitData[field] === "") delete submitData[field];
       });
 
-      if (!res.ok) throw new Error("Erreur lors de la modification");
+      // S'assurer que les nombres sont bien des nombres ou undefined
+      if (submitData.stageHours === "") delete submitData.stageHours;
+      if (submitData.stageScore === "") delete submitData.stageScore;
+      if (submitData.certificationHours === "") delete submitData.certificationHours;
+      if (submitData.certificationScore === "") delete submitData.certificationScore;
+
+      await apiFetch(`/api/attestations/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(submitData),
+      });
 
       setSuccess(true);
       toast.success("✅ Attestation modifiée avec succès !");
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
-      toast.error(err.message || "Erreur inconnue");
+      
+      // Si on a des détails d'erreur (ex: Zod), on les affiche par champ
+      if (err instanceof ApiError && err.details && Array.isArray(err.details)) {
+        const errors: any = {};
+        err.details.forEach((detail: any) => {
+          if (detail.path && detail.path.length > 0) {
+            const fieldName = detail.path[0];
+            errors[fieldName] = detail.message;
+          }
+        });
+        setFieldErrors(errors);
+      }
     } finally {
       setSaving(false);
     }
@@ -205,9 +228,15 @@ export default function EditAttestationPage() {
           </Alert>
         )}
 
-        {/* Formulaire */}
-        <Card className="p-8 bg-white shadow-lg">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Formulaire - Rendu seulement si form est prêt */}
+        {!form ? (
+          <Card className="p-12 flex flex-col items-center justify-center bg-white shadow-lg space-y-4">
+             <Loader2 className="animate-spin w-8 h-8 text-blue-500" />
+             <p className="text-slate-500 text-sm italic font-medium">Récuperation de la configuration...</p>
+          </Card>
+        ) : (
+          <Card className="p-8 bg-white shadow-lg overflow-hidden border-none ring-1 ring-slate-200">
+            <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informations personnelles */}
             <div>
               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -464,6 +493,7 @@ export default function EditAttestationPage() {
             </div>
           </form>
         </Card>
+        )}
       </div>
     </div>
   );

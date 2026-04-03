@@ -1,5 +1,19 @@
 import { toast } from "sonner";
 
+export class ApiError extends Error {
+  status: number;
+  details?: any;
+  code?: string;
+
+  constructor(message: string, status: number, details?: any, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+    this.code = code;
+  }
+}
+
 /**
  * Standard fetch wrapper that handles JSON parsing and error reporting
  * Automatically shows a toast if an error occurs and 'notify' is true
@@ -20,9 +34,9 @@ export async function apiFetch<T = any>(
 
   const csrfToken = getCSRFToken();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
-    ...(options.headers as Record<string, string> || {}),
+      'Content-Type': 'application/json',
+      ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+      ...(options.headers as Record<string, string> || {}),
   };
 
   try {
@@ -31,7 +45,6 @@ export async function apiFetch<T = any>(
       headers,
     });
 
-    // Content-type application/json expected
     let data: any = {};
     const contentType = res.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
@@ -39,17 +52,26 @@ export async function apiFetch<T = any>(
     }
 
     if (!res.ok) {
-        const errorMsg = data.error || data.message || `Erreur ${res.status}`;
-        if (notify) toast.error(errorMsg);
-        throw new Error(errorMsg);
+        const errorMsg = data.message || data.error || `Erreur ${res.status}`;
+        const errorDetails = data.details || null;
+        const errorCode = data.code || null;
+        
+        if (notify) {
+            toast.error(errorMsg, {
+              description: errorCode ? `Code: ${errorCode}` : undefined,
+            });
+        }
+        
+        throw new ApiError(errorMsg, res.status, errorDetails, errorCode);
     }
 
     return data as T;
   } catch (error: any) {
-    if (notify && !error.message.includes("fetch")) {
-       // Only toast if it wasn't already toasted by the !res.ok block
-       // and avoid raw network errors if possible
+    if (error instanceof ApiError) {
+      throw error;
     }
-    throw error;
+    const msg = error.message || "Une erreur inattendue est survenue";
+    if (notify) toast.error(msg);
+    throw new ApiError(msg, 500);
   }
 }

@@ -50,7 +50,7 @@ const CertificateTemplate = ({ data, settings, id = "certificate-content" }: Cer
 
   return (
     <div 
-      className="fixed -left-[5000px] top-0 bg-white" 
+      className="bg-white" 
       style={{ width: "1122px", height: "794px", fontFamily: "'Times New Roman', Times, serif" }} 
       id={id}
     >

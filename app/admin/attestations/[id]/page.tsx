@@ -240,28 +240,91 @@ export default function AttestationDetailsPage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Aperçu de l'attestation */}
-          <Card className="lg:col-span-2 p-8 bg-white shadow-lg">
-            <div id="attestation-preview" className="p-8 bg-white border-2 border-slate-200">
-                {/* Aperçu PDF masqué ou visible ? L'utilisateur veut une expérience pro */}
-                <div className="flex justify-center scale-[0.6] origin-top mb-[-250px]">
-                    <CertificateTemplate 
-                        id="certificate-content"
-                        settings={settings}
-                        data={{
-                            fullName: data.fullName,
-                            formationName: data.formation?.name || "Formation Professionnelle",
-                            code: data.code,
-                            issuedAt: data.issuedAt,
-                            startDate: data.startDate,
-                            endDate: data.endDate,
-                            score: data.type === "FORMATION" ? data.certificationScore : data.stageScore,
-                            hours: data.type === "FORMATION" ? data.certificationHours : data.stageHours,
-                            type: data.type,
-                            gender: data.gender
-                        }}
-                    />
+          {/* Aperçu de l'attestation - Minimaliste et Pro */}
+          <Card className="lg:col-span-2 p-0 bg-white shadow-lg overflow-hidden border-none ring-1 ring-slate-200">
+            {/* Header de l'aperçu */}
+            <div className="bg-slate-50 border-b p-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                        <Award className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-slate-700">Aperçu du contenu</span>
                 </div>
+                <Badge variant="outline" className="font-mono text-[10px]">{data.id}</Badge>
+            </div>
+
+            {/* Corps minimaliste */}
+            <div className="p-12 relative flex flex-col items-center text-center">
+                {/* Filigrane discret */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
+                    <Award size={400} />
+                </div>
+
+                <div className="relative z-10 space-y-8 max-w-2xl">
+                    <div className="space-y-2">
+                        <p className="text-xs uppercase tracking-[0.3em] font-black text-blue-500">Document Officiel</p>
+                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">
+                            {data.type === "FORMATION" ? "Attestation de Formation" : 
+                             data.type === "STAGE" ? "Certificat de Stage" : "Diplôme de Réussite"}
+                        </h2>
+                    </div>
+
+                    <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-emerald-500 mx-auto rounded-full"></div>
+
+                    <div className="py-6">
+                        <p className="text-slate-500 text-sm mb-4">Ce document certifie le parcours de</p>
+                        <p className="text-5xl font-black text-slate-800 tracking-tighter capitalize">
+                            {data.fullName}
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 text-left pt-6">
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Formation / Projet</p>
+                            <p className="font-bold text-slate-800 leading-tight">
+                                {data.formation?.name || "Formation Professionnelle"}
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Période d'évaluation</p>
+                            <p className="font-bold text-slate-800">
+                                <DateLocale date={data.startDate} /> — <DateLocale date={data.endDate} />
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Évaluation finale</p>
+                            <p className="font-bold text-emerald-600">
+                                {data.type === "FORMATION" ? (data.certificationScore || 0) : (data.stageScore || 0)} / 100
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Volume horaire</p>
+                            <p className="font-bold text-slate-800">
+                                {data.type === "FORMATION" ? (data.certificationHours || 0) : (data.stageHours || 0)} Heures
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Template réel caché pour la génération PDF uniquement */}
+            <div className="hidden">
+                 <CertificateTemplate 
+                    id="certificate-content"
+                    settings={settings}
+                    data={{
+                        fullName: data.fullName,
+                        formationName: data.formation?.name || "Formation Professionnelle",
+                        code: data.code,
+                        issuedAt: data.issuedAt,
+                        startDate: data.startDate,
+                        endDate: data.endDate,
+                        score: data.type === "FORMATION" ? data.certificationScore : data.stageScore,
+                        hours: data.type === "FORMATION" ? data.certificationHours : data.stageHours,
+                        type: data.type,
+                        gender: data.gender
+                    }}
+                />
             </div>
           </Card>
 
