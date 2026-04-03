@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { customAlphabet } from 'nanoid';
 import { emailService } from '@/lib/email';
+import type { ExamSessionStatus, AttestationStatus, AttestationType } from '@/lib/prisma-types';
 
 const nanoid = customAlphabet('1234567890abcdef', 5);
 
@@ -55,7 +56,7 @@ export async function POST(
         scorePart2: scorePart2 || 0,
         scorePart3: scorePart3 || 0,
         totalScore: Math.round(totalScore * 100) / 100,
-        status: "GRADED",
+        status: 'GRADED' as ExamSessionStatus,
         gradedAt: new Date(),
       }
     });
@@ -104,8 +105,8 @@ export async function POST(
           location: "Abomey-Calavi",
           instructor: "Ferme St André",
           issuingCompany: "Ferme Agro-Piscicole Cité St André",
-          type: "CERTIFICATION",
-          status: "VALIDATED",
+          type: 'CERTIFICATION' as AttestationType,
+          status: 'VALIDATED' as AttestationStatus,
           certificationScore: totalScore * 5, // Score sur 100
           certificationObservations: observations || "Examen réussi.",
         }

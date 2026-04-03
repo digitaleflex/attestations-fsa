@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 import { handleApiError } from '@/lib/error-handler';
 import type { Prisma } from '@prisma/client';
+import type { ExamSessionStatus } from '@/lib/prisma-types';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
