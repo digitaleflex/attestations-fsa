@@ -6,7 +6,7 @@ import { customAlphabet } from 'nanoid'
 import { isAdminAuthenticated } from '@/lib/auth';
 import { z } from 'zod';
 
-const nanoid = customAlphabet('1234567890abcdef', 5)
+const nanoid = customAlphabet('0123456789ABCDEFGHJKLMNPQRSTUVWXYZ', 6)
 
 // Schéma de validation pour la création d'une attestation
 const AttestationSchema = z.object({
@@ -111,31 +111,11 @@ export async function POST(request: Request) {
     }
     const formationId = formationRecord.id
 
-    // Génération du code d'attestation
+    // Génération du code d'attestation propre et pro
     const now = new Date()
     const year = now.getFullYear()
-    const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`
-
-    // Debug log
-    console.log(`[POST /api/attestations] Generating sequence for ${year}-${month}`);
-
-    // Compter le nombre d'attestations ce mois pour le numéro séquentiel
-    const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-    const startOfNextMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
-
-    console.log(`[POST /api/attestations] Counting records between ${startOfMonth.toISOString()} and ${startOfNextMonth.toISOString()}`);
-
-    const count = await prisma.attestation.count({
-      where: {
-        issuedAt: {
-          gte: startOfMonth,
-          lt: startOfNextMonth
-        }
-      }
-    })
-    const seq = String(count + 1).padStart(5, '0')
     const hash = nanoid()
-    const code = `FSA-${year}-${month}-${seq}-${hash}`
+    const code = `FSA-${year}-${hash}`
 
     console.log('[POST /api/attestations] Creating record with code:', code);
 

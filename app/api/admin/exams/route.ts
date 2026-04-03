@@ -18,6 +18,7 @@ async function isAuthenticatedAdmin() {
 // Schéma de validation pour la création d'examen
 const CreateExamSchema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
+  session: z.string().optional(),
   description: z.string().optional(),
   formationId: z.string().min(1, 'ID de formation requis'),
   duration: z.number().min(300).max(28800), // 5 min à 8 heures
@@ -34,6 +35,7 @@ const CreateExamSchema = z.object({
   part3Mode: z.string().default('digital'),
   randomizeQuestions: z.boolean().default(false),
   showResults: z.boolean().default(false),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
 });
 
 // POST /api/admin/exams - Créer un examen
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
 
     const {
       name,
+      session,
       description,
       formationId,
       duration,
@@ -72,6 +75,7 @@ export async function POST(request: Request) {
       part3Mode,
       randomizeQuestions,
       showResults,
+      status,
     } = parse.data;
 
     // Vérifier que la formation existe
@@ -101,6 +105,7 @@ export async function POST(request: Request) {
       data: {
         name,
         title: name,
+        session,
         description,
         formationId,
         duration,
@@ -118,7 +123,7 @@ export async function POST(request: Request) {
         part3Mode,
         randomizeQuestions,
         showResults,
-        status: 'DRAFT', // DRAFT, PUBLISHED, ARCHIVED
+        status, // DRAFT, PUBLISHED, ARCHIVED
       },
       include: {
         formation: true

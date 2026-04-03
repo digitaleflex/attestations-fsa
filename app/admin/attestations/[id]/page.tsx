@@ -8,12 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Download, Edit, ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, Calendar, MapPin, GraduationCap, Award, QrCode } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils"; // Force import recognition
+import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
 import { QRCodeSVG } from "qrcode.react";
-
 import { useQuery } from "@tanstack/react-query";
-import CertificateTemplate from "@/components/CertificateTemplate";
+
+/**
+ * Page de détails de l'attestation - FSA Admin
+ */
 
 type AttestationData = {
   id: string;
@@ -54,6 +58,19 @@ export default function AttestationDetailsPage() {
   const [data, setData] = useState<AttestationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pdfLib, setPdfLib] = useState<any>(null);
+
+  // Pré-chargement de html2pdf pour éviter de recharger la page entre deux clics
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      import("html2pdf.js")
+        .then((module) => {
+          setPdfLib(() => module.default);
+          console.log("PDF Engine initialized and ready.");
+        })
+        .catch((err) => console.error("Erreur de chargement PDF Lib:", err));
+    }
+  }, []);
 
   // Fetch settings for dynamic branding
   const { data: settings } = useQuery({
@@ -66,8 +83,8 @@ export default function AttestationDetailsPage() {
   });
 
   useEffect(() => {
-    fetch(`/api/attestations/${id}`)
-      .then((res) => res.json())
+    setLoading(true);
+    apiFetch(`/api/attestations/${id}`, {}, false)
       .then((data) => {
         setData(data);
         setLoading(false);
@@ -78,30 +95,27 @@ export default function AttestationDetailsPage() {
   const handleStatus = async (status: "VALIDATED" | "REJECTED") => {
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/attestations/${id}`, {
+      await apiFetch(`/api/attestations/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Erreur lors de la mise à jour");
       setData((prev) => prev ? { ...prev, status } : null);
       toast.success(status === "VALIDATED" ? "✅ Attestation validée !" : "❌ Attestation rejetée !");
     } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur lors de la mise à jour");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette attestation ?")) return;
+    if (!confirm("⚠️ Voulez-vous vraiment supprimer définitivement cette attestation ?")) return;
     try {
-      const res = await fetch(`/api/attestations/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erreur lors de la suppression");
-      toast.success("Attestation supprimée !");
+      await apiFetch(`/api/attestations/${id}`, { method: "DELETE" });
+      toast.success("🗑️ Attestation supprimée avec succès");
       router.push("/admin/attestations");
     } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur lors de la suppression");
     }
   };
 
@@ -111,25 +125,51 @@ export default function AttestationDetailsPage() {
     
     toast.promise(
       (async () => {
-        const html2pdf = (await import("html2pdf.js")).default;
-        const element = document.getElementById("certificate-content"); // This is the ID in the CertificateTemplate
-        if (!element) throw new Error("Template non trouvé");
-        
-        await html2pdf()
-          .from(element)
-          .set({ 
-            margin: 0, 
-            filename: fileName,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 3, useCORS: true, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-          })
-          .save();
+        try {
+            console.log("Démarrage de la génération PDF du document minimaliste...");
+            
+            const html2pdf = pdfLib;
+            if (!html2pdf) {
+                toast.error("Le moteur PDF est encore en cours de chargement. Réessayez dans un instant.");
+                return;
+            }
+
+            const element = document.getElementById("minimalist-preview-card");
+            
+            if (!element) {
+                console.error("DOM Error: #minimalist-preview-card non trouvé");
+                throw new Error("Aperçu de l'attestation non trouvé");
+            }
+
+            // Attente pour le rendu final
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            const opt = {
+              margin: 0,
+              filename: fileName,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { 
+                scale: 2, 
+                useCORS: true, 
+                letterRendering: true,
+                allowTaint: true,
+                logging: true // On active les logs pour voir les erreurs d'images/fonts
+              },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+
+            const worker = html2pdf().from(element).set(opt);
+            await worker.save();
+            console.log("PDF généré avec succès !");
+        } catch (err: any) {
+            console.error("PDF Generation Detailed Error:", err);
+            throw err;
+        }
       })(),
       {
         loading: 'Génération du diplôme officiel...',
         success: 'Téléchargement réussi !',
-        error: 'Erreur lors de la génération.',
+        error: (err) => `Erreur : ${err.message || "Problème technique"}`,
       }
     );
   };
@@ -254,77 +294,109 @@ export default function AttestationDetailsPage() {
             </div>
 
             {/* Corps minimaliste */}
-            <div className="p-12 relative flex flex-col items-center text-center">
-                {/* Filigrane discret */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
-                    <Award size={400} />
-                </div>
+            <div className="p-12 relative flex flex-col items-center text-center bg-white" style={{ backgroundColor: "#ffffff" }}>
+                {/* Stepper de cycle de vie - Nouveau (Caché dans le PDF) */}
+                <div className="w-full max-w-sm mb-12 flex items-center justify-between relative no-pdf">
+                    <div className="absolute top-4 left-0 w-full h-[1px] -z-0" style={{ backgroundColor: "#f1f5f9" }} />
+                    
+                    {/* Étape 1: Création */}
+                    <div className="flex flex-col items-center gap-2 z-10">
+                        <div className="w-8 h-8 rounded-full text-white flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm" style={{ backgroundColor: "#2563eb" }}>1</div>
+                        <span className="text-[9px] font-bold uppercase tracking-tighter" style={{ color: "#94a3b8" }}>Création</span>
+                    </div>
 
-                <div className="relative z-10 space-y-8 max-w-2xl">
+                    {/* Étape 2: Examen Jury */}
+                    <div className="flex flex-col items-center gap-2 z-10">
+                        <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm transition-all duration-500",
+                            data.status === "PENDING" ? "animate-pulse" : ""
+                        )} style={{ 
+                            backgroundColor: data.status === "PENDING" ? "#f59e0b" : 
+                                            (data.status === "VALIDATED" || data.status === "REJECTED") ? "#10b981" : "#f1f5f9",
+                            color: (data.status === "PENDING" || data.status === "VALIDATED" || data.status === "REJECTED") ? "#ffffff" : "#94a3b8"
+                        }}>
+                            { (data.status === "VALIDATED" || data.status === "REJECTED") ? "✓" : "2" }
+                        </div>
+                        <span className="text-[9px] font-bold uppercase tracking-tighter" style={{ color: "#94a3b8" }}>Examen</span>
+                    </div>
+
+                    {/* Étape 3: Décision */}
+                    <div className="flex flex-col items-center gap-2 z-10">
+                        <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm transition-all duration-500"
+                        )} style={{ 
+                            backgroundColor: data.status === "VALIDATED" ? "#059669" : 
+                                            data.status === "REJECTED" ? "#dc2626" : "#f1f5f9",
+                            color: (data.status === "VALIDATED" || data.status === "REJECTED") ? "#ffffff" : "#94a3b8"
+                        }}>
+                            { data.status === "VALIDATED" ? "✓" : data.status === "REJECTED" ? "✕" : "3" }
+                        </div>
+                        <span className="text-[9px] font-bold uppercase tracking-tighter" style={{ color: "#94a3b8" }}>Décision</span>
+                    </div>
+                </div>
+                <div id="minimalist-preview-card" className="w-full flex flex-col items-center p-8 rounded-[24px]" style={{ backgroundColor: "#ffffff", border: "1px solid #f8fafc", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
+                    {/* Filigrane discret */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none" style={{ color: "#000000" }}>
+                        <Award size={400} />
+                    </div>
+
+                <div className="relative z-10 flex flex-col items-center w-full" style={{ gap: "2rem" }}>
                     <div className="space-y-2">
-                        <p className="text-xs uppercase tracking-[0.3em] font-black text-blue-500">Document Officiel</p>
-                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">
+                        <p className="text-xs uppercase tracking-[0.3em] font-black" style={{ color: "#3b82f6" }}>Document Officiel</p>
+                        <h2 className="text-4xl font-black tracking-tight" style={{ color: "#0f172a" }}>
                             {data.type === "FORMATION" ? "Attestation de Formation" : 
                              data.type === "STAGE" ? "Certificat de Stage" : "Diplôme de Réussite"}
                         </h2>
                     </div>
 
-                    <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-emerald-500 mx-auto rounded-full"></div>
+                    <div className="w-24 h-1 mx-auto rounded-full" style={{ background: "linear-gradient(to right, #3b82f6, #10b981)" }}></div>
 
                     <div className="py-6">
-                        <p className="text-slate-500 text-sm mb-4">Ce document certifie le parcours de</p>
-                        <p className="text-5xl font-black text-slate-800 tracking-tighter capitalize">
+                        <p className="text-sm mb-4" style={{ color: "#64748b" }}>Ce document certifie le parcours de</p>
+                        <p className="text-5xl font-black tracking-tighter capitalize" style={{ color: "#1e293b" }}>
                             {data.fullName}
                         </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-8 text-left pt-6">
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Formation / Projet</p>
-                            <p className="font-bold text-slate-800 leading-tight">
+                        <div className="p-4 rounded-2xl" style={{ border: "1px solid #f1f5f9", backgroundColor: "#f8fafc" }}>
+                            <p className="text-[10px] uppercase font-bold mb-1" style={{ color: "#94a3b8" }}>Formation / Projet</p>
+                            <p className="font-bold leading-tight" style={{ color: "#1e293b" }}>
                                 {data.formation?.name || "Formation Professionnelle"}
                             </p>
                         </div>
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Période d'évaluation</p>
-                            <p className="font-bold text-slate-800">
+                        <div className="p-4 rounded-2xl" style={{ border: "1px solid #f1f5f9", backgroundColor: "#f8fafc" }}>
+                            <p className="text-[10px] uppercase font-bold mb-1" style={{ color: "#94a3b8" }}>Période d'évaluation</p>
+                            <p className="font-bold" style={{ color: "#1e293b" }}>
                                 <DateLocale date={data.startDate} /> — <DateLocale date={data.endDate} />
                             </p>
                         </div>
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Évaluation finale</p>
-                            <p className="font-bold text-emerald-600">
+                        <div className="p-4 rounded-2xl" style={{ border: "1px solid #f1f5f9", backgroundColor: "#f8fafc" }}>
+                            <p className="text-[10px] uppercase font-bold mb-1" style={{ color: "#94a3b8" }}>Évaluation finale</p>
+                            <p className="font-bold" style={{ color: "#10b981" }}>
                                 {data.type === "FORMATION" ? (data.certificationScore || 0) : (data.stageScore || 0)} / 100
                             </p>
                         </div>
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Volume horaire</p>
-                            <p className="font-bold text-slate-800">
-                                {data.type === "FORMATION" ? (data.certificationHours || 0) : (data.stageHours || 0)} Heures
+                        <div className="p-4 rounded-2xl" style={{ border: "1px solid #f1f5f9", backgroundColor: "#f8fafc" }}>
+                            <p className="text-[10px] uppercase font-bold mb-1" style={{ color: "#94a3b8" }}>Décision du jury</p>
+                            <p className="font-bold" style={{ 
+                                color: data.status === "VALIDATED" ? "#059669" : 
+                                       data.status === "REJECTED" ? "#dc2626" : "#d97706"
+                            }}>
+                                {data.status === "VALIDATED" ? "ADMIS" : 
+                                 data.status === "REJECTED" ? "REFUSÉ" : "EN ATTENTE"}
                             </p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Template réel caché pour la génération PDF uniquement */}
-            <div className="hidden">
-                 <CertificateTemplate 
-                    id="certificate-content"
-                    settings={settings}
-                    data={{
-                        fullName: data.fullName,
-                        formationName: data.formation?.name || "Formation Professionnelle",
-                        code: data.code,
-                        issuedAt: data.issuedAt,
-                        startDate: data.startDate,
-                        endDate: data.endDate,
-                        score: data.type === "FORMATION" ? data.certificationScore : data.stageScore,
-                        hours: data.type === "FORMATION" ? data.certificationHours : data.stageHours,
-                        type: data.type,
-                        gender: data.gender
-                    }}
-                />
+                {/* Footer de la fiche avec le Code - Nouveau */}
+                <div className="mt-12 pt-6 w-full flex items-center justify-between text-[10px] font-mono" style={{ borderTop: "1px solid #f1f5f9", color: "#94a3b8" }}>
+                    <span>ID: {data.id}</span>
+                    <span className="font-bold" style={{ color: "#475569" }}>CODE: {data.code}</span>
+                    <span>© FSA PORTAL</span>
+                </div>
+              </div>
             </div>
           </Card>
 

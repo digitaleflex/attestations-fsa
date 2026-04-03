@@ -1,35 +1,42 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from 'next/headers';
+import { getCurrentUser } from "@/lib/auth";
+import { z } from "zod";
 
-async function isAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-  
-  if (!session || !session.value) return null;
-  if (role?.value !== 'USER') return null;
-  
-  return session.value;
-}
+const CorrectionRequestSchema = z.object({
+  field: z.string().min(1, "Le champ est requis"),
+  newValue: z.string().min(1, "La nouvelle valeur est requise"),
+  attestationId: z.string().optional(),
+  reason: z.string().max(500).optional(),
+});
 
 export async function POST(req: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    // ✅ FIX: Use Better Auth instead of custom cookie check
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Non autorisé - Authentification requise" },
+        { status: 401 }
+      );
     }
 
-    const { field, newValue, attestationId, reason } = await req.json();
+    const body = await req.json();
+    const parse = CorrectionRequestSchema.safeParse(body);
 
-    if (!field || !newValue) {
-      return new NextResponse("Données manquantes", { status: 400 });
+    if (!parse.success) {
+      return NextResponse.json(
+        { error: "Entrée invalide", details: parse.error.errors },
+        { status: 400 }
+      );
     }
+
+    const { field, newValue, attestationId, reason } = parse.data;
 
     // Créer la demande de correction
-    const request = await prisma.correctionRequest.create({
+    const correctionRequest = await prisma.correctionRequest.create({
       data: {
-        userId,
+        userId: user.id,
         attestationId,
         field,
         newValue,
@@ -41,10 +48,13 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Demande de correction envoyée !",
-      data: request,
+      data: correctionRequest,
     });
   } catch (error) {
-    console.error("[CORRECTION_REQUEST_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error("[POST /api/user/profile/correction ERROR]", error);
+    return NextResponse.json(
+      { error: "Erreur lors de la création de la demande" },
+      { status: 500 }
+    );
   }
 }

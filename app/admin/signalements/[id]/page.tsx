@@ -10,6 +10,17 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { apiFetch } from "@/lib/api-client";
 
 type Report = {
   id: string;
@@ -25,16 +36,14 @@ export default function SignalementDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
   const [status, setStatus] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { data: report, isLoading, error } = useQuery({
     queryKey: ["report", id],
     queryFn: async () => {
-      const res = await fetch(`/api/signalement`);
-      if (!res.ok) throw new Error("Erreur");
-      const data = await res.json();
-      const found = Array.isArray(data) ? data.find((r: Report) => r.id === id) : null;
-      if (!found) throw new Error("Signalement non trouvé");
-      return found;
+      const data = await apiFetch(`/api/signalement?id=${id}`);
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -48,32 +57,29 @@ export default function SignalementDetailsPage() {
   const handleStatusChange = async (newStatus: string) => {
     setStatus(newStatus);
     try {
-      const res = await fetch(`/api/signalement`, {
+      await apiFetch(`/api/signalement`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: newStatus }),
       });
-      if (!res.ok) throw new Error("Erreur lors de la mise à jour");
       toast.success("✅ Statut mis à jour !");
     } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur lors de la mise à jour");
       setStatus(report?.status || "");
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce signalement ?")) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/signalement`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+      await apiFetch(`/api/signalement?id=${id}`, {
+        method: "DELETE"
       });
-      if (!res.ok) throw new Error("Erreur lors de la suppression");
-      toast.success("Signalement supprimé !");
+      toast.success("✅ Signalement supprimé !");
       router.push("/admin/signalements");
     } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur lors de la suppression");
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -282,15 +288,45 @@ export default function SignalementDetailsPage() {
             {/* Suppression */}
             <Button
               variant="destructive"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
               className="gap-2"
+              disabled={isDeleting}
             >
-              <Trash2 className="w-4 h-4" />
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               Supprimer le signalement
             </Button>
           </div>
         </Card>
       </div>
+
+      {/* Modern Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="max-w-[400px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmer la suppression
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce signalement ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white gap-2"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

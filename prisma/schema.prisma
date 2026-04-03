@@ -241,6 +241,7 @@ model Exam {
   id              String          @id @default(uuid())
   name            String
   title           String
+  session         String?         // e.g. "Avril 2026"
   description     String?
   status          ExamStatus      @default(DRAFT)
   duration        Int             @default(3600) // seconds

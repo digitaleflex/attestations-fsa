@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,15 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api-client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CreateExamPage() {
   const router = useRouter();
@@ -24,6 +33,7 @@ export default function CreateExamPage() {
   // Exam settings
   const [exam, setExam] = useState({
     name: "",
+    session: "",
     description: "",
     formationId: "",
     duration: 3600, // seconds
@@ -40,7 +50,52 @@ export default function CreateExamPage() {
     part3Mode: "digital", // "digital" or "physical"
     randomizeQuestions: false,
     showResults: false,
+    status: "DRAFT",
   });
+
+  // Score state for /20
+  const [score20, setScore20] = useState(12);
+
+  // Time state for HH:MM:SS
+  const [time, setTime] = useState({
+    h: 1,
+    m: 0,
+    s: 0
+  });
+
+  // Fetch formations
+  const { data: formations, isLoading: formationsLoading } = useQuery({
+    queryKey: ["formations-list"],
+    queryFn: async () => {
+      return await apiFetch("/api/formations");
+    }
+  });
+
+  const handleTimeChange = (field: "h" | "m" | "s", bValue: string) => {
+    const val = parseInt(bValue) || 0;
+    const newTime = { ...time, [field]: val };
+    setTime(newTime);
+    // Update duration in seconds: (h*3600) + (m*60) + s
+    const totalSeconds = (newTime.h * 3600) + (newTime.m * 60) + newTime.s;
+    setExam(prev => ({ ...prev, duration: totalSeconds }));
+  };
+
+  // Session state
+  const [sessionMonth, setSessionMonth] = useState("Avril");
+  const [sessionYear, setSessionYear] = useState(new Date().getFullYear().toString());
+
+  useEffect(() => {
+    setExam(prev => ({ ...prev, session: `${sessionMonth} ${sessionYear}` }));
+  }, [sessionMonth, sessionYear]);
+
+  const handleScoreChange = (val: string) => {
+    const num = parseFloat(val) || 0;
+    const clamped = Math.min(Math.max(num, 0), 20);
+    setScore20(clamped);
+    // Convert to percentage
+    const percentage = Math.round((clamped / 20) * 100);
+    setExam(prev => ({ ...prev, passingScore: percentage }));
+  };
 
   const handleChange = (field: string, value: any) => {
     setExam((prev) => ({ ...prev, [field]: value }));
@@ -90,6 +145,8 @@ export default function CreateExamPage() {
                       (exam.part2Enabled ? exam.part2Points : 0) +
                       (exam.part3Enabled ? exam.part3Points : 0);
 
+  const isPointsBalanced = totalPoints === 20;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <header className="bg-white border-b shadow-sm">
@@ -119,18 +176,46 @@ export default function CreateExamPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="name" className="text-sm font-semibold text-slate-700">
-                  Nom de l'examen *
-                </Label>
-                <Input
-                  id="name"
-                  value={exam.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  placeholder="Ex: Examen Certification Aquaculture"
-                  className="mt-1.5 h-11"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                <div>
+                  <Label htmlFor="name" className="text-sm font-semibold text-slate-700">
+                    Nom de l'examen *
+                  </Label>
+                  <Input
+                    id="name"
+                    value={exam.name}
+                    onChange={(e) => handleChange("name", e.target.value)}
+                    placeholder="Ex: Examen Certification Aquaculture"
+                    className="mt-1.5 h-11"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold text-slate-700">
+                    Session de l'examen *
+                  </Label>
+                  <div className="flex gap-2 mt-1.5">
+                    <Select value={sessionMonth} onValueChange={setSessionMonth}>
+                      <SelectTrigger className="h-11 w-[150px]">
+                        <SelectValue placeholder="Mois" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"].map(m => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      value={sessionYear}
+                      onChange={(e) => setSessionYear(e.target.value)}
+                      className="h-11 w-[100px]"
+                      placeholder="Année"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1 capitalize">Format: {exam.session}</p>
+                </div>
               </div>
 
               <div className="md:col-span-2">
@@ -151,52 +236,117 @@ export default function CreateExamPage() {
                 <Label htmlFor="formationId" className="text-sm font-semibold text-slate-700">
                   Formation associée *
                 </Label>
-                <Input
-                  id="formationId"
-                  value={exam.formationId}
-                  onChange={(e) => handleChange("formationId", e.target.value)}
-                  placeholder="ID de la formation"
-                  className="mt-1.5 h-11"
-                  required
-                />
+                <div className="mt-1.5">
+                  <Select 
+                    onValueChange={(value) => handleChange("formationId", value)}
+                    value={exam.formationId}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder={formationsLoading ? "Chargement..." : "Sélectionner une formation"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formations?.map((f: any) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.name} ({f.category})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div>
-                <Label htmlFor="duration" className="text-sm font-semibold text-slate-700">
+                <Label className="text-sm font-semibold text-slate-700">
                   <Clock className="w-4 h-4 inline mr-1" />
-                  Durée (minutes)
+                  Durée de l'examen (HH:MM:SS) *
                 </Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min="5"
-                  max="480"
-                  value={Math.round(exam.duration / 60)}
-                  onChange={(e) => handleChange("duration", parseInt(e.target.value) * 60)}
-                  className="mt-1.5 h-11"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  {Math.round(exam.duration / 60)} minutes = {exam.duration} secondes
+                <div className="flex items-center gap-2 mt-1.5 h-11">
+                  <div className="flex-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      value={time.h}
+                      onChange={(e) => handleTimeChange("h", e.target.value)}
+                      className="text-center"
+                    />
+                    <p className="text-[10px] text-slate-400 font-bold uppercase text-center mt-1">HEURES</p>
+                  </div>
+                  <span className="font-bold text-slate-400 pb-5">:</span>
+                  <div className="flex-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      value={time.m}
+                      onChange={(e) => handleTimeChange("m", e.target.value)}
+                      className="text-center"
+                    />
+                    <p className="text-[10px] text-slate-400 font-bold uppercase text-center mt-1">MIN</p>
+                  </div>
+                  <span className="font-bold text-slate-400 pb-5">:</span>
+                  <div className="flex-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="SS"
+                      value={time.s}
+                      onChange={(e) => handleTimeChange("s", e.target.value)}
+                      className="text-center"
+                    />
+                    <p className="text-[10px] text-slate-400 font-bold uppercase text-center mt-1">SEC</p>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-5">
+                  Durée totale : {exam.duration} secondes
                 </p>
               </div>
 
               <div>
                 <Label htmlFor="passingScore" className="text-sm font-semibold text-slate-700">
                   <BarChart3 className="w-4 h-4 inline mr-1" />
-                  Score de réussite (%)
+                  Moyenne de réussite (/20) *
                 </Label>
-                <Input
-                  id="passingScore"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={exam.passingScore}
-                  onChange={(e) => handleChange("passingScore", parseInt(e.target.value))}
-                  className="mt-1.5 h-11"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Les candidats avec ≥ {exam.passingScore}% obtiennent l'attestation
+                <div className="relative mt-1.5 h-11">
+                  <Input
+                    id="passingScore"
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    value={score20}
+                    onChange={(e) => handleScoreChange(e.target.value)}
+                    className="h-11 pr-12 text-lg font-bold"
+                  />
+                  <div className="absolute right-3 top-2.5 text-slate-400 font-bold">/ 20</div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Équivalent à <span className="font-bold text-emerald-600">{exam.passingScore}%</span> de réussite
                 </p>
+              </div>
+
+              <div className="flex flex-col justify-center">
+                <Label htmlFor="status" className="text-sm font-semibold text-slate-700 mb-2">
+                  Statut de l'examen
+                </Label>
+                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <Switch
+                    id="status"
+                    checked={exam.status === "PUBLISHED"}
+                    onCheckedChange={(checked) => handleChange("status", checked ? "PUBLISHED" : "DRAFT")}
+                  />
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">
+                      {exam.status === "PUBLISHED" ? "🚀 Publié" : "📝 Brouillon"}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {exam.status === "PUBLISHED" ? "Visible par les candidats" : "Visible uniquement par les admins"}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
@@ -490,7 +640,7 @@ export default function CreateExamPage() {
               <div className="text-center p-4 bg-white rounded-lg">
                 <p className="text-sm text-slate-500">Durée totale</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  {Math.round(exam.duration / 60)} min
+                  {String(time.h).padStart(2, '0')}:{String(time.m).padStart(2, '0')}:{String(time.s).padStart(2, '0')}
                 </p>
               </div>
 
@@ -532,6 +682,24 @@ export default function CreateExamPage() {
                 )}
               </div>
             </div>
+
+            {!isPointsBalanced && (
+              <Alert className="mt-4 bg-rose-50 border-rose-200 py-3">
+                <AlertCircle className="w-4 h-4 text-rose-600" />
+                <AlertDescription className="text-rose-700 text-xs">
+                  Attention : Le total des points ({totalPoints}) est différent de 20. Pour une notation cohérente, essayez d'ajuster le barème pour arriver à 20 points.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isPointsBalanced && (
+              <Alert className="mt-4 bg-emerald-50 border-emerald-200 py-3">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                <AlertDescription className="text-emerald-700 text-xs">
+                  Parfait ! Votre barème est bien équilibré sur 20 points.
+                </AlertDescription>
+              </Alert>
+            )}
           </Card>
 
           {/* Submit */}

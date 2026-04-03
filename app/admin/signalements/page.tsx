@@ -10,6 +10,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { apiFetch } from "@/lib/api-client";
 
 type Report = {
   id: string;
@@ -27,6 +38,8 @@ export default function AdminSignalementsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Statistiques
   const stats = {
@@ -52,19 +65,21 @@ export default function AdminSignalementsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce signalement ?")) return;
+  const handleDelete = async () => {
+    if (!reportToDelete) return;
+
+    setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/signalement`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+      await apiFetch(`/api/signalement?id=${reportToDelete}`, {
+        method: "DELETE"
       });
-      if (!res.ok) throw new Error("Erreur lors de la suppression");
-      setReports((prev) => prev.filter((r) => r.id !== id));
-      toast.success("Signalement supprimé !");
+      setReports((prev) => prev.filter((r) => r.id !== reportToDelete));
+      toast.success("✅ Signalement supprimé avec succès !");
+      setReportToDelete(null);
     } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+      toast.error(err.message || "Erreur lors de la suppression");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -303,8 +318,8 @@ export default function AdminSignalementsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(r.id)}
-                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                      onClick={() => setReportToDelete(r.id)}
+                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100"
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -351,8 +366,8 @@ export default function AdminSignalementsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(r.id)}
-                            className="text-rose-600 hover:text-rose-700"
+                            onClick={() => setReportToDelete(r.id)}
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -366,6 +381,39 @@ export default function AdminSignalementsPage() {
           </>
         ) }
       </div>
+
+      {/* Modern Confirmation Dialog */}
+      <AlertDialog open={!!reportToDelete} onOpenChange={() => setReportToDelete(null)}>
+        <AlertDialogContent className="max-w-[400px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmer la suppression
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce signalement ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white gap-2"
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
