@@ -21,9 +21,9 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const params = ExamsQuerySchema.safeParse({
-        search: searchParams.get('search'),
-        category: searchParams.get('category'),
-        limit: searchParams.get('limit'),
+        search: searchParams.get('search') || undefined,
+        category: searchParams.get('category') || undefined,
+        limit: searchParams.get('limit') || undefined,
     });
 
     if (!params.success) {

@@ -31,9 +31,9 @@ export async function GET(request: Request) {
     // Validation avec Zod (Sécurité Totale)
     const url = new URL(request.url);
     const params = QuerySchema.safeParse({
-      status: url.searchParams.get('status'),
-      type: url.searchParams.get('type'),
-      limit: url.searchParams.get('limit'),
+      status: url.searchParams.get('status') || undefined,
+      type: url.searchParams.get('type') || undefined,
+      limit: url.searchParams.get('limit') || undefined,
     });
 
     if (!params.success) {
