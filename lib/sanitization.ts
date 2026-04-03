@@ -24,22 +24,16 @@ const sanitizeOptions = {
  */
 export function sanitizeInput(input: string): string {
   if (!input) return ''
-  
+
   // Vérifier que c'est bien une chaîne
   if (typeof input !== 'string') {
     return String(input)
   }
-  
-  // Sanitiser avec DOMPurify
-  const sanitized = purify.sanitize(input, sanitizeOptions)
-  
-  // Encoder les caractères spéciaux restants pour plus de sécurité
-  return sanitized
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
+
+  // Sanitiser avec DOMPurify — supprime les tags HTML mais garde le texte
+  // ✅ FIX: Ne pas encoder les caractères spéciaux (apostrophes, etc.)
+  // Le texte doit être stocké proprement en base : d'ALMEIDA, pas d&#x27;ALMEIDA
+  return purify.sanitize(input, sanitizeOptions)
 }
 
 /**
