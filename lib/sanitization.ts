@@ -1,0 +1,222 @@
+// lib/sanitization.ts
+// Sanitization des entrées utilisateur - Protection contre les attaques XSS
+import DOMPurify from 'dompurify'
+import { JSDOM } from 'jsdom'
+import type { z } from 'zod'
+
+// Initialiser DOMPurify pour environnement Node.js (server-side)
+const window = new JSDOM('').window
+const purify = DOMPurify(window)
+
+// Configuration de sanitization - Stricte (aucun tag HTML)
+const sanitizeOptions = {
+  ALLOWED_TAGS: [],  // Aucun tag HTML autorisé
+  ALLOWED_ATTR: [],
+  KEEP_CONTENT: true,  // Garder le texte seulement
+  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+}
+
+/**
+ * Sanitise une chaîne de caractères
+ * Supprime tous les tags HTML et ne garde que le texte
+ * @param input - Chaîne à sanitiser
+ * @returns Chaîne sanitizée
+ */
+export function sanitizeInput(input: string): string {
+  if (!input) return ''
+  
+  // Vérifier que c'est bien une chaîne
+  if (typeof input !== 'string') {
+    return String(input)
+  }
+  
+  // Sanitiser avec DOMPurify
+  const sanitized = purify.sanitize(input, sanitizeOptions)
+  
+  // Encoder les caractères spéciaux restants pour plus de sécurité
+  return sanitized
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+}
+
+/**
+ * Sanitise un objet récursivement
+ * @param obj - Objet à sanitiser
+ * @returns Objet sanitizé
+ */
+export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
+  const sanitized: any = {}
+  
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string') {
+      sanitized[key] = sanitizeInput(value)
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      sanitized[key] = sanitizeObject(value)
+    } else if (Array.isArray(value)) {
+      sanitized[key] = value.map(item => 
+        typeof item === 'string' ? sanitizeInput(item) :
+        typeof item === 'object' ? sanitizeObject(item) : item
+      )
+    } else {
+      sanitized[key] = value
+    }
+  }
+  
+  return sanitized
+}
+
+/**
+ * Champs critiques qui nécessitent une sanitization renforcée
+ */
+export const CRITICAL_FIELDS = [
+  'message',
+  'reason',
+  'fullName',
+  'observations',
+  'comments',
+  'description',
+  'content',
+  'body',
+  'title',
+  'name',
+] as const
+
+/**
+ * Middleware de sanitization pour Zod
+ * Transforme les données après validation
+ */
+export function createSanitizedSchema<T extends z.ZodType>(schema: T) {
+  return schema.transform((data) => {
+    if (typeof data === 'string') {
+      return sanitizeInput(data) as any
+    }
+    if (typeof data === 'object' && data !== null) {
+      return sanitizeObject(data as Record<string, any>)
+    }
+    return data
+  })
+}
+
+/**
+ * Sanitize un champ spécifique d'un objet
+ * @param data - Objet contenant le champ
+ * @param field - Nom du champ à sanitiser
+ * @returns Objet avec le champ sanitizé
+ */
+export function sanitizeField<T extends Record<string, any>>(
+  data: T,
+  field: keyof T
+): T {
+  if (typeof data[field] === 'string') {
+    return {
+      ...data,
+      [field]: sanitizeInput(data[field] as string) as any,
+    }
+  }
+  return data
+}
+
+/**
+ * Nettoie une entrée HTML en gardant certains tags autorisés
+ * @param html - HTML à nettoyer
+ * @param allowedTags - Tags HTML autorisés
+ * @returns HTML nettoyé
+ */
+export function sanitizeHTML(
+  html: string,
+  allowedTags: string[] = ['b', 'i', 'em', 'strong', 'u', 'br', 'p', 'ul', 'ol', 'li']
+): string {
+  if (!html) return ''
+  
+  return purify.sanitize(html, {
+    ALLOWED_TAGS: allowedTags,
+    ALLOWED_ATTR: [],
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input'],
+    FORBID_ATTR: ['onclick', 'onerror', 'onload', 'onmouseover', 'onfocus', 'onblur'],
+  })
+}
+
+/**
+ * Vérifie si une chaîne contient du code HTML potentiellement dangereux
+ * @param input - Chaîne à vérifier
+ * @returns true si du code HTML/JS suspect est détecté
+ */
+export function containsDangerousHTML(input: string): boolean {
+  if (!input) return false
+  
+  const dangerousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+\s*=/i,  // onclick=, onerror=, etc.
+    /<iframe/i,
+    /<object/i,
+    /<embed/i,
+    /data:text\/html/i,
+    /vbscript:/i,
+    /expression\s*\(/i,
+  ]
+  
+  return dangerousPatterns.some(pattern => pattern.test(input))
+}
+
+/**
+ * Encode une chaîne pour une utilisation sûre dans différents contextes
+ */
+export const HTMLEncode = {
+  // Pour utilisation dans du HTML
+  forHTML: (str: string): string => {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+  },
+  
+  // Pour utilisation dans un attribut HTML
+  forAttribute: (str: string): string => {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+      .replace(/=/g, '&#x3D;')
+  },
+  
+  // Pour utilisation dans du JavaScript
+  forJS: (str: string): string => {
+    return str
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, '\\x27')
+      .replace(/"/g, '\\x22')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/</g, '\\x3C')
+      .replace(/>/g, '\\x3E')
+  },
+  
+  // Pour utilisation dans une URL
+  forURL: (str: string): string => {
+    return encodeURIComponent(str)
+  },
+}
+
+/**
+ * Nettoie un nom de fichier pour éviter les injections de chemin
+ * @param filename - Nom de fichier à nettoyer
+ * @returns Nom de fichier sécurisé
+ */
+export function sanitizeFilename(filename: string): string {
+  if (!filename) return ''
+  
+  // Supprimer les caractères spéciaux et les chemins
+  return filename
+    .replace(/[^\w.\-]/g, '_')
+    .replace(/\.{2,}/g, '_')  // .. → _
+    .replace(/^\.+/, '')  // Supprimer les points au début
+    .substring(0, 255)  // Limiter la longueur
+}
