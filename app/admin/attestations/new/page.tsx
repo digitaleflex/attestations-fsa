@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Keyboard } from "lucide-react";
+import { Loader2, Save, RotateCcw, Keyboard, CloudOff, Cloud } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
+const STORAGE_KEY = "attestation_draft";
 const ATTESTATION_TYPES = [
   { value: "FORMATION", label: "Formation" },
   { value: "STAGE", label: "Stage" },
@@ -25,54 +26,92 @@ const GENDER_OPTIONS = [
   { value: "F", label: "Féminin" },
 ];
 
-type NewAttestationForm = {
-  fullName: string;
-  gender?: "M" | "F";
-  birthDate: string;
-  birthPlace: string;
-  formation: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  instructor: string;
-  issuingCompany: string;
-  type: "FORMATION" | "STAGE" | "CERTIFICATION";
-  stageHours?: number;
-  stageScore?: number;
-  stageObservations?: string;
-  certificationMention?: string;
-  certificationScore?: number;
-  certificationHours?: number;
-  certificationObservations?: string;
+const DEFAULT_FORM = {
+  fullName: "",
+  gender: undefined as "M" | "F" | undefined,
+  birthDate: "",
+  birthPlace: "",
+  formation: "",
+  startDate: "",
+  endDate: "",
+  location: "Abomey-Calavi, Bénin",
+  instructor: "",
+  issuingCompany: "La Ferme Agro Piscicole Cité St André",
+  type: "FORMATION" as "FORMATION" | "STAGE" | "CERTIFICATION",
+  stageHours: undefined as number | undefined,
+  stageScore: undefined as number | undefined,
+  stageObservations: "",
+  certificationMention: undefined as string | undefined,
+  certificationScore: undefined as number | undefined,
+  certificationHours: undefined as number | undefined,
+  certificationObservations: "",
 };
 
+type NewAttestationForm = typeof DEFAULT_FORM;
+
 export default function NewAttestationPage() {
-  const [form, setForm] = useState<NewAttestationForm>({
-    fullName: "",
-    gender: undefined,
-    birthDate: "",
-    birthPlace: "",
-    formation: "",
-    startDate: "",
-    endDate: "",
-    location: "Abomey-Calavi, Bénin",
-    instructor: "",
-    issuingCompany: "La Ferme Agro Piscicole Cité St André",
-    type: "FORMATION",
-    stageHours: undefined,
-    stageScore: undefined,
-    stageObservations: "",
-    certificationMention: undefined,
-    certificationScore: undefined,
-    certificationHours: undefined,
-    certificationObservations: "",
-  });
+  const [form, setForm] = useState<NewAttestationForm>(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [formations, setFormations] = useState<string[]>([]);
   const [completion, setCompletion] = useState(0);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const isInitialMount = useRef(true);
 
+  // 1. Charger le brouillon depuis localStorage au montage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setForm((prev) => ({ ...prev, ...parsed }));
+        setIsDraftLoaded(true);
+        toast.info("📝 Brouillon restauré automatiquement");
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  // 2. Sauvegarder automatiquement dans localStorage à chaque changement
+  useEffect(() => {
+    // Skip initial mount to avoid saving default form
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Debounce save (500ms)
+    const timeout = setTimeout(() => {
+      try {
+        setIsSaving(true);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+        setIsSaving(false);
+      } catch {
+        setIsSaving(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [form]);
+
+  // 3. Avertir avant de quitter la page si des données non sauvegardées existent
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasData = form.fullName || form.birthDate || form.formation;
+      if (hasData && !success) {
+        e.preventDefault();
+        e.returnValue = "Des données non sauvegardées seront perdues. Voulez-vous vraiment quitter ?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [form, success]);
+
+  // Charger les formations
   useEffect(() => {
     fetch("/api/formations")
       .then((res) => res.json())
@@ -93,7 +132,9 @@ export default function NewAttestationPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        if (!loading) handleSubmit();
+        // Force immediate save
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+        toast.success("💾 Brouillon sauvegardé !");
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
         e.preventDefault();
@@ -102,7 +143,7 @@ export default function NewAttestationPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [loading, form]);
+  }, [form]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -131,6 +172,8 @@ export default function NewAttestationPage() {
       if (!res.ok) throw new Error("Erreur lors de la création de l'attestation");
       setSuccess(true);
       toast.success("✅ Attestation créée avec succès !");
+      // ✅ Supprimer le brouillon après succès
+      localStorage.removeItem(STORAGE_KEY);
       handleReset();
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
@@ -141,30 +184,27 @@ export default function NewAttestationPage() {
   };
 
   const handleReset = () => {
-    setForm({
-      fullName: "",
-      gender: undefined,
-      birthDate: "",
-      birthPlace: "",
-      formation: "",
-      startDate: "",
-      endDate: "",
-      location: "Abomey-Calavi, Bénin",
-      instructor: "",
-      issuingCompany: "La Ferme Agro Piscicole Cité St André",
-      type: "FORMATION",
-      stageHours: undefined,
-      stageScore: undefined,
-      stageObservations: "",
-      certificationMention: undefined,
-      certificationScore: undefined,
-      certificationHours: undefined,
-      certificationObservations: "",
-    });
+    setForm(DEFAULT_FORM);
     setSuccess(false);
     setError("");
+    // ✅ Supprimer le brouillon
+    localStorage.removeItem(STORAGE_KEY);
     toast.info("Formulaire réinitialisé");
   };
+
+  const handleRestoreDraft = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setForm((prev) => ({ ...prev, ...parsed }));
+        setIsDraftLoaded(true);
+        toast.info("📝 Brouillon restauré");
+      }
+    } catch {
+      toast.error("Erreur lors de la restauration du brouillon");
+    }
+  }, []);
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
@@ -181,6 +221,20 @@ export default function NewAttestationPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Indicateur de sauvegarde auto */}
+            <Badge variant="outline" className="gap-1.5">
+              {isSaving ? (
+                <>
+                  <CloudOff className="w-3 h-3 animate-pulse" />
+                  Sauvegarde...
+                </>
+              ) : (
+                <>
+                  <Cloud className="w-3 h-3 text-emerald-600" />
+                  Brouillon auto-sauvegardé
+                </>
+              )}
+            </Badge>
             <Link href="/admin/attestations">
               <Button variant="outline">← Retour</Button>
             </Link>
@@ -204,7 +258,7 @@ export default function NewAttestationPage() {
             <Keyboard className="w-4 h-4" />
             <span>Raccourcis :</span>
             <span className="font-mono bg-slate-100 px-2 py-1 rounded">Ctrl+S</span>
-            <span>Sauvegarder</span>
+            <span>Sauvegarder le brouillon</span>
             <span className="font-mono bg-slate-100 px-2 py-1 rounded">Ctrl+R</span>
             <span>Réinitialiser</span>
           </div>
@@ -473,9 +527,9 @@ export default function NewAttestationPage() {
 
           {/* Footer avec actions */}
           <div className="flex gap-3 mt-8 pt-6 border-t">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={handleReset}
               disabled={loading}
               className="gap-2"
@@ -483,8 +537,8 @@ export default function NewAttestationPage() {
               <RotateCcw className="w-4 h-4" />
               Réinitialiser
             </Button>
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               onClick={handleSubmit}
               disabled={loading}
               className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
