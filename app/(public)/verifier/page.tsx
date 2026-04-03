@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ShieldCheck, XCircle, Sparkles } from "lucide-react";
+import { ShieldCheck, XCircle, Sparkles, Loader2 } from "lucide-react";
 // Confetti simple (SVG fallback)
 
 const schema = z.object({
@@ -32,12 +33,15 @@ interface Attestation {
   };
 }
 
-export default function VerifierPage() {
+function VerifierContent() {
   const [result, setResult] = useState<Attestation | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("code");
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema)
   });
 
@@ -65,6 +69,14 @@ export default function VerifierPage() {
       setLoading(false);
     }
   };
+
+  // Auto-trigger if code is in URL
+  useEffect(() => {
+    if (codeParam) {
+      setValue("code", codeParam);
+      onSubmit({ code: codeParam });
+    }
+  }, [codeParam, setValue]);
 
   useEffect(() => {
     if (showConfetti) {
@@ -100,7 +112,7 @@ export default function VerifierPage() {
             className="w-full py-3 mt-2 rounded-lg bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold text-lg shadow-lg hover:scale-105 hover:shadow-2xl focus:scale-105 transition-transform duration-150 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-60"
             disabled={loading}
           >
-            {loading ? "Vérification..." : "Vérifier"}
+            {loading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : "Vérifier"}
           </button>
         </form>
         {/* Résultat */}
@@ -179,3 +191,11 @@ export default function VerifierPage() {
     </div>
   );
 } 
+
+export default function VerifierPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-green-600" /></div>}>
+      <VerifierContent />
+    </Suspense>
+  );
+}

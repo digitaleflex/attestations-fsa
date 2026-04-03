@@ -319,7 +319,12 @@ export default function AuthPage() {
         });
       }
 
-      router.push(isLogin ? "/admin/dashboard" : "/admin/dashboard");
+      // Redirection selon le rôle
+      if (data.user?.role === 'ADMIN') {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/exams");
+      }
     } catch (err: any) {
       console.error("Erreur lors de l'authentification:", err);
       const errorMessage = err.message || "Une erreur inattendue est survenue";
