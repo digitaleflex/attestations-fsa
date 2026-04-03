@@ -53,6 +53,24 @@ export default function CreateExamPage() {
     status: "DRAFT",
   });
 
+  // Questions state
+  const [qcmQuestions, setQcmQuestions] = useState<any[]>([
+    { 
+      text: "", 
+      type: "SINGLE_CHOICE", 
+      points: 1,
+      options: [
+        { text: "", isCorrect: true, feedback: "" },
+        { text: "", isCorrect: false, feedback: "" },
+        { text: "", isCorrect: false, feedback: "" },
+        { text: "", isCorrect: false, feedback: "" }
+      ]
+    }
+  ]);
+  const [openQuestions, setOpenQuestions] = useState<any[]>([
+    { text: "", points: 5 }
+  ]);
+
   // Score state for /20
   const [score20, setScore20] = useState(12);
 
@@ -97,6 +115,74 @@ export default function CreateExamPage() {
     setExam(prev => ({ ...prev, passingScore: percentage }));
   };
 
+  // QCM Handlers
+  const addQcmQuestion = () => {
+    setQcmQuestions([...qcmQuestions, { 
+      text: "", 
+      type: "SINGLE_CHOICE", 
+      points: 1, 
+      options: [
+        { text: "", isCorrect: false, feedback: "" },
+        { text: "", isCorrect: false, feedback: "" },
+        { text: "", isCorrect: false, feedback: "" },
+        { text: "", isCorrect: false, feedback: "" }
+      ] 
+    }]);
+  };
+
+  const updateQcmQuestion = (index: number, field: string, value: any) => {
+    const newQuestions = [...qcmQuestions];
+    newQuestions[index][field] = value;
+    setQcmQuestions(newQuestions);
+  };
+
+  const updateQcmOption = (qIndex: number, oIndex: number, field: string, value: any) => {
+    const newQuestions = [...qcmQuestions];
+    newQuestions[qIndex].options[oIndex][field] = value;
+    
+    // If single choice and setting to correct, uncheck others
+    if (newQuestions[qIndex].type === "SINGLE_CHOICE" && field === "isCorrect" && value === true) {
+      newQuestions[qIndex].options.forEach((opt: any, i: number) => {
+        if (i !== oIndex) opt.isCorrect = false;
+      });
+    }
+    
+    setQcmQuestions(newQuestions);
+  };
+
+  const removeQcmQuestion = (index: number) => {
+    setQcmQuestions(qcmQuestions.filter((_, i) => i !== index));
+  };
+
+  // Open Question Handlers
+  const addOpenQuestion = () => {
+    setOpenQuestions([...openQuestions, { text: "", points: 5 }]);
+  };
+
+  const updateOpenQuestion = (index: number, field: string, value: any) => {
+    const newQuestions = [...openQuestions];
+    newQuestions[index][field] = value;
+    setOpenQuestions(newQuestions);
+  };
+
+  const removeOpenQuestion = (index: number) => {
+    setOpenQuestions(openQuestions.filter((_, i) => i !== index));
+  };
+
+  // Auto-sync total points
+  useEffect(() => {
+    const p1Total = qcmQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
+    const p2Total = openQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
+    
+    setExam(prev => ({ 
+      ...prev, 
+      part1Questions: qcmQuestions.length,
+      part1Points: p1Total,
+      part2Questions: openQuestions.length,
+      part2Points: p2Total
+    }));
+  }, [qcmQuestions, openQuestions]);
+
   const handleChange = (field: string, value: any) => {
     setExam((prev) => ({ ...prev, [field]: value }));
   };
@@ -121,16 +207,16 @@ export default function CreateExamPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/admin/exams", {
+      const payload = {
+        ...exam,
+        qcmQuestions,
+        openQuestions
+      };
+      
+      await apiFetch("/api/admin/exams", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(exam),
+        body: JSON.stringify(payload),
       });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Erreur");
-      }
 
       toast.success("✅ Examen créé avec succès !");
       router.push("/admin/exams");
@@ -371,39 +457,138 @@ export default function CreateExamPage() {
             </div>
 
             {exam.part1Enabled && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700">
-                    Nombre de questions
-                  </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={exam.part1Questions}
-                    onChange={(e) => handleChange("part1Questions", parseInt(e.target.value))}
-                    className="mt-1.5 h-11"
-                  />
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-semibold text-slate-700">
+                      Points de la partie (Total sur 20)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={exam.part1Points}
+                      onChange={(e) => handleChange("part1Points", parseInt(e.target.value))}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold text-slate-700 text-slate-400">
+                      Nombre de questions
+                    </Label>
+                    <div className="h-11 flex items-center px-4 bg-slate-50 border rounded-lg text-slate-500 font-bold">
+                      {qcmQuestions.length} questions
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700">
-                    Points attribués
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={exam.part1Points}
-                    onChange={(e) => handleChange("part1Points", parseInt(e.target.value))}
-                    className="mt-1.5 h-11"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <Badge variant="secondary" className="h-11">
-                    {exam.part1Points} points
-                  </Badge>
+                {/* Question Builder */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-sm font-bold text-slate-600 flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Liste des questions QCM
+                  </h3>
+                  
+                  {qcmQuestions.map((q, qIndex) => (
+                    <Card key={qIndex} className="p-4 bg-slate-50/50 border-slate-200 shadow-none">
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold mt-1">
+                            {qIndex + 1}
+                          </span>
+                          <div className="flex-1 space-y-3">
+                            <Input
+                              placeholder="Énoncé de la question..."
+                              value={q.text}
+                              onChange={(e) => updateQcmQuestion(qIndex, "text", e.target.value)}
+                              className="bg-white font-semibold"
+                            />
+                            
+                            <div className="flex items-center gap-4 text-xs font-medium text-slate-500 bg-white/50 p-2 rounded border border-dashed">
+                              <div className="flex items-center gap-2">
+                                <Settings className="w-3 h-3" />
+                                Type :
+                                <select 
+                                  value={q.type} 
+                                  onChange={(e) => updateQcmQuestion(qIndex, "type", e.target.value)}
+                                  className="bg-transparent border-none p-0 h-auto font-bold text-blue-600 cursor-pointer focus:ring-0"
+                                >
+                                  <option value="SINGLE_CHOICE">Choix Unique</option>
+                                  <option value="MULTIPLE_CHOICE">Choix Multiple</option>
+                                </select>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Plus className="w-3 h-3" />
+                                Points :
+                                <Input 
+                                  type="number" 
+                                  step="0.25"
+                                  value={q.points} 
+                                  onChange={(e) => updateQcmQuestion(qIndex, "points", parseFloat(e.target.value))}
+                                  className="h-6 w-12 p-0 px-1 border-none bg-transparent font-bold text-blue-600 text-center"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-rose-400 hover:text-rose-600 h-9 w-9"
+                            onClick={() => removeQcmQuestion(qIndex)}
+                            disabled={qcmQuestions.length === 1}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-3 pl-9">
+                          {q.options.map((opt: any, oIndex: number) => (
+                            <div key={oIndex} className="space-y-2">
+                              <div className="flex items-center gap-3">
+                                <div 
+                                  className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold cursor-pointer transition-all border-2 ${
+                                    opt.isCorrect
+                                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" 
+                                    : "bg-white border-slate-200 text-slate-400 hover:border-blue-400"
+                                  }`}
+                                  onClick={() => updateQcmOption(qIndex, oIndex, "isCorrect", !opt.isCorrect)}
+                                >
+                                  {["A", "B", "C", "D"][oIndex]}
+                                </div>
+                                <Input
+                                  value={opt.text}
+                                  onChange={(e) => updateQcmOption(qIndex, oIndex, "text", e.target.value)}
+                                  placeholder={`Réponse ${["A", "B", "C", "D"][oIndex]}`}
+                                  className={`text-sm h-9 bg-white transition-all ${opt.isCorrect ? "border-emerald-200 bg-emerald-50/20" : ""}`}
+                                />
+                              </div>
+                              <div className="pl-9">
+                                <div className="relative">
+                                  <FileText className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-300" />
+                                  <Input
+                                    value={opt.feedback}
+                                    onChange={(e) => updateQcmOption(qIndex, oIndex, "feedback", e.target.value)}
+                                    placeholder="Explication ou correction (optionnel)..."
+                                    className="text-[10px] h-8 pl-8 bg-slate-50/50 border-none italic"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={addQcmQuestion} 
+                    className="w-full border-dashed border-2 hover:bg-blue-50 hover:border-blue-300 gap-2 h-12"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Ajouter une question QCM
+                  </Button>
                 </div>
               </div>
             )}
@@ -435,39 +620,84 @@ export default function CreateExamPage() {
             </div>
 
             {exam.part2Enabled && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700">
-                    Nombre de questions
-                  </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={exam.part2Questions}
-                    onChange={(e) => handleChange("part2Questions", parseInt(e.target.value))}
-                    className="mt-1.5 h-11"
-                  />
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-semibold text-slate-700">
+                      Points de la partie (Total sur 20)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={exam.part2Points}
+                      onChange={(e) => handleChange("part2Points", parseInt(e.target.value))}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold text-slate-700 text-slate-400">
+                      Nombre de questions
+                    </Label>
+                    <div className="h-11 flex items-center px-4 bg-slate-50 border rounded-lg text-slate-500 font-bold">
+                      {openQuestions.length} questions
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700">
-                    Points attribués
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={exam.part2Points}
-                    onChange={(e) => handleChange("part2Points", parseInt(e.target.value))}
-                    className="mt-1.5 h-11"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <Badge variant="secondary" className="h-11">
-                    {exam.part2Points} points
-                  </Badge>
+                {/* Question Builder */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-sm font-bold text-slate-600 flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Liste des questions ouvertes
+                  </h3>
+                  
+                  {openQuestions.map((q, oIndex) => (
+                    <Card key={oIndex} className="p-4 bg-slate-50/50 border-slate-200 shadow-none">
+                      <div className="flex items-center gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
+                          {oIndex + 1}
+                        </span>
+                        <div className="flex-1 space-y-3">
+                          <Input
+                            placeholder="Libellé de la question..."
+                            value={q.text}
+                            onChange={(e) => updateOpenQuestion(oIndex, "text", e.target.value)}
+                            className="bg-white"
+                          />
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                             <Plus className="w-3 h-3" />
+                             Points :
+                             <Input 
+                               type="number" 
+                               value={q.points} 
+                               onChange={(e) => updateOpenQuestion(oIndex, "points", parseFloat(e.target.value))}
+                               className="h-6 w-12 border-none bg-transparent font-bold text-purple-600 p-0 text-center"
+                             />
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-rose-400 hover:text-rose-600 h-9 w-9"
+                          onClick={() => removeOpenQuestion(oIndex)}
+                          disabled={openQuestions.length === 1}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={addOpenQuestion} 
+                    className="w-full border-dashed border-2 hover:bg-purple-50 hover:border-purple-300 gap-2 h-12"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Ajouter une question ouverte
+                  </Button>
                 </div>
               </div>
             )}

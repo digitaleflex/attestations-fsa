@@ -304,6 +304,7 @@ model QuestionOption {
   question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
   text            String
   isCorrect       Boolean         @default(false)
+  feedback        String?         // Explication/Correction pour cette option
 }
 
 model ExamSession {

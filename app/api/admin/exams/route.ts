@@ -36,6 +36,8 @@ const CreateExamSchema = z.object({
   randomizeQuestions: z.boolean().default(false),
   showResults: z.boolean().default(false),
   status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
+  qcmQuestions: z.array(z.any()).optional(),
+  openQuestions: z.array(z.any()).optional(),
 });
 
 // POST /api/admin/exams - Créer un examen
@@ -76,6 +78,8 @@ export async function POST(request: Request) {
       randomizeQuestions,
       showResults,
       status,
+      qcmQuestions = [],
+      openQuestions = [],
     } = parse.data;
 
     // Vérifier que la formation existe
@@ -100,34 +104,118 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Créer l'examen
-    const exam = await prisma.exam.create({
-      data: {
-        name,
-        title: name,
-        session,
-        description,
-        formationId,
-        duration,
-        passingScore,
-        totalPoints,
-        part1Enabled,
-        part1Questions,
-        part1Points,
-        part2Enabled,
-        part2Questions,
-        part2Points,
-        part3Enabled,
-        part3Subject,
-        part3Points,
-        part3Mode,
-        randomizeQuestions,
-        showResults,
-        status, // DRAFT, PUBLISHED, ARCHIVED
-      },
-      include: {
-        formation: true
+    // 🔄 Utilisation d'une transaction pour créer l'examen et ses parties
+    const exam = await prisma.$transaction(async (tx) => {
+      // 1. Créer l'examen
+      const newExam = await tx.exam.create({
+        data: {
+          name,
+          title: name,
+          session,
+          description,
+          formationId,
+          duration,
+          passingScore,
+          totalPoints,
+          part1Enabled,
+          part1Questions: qcmQuestions.length || part1Questions,
+          part1Points,
+          part2Enabled,
+          part2Questions: openQuestions.length || part2Questions,
+          part2Points,
+          part3Enabled,
+          part3Subject,
+          part3Points,
+          part3Mode,
+          randomizeQuestions,
+          showResults,
+          status,
+        }
+      });
+
+      // 2. Créer la partie QCM si activée
+      if (part1Enabled && qcmQuestions.length > 0) {
+        const part1 = await tx.examPart.create({
+          data: {
+            examId: newExam.id,
+            title: "Partie 1 : QCM",
+            type: "QCM",
+            duration: Math.floor(duration / 3 / 60), // Estimation simple
+            points: part1Points,
+            order: 1,
+          }
+        });
+
+        // Ajouter les questions QCM
+        for (let i = 0; i < qcmQuestions.length; i++) {
+          const q = qcmQuestions[i];
+          const question = await tx.question.create({
+            data: {
+              partId: part1.id,
+              text: q.text || `Question QCM ${i + 1}`,
+              type: q.type || "SINGLE_CHOICE",
+              points: q.points || 1,
+              order: i + 1,
+            }
+          });
+
+          // Ajouter les options
+          if (q.options) {
+            await tx.questionOption.createMany({
+              data: q.options.map((opt: any) => ({
+                questionId: question.id,
+                text: opt.text || "...",
+                isCorrect: opt.isCorrect,
+                feedback: opt.feedback || "",
+              }))
+            });
+          }
+        }
       }
+
+      // 3. Créer la partie Questions Ouvertes si activée
+      if (part2Enabled && openQuestions.length > 0) {
+        const part2 = await tx.examPart.create({
+          data: {
+            examId: newExam.id,
+            title: "Partie 2 : Questions Ouvertes",
+            type: "OPEN",
+            duration: Math.floor(duration / 3 / 60),
+            points: part2Points,
+            order: 2,
+          }
+        });
+
+        for (let i = 0; i < openQuestions.length; i++) {
+          const qData = openQuestions[i];
+          await tx.question.create({
+            data: {
+              partId: part2.id,
+              text: qData.text || `Question ouverte ${i + 1}`,
+              type: "OPEN",
+              points: qData.points || 5,
+              order: i + 1,
+            }
+          });
+        }
+      }
+
+      // 4. Créer la partie Étude de Cas si activée
+      if (part3Enabled) {
+        await tx.examPart.create({
+          data: {
+            examId: newExam.id,
+            title: "Partie 3 : Étude de Cas",
+            type: "CASE_STUDY",
+            duration: Math.floor(duration / 3 / 60),
+            points: part3Points,
+            order: 3,
+            scenario: part3Subject,
+          }
+        });
+      }
+
+      return newExam;
     });
 
     return NextResponse.json({
