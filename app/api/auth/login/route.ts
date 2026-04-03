@@ -19,7 +19,7 @@ const LoginSchema = z.object({
 export async function POST(request: Request) {
   try {
     // ✅ RATE LIMITING - 5 essais maximum par 15 minutes
-    const rateLimit = await applyRateLimit(request as any, 'login')
+    const rateLimit = await applyRateLimit(request, 'login')
     if (!rateLimit.allowed && rateLimit.response) {
       const ip = request.headers.get('x-forwarded-for') || 'unknown'
       console.warn(`[SECURITY] Rate limit exceeded for login from IP: ${ip}`)

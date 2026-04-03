@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma'
  * @param resourceType - Type de ressource (pour logging)
  * @returns true si l'utilisateur possède la ressource
  */
-export async function checkOwnership<T extends { userId: string | null }>(
+export async function checkOwnership<T extends { id: string; userId: string | null }>(
   resource: T | null,
   userId: string,
   resourceType: string
@@ -174,7 +174,7 @@ export const ResourceGuards = {
    */
   examSubmission: async (submissionId: string, userId: string, isAdmin: boolean) => {
     return requireOwnership(
-      prisma.examSubmission,
+      prisma.examSession,
       submissionId,
       userId,
       isAdmin,

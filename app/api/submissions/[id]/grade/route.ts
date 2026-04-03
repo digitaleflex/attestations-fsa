@@ -124,7 +124,7 @@ export async function POST(
 
     // ✅ FIX: Logger l'action de notation pour audit
     console.log(
-      `[AUDIT] Note enregistrée par admin ${(adminUser as any)?.email || 'unknown'} | ` +
+      `[AUDIT] Note enregistrée par admin ${(adminUser as { email?: string })?.email || 'unknown'} | ` +
       `Session: ${id} | Score: ${updatedSession.totalScore}/20 | ` +
       `Attestation: ${attestationCreated ? 'CRÉÉE (' + attestationCode + ')' : 'NON CRÉÉE'}`
     );

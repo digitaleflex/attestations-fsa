@@ -1,9 +1,9 @@
 // lib/rate-limit.ts
 // Rate limiting avec Upstash Redis - Protection contre brute-force et DDoS
+// ✅ FIX: Accept Request instead of NextRequest to eliminate `as any` casts
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
 // Initialisation Redis
 // Note: Si Upstash n'est pas configuré, le rate limiting sera désactivé
@@ -21,7 +21,7 @@ try {
     console.warn('[RATE LIMIT] Upstash Redis non configuré. Rate limiting désactivé.')
     console.warn('[RATE LIMIT] Ajoutez UPSTASH_REDIS_REST_URL et UPSTASH_REDIS_REST_TOKEN dans .env')
   }
-} catch (error) {
+} catch (error: unknown) {
   console.error('[RATE LIMIT] Erreur lors de l\'initialisation de Redis:', error)
 }
 
@@ -92,30 +92,30 @@ export const rateLimits = {
   }) : null,
 }
 
-// Helper pour appliquer le rate limiting
+// ✅ FIX: Accept Request instead of NextRequest
 export async function applyRateLimit(
-  request: NextRequest,
+  request: Request,
   limitType: keyof typeof rateLimits
 ) {
   // Si Redis n'est pas configuré, on bypass le rate limiting
   if (!ratelimitEnabled) {
     return {
       allowed: true,
-      headers: {},
-    }
+      headers: {} as Record<string, string>,
+    } as const
   }
 
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
   const limit = rateLimits[limitType]
-  
+
   if (!limit) {
     console.warn(`[RATE LIMIT] Type de limit inconnu: ${limitType}`)
     return {
       allowed: true,
-      headers: {},
-    }
+      headers: {} as Record<string, string>,
+    } as const
   }
-  
+
   const { success, limit: max, reset, remaining } = await limit.limit(ip)
 
   if (!success) {
@@ -137,7 +137,7 @@ export async function applyRateLimit(
           },
         }
       ),
-    }
+    } as const
   }
 
   return {
@@ -147,11 +147,11 @@ export async function applyRateLimit(
       'X-RateLimit-Remaining': remaining.toString(),
       'X-RateLimit-Reset': new Date(reset).toISOString(),
     },
-  }
+  } as const
 }
 
 // Middleware helper pour vérifier le rate limiting
-export function getRateLimitHeaders(max: number, remaining: number, reset: number) {
+export function getRateLimitHeaders(max: number, remaining: number, reset: number): Record<string, string> {
   return {
     'X-RateLimit-Limit': max.toString(),
     'X-RateLimit-Remaining': remaining.toString(),
@@ -160,6 +160,6 @@ export function getRateLimitHeaders(max: number, remaining: number, reset: numbe
 }
 
 // Fonction utilitaire pour logger les dépassements
-export function logRateLimitExceeded(limitType: string, ip: string) {
+export function logRateLimitExceeded(limitType: string, ip: string): void {
   console.warn(`[RATE LIMIT] Limite dépassée pour ${limitType} - IP: ${ip}`)
 }

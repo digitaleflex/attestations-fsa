@@ -20,7 +20,7 @@ const SignalementSchema = z.object({
 export async function POST(req: Request) {
   try {
     // ✅ RATE LIMITING - 3 signalements maximum par heure
-    const rateLimit = await applyRateLimit(req as any, 'report')
+    const rateLimit = await applyRateLimit(req, 'report')
     if (!rateLimit.allowed && rateLimit.response) {
       const ip = req.headers.get('x-forwarded-for') || 'unknown'
       console.warn(`[SECURITY] Rate limit exceeded for report from IP: ${ip}`)

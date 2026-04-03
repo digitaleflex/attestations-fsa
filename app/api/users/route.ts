@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
 
     // ✅ Rate limiting pour éviter la création massive de comptes
-    const rateLimit = await applyRateLimit(request as any, 'register');
+    const rateLimit = await applyRateLimit(request, 'register');
     if (!rateLimit.allowed && rateLimit.response) {
       const ip = request.headers.get('x-forwarded-for') || 'unknown';
       console.warn(`[SECURITY] Rate limit exceeded for user creation from IP: ${ip}`);

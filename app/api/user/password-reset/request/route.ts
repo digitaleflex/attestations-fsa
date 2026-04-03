@@ -20,7 +20,7 @@ const RequestSchema = z.object({
 export async function POST(request: Request) {
   try {
     // ✅ Rate limiting - 3 demandes par heure
-    const rateLimit = await applyRateLimit(request as any, 'passwordReset')
+    const rateLimit = await applyRateLimit(request, 'passwordReset')
     if (!rateLimit.allowed && rateLimit.response) {
       return rateLimit.response
     }

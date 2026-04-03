@@ -6,6 +6,24 @@ import { rawPrisma, prisma } from '@/lib/prisma'
 import { nextCookies } from "better-auth/next-js"
 import { cookies, headers } from 'next/headers';
 
+// ✅ FIX: Define typed session user to eliminate `as any` casts
+export type SessionUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: 'ADMIN' | 'USER';
+  emailVerified?: boolean;
+};
+
+export type SessionData = {
+  user: SessionUser;
+  session: {
+    id: string;
+    userId: string;
+    expiresAt: Date;
+  };
+};
+
 // Vérification de la clé secrète
 if (!process.env.AUTH_SECRET) {
     if (process.env.NODE_ENV === 'development') {
@@ -66,16 +84,24 @@ async function getLegacySessionId(request?: Request): Promise<string | null> {
 }
 
 /**
+ * ✅ FIX: Helper to safely extract role from session user
+ */
+function getUserRole(user: Record<string, unknown>): string | undefined {
+  return user.role as string | undefined;
+}
+
+/**
  * Vérifie si l'utilisateur est un administrateur (Hybride)
  */
 export async function isAdminAuthenticated(request?: Request): Promise<boolean> {
     try {
         // 1. Essai avec Better Auth
-        const session = request 
+        const session = request
             ? await auth.api.getSession({ headers: request.headers })
             : await auth.api.getSession({ headers: await headers() });
-        
-        if (session?.user && (session.user as any).role === 'ADMIN') {
+
+        // ✅ FIX: Use typed helper instead of `as any`
+        if (session?.user && getUserRole(session.user) === 'ADMIN') {
             return true;
         }
 
@@ -90,7 +116,7 @@ export async function isAdminAuthenticated(request?: Request): Promise<boolean> 
         }
 
         return false;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('[AUTH ERROR] isAdminAuthenticated:', error);
         return false;
     }
@@ -102,10 +128,10 @@ export async function isAdminAuthenticated(request?: Request): Promise<boolean> 
 export async function isUserAuthenticated(request?: Request): Promise<boolean> {
     try {
         // 1. Essai avec Better Auth
-        const session = request 
+        const session = request
             ? await auth.api.getSession({ headers: request.headers })
             : await auth.api.getSession({ headers: await headers() });
-        
+
         if (session?.user) return true;
 
         // 2. Fallback avec session legacy
@@ -120,7 +146,7 @@ export async function isUserAuthenticated(request?: Request): Promise<boolean> {
         }
 
         return false;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('[AUTH ERROR] isUserAuthenticated:', error);
         return false;
     }
@@ -129,14 +155,21 @@ export async function isUserAuthenticated(request?: Request): Promise<boolean> {
 /**
  * Récupère l'utilisateur actuellement connecté (Hybride)
  */
-export async function getCurrentUser(request?: Request) {
+export async function getCurrentUser(request?: Request): Promise<SessionUser | { id: string; email: string; name: string | null; role: string } | null> {
     try {
         // 1. Essai avec Better Auth
-        const session = request 
+        const session = request
             ? await auth.api.getSession({ headers: request.headers })
             : await auth.api.getSession({ headers: await headers() });
-        
-        if (session?.user) return session.user;
+
+        if (session?.user) {
+            return {
+                id: session.user.id as string,
+                email: session.user.email as string,
+                name: session.user.name as string | null | undefined,
+                role: getUserRole(session.user) || 'USER',
+            } as SessionUser;
+        }
 
         // 2. Fallback avec session legacy
         const legacyId = await getLegacySessionId(request);
@@ -146,19 +179,19 @@ export async function getCurrentUser(request?: Request) {
                 where: { id: legacyId },
                 select: { id: true, email: true, name: true, role: true }
             });
-            
+
             if (admin) return admin;
 
             const user = await prisma.user.findUnique({
                 where: { id: legacyId },
                 select: { id: true, email: true, name: true, role: true }
             });
-            
+
             return user || null;
         }
 
         return null;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('[AUTH ERROR] getCurrentUser:', error);
         return null;
     }

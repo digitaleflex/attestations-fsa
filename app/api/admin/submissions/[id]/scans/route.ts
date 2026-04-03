@@ -140,7 +140,7 @@ export async function POST(
     }
 
     const adminUser = await getCurrentUser()
-    const adminId = (adminUser as any)?.id
+    const adminId = (adminUser as { id?: string })?.id
 
     const { id } = await params
 

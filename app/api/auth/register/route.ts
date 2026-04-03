@@ -28,7 +28,7 @@ const RegisterSchema = z.object({
 export async function POST(request: Request) {
   try {
     // ✅ RATE LIMITING - 3 inscriptions maximum par heure
-    const rateLimit = await applyRateLimit(request as any, 'register')
+    const rateLimit = await applyRateLimit(request, 'register')
     if (!rateLimit.allowed && rateLimit.response) {
       const ip = request.headers.get('x-forwarded-for') || 'unknown'
       console.warn(`[SECURITY] Rate limit exceeded for registration from IP: ${ip}`)

@@ -12,9 +12,12 @@ const FormationSchema = z.object({
   skills: z.array(z.string()).optional(),
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function PATCH(request: NextRequest, context: any) {
-  const { id } = context.params;
+// ✅ FIX: Next.js 15 compatible - params is a Promise
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const { id } = await params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
@@ -22,7 +25,7 @@ export async function PATCH(request: NextRequest, context: any) {
     const body = await request.json();
     const parse = FormationSchema.safeParse(body);
     if (!parse.success) {
-      return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
     }
     const data = parse.data;
     const formation = await prisma.formation.update({
@@ -35,40 +38,47 @@ export async function PATCH(request: NextRequest, context: any) {
       },
     });
     return NextResponse.json(formation);
-  } catch (error) {
-    return NextResponse.json({ message: "Erreur lors de la modification de la formation" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur lors de la modification de la formation';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function DELETE(request: NextRequest, context: any) {
-  const { id } = context.params;
+// ✅ FIX: Next.js 15 compatible - params is a Promise
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const { id } = await params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   try {
     await prisma.formation.delete({ where: { id } });
     return NextResponse.json({ message: 'Formation supprimée' });
-   
-  } catch (error) {
-    return NextResponse.json({ message: "Erreur lors de la suppression de la formation" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur lors de la suppression de la formation';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
- 
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function GET(request: NextRequest, context: any) {
-  const { id } = context.params;
+// ✅ FIX: Next.js 15 compatible - params is a Promise
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const { id } = await params;
   if (!(await isAdminAuthenticated())) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
   }
   try {
     const formation = await prisma.formation.findUnique({ where: { id } });
     if (!formation) {
-      return NextResponse.json({ message: 'Formation non trouvée' }, { status: 404 });
+      return NextResponse.json({ error: 'Formation non trouvée' }, { status: 404 });
     }
     return NextResponse.json(formation);
-  } catch (error) {
-    return NextResponse.json({ message: "Erreur lors de la récupération de la formation" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur lors de la récupération de la formation';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-} 
+}

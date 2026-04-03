@@ -11,7 +11,7 @@ import { sanitizeInput } from '@/lib/sanitization'
 export async function GET(request: Request) {
   try {
     // ✅ RATE LIMITING - 10 vérifications maximum par heure
-    const rateLimit = await applyRateLimit(request as any, 'verify')
+    const rateLimit = await applyRateLimit(request, 'verify')
     if (!rateLimit.allowed && rateLimit.response) {
       const ip = request.headers.get('x-forwarded-for') || 'unknown'
       console.warn(`[SECURITY] Rate limit exceeded for verification from IP: ${ip}`)

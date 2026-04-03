@@ -15,7 +15,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 export async function POST(request: Request) {
   try {
     // ✅ Rate limiting - 5 envois par heure
-    const rateLimit = await applyRateLimit(request as any, 'emailVerification')
+    const rateLimit = await applyRateLimit(request, 'emailVerification')
     if (!rateLimit.allowed && rateLimit.response) {
       return rateLimit.response
     }

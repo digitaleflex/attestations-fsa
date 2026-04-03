@@ -5,8 +5,9 @@ import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 import { handleApiError } from '@/lib/error-handler';
+import type { Prisma } from '@prisma/client';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
@@ -19,7 +20,8 @@ export async function GET(request: NextRequest) {
     const userId = url.searchParams.get('userId');
     const examId = url.searchParams.get('examId');
 
-    const where: any = {};
+    // ✅ FIX: Use Prisma type instead of `any`
+    const where: Prisma.ExamSessionWhereInput = {};
     if (userId) where.userId = userId;
     if (examId) where.examId = examId;
 
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(request: NextRequest): Promise<NextResponse> {
   try {
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
