@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+// Refreshed for prisma schema sync
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
