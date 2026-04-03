@@ -149,17 +149,3 @@ export async function applyRateLimit(
     },
   } as const
 }
-
-// Middleware helper pour vérifier le rate limiting
-export function getRateLimitHeaders(max: number, remaining: number, reset: number): Record<string, string> {
-  return {
-    'X-RateLimit-Limit': max.toString(),
-    'X-RateLimit-Remaining': remaining.toString(),
-    'X-RateLimit-Reset': new Date(reset).toISOString(),
-  }
-}
-
-// Fonction utilitaire pour logger les dépassements
-export function logRateLimitExceeded(limitType: string, ip: string): void {
-  console.warn(`[RATE LIMIT] Limite dépassée pour ${limitType} - IP: ${ip}`)
-}

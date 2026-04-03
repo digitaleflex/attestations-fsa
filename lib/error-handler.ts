@@ -134,18 +134,24 @@ export class ApiErrorImpl extends Error {
 }
 
 /**
- * Wrapper pour exécuter du code et gérer les erreurs automatiquement
- * Usage: await withErrorHandler(async () => { ... }, request)
+ * Classe d'erreur API personnalisée
+ * Permet de lever des erreurs métier avec statut HTTP
  */
-export async function withErrorHandler<T>(
-  fn: () => Promise<T>,
-  context?: ErrorContext
-): Promise<NextResponse | T> {
-  try {
-    const result = await fn()
-    return result
-  } catch (error) {
-    return handleApiError(error, context)
+export class ApiErrorImpl extends Error {
+  code: string
+  status: number
+  details?: any
+
+  constructor(
+    type: keyof typeof ErrorTypes,
+    message: string,
+    details?: any
+  ) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = ErrorTypes[type].code
+    this.status = ErrorTypes[type].status
+    this.details = details
   }
 }
 
@@ -168,21 +174,4 @@ export function formatValidationError(error: any): ApiError {
     message: 'Entrée invalide',
     code: 'VALIDATION_ERROR',
   }
-}
-
-/**
- * Middleware de gestion d'erreur pour les routes API
- * Usage: export const POST = async (req) => handleApiRoute(async () => { ... })
- */
-export function handleApiRoute<T extends (...args: any[]) => Promise<any>>(
-  handler: T
-): T {
-  return ((...args: any[]) =>
-    withErrorHandler(
-      () => handler(...args),
-      {
-        route: args[0]?.url,
-        operation: 'API_HANDLER',
-      }
-    )) as T
 }

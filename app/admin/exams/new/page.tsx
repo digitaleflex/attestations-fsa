@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
+import DOMPurify from "dompurify";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Type,
+  Eye,
+  Edit3
+} from "lucide-react";
 
 export default function CreateExamPage() {
   const router = useRouter();
@@ -169,6 +179,58 @@ export default function CreateExamPage() {
     setOpenQuestions(openQuestions.filter((_, i) => i !== index));
   };
 
+  // Markdown Helper
+  const renderMarkdown = (text: string) => {
+    if (!text) return "";
+    let html = text
+      .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
+      .replace(/\*(.*?)\*/g, "<i>$1</i>")
+      // Listes à puces
+      .replace(/^-\s(.*)$/gm, "<li>$1</li>")
+      .replace(/<\/li>\n<li>/g, "</li><li>")
+      .replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>")
+      // Listes numérotées
+      .replace(/^\d\.\s(.*)$/gm, "<li class='list-decimal'>$1</li>")
+      .replace(/<\/li>\n<li class='list-decimal'>/g, "</li><li class='list-decimal'>")
+      .replace(/(<li class='list-decimal'>.*<\/li>)/s, "<ol class='list-decimal pl-4'>$1</ol>")
+      // Retours à la ligne (Paragraphes vs Sauts simples)
+      .replace(/\n\n/g, "</p><p>")
+      .replace(/\n/g, "<br/>");
+    
+    // Encapsuler dans un paragraphe si nécessaire
+    html = `<p>${html}</p>`;
+    
+    // Nettoyer les balises vides/erronées dues au remplacement
+    html = html.replace(/<p><\/p>/g, "")
+               .replace(/<p><br\/>/g, "<p>")
+               .replace(/<br\/><\/p>/g, "</p>")
+               .replace(/<p><ul>/g, "<ul>")
+               .replace(/<\/ul><\/p>/g, "</ul>")
+               .replace(/<p><ol/g, "<ol")
+               .replace(/<\/ol><\/p>/g, "</ol>");
+    
+    return DOMPurify.sanitize(html);
+  };
+
+  const insertFormat = (format: string) => {
+    const textarea = document.getElementById("part3Subject") as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = exam.part3Subject || "";
+    const selected = text.substring(start, end);
+
+    let newText = "";
+    if (format === "bold") newText = text.substring(0, start) + "**" + (selected || "texte") + "**" + text.substring(end);
+    if (format === "italic") newText = text.substring(0, start) + "*" + (selected || "texte") + "*" + text.substring(end);
+    if (format === "list") newText = text.substring(0, start) + "\n- " + (selected || "élément") + text.substring(end);
+    if (format === "ordered") newText = text.substring(0, start) + "\n1. " + (selected || "étape") + text.substring(end);
+
+    handleChange("part3Subject", newText);
+    textarea.focus();
+  };
+
   // Auto-sync total points
   useEffect(() => {
     const p1Total = qcmQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
@@ -231,7 +293,7 @@ export default function CreateExamPage() {
                       (exam.part2Enabled ? exam.part2Points : 0) +
                       (exam.part3Enabled ? exam.part3Points : 0);
 
-  const isPointsBalanced = totalPoints === 20;
+  const isPointsBalanced = totalPoints === 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -814,20 +876,90 @@ export default function CreateExamPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="part3Subject" className="text-sm font-semibold text-slate-700">
-                    Sujet de l'étude de cas *
-                  </Label>
-                  <Textarea
-                    id="part3Subject"
-                    value={exam.part3Subject}
-                    onChange={(e) => handleChange("part3Subject", e.target.value)}
-                    placeholder="Décrivez le scénario, le contexte, les questions..."
-                    rows={6}
-                    className="mt-1.5 resize-none"
-                    required={exam.part3Enabled}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Ce sujet sera affiché aux candidats au début de la Partie 3
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="part3Subject" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <Edit3 className="w-4 h-4" />
+                      Énoncé de l'étude de cas *
+                    </Label>
+                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md border">
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-slate-600 hover:text-blue-600"
+                        onClick={() => insertFormat("bold")}
+                        title="Gras"
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-slate-600 hover:text-blue-600"
+                        onClick={() => insertFormat("italic")}
+                        title="Italique"
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-slate-600 hover:text-blue-600"
+                        onClick={() => insertFormat("list")}
+                        title="Liste à puces"
+                      >
+                        <List className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-slate-600 hover:text-blue-600"
+                        onClick={() => insertFormat("ordered")}
+                        title="Liste numérotée"
+                      >
+                        <ListOrdered className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Editor */}
+                    <div className="relative group">
+                      <Textarea
+                        id="part3Subject"
+                        value={exam.part3Subject || ""}
+                        onChange={(e) => handleChange("part3Subject", e.target.value)}
+                        placeholder="Utilisez **gras** pour le gras, *italique* et - pour les listes..."
+                        rows={12}
+                        className="resize-none font-mono text-sm border-slate-200 group-focus-within:border-blue-400 group-focus-within:ring-2 group-focus-within:ring-blue-50"
+                        required={exam.part3Enabled}
+                      />
+                    </div>
+
+                    {/* Preview */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 overflow-y-auto max-h-[290px] relative">
+                      <div className="absolute top-2 right-2 flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                        <Eye className="w-3 h-3" />
+                        APERÇU EN DIRECT
+                      </div>
+                      <div 
+                        className="prose prose-sm max-w-none text-slate-700 rich-text-preview" 
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(exam.part3Subject || "") }}
+                      />
+                      {(!exam.part3Subject) && (
+                        <p className="text-slate-400 italic text-sm text-center mt-10">
+                          Commencez à rédiger pour voir l'aperçu ici...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
+                    <Type className="w-3 h-3" />
+                    Supporte le formatage Markdown simple.
                   </p>
                 </div>
 
@@ -916,8 +1048,8 @@ export default function CreateExamPage() {
             {!isPointsBalanced && (
               <Alert className="mt-4 bg-rose-50 border-rose-200 py-3">
                 <AlertCircle className="w-4 h-4 text-rose-600" />
-                <AlertDescription className="text-rose-700 text-xs">
-                  Attention : Le total des points ({totalPoints}) est différent de 20. Pour une notation cohérente, essayez d'ajuster le barème pour arriver à 20 points.
+                <AlertDescription className="text-rose-700 text-xs text-balance">
+                  Attention : Le total de votre barème ({totalPoints}) est différent de 100. Pour une notation cohérente (sur 100%), essayez d'ajuster les points de chaque question.
                 </AlertDescription>
               </Alert>
             )}
@@ -926,7 +1058,7 @@ export default function CreateExamPage() {
               <Alert className="mt-4 bg-emerald-50 border-emerald-200 py-3">
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
                 <AlertDescription className="text-emerald-700 text-xs">
-                  Parfait ! Votre barème est bien équilibré sur 20 points.
+                  Parfait ! Votre barème est bien équilibré sur 100 points.
                 </AlertDescription>
               </Alert>
             )}

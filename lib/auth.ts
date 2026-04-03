@@ -123,36 +123,6 @@ export async function isAdminAuthenticated(request?: Request): Promise<boolean> 
 }
 
 /**
- * Vérifie si l'utilisateur est connecté (Hybride)
- */
-export async function isUserAuthenticated(request?: Request): Promise<boolean> {
-    try {
-        // 1. Essai avec Better Auth
-        const session = request
-            ? await auth.api.getSession({ headers: request.headers })
-            : await auth.api.getSession({ headers: await headers() });
-
-        if (session?.user) return true;
-
-        // 2. Fallback avec session legacy
-        const legacyId = await getLegacySessionId(request);
-        if (legacyId) {
-            // Un id de session legacy peut être un Admin ou un User
-            const [user, admin] = await Promise.all([
-                prisma.user.findUnique({ where: { id: legacyId }, select: { id: true } }),
-                prisma.admin.findUnique({ where: { id: legacyId }, select: { id: true } })
-            ]);
-            return !!(user || admin);
-        }
-
-        return false;
-    } catch (error: unknown) {
-        console.error('[AUTH ERROR] isUserAuthenticated:', error);
-        return false;
-    }
-}
-
-/**
  * Récupère l'utilisateur actuellement connecté (Hybride)
  */
 export async function getCurrentUser(request?: Request): Promise<SessionUser | { id: string; email: string; name: string | null; role: string } | null> {
