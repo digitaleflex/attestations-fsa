@@ -9,13 +9,26 @@ export async function apiFetch<T = any>(
   options: RequestInit = {}, 
   notify: boolean = true
 ): Promise<T> {
+  // Extraire le token CSRF du cookie si présent (Pattern Double-Submit)
+  const getCSRFToken = () => {
+    if (typeof document === 'undefined') return undefined;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; csrf_token=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    return undefined;
+  };
+
+  const csrfToken = getCSRFToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+    ...(options.headers as Record<string, string> || {}),
+  };
+
   try {
     const res = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     // Content-type application/json expected

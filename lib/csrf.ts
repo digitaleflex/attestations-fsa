@@ -30,7 +30,7 @@ export async function addCSRFTokenToResponse(response: NextResponse): Promise<Ne
   const token = generateCSRFToken()
   
   response.cookies.set('csrf_token', token, {
-    httpOnly: true,
+    httpOnly: false, // Doit être lisible par JS pour être envoyé dans le header X-CSRF-Token
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',

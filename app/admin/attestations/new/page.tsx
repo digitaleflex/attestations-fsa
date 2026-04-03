@@ -13,6 +13,7 @@ import { Loader2, Save, RotateCcw, Keyboard, CloudOff, Cloud } from "lucide-reac
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { apiFetch } from "@/lib/api-client";
 
 const STORAGE_KEY = "attestation_draft";
 const ATTESTATION_TYPES = [
@@ -164,12 +165,10 @@ export default function NewAttestationPage() {
     setError("");
     setSuccess(false);
     try {
-      const res = await fetch("/api/attestations", {
+      await apiFetch("/api/attestations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error("Erreur lors de la création de l'attestation");
       setSuccess(true);
       toast.success("✅ Attestation créée avec succès !");
       // ✅ Supprimer le brouillon après succès
@@ -177,7 +176,6 @@ export default function NewAttestationPage() {
       handleReset();
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
-      toast.error(err.message || "Erreur inconnue");
     } finally {
       setLoading(false);
     }

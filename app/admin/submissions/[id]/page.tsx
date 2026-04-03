@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { apiFetch } from "@/lib/api-client";
 import { 
   Loader2, 
   CheckCircle2, 
@@ -79,9 +80,8 @@ export default function GradeSubmissionPage() {
     
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/admin/submissions/${id}/correct`, {
+      await apiFetch(`/api/admin/submissions/${id}/correct`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           part2Score: parseFloat(score2.toString()),
           part3Score: parseFloat(score3.toString()),
@@ -89,12 +89,10 @@ export default function GradeSubmissionPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Erreur de sauvegarde");
-      
       toast.success("Notation enregistrée !");
       router.push("/admin/submissions");
     } catch (err) {
-      toast.error("Échec de l'enregistrement de la note.");
+      // toast is already handled by apiFetch
     } finally {
       setIsSaving(false);
     }
