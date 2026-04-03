@@ -8,7 +8,7 @@ import { getCurrentUser } from '@/lib/auth';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser(request);
@@ -16,7 +16,7 @@ export async function POST(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { id: examId } = params;
+    const { id: examId } = await params;
 
     // 1. Vérifier si l'examen existe et est publié
     const exam = await prisma.exam.findUnique({

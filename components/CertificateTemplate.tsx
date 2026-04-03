@@ -17,10 +17,18 @@ interface CertificateTemplateProps {
     type: string;
     gender?: string;
   };
+  settings?: {
+    institutionName: string;
+    institutionLogo: string | null;
+    instructorName: string;
+    instructorTitle: string;
+    signatureUrl: string | null;
+    location: string;
+  };
   id?: string;
 }
 
-const CertificateTemplate = ({ data, id = "certificate-content" }: CertificateTemplateProps) => {
+const CertificateTemplate = ({ data, settings, id = "certificate-content" }: CertificateTemplateProps) => {
   const formatDate = (d: string | Date | undefined) => {
     if (!d) return "--/--/----";
     return new Date(d).toLocaleDateString("fr-FR", {
@@ -81,10 +89,16 @@ const CertificateTemplate = ({ data, id = "certificate-content" }: CertificateTe
 
         {/* Double Logos Circulaires */}
         <div className="z-10 w-full flex justify-between px-16 mt-4">
-          <div className="w-32 h-32 rounded-full border-2 border-red-700 p-1 flex flex-col items-center justify-center text-center bg-white shadow-sm">
-            <div className="text-[10px] uppercase font-black text-red-800 leading-tight px-1">Ferme Agro Piscicole</div>
-            <div className="w-10 h-6 border-y border-red-300 my-1 flex items-center justify-center">🐟</div>
-            <div className="text-[8px] font-bold text-red-600 uppercase tracking-widest">St Andre</div>
+          <div className="w-32 h-32 rounded-full border-2 border-red-700 p-1 flex flex-col items-center justify-center text-center bg-white shadow-sm overflow-hidden">
+            {settings?.institutionLogo ? (
+                <img src={settings.institutionLogo} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+                <>
+                    <div className="text-[10px] uppercase font-black text-red-800 leading-tight px-1">{settings?.institutionName || "Ferme Agro Piscicole"}</div>
+                    <div className="w-10 h-6 border-y border-red-300 my-1 flex items-center justify-center">🐟</div>
+                    <div className="text-[8px] font-bold text-red-600 uppercase tracking-widest">St Andre</div>
+                </>
+            )}
           </div>
 
           <div className="text-center pt-4">
@@ -100,17 +114,23 @@ const CertificateTemplate = ({ data, id = "certificate-content" }: CertificateTe
             </div>
           </div>
 
-          <div className="w-32 h-32 rounded-full border-2 border-red-700 p-1 flex flex-col items-center justify-center text-center bg-white shadow-sm">
-            <div className="text-[10px] uppercase font-black text-red-800 leading-tight px-1">Ferme Agro Piscicole</div>
-            <div className="w-10 h-6 border-y border-red-300 my-1 flex items-center justify-center">🐟</div>
-            <div className="text-[8px] font-bold text-red-600 uppercase tracking-widest">St Andre</div>
+          <div className="w-32 h-32 rounded-full border-2 border-red-700 p-1 flex flex-col items-center justify-center text-center bg-white shadow-sm overflow-hidden">
+            {settings?.institutionLogo ? (
+                <img src={settings.institutionLogo} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+                <>
+                    <div className="text-[10px] uppercase font-black text-red-800 leading-tight px-1">{settings?.institutionName || "Ferme Agro Piscicole"}</div>
+                    <div className="w-10 h-6 border-y border-red-300 my-1 flex items-center justify-center">🐟</div>
+                    <div className="text-[8px] font-bold text-red-600 uppercase tracking-widest">St Andre</div>
+                </>
+            )}
           </div>
         </div>
 
         {/* Corps du texte */}
         <div className="z-10 text-center mt-12 space-y-6 px-24">
           <p className="text-2xl text-slate-800">
-            La Ferme Agro-piscicole St Andre certifie que {prefix}
+            {settings?.institutionName || "La Ferme Agro-piscicole St Andre"} certifie que {prefix}
           </p>
           
           <h2 className="text-6xl italic text-slate-900 py-4 font-extrabold capitalize" style={{ fontFamily: "'Charmonman', cursive, serif" }}>
@@ -133,15 +153,20 @@ const CertificateTemplate = ({ data, id = "certificate-content" }: CertificateTe
         {/* Footer */}
         <div className="z-10 w-full mt-auto mb-10 px-24 flex flex-col items-end">
           <p className="text-lg text-slate-800">
-            Fait à Abomey-Calavi, le {issuedDate}
+            Fait à {settings?.location || "Abomey-Calavi"}, le {issuedDate}
           </p>
           
           <div className="mt-8 text-center w-64 mr-4">
             <div className="w-full h-[1px] bg-slate-400 mb-2"></div>
-            <p className="text-xl font-bold text-red-700 uppercase">Le Responsable</p>
+            <p className="text-xl font-bold text-red-700 uppercase">{settings?.instructorTitle || "Le Responsable"}</p>
             <div className="h-16 flex items-center justify-center text-red-800 text-4xl" style={{ fontFamily: "'Dancing Script', cursive" }}>
-              Augustin Boko
+              {settings?.signatureUrl ? (
+                <img src={settings.signatureUrl} alt="Signature" className="max-h-full" />
+              ) : (
+                settings?.instructorName || "Augustin Boko"
+              )}
             </div>
+            {settings?.signatureUrl && <p className="text-sm font-bold text-slate-700 mt-2">{settings.instructorName}</p>}
           </div>
         </div>
 

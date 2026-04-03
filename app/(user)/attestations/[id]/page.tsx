@@ -25,27 +25,41 @@ export default function AttestationPreviewPage() {
     }
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ["public-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/settings");
+      if (!res.ok) return null;
+      return res.json();
+    }
+  });
+
   const handleDownload = async () => {
     if (!att) return;
-    toast.info("Génération du document...");
     
-    try {
-      const html2pdf = (await import("html2pdf.js")).default;
-      const element = document.getElementById(`cert-template-${att.id}`);
-      
-      const opt = {
-        margin: 0,
-        filename: `Attestation_FSA_${att.code}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
+    const fileName = `${att.code.slice(-5)}_${att.fullName.replace(/\s+/g, '_')}.pdf`;
 
-      await html2pdf().set(opt).from(element).save();
-      toast.success("Téléchargement réussi !");
-    } catch (e) {
-      toast.error("Erreur de génération");
-    }
+    toast.promise(
+      (async () => {
+        const html2pdf = (await import("html2pdf.js")).default;
+        const element = document.getElementById(`cert-template-${att.id}`);
+        
+        const opt = {
+          margin: 0,
+          filename: fileName,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        await html2pdf().set(opt).from(element).save();
+      })(),
+      {
+        loading: 'Génération du PDF haute qualité...',
+        success: 'Votre attestation a été téléchargée !',
+        error: 'Erreur lors de la génération du PDF.',
+      }
+    );
   };
 
   if (isLoading) return <div className="h-screen flex items-center justify-center">Chargement...</div>;
@@ -85,6 +99,7 @@ export default function AttestationPreviewPage() {
              <div className="w-full max-w-[1000px] shadow-2xl origin-top transition-transform">
                 <CertificateTemplate 
                     id={`cert-template-${att.id}`}
+                    settings={settings}
                     data={{
                         fullName: att.fullName,
                         formationName: att.formation?.name || "Formation Professionnelle",

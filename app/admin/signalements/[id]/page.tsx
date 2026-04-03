@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, AlertTriangle, Mail, FileText, Calendar, CheckCircle, Clock, AlertCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Mail, FileText, Calendar, CheckCircle, Clock, AlertCircle, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
 
 type Report = {

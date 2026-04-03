@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { headers as getHeaders } from 'next/headers';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await getAuth();
   const session = await auth.api.getSession({
     headers: await getHeaders()
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const exam = await prisma.exam.findUnique({
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await getAuth();
   const session = await auth.api.getSession({
     headers: await getHeaders()
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await params;
   const body = await request.json();
   const { answers } = body; // answers: Record<questionId, any>
 

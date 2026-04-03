@@ -7,14 +7,14 @@ const nanoid = customAlphabet('1234567890abcdef', 5);
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
-    const { id } = params; // InternshipRequest ID
+    const { id } = await params; // InternshipRequest ID
     const body = await request.json();
     const { startDate, endDate, location, instructor, stageScore, stageObservations } = body;
 
@@ -51,7 +51,10 @@ export async function POST(
         }
     }
 
-    // 3. Générer le code d'attestation unique
+    // 3. Récupérer les réglages pour l'identité visuelle
+    const settings = await prisma.settings.findFirst();
+
+    // 4. Générer le code d'attestation unique
     const now = new Date();
     const year = now.getFullYear();
     const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -67,7 +70,7 @@ export async function POST(
     const hash = nanoid();
     const attestationCode = `FSA-STG-${year}-${month}-${seq}-${hash}`;
 
-    // 4. Créer l'attestation
+    // 5. Créer l'attestation
     const attestation = await prisma.attestation.create({
       data: {
         code: attestationCode,
@@ -78,9 +81,9 @@ export async function POST(
         formationId: formation.id,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        location: location || "Abomey-Calavi",
-        instructor: instructor || "Ferme St André",
-        issuingCompany: "Ferme Agro-Piscicole Cité St André",
+        location: location || settings?.location || "Abomey-Calavi",
+        instructor: instructor || settings?.instructorName || "Ferme St André",
+        issuingCompany: settings?.institutionName || "Ferme Agro-Piscicole Cité St André",
         status: 'VALIDATED',
         stageScore: parseFloat(stageScore || "100"),
         stageObservations: stageObservations || "Stage terminé avec succès.",

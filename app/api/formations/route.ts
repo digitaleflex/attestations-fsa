@@ -14,7 +14,7 @@ const FormationSchema = z.object({
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   const url = new URL(request.url);
   const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
     const body = await request.json();

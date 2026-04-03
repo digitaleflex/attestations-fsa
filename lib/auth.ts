@@ -9,9 +9,9 @@ import { cookies, headers } from 'next/headers';
 // ✅ FIX: Define typed session user to eliminate `as any` casts
 export type SessionUser = {
   id: string;
-  email: string;
+  email: string | null;
   name?: string | null;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | string;
   emailVerified?: boolean;
 };
 

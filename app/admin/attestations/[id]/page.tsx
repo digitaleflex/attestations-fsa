@@ -12,6 +12,9 @@ import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
 import { QRCodeSVG } from "qrcode.react";
 
+import { useQuery } from "@tanstack/react-query";
+import CertificateTemplate from "@/components/CertificateTemplate";
+
 type AttestationData = {
   id: string;
   code: string;
@@ -51,6 +54,16 @@ export default function AttestationDetailsPage() {
   const [data, setData] = useState<AttestationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Fetch settings for dynamic branding
+  const { data: settings } = useQuery({
+    queryKey: ["public-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/settings");
+      if (!res.ok) return null;
+      return res.json();
+    }
+  });
 
   useEffect(() => {
     fetch(`/api/attestations/${id}`)
@@ -92,14 +105,33 @@ export default function AttestationDetailsPage() {
     }
   };
 
-  const handleDownload = () => {
-    const element = document.getElementById("attestation-preview");
-    if (!element) return;
-    html2pdf()
-      .from(element)
-      .set({ margin: 10, filename: `attestation-${data?.code}.pdf` })
-      .save();
-    toast.success("PDF téléchargé !");
+  const handleDownload = async () => {
+    if (!data) return;
+    const fileName = `${data.code.slice(-5)}_${data.fullName.replace(/\s+/g, '_')}.pdf`;
+    
+    toast.promise(
+      (async () => {
+        const html2pdf = (await import("html2pdf.js")).default;
+        const element = document.getElementById("certificate-content"); // This is the ID in the CertificateTemplate
+        if (!element) throw new Error("Template non trouvé");
+        
+        await html2pdf()
+          .from(element)
+          .set({ 
+            margin: 0, 
+            filename: fileName,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          })
+          .save();
+      })(),
+      {
+        loading: 'Génération du diplôme officiel...',
+        success: 'Téléchargement réussi !',
+        error: 'Erreur lors de la génération.',
+      }
+    );
   };
 
   if (loading) {
@@ -211,86 +243,25 @@ export default function AttestationDetailsPage() {
           {/* Aperçu de l'attestation */}
           <Card className="lg:col-span-2 p-8 bg-white shadow-lg">
             <div id="attestation-preview" className="p-8 bg-white border-2 border-slate-200">
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-slate-800">ATTESTATION DE {data.type}</h1>
-                <p className="text-slate-600 mt-2 font-mono text-sm">{data.code}</p>
-              </div>
-
-              <div className="space-y-4 text-slate-700">
-                <p className="text-lg">
-                  Je soussigné(e), la direction de <strong>{data.issuingCompany}</strong>, atteste que :
-                </p>
-                <p className="text-xl font-semibold text-center my-6">
-                  {data.gender === "F" ? "Mme " : data.gender === "M" ? "M. " : ""}{data.fullName}
-                </p>
-                <p style={{ fontSize: 15, color: "#444", marginBottom: 4 }}>
-                  Né(e) le <DateLocale date={data.birthDate} /> à <strong>{data.birthPlace}</strong>
-                </p>
-                <p className="text-lg">
-                  A suivi avec succès la formation <strong>{data.formation?.name || "-"}</strong>
-                </p>
-                <p style={{ fontSize: 15, color: "#444", marginBottom: 4 }}>
-                  Période : du <DateLocale date={data.startDate} /> au <DateLocale date={data.endDate} />
-                </p>
-                <p style={{ fontSize: 15, color: "#444" }}>
-                  Lieu : <strong>{data.location}</strong>
-                </p>
-                <p style={{ fontSize: 15, color: "#444" }}>
-                  Formateur : <strong>{data.instructor}</strong>
-                </p>
-                
-                {/* Informations spécifiques */}
-                {data.type === "STAGE" && data.stageHours && (
-                  <p style={{ fontSize: 15, color: "#444" }}>
-                    Durée du stage : <strong>{data.stageHours} heures</strong>
-                    {data.stageScore && ` - Score: ${data.stageScore}/100`}
-                  </p>
-                )}
-                {data.type === "CERTIFICATION" && (
-                  <>
-                    {data.certificationHours && (
-                      <p style={{ fontSize: 15, color: "#444" }}>
-                        Durée : <strong>{data.certificationHours} heures</strong>
-                      </p>
-                    )}
-                    {data.certificationMention && (
-                      <p style={{ fontSize: 15, color: "#444" }}>
-                        Mention : <strong>{data.certificationMention}</strong>
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="mt-12 pt-8 border-t-2 border-slate-300">
-                <div className="flex justify-between items-end">
-                  <div>
-                    <div style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
-                      Statut :{" "}
-                      <span className={
-                        data.status === "VALIDATED" ? "text-emerald-600" :
-                        data.status === "REJECTED" ? "text-rose-600" : "text-amber-600"
-                      }>
-                        {data.status === "VALIDATED" ? "VALIDÉE" :
-                         data.status === "REJECTED" ? "REJETÉE" : "EN ATTENTE"}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
-                      Date : <DateLocale date={data.issuedAt} options={{ day: "numeric", month: "long", year: "numeric" }} />
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="border-t border-slate-800 w-48 mx-auto mb-2"></div>
-                    <div className="text-sm font-semibold">La Direction</div>
-                    <div className="text-xs text-slate-500">{data.issuingCompany}</div>
-                  </div>
+                {/* Aperçu PDF masqué ou visible ? L'utilisateur veut une expérience pro */}
+                <div className="flex justify-center scale-[0.6] origin-top mb-[-250px]">
+                    <CertificateTemplate 
+                        id="certificate-content"
+                        settings={settings}
+                        data={{
+                            fullName: data.fullName,
+                            formationName: data.formation?.name || "Formation Professionnelle",
+                            code: data.code,
+                            issuedAt: data.issuedAt,
+                            startDate: data.startDate,
+                            endDate: data.endDate,
+                            score: data.type === "FORMATION" ? data.certificationScore : data.stageScore,
+                            hours: data.type === "FORMATION" ? data.certificationHours : data.stageHours,
+                            type: data.type,
+                            gender: data.gender
+                        }}
+                    />
                 </div>
-              </div>
-
-              <div className="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
-                Fait à {data.location.split(",")[0] || "Abomey-Calavi"}, le{" "}
-                <DateLocale date={data.issuedAt} options={{ day: "numeric", month: "long", year: "numeric" }} />.
-              </div>
             </div>
           </Card>
 

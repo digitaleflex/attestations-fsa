@@ -78,7 +78,7 @@ model Session {
 }
 
 model Verification {
-  id         String    @id
+  id         String    @id @default(cuid())
   identifier String
   value      String
   expiresAt  DateTime
@@ -118,6 +118,7 @@ model User {
 
   correctionRequests CorrectionRequest[]
   attestations  Attestation[]
+  auditLogs     AuditLog[]
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -194,12 +195,17 @@ model Attestation {
 
 model Settings {
   id                  String  @id @default(uuid())
-  institutionName     String
-  logoUrl             String?
+  institutionName     String  @default("Ferme Agro-Piscicole Cité St André")
+  institutionLogo     String?
+  instructorName      String  @default("Directeur Technique")
+  instructorTitle     String  @default("Responsable des Formations")
+  signatureUrl        String? // URL of the scanned signature
+  location            String  @default("Abomey-Calavi")
+  supportEmail        String  @default("contact@fsa.bj")
   replyTo             String?
-  targetInscriptions  Int     @default(100)
-  targetAttestations  Int     @default(50)
-  targetValidations   Int     @default(75)
+  targetInscriptions  Int     @default(500)
+  targetAttestations  Int     @default(300)
+  targetValidations   Int     @default(450)
   updatedAt           DateTime @updatedAt
 }
 
@@ -406,6 +412,7 @@ model SecurityLog {
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String
+  user       User     @relation(fields: [userId], references: [id])
   action     String
   resource   String
   resourceId String

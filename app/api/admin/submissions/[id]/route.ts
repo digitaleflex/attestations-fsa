@@ -40,14 +40,18 @@ export async function GET(
         },
         exam: {
           include: {
-            questions: {
+            parts: {
               include: {
-                question: true
+                questions: {
+                  include: {
+                    options: true
+                  }
+                }
               }
             }
           }
         },
-        answers: true
+        scans: true
       }
     });
 
@@ -55,15 +59,11 @@ export async function GET(
       return NextResponse.json({ error: 'Soumission non trouvée' }, { status: 404 });
     }
 
-    // Formater les réponses
+    // Formater les réponses (en fonction de la structure stockée dans le JSON answers)
+    // On garde tel quel pour la compatibilité, mais on change qcmScore
     const formattedSubmission = {
       ...submission,
-      answers: {
-        part1: submission.answers?.filter((a: any) => a.part === 1),
-        part2: submission.answers?.filter((a: any) => a.part === 2).map((a: any) => a.answerText),
-        part3: submission.answers?.find((a: any) => a.part === 3)?.answerText,
-      },
-      qcmScore: submission.qcmScore || 0,
+      qcmScore: submission.scorePart1 || 0,
     };
 
     return NextResponse.json(formattedSubmission);

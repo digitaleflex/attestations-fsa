@@ -36,7 +36,7 @@ const AttestationSchema = z.object({
 
 export async function GET(request: Request) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   const url = new URL(request.url);
   const status = url.searchParams.get('status');
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
     const body = await request.json()

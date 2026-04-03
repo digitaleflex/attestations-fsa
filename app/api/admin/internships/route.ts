@@ -4,7 +4,7 @@ import { isAdminAuthenticated } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
   try {
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
   try {

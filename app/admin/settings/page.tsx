@@ -1,263 +1,271 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Building, Image, Mail, Target, CheckCircle } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { 
+  Loader2, 
+  Settings as SettingsIcon, 
+  Save, 
+  Building2, 
+  UserCircle, 
+  Target, 
+  Mail, 
+  PenLine, 
+  Image as ImageIcon 
+} from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { Progress } from "@/components/ui/progress";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-export default function AdminSettingsPage() {
-  const [form, setForm] = useState({
-    institutionName: "",
-    logoUrl: "",
-    replyTo: "",
-    targetInscriptions: 100,
-    targetAttestations: 50,
-    targetValidations: 75,
-  });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+type Settings = {
+  id: string;
+  institutionName: string;
+  institutionLogo: string | null;
+  instructorName: string;
+  instructorTitle: string;
+  signatureUrl: string | null;
+  supportEmail: string;
+  replyTo: string | null;
+  targetInscriptions: number;
+  targetAttestations: number;
+  targetValidations: number;
+};
 
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings"],
+export default function SettingsPage() {
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState<Partial<Settings>>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 1. Fetch current settings
+  const { data: settings, isLoading } = useQuery<Settings>({
+    queryKey: ["admin-settings"],
     queryFn: async () => {
-      const res = await fetch("/api/settings");
-      if (!res.ok) throw new Error("Erreur");
+      const res = await fetch("/api/admin/settings");
+      if (!res.ok) throw new Error("Erreur de récupération");
       return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
+    }
   });
 
+  // 2. Map data to form state when loaded
   useEffect(() => {
     if (settings) {
-      setForm({
-        institutionName: settings.institutionName || "",
-        logoUrl: settings.logoUrl || "",
-        replyTo: settings.replyTo || "",
-        targetInscriptions: settings.targetInscriptions ?? 100,
-        targetAttestations: settings.targetAttestations ?? 50,
-        targetValidations: settings.targetValidations ?? 75,
-      });
+      setFormData(settings);
     }
   }, [settings]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccess(false);
-
-    try {
-      const res = await fetch("/api/settings", {
+  // 3. Update mutations
+  const updateMutation = useMutation({
+    mutationFn: async (updatedData: Partial<Settings>) => {
+      const res = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ id: settings?.id, ...updatedData })
       });
+      if (!res.ok) throw new Error("Erreur");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("✅ Paramètres mis à jour !");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+    },
+    onError: () => {
+      toast.error("❌ Échec de la mise à jour");
+    }
+  });
 
-      if (!res.ok) throw new Error("Erreur lors de l'enregistrement");
-
-      setSuccess(true);
-      toast.success("Paramètres enregistrés !");
-    } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+        await updateMutation.mutateAsync(formData);
     } finally {
-      setLoading(false);
+        setIsSaving(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin w-8 h-8 text-slate-400" />
-      </div>
-    );
-  }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? parseInt(value) || 0 : value
+    }));
+  };
+
+  if (isLoading) return <div className="p-20 flex justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="p-8 max-w-5xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-xl shadow-slate-200">
+            <SettingsIcon className="w-7 h-7 text-white" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">⚙️ Paramètres</h1>
-            <p className="text-slate-500 mt-1">Configurez l'application</p>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Configuration Générale</h1>
+            <p className="text-slate-500 font-medium">Personnalisez l'identité de votre établissement et vos objectifs.</p>
           </div>
         </div>
-
-        {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Informations de l'institution */}
-          <Card className="p-6 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b">
-              <Building className="w-5 h-5 text-blue-500" />
-              <h2 className="text-lg font-bold text-slate-800">Informations de l'institution</h2>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="institutionName" className="text-sm font-semibold text-slate-700">
-                  🏢 Nom de l'institution
-                </Label>
-                <div className="relative mt-1">
-                  <Building className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="institutionName"
-                    value={form.institutionName}
-                    onChange={(e) => setForm((prev) => ({ ...prev, institutionName: e.target.value }))}
-                    placeholder="Ferme St André"
-                    className="pl-10 h-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="logoUrl" className="text-sm font-semibold text-slate-700">
-                  🖼️ URL du logo
-                </Label>
-                <div className="relative mt-1">
-                  <Image className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="logoUrl"
-                    value={form.logoUrl}
-                    onChange={(e) => setForm((prev) => ({ ...prev, logoUrl: e.target.value }))}
-                    placeholder="https://..."
-                    className="pl-10 h-11"
-                  />
-                </div>
-                {form.logoUrl && (
-                  <div className="mt-2 flex items-center gap-3">
-                    <p className="text-xs text-slate-500">Aperçu :</p>
-                    <img src={form.logoUrl} alt="Logo" className="h-10 w-auto rounded border" />
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="replyTo" className="text-sm font-semibold text-slate-700">
-                  📧 Email de réponse
-                </Label>
-                <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="replyTo"
-                    type="email"
-                    value={form.replyTo}
-                    onChange={(e) => setForm((prev) => ({ ...prev, replyTo: e.target.value }))}
-                    placeholder="contact@fsa.bj"
-                    className="pl-10 h-11"
-                  />
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Objectifs */}
-          <Card className="p-6 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b">
-              <Target className="w-5 h-5 text-emerald-500" />
-              <h2 className="text-lg font-bold text-slate-800">Objectifs mensuels</h2>
-            </div>
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="targetInscriptions" className="text-sm font-semibold text-slate-700">
-                    📈 Inscriptions cibles
-                  </Label>
-                  <Badge variant="secondary" className="text-sm">
-                    {form.targetInscriptions}
-                  </Badge>
-                </div>
-                <Input
-                  id="targetInscriptions"
-                  type="range"
-                  min="0"
-                  max="500"
-                  step="10"
-                  value={form.targetInscriptions}
-                  onChange={(e) => setForm((prev) => ({ ...prev, targetInscriptions: parseInt(e.target.value) }))}
-                  className="w-full"
-                />
-                <Progress value={(form.targetInscriptions / 500) * 100} className="h-2 mt-2" />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="targetAttestations" className="text-sm font-semibold text-slate-700">
-                    📜 Attestations cibles
-                  </Label>
-                  <Badge variant="secondary" className="text-sm">
-                    {form.targetAttestations}
-                  </Badge>
-                </div>
-                <Input
-                  id="targetAttestations"
-                  type="range"
-                  min="0"
-                  max="200"
-                  step="5"
-                  value={form.targetAttestations}
-                  onChange={(e) => setForm((prev) => ({ ...prev, targetAttestations: parseInt(e.target.value) }))}
-                  className="w-full"
-                />
-                <Progress value={(form.targetAttestations / 200) * 100} className="h-2 mt-2" />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="targetValidations" className="text-sm font-semibold text-slate-700">
-                    ✅ Validations cibles
-                  </Label>
-                  <Badge variant="secondary" className="text-sm">
-                    {form.targetValidations}
-                  </Badge>
-                </div>
-                <Input
-                  id="targetValidations"
-                  type="range"
-                  min="0"
-                  max="200"
-                  step="5"
-                  value={form.targetValidations}
-                  onChange={(e) => setForm((prev) => ({ ...prev, targetValidations: parseInt(e.target.value) }))}
-                  className="w-full"
-                />
-                <Progress value={(form.targetValidations / 200) * 100} className="h-2 mt-2" />
-              </div>
-            </div>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3">
-            {success && (
-              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-2">
-                <CheckCircle className="w-3 h-3" />
-                Paramètres enregistrés !
-              </Badge>
-            )}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin w-4 h-4" />
-                  Enregistrement...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Enregistrer les paramètres
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
+        <Button 
+          onClick={handleSave} 
+          disabled={isSaving} 
+          size="lg" 
+          className="bg-slate-900 hover:bg-slate-800 gap-2 h-14 px-8 shadow-xl hover:shadow-2xl transition-all"
+        >
+          {isSaving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5" />}
+          Enregistrer les modifications
+        </Button>
       </div>
+
+      <form className="grid gap-10 lg:grid-cols-2" onSubmit={handleSave}>
+        
+        {/* Identité de l'institution */}
+        <Card className="p-8 border-none shadow-premium bg-white space-y-8">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+               <Building2 className="w-5 h-5 text-blue-600" />
+               <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">Identité de l'institution</h3>
+            </div>
+
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nom de l'établissement</label>
+                    <Input 
+                      name="institutionName"
+                      value={formData.institutionName || ""}
+                      onChange={handleChange}
+                      className="bg-slate-50 border-slate-100 h-12 font-medium"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email de contact (Support)</label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+                        <Input 
+                          name="supportEmail"
+                          type="email"
+                          value={formData.supportEmail || ""}
+                          onChange={handleChange}
+                          className="pl-10 bg-slate-50 border-slate-100 h-12"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logo (URL)</label>
+                    <div className="relative">
+                        <ImageIcon className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+                        <Input 
+                          name="institutionLogo"
+                          value={formData.institutionLogo || ""}
+                          onChange={handleChange}
+                          placeholder="https://..."
+                          className="pl-10 bg-slate-50 border-slate-100 h-12"
+                        />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 italic">Utilisé dans le header des emails et sur les PDFs.</p>
+                </div>
+            </div>
+        </Card>
+
+        {/* Autorité de Certification */}
+        <Card className="p-8 border-none shadow-premium bg-white space-y-8">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+               <UserCircle className="w-5 h-5 text-emerald-600" />
+               <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">Autorité de Certification</h3>
+            </div>
+
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nom du Signataire</label>
+                    <Input 
+                      name="instructorName"
+                      value={formData.instructorName || ""}
+                      onChange={handleChange}
+                      className="bg-slate-50 border-slate-100 h-12 font-bold"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Titre / Fonction</label>
+                    <Input 
+                      name="instructorTitle"
+                      value={formData.instructorTitle || ""}
+                      onChange={handleChange}
+                      className="bg-slate-50 border-slate-100 h-12"
+                    />
+                </div>
+
+                <div className="space-y-2 pt-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Signature Numérisée (URL)</label>
+                    <div className="relative">
+                        <PenLine className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+                        <Input 
+                          name="signatureUrl"
+                          value={formData.signatureUrl || ""}
+                          onChange={handleChange}
+                          placeholder="URL de l'image de votre signature"
+                          className="pl-10 bg-slate-50 border-slate-100 h-12"
+                        />
+                    </div>
+                    {formData.signatureUrl && (
+                        <div className="mt-4 p-4 bg-slate-50 border border-dashed rounded-xl flex items-center justify-center">
+                            <img src={formData.signatureUrl} alt="Signature Preview" className="max-h-20" />
+                        </div>
+                    )}
+                </div>
+            </div>
+        </Card>
+
+        {/* Objectifs KPIs (Dashboard) */}
+        <Card className="p-8 border-none shadow-premium bg-white lg:col-span-2 space-y-8">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                    <Target className="w-5 h-5 text-amber-600" />
+                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">Objectifs de performance mensuels</h3>
+                </div>
+                <div className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full uppercase tracking-tighter">KPIs V4 Ready</div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cible Inscriptions</label>
+                    <Input 
+                      name="targetInscriptions"
+                      type="number"
+                      value={formData.targetInscriptions || 0}
+                      onChange={handleChange}
+                      className="bg-slate-50 border-slate-100 h-14 text-2xl font-black text-amber-600"
+                    />
+                    <p className="text-xs text-slate-400">Nombre d'inscriptions visées chaque mois.</p>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cible Attestations</label>
+                    <Input 
+                      name="targetAttestations"
+                      type="number"
+                      value={formData.targetAttestations || 0}
+                      onChange={handleChange}
+                      className="bg-slate-50 border-slate-100 h-14 text-2xl font-black text-blue-600"
+                    />
+                    <p className="text-xs text-slate-400">Attestations prévues de délivrer.</p>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cible Examens Validés</label>
+                    <Input 
+                      name="targetValidations"
+                      type="number"
+                      value={formData.targetValidations || 0}
+                      onChange={handleChange}
+                      className="bg-slate-50 border-slate-100 h-14 text-2xl font-black text-emerald-600"
+                    />
+                    <p className="text-xs text-slate-400">Total de réussites aux examens visé.</p>
+                </div>
+            </div>
+        </Card>
+      </form>
     </div>
   );
 }

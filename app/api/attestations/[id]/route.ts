@@ -30,13 +30,15 @@ const AttestationUpdateSchema = z.object({
   certificationObservations: z.string().max(1000).optional(),
 });
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
-  // Récupérer l'id depuis l'URL
-  const url = new URL(request.url);
-  const id = url.pathname.split("/").pop();
+
+  const { id } = await params;
   try {
     const attestation = await prisma.attestation.findUnique({
       where: { id },
@@ -54,12 +56,15 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
-  const url = new URL(request.url);
-  const id = url.pathname.split("/").pop();
+
+  const { id } = await params;
   try {
     const body = await request.json();
     // Validation stricte avec zod
@@ -106,12 +111,15 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
-  const url = new URL(request.url);
-  const id = url.pathname.split("/").pop();
+
+  const { id } = await params;
   try {
     await prisma.attestation.delete({ where: { id } });
     return NextResponse.json({ message: 'Attestation supprimée' });

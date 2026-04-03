@@ -62,7 +62,7 @@ export async function POST(
     }
 
     // Calculer le score total
-    const qcmScore = submission.qcmScore || 0;
+    const qcmScore = submission.scorePart1 || 0;
     const totalScore = qcmScore + part2Score + part3Score;
     const percentage = Math.round((totalScore / 100) * 100);
     const isPassing = percentage >= 60;
@@ -71,18 +71,13 @@ export async function POST(
     const updatedSubmission = await prisma.examSession.update({
       where: { id },
       data: {
-        status: 'COMPLETED',
+        status: 'GRADED',
         score: totalScore,
-        maxScore: 100,
-        completedAt: new Date(),
-        adminNotes: JSON.stringify({
-          part2Score,
-          part3Score,
-          part2Feedback,
-          part3Feedback,
-          correctedAt: new Date().toISOString(),
-          correctedBy: adminId,
-        }),
+        totalScore: totalScore,
+        gradedAt: new Date(),
+        scorePart2: part2Score,
+        scorePart3: part3Score,
+        gradedBy: adminId
       },
       include: {
         candidate: true,
@@ -93,9 +88,9 @@ export async function POST(
     // Si réussi (≥ 60%), générer automatiquement l'attestation
     if (isPassing) {
       try {
-        // Générer un code unique
-        const nanoid = (await import('nanoid')).nanoid;
-        const customNanoid = nanoid.customAlphabet('1234567890abcdef', 5);
+        // Générer un code unique (utilisant customAlphabet correct)
+        const { customAlphabet } = await import('nanoid');
+        const customNanoid = customAlphabet('1234567890abcdef', 5);
         
         const now = new Date();
         const year = now.getFullYear();
@@ -121,11 +116,11 @@ export async function POST(
             fullName: submission.candidate.name || '',
             birthDate: submission.candidate.birthDate || new Date(),
             birthPlace: submission.candidate.birthPlace || '',
-            formationId: submission.exam.formationId,
+            formationId: submission.exam.formationId || '',
             type: 'CERTIFICATION',
             status: 'VALIDATED',
             startDate: submission.startedAt,
-            endDate: submission.completedAt,
+            endDate: submission.submittedAt || new Date(),
             location: 'En ligne',
             instructor: 'Système automatique',
             issuingCompany: 'Ferme St André',

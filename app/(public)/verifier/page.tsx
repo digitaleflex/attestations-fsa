@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ShieldCheck, XCircle, Sparkles, Loader2 } from "lucide-react";
+import CertificateTemplate from "@/components/CertificateTemplate";
+import { useQuery } from "@tanstack/react-query";
 // Confetti simple (SVG fallback)
 
 const schema = z.object({
@@ -40,6 +42,15 @@ function VerifierContent() {
   const [showConfetti, setShowConfetti] = useState(false);
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("code");
+
+  const { data: settings } = useQuery({
+    queryKey: ["public-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/settings");
+      if (!res.ok) return null;
+      return res.json();
+    }
+  });
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema)
@@ -169,14 +180,41 @@ function VerifierContent() {
                     <div className={`text-lg font-bold mt-1 ${textClass}`}>{subtitle}</div>
                   </div>
                 </div>
-                <div className="mb-1"><span className="font-semibold">Nom :</span> {result.fullName}</div>
-                <div className="mb-1"><span className="font-semibold">Formation :</span> {result.formation?.name || '-'} </div>
-                <div className="mb-1"><span className="font-semibold">Type :</span> {result.type}</div>
-                <div className="mb-1"><span className="font-semibold">Dates :</span> {new Date(result.startDate).toLocaleDateString()} - {new Date(result.endDate).toLocaleDateString()}</div>
-                <div className="mb-1"><span className="font-semibold">Lieu :</span> {result.location}</div>
-                <div className="mb-1"><span className="font-semibold">Formateur :</span> {result.instructor}</div>
-                <div className="mb-1"><span className="font-semibold">Statut :</span> <span className={`inline-block px-2 py-1 rounded ${badgeClass} text-white text-xs ml-1`}>{result.status}</span></div>
-                <div className={`mt-4 ${infoClass} text-sm italic`}>La Ferme St André s’engage pour la confiance et la transparence de vos parcours professionnels.</div>
+                {/* Info de base */}
+                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                        <span className="block text-[10px] font-black text-slate-400 uppercase">Détenteur</span>
+                        <span className="font-bold text-slate-900">{result.fullName}</span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                        <span className="block text-[10px] font-black text-slate-400 uppercase">Formation</span>
+                        <span className="font-bold text-slate-900 truncate block">{result.formation?.name || '-'}</span>
+                    </div>
+                </div>
+
+                {result.status === "VALIDATED" && (
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-center italic">Aperçu officiel du document</p>
+                        <div className="overflow-hidden rounded-xl border border-slate-200 shadow-inner flex justify-center bg-slate-50 p-4">
+                            <div className="scale-[0.35] origin-top mb-[-480px]">
+                                <CertificateTemplate 
+                                    data={{
+                                        fullName: result.fullName,
+                                        formationName: result.formation?.name || "Formation Professionnelle",
+                                        code: codeParam || "",
+                                        issuedAt: new Date().toISOString(),
+                                        startDate: result.startDate,
+                                        endDate: result.endDate,
+                                        type: result.type
+                                    }}
+                                    settings={settings}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                <div className={`mt-4 ${infoClass} text-xs italic text-center`}>La Ferme St André s’engage pour la confiance et la transparence de vos parcours professionnels.</div>
               </div>
             );
           })()

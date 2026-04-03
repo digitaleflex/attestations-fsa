@@ -12,7 +12,7 @@ async function isAuthenticatedUser() {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await isAuthenticatedUser();
@@ -20,9 +20,9 @@ export async function GET(
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
-    const submission = await prisma.examSubmission.findUnique({
+    const submission = await prisma.examSession.findUnique({
       where: { id },
       include: {
         exam: {

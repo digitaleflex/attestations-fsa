@@ -20,7 +20,7 @@ const AdminProfileSchema = z.object({
 // GET /api/admin - Récupérer le profil de l'admin connecté
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé - Admin requis' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
   }
   const admin = await prisma.admin.findFirst({
     select: {
@@ -39,7 +39,7 @@ export async function GET() {
 // PATCH /api/admin - Mettre à jour le profil de l'admin
 export async function PATCH(request: Request) {
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   const body = await request.json();
   const parse = AdminProfileSchema.safeParse(body);

@@ -19,7 +19,7 @@ export async function PATCH(
 ): Promise<NextResponse> {
   const { id } = await params;
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
     const body = await request.json();
@@ -51,7 +51,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const { id } = await params;
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
     await prisma.formation.delete({ where: { id } });
@@ -69,7 +69,7 @@ export async function GET(
 ): Promise<NextResponse> {
   const { id } = await params;
   if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
     const formation = await prisma.formation.findUnique({ where: { id } });
