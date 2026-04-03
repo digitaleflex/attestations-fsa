@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { customAlphabet } from 'nanoid';
 import { emailService } from '@/lib/email';
 
@@ -8,19 +8,24 @@ const nanoid = customAlphabet('1234567890abcdef', 5);
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     if (!(await isAdminAuthenticated())) {
-      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Non autorisé - Authentification admin requise" },
+        { status: 401 }
+      );
     }
 
-    const { id } = params; // Submission ID
+    const adminUser = await getCurrentUser();
+
+    const { id } = await params; // Session ID
     const body = await request.json();
     const { scorePart2, scorePart3, observations } = body;
 
-    // 1. Récupérer la soumission existante
-    const submission = await prisma.examSession.findUnique({
+    // 1. Récupérer la session existante
+    const session = await prisma.examSession.findUnique({
       where: { id },
       include: {
         candidate: true,
@@ -32,16 +37,19 @@ export async function POST(
       }
     });
 
-    if (!submission) {
-      return NextResponse.json({ message: "Soumission non trouvée" }, { status: 404 });
+    if (!session) {
+      return NextResponse.json(
+        { error: "Soumission non trouvée" },
+        { status: 404 }
+      );
     }
 
     // 2. Calculer la note finale sur 20
-    const totalRaw = submission.scorePart1 + (scorePart2 || 0) + (scorePart3 || 0);
+    const totalRaw = session.scorePart1 + (scorePart2 || 0) + (scorePart3 || 0);
     const totalScore = totalRaw / 5; // Conversion sur 20
 
-    // 3. Mettre à jour la soumission
-    const updatedSubmission = await prisma.examSession.update({
+    // 3. Mettre à jour la session
+    const updatedSession = await prisma.examSession.update({
       where: { id },
       data: {
         scorePart2: scorePart2 || 0,
@@ -56,12 +64,12 @@ export async function POST(
     let attestationCreated = false;
     let attestationCode = null;
 
-    if (totalScore >= 12 && submission.exam.formationId) {
-      // Génération du code (Copie de la logique officielle)
+    if (totalScore >= 12 && session.exam.formationId) {
+      // Génération du code
       const now = new Date();
       const year = now.getFullYear();
       const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`;
-      
+
       const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
       const startOfNextMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
 
@@ -78,18 +86,19 @@ export async function POST(
       const hash = nanoid();
       attestationCode = `FSA-${year}-${month}-${seq}-${hash}`;
 
-      // Calcul des dates réelles (Début = Inscription, Fin = Soumission de l'examen)
-      const startDate = submission.candidate.enrolledAt || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const endDate = submission.submittedAt || now;
+      // ✅ FIX: Utiliser la date originale de soumission, pas la date actuelle
+      // Si submittedAt est null, utiliser enrolledAt ou la date de notation comme dernier recours
+      const startDate = session.candidate.enrolledAt || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const endDate = session.submittedAt || session.candidate.enrolledAt || now;
 
       // Création de l'attestation
       await prisma.attestation.create({
         data: {
           code: attestationCode,
-          fullName: submission.candidate.name || "Candidat Anonyme",
-          birthDate: submission.candidate.birthDate || new Date(1990, 0, 1),
-          birthPlace: submission.candidate.birthPlace || "Non spécifié",
-          formationId: submission.exam.formationId,
+          fullName: session.candidate.name || "Candidat Anonyme",
+          birthDate: session.candidate.birthDate || new Date(1990, 0, 1),
+          birthPlace: session.candidate.birthPlace || "Non spécifié",
+          formationId: session.exam.formationId,
           startDate: startDate,
           endDate: endDate,
           location: "Abomey-Calavi",
@@ -106,22 +115,32 @@ export async function POST(
 
     // 5. Envoi de l'email de résultat au candidat
     await emailService.sendExamResults(
-      submission.candidate.email || "",
-      submission.candidate.name || "Candidat",
-      submission.exam.title,
-      updatedSubmission.totalScore,
+      session.candidate.email || "",
+      session.candidate.name || "Candidat",
+      session.exam.title,
+      updatedSession.totalScore,
       totalScore >= 12
+    );
+
+    // ✅ FIX: Logger l'action de notation pour audit
+    console.log(
+      `[AUDIT] Note enregistrée par admin ${(adminUser as any)?.email || 'unknown'} | ` +
+      `Session: ${id} | Score: ${updatedSession.totalScore}/20 | ` +
+      `Attestation: ${attestationCreated ? 'CRÉÉE (' + attestationCode + ')' : 'NON CRÉÉE'}`
     );
 
     return NextResponse.json({
       message: "Note enregistrée avec succès",
-      finalScore: updatedSubmission.totalScore,
+      finalScore: updatedSession.totalScore,
       attestationCreated,
       attestationCode
     });
 
   } catch (error) {
     console.error("[GRADING ERROR]", error);
-    return NextResponse.json({ message: "Erreur lors de la notation" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erreur lors de la notation" },
+      { status: 500 }
+    );
   }
 }

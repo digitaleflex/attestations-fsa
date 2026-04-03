@@ -1,6 +1,7 @@
 // app/api/auth/login/route.ts
 // Route de connexion avec rate limiting et sécurité renforcée
-// ⚠️ NOTE: Cette route devrait être dépréciée au profit de Better Auth (/api/auth/[...all])
+// ⚠️ NOTE: Cette route est un fallback - Better Auth (/api/auth/[...all]) est recommandé
+// ✅ FIX: Standardisation du format de réponse d'erreur
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
@@ -27,14 +28,14 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const parse = LoginSchema.safeParse(body)
-    
+
     if (!parse.success) {
-      return NextResponse.json({ 
-        message: 'Entrée invalide', 
-        details: parse.error.errors 
+      return NextResponse.json({
+        error: 'Entrée invalide',
+        details: parse.error.errors
       }, { status: 400 })
     }
-    
+
     const { email, password } = parse.data
 
     // Sanitization
@@ -54,8 +55,8 @@ export async function POST(request: Request) {
 
     // ⚠️ Message générique pour ne pas révéler si l'email existe
     if (!user) {
-      return NextResponse.json({ 
-        message: 'Email ou mot de passe incorrect' 
+      return NextResponse.json({
+        error: 'Email ou mot de passe incorrect'
       }, { status: 401 })
     }
 
@@ -64,8 +65,8 @@ export async function POST(request: Request) {
     if (!valid) {
       // Logger l'échec de connexion (pour détection brute-force)
       console.warn(`[SECURITY] Échec de connexion pour: ${sanitizedEmail}`)
-      return NextResponse.json({ 
-        message: 'Email ou mot de passe incorrect' 
+      return NextResponse.json({
+        error: 'Email ou mot de passe incorrect'
       }, { status: 401 })
     }
 
@@ -85,15 +86,15 @@ export async function POST(request: Request) {
     response.cookies.set('admin_session', user.id, {
       path: '/',
       sameSite: 'lax',
-      httpOnly: true,  // ✅ Non accessible via JS
-      secure: process.env.NODE_ENV === 'production',  // ✅ HTTPS uniquement
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 7 // 7 jours
     })
 
     response.cookies.set('user_role', userType, {
       path: '/',
       sameSite: 'lax',
-      httpOnly: false,  // Nécessaire pour lecture côté client
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 7
     })
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
     console.log(`[AUTH] Connexion réussie pour: ${sanitizedEmail} (${userType})`)
 
     return response
-    
+
   } catch (error: any) {
     console.error('Erreur détaillée login:', error)
     return handleApiError(error, {

@@ -1,15 +1,14 @@
 // app/api/admin/submissions/[id]/scans/route.ts
 // Route sécurisée pour l'upload de scans d'examens
-// Protection : authentification, validation type/taille, magic bytes
+// Protection : authentification Better Auth, validation type/taille, magic bytes
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { cookies } from 'next/headers'
 import { randomBytes } from 'crypto'
 import { join } from 'path'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
-import { handleApiError, ApiErrorImpl, ErrorTypes } from '@/lib/error-handler'
-import { isAdminAuthenticated } from '@/lib/auth'
+import { handleApiError, ApiErrorImpl } from '@/lib/error-handler'
+import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth'
 
 // ============================================================================
 // CONFIGURATION DE SÉCURITÉ
@@ -77,26 +76,6 @@ function generateSafeFilename(originalName: string): string {
   return `${randomBytes(16).toString('hex')}${ext}`
 }
 
-/**
- * Vérifie l'authentification admin
- * Note: Utilise le système unifié avec Better Auth
- */
-async function isAuthenticatedAdmin(): Promise<string | null> {
-  const cookieStore = await cookies()
-  const session = cookieStore.get('better-auth.session_token')
-  const roleCookie = cookieStore.get('better-auth.session_data')
-
-  if (!session?.value) return null
-
-  try {
-    const sessionData = JSON.parse(decodeURIComponent(roleCookie?.value || '{}'))
-    if (sessionData.user?.role !== 'ADMIN') return null
-    return sessionData.user.id || null
-  } catch {
-    return null
-  }
-}
-
 // ============================================================================
 // GET - Récupérer les scans
 // ============================================================================
@@ -105,17 +84,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await isAuthenticatedAdmin()
-    if (!adminId) {
+    // ✅ Authentification unifiée avec Better Auth
+    if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }
       )
     }
 
+    const adminUser = await getCurrentUser()
     const { id } = await params
 
-    const submission = await prisma.examSubmission.findUnique({
+    // ✅ Utilise examSession (nouveau nom du modèle)
+    const session = await prisma.examSession.findUnique({
       where: { id },
       include: {
         scans: {
@@ -124,21 +105,21 @@ export async function GET(
       }
     })
 
-    if (!submission) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Soumission non trouvée' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ scans: submission.scans })
+    return NextResponse.json({ scans: session.scans })
 
   } catch (error: any) {
     console.error('Erreur récupération scans:', error)
-    return NextResponse.json(
-      { error: 'Erreur lors de la récupération des scans' },
-      { status: 500 }
-    )
+    return handleApiError(error, {
+      route: '/api/admin/submissions/[id]/scans',
+      operation: 'get_scans',
+    })
   }
 }
 
@@ -150,22 +131,25 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await isAuthenticatedAdmin()
-    if (!adminId) {
+    // ✅ Authentification unifiée avec Better Auth
+    if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }
       )
     }
 
+    const adminUser = await getCurrentUser()
+    const adminId = (adminUser as any)?.id
+
     const { id } = await params
 
-    // Vérifier que la soumission existe
-    const submission = await prisma.examSubmission.findUnique({
+    // ✅ Vérifier que la session existe (nouveau nom du modèle)
+    const session = await prisma.examSession.findUnique({
       where: { id }
     })
 
-    if (!submission) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Soumission non trouvée' },
         { status: 404 }
@@ -256,7 +240,7 @@ export async function POST(
           pageNumber: i + 1,
           fileName: file.name,  // Nom original pour affichage
           fileSize: file.size,
-          uploadedBy: adminId,
+          uploadedBy: adminId || 'unknown',
         }
       })
 
@@ -280,23 +264,35 @@ export async function POST(
 
 // ============================================================================
 // DELETE - Supprimer un scan
+// ✅ FIX: scanId est passé en query parameter (?scanId=xxx) au lieu de route param
 // ============================================================================
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string; scanId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await isAuthenticatedAdmin()
-    if (!adminId) {
+    // ✅ Authentification unifiée avec Better Auth
+    if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }
       )
     }
 
-    const { id, scanId } = await params
+    const { id } = await params
 
-    // Vérifier que le scan existe et appartient à la soumission
+    // ✅ Récupérer scanId depuis les query parameters
+    const { searchParams } = new URL(request.url)
+    const scanId = searchParams.get('scanId')
+
+    if (!scanId) {
+      return NextResponse.json(
+        { error: 'Paramètre scanId requis (ex: ?scanId=xxx)' },
+        { status: 400 }
+      )
+    }
+
+    // Vérifier que le scan existe et appartient à la session
     const scan = await prisma.compositionScan.findUnique({
       where: {
         id: scanId,
@@ -324,16 +320,16 @@ export async function DELETE(
       where: { id: scanId }
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Scan supprimé avec succès',
       deletedScanId: scanId
     })
 
   } catch (error: any) {
     console.error('Erreur suppression scan:', error)
-    return NextResponse.json(
-      { error: 'Erreur lors de la suppression du scan' },
-      { status: 500 }
-    )
+    return handleApiError(error, {
+      route: '/api/admin/submissions/[id]/scans',
+      operation: 'delete_scan',
+    })
   }
 }

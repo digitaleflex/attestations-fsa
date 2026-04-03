@@ -1,7 +1,13 @@
+// app/api/auth/register/route.ts
+// Route d'inscription candidat avec rate limiting et sécurité renforcée
+// ✅ FIX: Ajout du rate limiting et sanitization
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+import { applyRateLimit } from '@/lib/rate-limit'
+import { handleApiError } from '@/lib/error-handler'
+import { sanitizeInput } from '@/lib/sanitization'
 
 // Schéma de validation pour l'inscription candidat (formulaire public)
 const RegisterSchema = z.object({
@@ -21,33 +27,46 @@ const RegisterSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // ✅ RATE LIMITING - 3 inscriptions maximum par heure
+    const rateLimit = await applyRateLimit(request as any, 'register')
+    if (!rateLimit.allowed && rateLimit.response) {
+      const ip = request.headers.get('x-forwarded-for') || 'unknown'
+      console.warn(`[SECURITY] Rate limit exceeded for registration from IP: ${ip}`)
+      return rateLimit.response
+    }
+
     const body = await request.json()
     const parse = RegisterSchema.safeParse(body)
     if (!parse.success) {
-      return NextResponse.json({ 
-        message: 'Données invalides', 
-        details: parse.error.errors 
+      return NextResponse.json({
+        error: 'Données invalides',
+        details: parse.error.errors
       }, { status: 400 })
     }
+
     const { email, password, name, birthDate, birthPlace, phone, address } = parse.data
-    
+
+    // ✅ SANITIZATION
+    const sanitizedEmail = sanitizeInput(email)
+    const sanitizedName = sanitizeInput(name)
+
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await prisma.user.findUnique({ where: { email } })
+    const existingUser = await prisma.user.findUnique({ where: { email: sanitizedEmail } })
     if (existingUser) {
-      return NextResponse.json({ 
-        message: 'Un compte avec cet email existe déjà' 
+      return NextResponse.json({
+        error: 'Un compte avec cet email existe déjà'
       }, { status: 400 })
     }
-    
+
     // Hacher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 12)
-    
+
     // Créer l'utilisateur (candidat, PAS admin)
     const user = await prisma.user.create({
       data: {
-        email,
+        email: sanitizedEmail,
         password: hashedPassword,
-        name,
+        name: sanitizedName,
         birthDate: birthDate ? new Date(birthDate) : null,
         birthPlace,
         phone,
@@ -63,15 +82,16 @@ export async function POST(request: Request) {
         createdAt: true
       }
     })
-    
-    return NextResponse.json({ 
-      message: 'Compte candidat créé avec succès', 
-      user 
+
+    return NextResponse.json({
+      message: 'Compte candidat créé avec succès',
+      user
     }, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la création du compte candidat:', error)
-    return NextResponse.json({ 
-      message: 'Erreur lors de la création du compte' 
-    }, { status: 500 })
+    return handleApiError(error, {
+      route: '/api/auth/register',
+      operation: 'register',
+    })
   }
 }

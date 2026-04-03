@@ -1,17 +1,24 @@
+// app/api/submissions/route.ts
+// Gestion des soumissions (liste et mise à jour - admin uniquement)
+// ✅ FIX: Standardisation du format de réponse d'erreur
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
+import { handleApiError } from '@/lib/error-handler';
 
 export async function GET(request: NextRequest) {
-  if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
-  }
-
-  const url = new URL(request.url);
-  const userId = url.searchParams.get('userId');
-  const examId = url.searchParams.get('examId');
-
   try {
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json(
+        { error: 'Non autorisé - Authentification admin requise' },
+        { status: 401 }
+      );
+    }
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
+    const examId = url.searchParams.get('examId');
+
     const where: any = {};
     if (userId) where.userId = userId;
     if (examId) where.examId = examId;
@@ -25,18 +32,24 @@ export async function GET(request: NextRequest) {
       orderBy: { submittedAt: 'desc' }
     });
     return NextResponse.json(submissions);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ message: "Erreur lors de la récupération des soumissions" }, { status: 500 });
+    return handleApiError(error, {
+      route: '/api/submissions',
+      operation: 'list_submissions',
+    });
   }
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!(await isAdminAuthenticated())) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401 });
-  }
-
   try {
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json(
+        { error: 'Non autorisé - Authentification admin requise' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { id, scorePart1, scorePart2, scorePart3, status, gradedBy } = body;
 
@@ -56,8 +69,11 @@ export async function PATCH(request: NextRequest) {
     });
 
     return NextResponse.json(submission);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ message: "Erreur lors de la mise à jour de la note" }, { status: 500 });
+    return handleApiError(error, {
+      route: '/api/submissions',
+      operation: 'update_submission',
+    });
   }
 }
