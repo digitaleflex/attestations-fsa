@@ -217,7 +217,7 @@ export async function POST(request: Request) {
       }
 
       return newExam;
-    });
+    }, { timeout: 30000 }); // ✅ Increase timeout to 30s for large exams
 
     return NextResponse.json({
       message: 'Examen créé avec succès',
