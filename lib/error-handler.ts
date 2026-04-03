@@ -134,28 +134,6 @@ export class ApiErrorImpl extends Error {
 }
 
 /**
- * Classe d'erreur API personnalisée
- * Permet de lever des erreurs métier avec statut HTTP
- */
-export class ApiErrorImpl extends Error {
-  code: string
-  status: number
-  details?: any
-
-  constructor(
-    type: keyof typeof ErrorTypes,
-    message: string,
-    details?: any
-  ) {
-    super(message)
-    this.name = 'ApiError'
-    this.code = ErrorTypes[type].code
-    this.status = ErrorTypes[type].status
-    this.details = details
-  }
-}
-
-/**
  * Formatte une erreur de validation Zod
  */
 export function formatValidationError(error: any): ApiError {

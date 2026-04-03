@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-import * as DOMPurify from "dompurify";
+import DOMPurify from "dompurify";
 import {
   Select,
   SelectContent,
@@ -43,6 +43,7 @@ export default function CreateExamPage() {
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [creationStep, setCreationStep] = useState<string>("");
   const isInitialMount = useRef(true);
   
   // Exam settings
@@ -86,6 +87,9 @@ export default function CreateExamPage() {
     { text: "", points: 5 }
   ]);
 
+  // Hydration state
+  const [mounted, setMounted] = useState(false);
+
   // Score state for /20
   const [score20, setScore20] = useState(12);
 
@@ -95,6 +99,10 @@ export default function CreateExamPage() {
     m: 0,
     s: 0
   });
+
+  // Session state
+  const [sessionMonth, setSessionMonth] = useState("Avril");
+  const [sessionYear, setSessionYear] = useState(new Date().getFullYear().toString());
 
   useEffect(() => {
     setMounted(true);
@@ -191,9 +199,6 @@ export default function CreateExamPage() {
     setExam(prev => ({ ...prev, duration: totalSeconds }));
   };
 
-  // Session state
-  const [sessionMonth, setSessionMonth] = useState("Avril");
-  const [sessionYear, setSessionYear] = useState(new Date().getFullYear().toString());
 
   useEffect(() => {
     setExam(prev => ({ ...prev, session: `${sessionMonth} ${sessionYear}` }));
@@ -310,7 +315,13 @@ export default function CreateExamPage() {
     
     // Sécurisation (uniquement côté client)
     if (typeof window !== "undefined") {
-      return (DOMPurify as any).sanitize(html);
+      const purify = DOMPurify as any;
+      if (typeof purify.sanitize === 'function') {
+        return purify.sanitize(html);
+      }
+      if (typeof purify === 'function') {
+        return purify(window).sanitize(html);
+      }
     }
     return html;
   };
@@ -336,8 +347,12 @@ export default function CreateExamPage() {
 
   // Auto-sync total points
   useEffect(() => {
-    const p1Total = qcmQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
-    const p2Total = openQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
+    const p1Raw = qcmQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
+    const p2Raw = openQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
+    
+    // Round to avoid 20.0099999
+    const p1Total = Number(p1Raw.toFixed(2));
+    const p2Total = Number(p2Raw.toFixed(2));
     
     setExam(prev => ({ 
       ...prev, 
@@ -354,7 +369,7 @@ export default function CreateExamPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!exam.name) {
       toast.error("Le nom de l'examen est requis");
@@ -370,6 +385,7 @@ export default function CreateExamPage() {
     }
 
     setLoading(true);
+    setCreationStep("📝 Création de l'examen...");
 
     try {
       const payload = {
@@ -377,36 +393,62 @@ export default function CreateExamPage() {
         qcmQuestions,
         openQuestions
       };
-      
+
+      // Simulate progress steps (API processes sequentially)
+      const totalQuestions = qcmQuestions.length + openQuestions.length;
+      const steps = [
+        { label: "📝 Création de l'examen...", delay: 500 },
+        { label: `📋 Partie 1 : ${qcmQuestions.length} questions QCM...`, delay: 1000 },
+        { label: `📝 Partie 2 : ${openQuestions.length} questions ouvertes...`, delay: 800 },
+        { label: exam.part3Enabled ? "📖 Partie 3 : Étude de cas..." : null, delay: 400 },
+        { label: "✅ Finalisation...", delay: 300 },
+      ].filter(s => s.label !== null);
+
+      // Start progress simulation
+      for (let i = 0; i < steps.length; i++) {
+        setCreationStep(steps[i].label);
+        await new Promise(r => setTimeout(r, steps[i].delay));
+      }
+
       await apiFetch("/api/admin/exams", {
         method: "POST",
         body: JSON.stringify(payload),
       });
 
+      setCreationStep("✅ Examen créé avec succès !");
       toast.success("✅ Examen créé avec succès !");
       // ✅ Clear draft after successful creation
       localStorage.removeItem(STORAGE_KEY);
+
+      // Small delay before redirect so user sees success message
+      await new Promise(r => setTimeout(r, 800));
       router.push("/admin/exams");
     } catch (error: any) {
+      setCreationStep("");
       toast.error(error.message || "Erreur lors de la création");
     } finally {
       setLoading(false);
+      setCreationStep("");
     }
   };
 
-  const totalPoints = (exam.part1Enabled ? exam.part1Points : 0) +
+  const currentTotal = (exam.part1Enabled ? exam.part1Points : 0) +
                       (exam.part2Enabled ? exam.part2Points : 0) +
                       (exam.part3Enabled ? exam.part3Points : 0);
 
-  const isPointsBalanced = totalPoints === 100;
+  const isBalanced = currentTotal === 100;
 
-  const isPointsBalanced = totalPoints === 100;
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  if (!mounted) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-    </div>
-  );
+  // Use the new variable name to avoid any collision
+  const totalPoints = Number(parseFloat(currentTotal.toFixed(2)));
+  const isPointsBalanced = totalPoints === 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -659,14 +701,15 @@ export default function CreateExamPage() {
                     <Label className="text-sm font-semibold text-slate-700">
                       Points de la partie (Total sur 20)
                     </Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={exam.part1Points}
-                      onChange={(e) => handleChange("part1Points", parseInt(e.target.value))}
-                      className="mt-1.5 h-11"
-                    />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.25"
+                        value={exam.part1Points || 0}
+                        onChange={(e) => handleChange("part1Points", parseFloat(e.target.value) || 0)}
+                        className="mt-1.5 h-11"
+                      />
                   </div>
                   <div>
                     <Label className="text-sm font-semibold text-slate-700 text-slate-400">
@@ -826,8 +869,9 @@ export default function CreateExamPage() {
                       type="number"
                       min="0"
                       max="100"
-                      value={exam.part2Points}
-                      onChange={(e) => handleChange("part2Points", parseInt(e.target.value))}
+                      step="0.25"
+                      value={exam.part2Points || 0}
+                      onChange={(e) => handleChange("part2Points", parseFloat(e.target.value) || 0)}
                       className="mt-1.5 h-11"
                     />
                   </div>
@@ -936,15 +980,16 @@ export default function CreateExamPage() {
                       type="number"
                       min="0"
                       max="100"
-                      value={exam.part3Points}
-                      onChange={(e) => handleChange("part3Points", parseInt(e.target.value))}
+                      step="0.25"
+                      value={exam.part3Points || 0}
+                      onChange={(e) => handleChange("part3Points", parseFloat(e.target.value) || 0)}
                       className="mt-1.5 h-11"
                     />
                   </div>
 
                   <div className="flex items-end">
                     <Badge variant="secondary" className="h-11">
-                      {exam.part3Points} points
+                      {Number(parseFloat((exam.part3Points || 0).toFixed(2)))} points
                     </Badge>
                   </div>
                 </div>
@@ -1164,17 +1209,17 @@ export default function CreateExamPage() {
               <div className="flex items-center gap-2 text-sm">
                 {exam.part1Enabled && (
                   <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                    P1: {exam.part1Points} pts
+                    P1: {Number(parseFloat((exam.part1Points || 0).toFixed(2)))} pts
                   </Badge>
                 )}
                 {exam.part2Enabled && (
                   <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                    P2: {exam.part2Points} pts
+                    P2: {Number(parseFloat((exam.part2Points || 0).toFixed(2)))} pts
                   </Badge>
                 )}
                 {exam.part3Enabled && (
                   <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                    P3: {exam.part3Points} pts
+                    P3: {Number(parseFloat((exam.part3Points || 0).toFixed(2)))} pts
                   </Badge>
                 )}
               </div>
@@ -1202,7 +1247,7 @@ export default function CreateExamPage() {
           {/* Submit */}
           <div className="flex items-center justify-end gap-3">
             <Link href="/admin/exams">
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" disabled={loading}>
                 Annuler
               </Button>
             </Link>
@@ -1214,7 +1259,7 @@ export default function CreateExamPage() {
               {loading ? (
                 <>
                   <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                  Création...
+                  {creationStep || "Création..."}
                 </>
               ) : (
                 <>
@@ -1224,6 +1269,37 @@ export default function CreateExamPage() {
               )}
             </Button>
           </div>
+
+          {/* Progress steps */}
+          {loading && (
+            <Card className="p-4 bg-slate-50 border-slate-200">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full" />
+                  Progression de la création
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { label: "Examen", done: true },
+                    { label: `Partie 1 : ${qcmQuestions.length} QCM`, done: true, active: exam.part1Enabled },
+                    { label: `Partie 2 : ${openQuestions.length} questions`, done: true, active: exam.part2Enabled },
+                    { label: "Partie 3 : Étude de cas", done: false, active: exam.part3Enabled },
+                  ].filter(s => s.active !== false).map((step, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sm">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                        i < 2 ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-400"
+                      }`}>
+                        {i < 2 ? "✓" : i + 1}
+                      </div>
+                      <span className={i < 2 ? "text-emerald-700 font-medium" : "text-slate-400"}>
+                        {step.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
         </form>
       </main>
     </div>

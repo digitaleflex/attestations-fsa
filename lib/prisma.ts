@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { withAccelerate } from '@prisma/extension-accelerate';
 
-// Extend the PrismaClient type to include our custom extensions
+// Refreshed instance to pick up new schema fields (e.g. session)
 type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
 
 // Create a type-safe Prisma client with extensions

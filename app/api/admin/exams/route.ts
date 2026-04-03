@@ -100,110 +100,117 @@ export async function POST(request: Request) {
                         (part3Enabled ? part3Points : 0);
 
     if (totalPoints === 0) {
-      return NextResponse.json({ 
-        message: 'Au moins une partie doit être activée avec des points' 
+      return NextResponse.json({
+        message: 'Au moins une partie doit être activée avec des points'
       }, { status: 400 });
     }
 
-    // 🔄 Utilisation d'une transaction pour créer l'examen et ses parties
-    const exam = await prisma.$transaction(async (tx) => {
-      // 1. Créer l'examen
-      const newExam = await tx.exam.create({
-        data: {
-          name,
-          title: name,
-          session,
-          description,
-          formationId,
-          duration,
-          passingScore,
-          totalPoints,
-          part1Enabled,
-          part1Questions: qcmQuestions.length || part1Questions,
-          part1Points,
-          part2Enabled,
-          part2Questions: openQuestions.length || part2Questions,
-          part2Points,
-          part3Enabled,
-          part3Subject,
-          part3Points,
-          part3Mode,
-          randomizeQuestions,
-          showResults,
-          status,
-        }
-      });
+    // ✅ Split into small sequential transactions to avoid Accelerate 15s limit
+    // Step 1: Create the exam
+    const newExam = await prisma.exam.create({
+      data: {
+        name,
+        title: name,
+        session,
+        description,
+        formationId,
+        duration,
+        passingScore,
+        totalPoints,
+        part1Enabled,
+        part1Questions: qcmQuestions.length || part1Questions,
+        part1Points,
+        part2Enabled,
+        part2Questions: openQuestions.length || part2Questions,
+        part2Points,
+        part3Enabled,
+        part3Subject,
+        part3Points,
+        part3Mode,
+        randomizeQuestions,
+        showResults,
+        status,
+      }
+    });
 
-      // 2. Créer la partie QCM si activée
+    // Track created parts for rollback on error
+    const createdPartIds: string[] = [];
+
+    try {
+      // Step 2: Create Part 1 (QCM) with questions
       if (part1Enabled && qcmQuestions.length > 0) {
-        const part1 = await tx.examPart.create({
-          data: {
-            examId: newExam.id,
-            title: "Partie 1 : QCM",
-            type: "QCM",
-            duration: Math.floor(duration / 3 / 60), // Estimation simple
-            points: part1Points,
-            order: 1,
-          }
-        });
-
-        // Ajouter les questions QCM
-        for (let i = 0; i < qcmQuestions.length; i++) {
-          const q = qcmQuestions[i];
-          const question = await tx.question.create({
+        await prisma.$transaction(async (tx) => {
+          const part1 = await tx.examPart.create({
             data: {
-              partId: part1.id,
-              text: q.text || `Question QCM ${i + 1}`,
-              type: q.type || "SINGLE_CHOICE",
-              points: q.points || 1,
-              order: i + 1,
+              examId: newExam.id,
+              title: "Partie 1 : QCM",
+              type: "QCM",
+              duration: Math.floor(duration / 3 / 60),
+              points: part1Points,
+              order: 1,
             }
           });
+          createdPartIds.push(part1.id);
 
-          // Ajouter les options
-          if (q.options) {
-            await tx.questionOption.createMany({
-              data: q.options.map((opt: any) => ({
-                questionId: question.id,
-                text: opt.text || "...",
-                isCorrect: opt.isCorrect,
-                feedback: opt.feedback || "",
-              }))
+          for (let i = 0; i < qcmQuestions.length; i++) {
+            const q = qcmQuestions[i];
+            const question = await tx.question.create({
+              data: {
+                partId: part1.id,
+                text: q.text || `Question QCM ${i + 1}`,
+                type: q.type || "SINGLE_CHOICE",
+                points: q.points || 1,
+                order: i + 1,
+              }
+            });
+
+            if (q.options && q.options.length > 0) {
+              await tx.questionOption.createMany({
+                data: q.options.map((opt: any) => ({
+                  questionId: question.id,
+                  text: opt.text || "...",
+                  isCorrect: opt.isCorrect,
+                  feedback: opt.feedback || "",
+                }))
+              });
+            }
+          }
+        });
+      }
+
+      // Step 3: Create Part 2 (Open Questions) with questions
+      if (part2Enabled && openQuestions.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          const part2 = await tx.examPart.create({
+            data: {
+              examId: newExam.id,
+              title: "Partie 2 : Questions Ouvertes",
+              type: "OPEN",
+              duration: Math.floor(duration / 3 / 60),
+              points: part2Points,
+              order: 2,
+            }
+          });
+          createdPartIds.push(part2.id);
+
+          for (let i = 0; i < openQuestions.length; i++) {
+            const qData = openQuestions[i];
+            await tx.question.create({
+              data: {
+                partId: part2.id,
+                text: qData.text || `Question ouverte ${i + 1}`,
+                type: "OPEN",
+                points: qData.points || 5,
+                order: i + 1,
+              }
             });
           }
-        }
-      }
-
-      // 3. Créer la partie Questions Ouvertes si activée
-      if (part2Enabled && openQuestions.length > 0) {
-        const part2 = await tx.examPart.create({
-          data: {
-            examId: newExam.id,
-            title: "Partie 2 : Questions Ouvertes",
-            type: "OPEN",
-            duration: Math.floor(duration / 3 / 60),
-            points: part2Points,
-            order: 2,
-          }
         });
-
-        for (let i = 0; i < openQuestions.length; i++) {
-          const qData = openQuestions[i];
-          await tx.question.create({
-            data: {
-              partId: part2.id,
-              text: qData.text || `Question ouverte ${i + 1}`,
-              type: "OPEN",
-              points: qData.points || 5,
-              order: i + 1,
-            }
-          });
-        }
       }
 
-      // 4. Créer la partie Étude de Cas si activée
+      // Step 4: Create Part 3 (Case Study)
       if (part3Enabled) {
-        await tx.examPart.create({
+        await prisma.examPart.create({
           data: {
             examId: newExam.id,
             title: "Partie 3 : Étude de Cas",
@@ -215,9 +222,15 @@ export async function POST(request: Request) {
           }
         });
       }
-
-      return newExam;
-    }, { timeout: 30000 }); // ✅ Increase timeout to 30s for large exams
+    } catch (error) {
+      // Rollback: delete exam and created parts on error
+      console.error('[EXAM CREATION ERROR] Rolling back...', error);
+      for (const partId of createdPartIds) {
+        await prisma.examPart.delete({ where: { id: partId } }).catch(() => {});
+      }
+      await prisma.exam.delete({ where: { id: newExam.id } }).catch(() => {});
+      throw error;
+    }
 
     return NextResponse.json({
       message: 'Examen créé avec succès',
