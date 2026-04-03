@@ -1,20 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Download, QrCode, Share2, ShieldCheck, Printer } from "lucide-react";
 import Link from "next/link";
-import CertificateTemplate from "@/components/CertificateTemplate";
+import OfficialDocument from "@/components/OfficialDocument";
 import { toast } from "sonner";
-import dynamic from "next/dynamic";
-
-const html2pdf = dynamic(() => import("html2pdf.js"), { ssr: false });
+/**
+ * Page d'aperçu d'attestation pour le candidat
+ */
 
 export default function AttestationPreviewPage() {
   const { id } = useParams();
   const router = useRouter();
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const { data: att, isLoading } = useQuery({
     queryKey: ["user-attestation", id],
@@ -41,23 +43,46 @@ export default function AttestationPreviewPage() {
 
     toast.promise(
       (async () => {
+        // 1. Activer le mode impression pour la largeur fixe
+        setIsPrinting(true);
+        
+        // 2. Laisser un temps pour le re-render
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // 3. Importer la librairie côté client
         const html2pdf = (await import("html2pdf.js")).default;
         const element = document.getElementById(`cert-template-${att.id}`);
         
+        if (!element) {
+            setIsPrinting(false);
+            throw new Error("Élément introuvable");
+        }
+
         const opt = {
           margin: 0,
           filename: fileName,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true,
+            width: 1120, // Forcer la capture sur la largeur fixe
+            windowWidth: 1120
+          },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
-        await html2pdf().set(opt).from(element).save();
+        try {
+            await html2pdf().set(opt).from(element).save();
+        } finally {
+            // 4. Désactiver le mode impression
+            setIsPrinting(false);
+        }
       })(),
       {
-        loading: 'Génération du PDF haute qualité...',
-        success: 'Votre attestation a été téléchargée !',
-        error: 'Erreur lors de la génération du PDF.',
+        loading: 'Génération de votre document officiel...',
+        success: 'Téléchargement réussi !',
+        error: 'Erreur lors du téléchargement. Veuillez réessayer.',
       }
     );
   };
@@ -97,20 +122,20 @@ export default function AttestationPreviewPage() {
       <Card className="overflow-hidden bg-slate-50 border-none shadow-2xl transition-all duration-500 hover:shadow-emerald-500/10">
         <div className="p-4 md:p-8 flex justify-center">
              <div className="w-full max-w-[1000px] shadow-2xl origin-top transition-transform">
-                <CertificateTemplate 
+                <OfficialDocument 
                     id={`cert-template-${att.id}`}
-                    settings={settings}
+                    isPrinting={isPrinting}
                     data={{
-                        fullName: att.fullName,
-                        formationName: att.formation?.name || "Formation Professionnelle",
+                        id: att.id,
                         code: att.code,
-                        issuedAt: att.issuedAt,
+                        fullName: att.fullName,
+                        formationName: att.formation?.name || "Formation Saint André",
+                        type: att.type,
                         startDate: att.startDate,
                         endDate: att.endDate,
-                        score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
-                        hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
-                        type: att.type,
-                        gender: att.gender
+                        score: att.type === "FORMATION" ? (att.certificationScore || 0) : (att.stageScore || 0),
+                        status: att.status,
+                        issuedAt: att.issuedAt
                     }}
                 />
              </div>
