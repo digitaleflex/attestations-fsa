@@ -8,6 +8,7 @@ import { NextRequest } from "next/server"
 import { applyRateLimit } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/error-handler'
 import { sanitizeInput } from '@/lib/sanitization'
+import { isAdminAuthenticated } from '@/lib/auth'
 
 // Schéma de validation pour un signalement
 const SignalementSchema = z.object({
@@ -29,16 +30,16 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const parse = SignalementSchema.safeParse(body)
-    
+
     if (!parse.success) {
-      return NextResponse.json({ 
-        message: "Entrée invalide", 
-        details: parse.error.errors 
+      return NextResponse.json({
+        error: "Entrée invalide",
+        details: parse.error.errors
       }, { status: 400 })
     }
-    
+
     let { code, motif, message, email } = parse.data
-    
+
     // ✅ SANITIZATION - Nettoyer les entrées
     motif = sanitizeInput(motif)
     message = sanitizeInput(message)
@@ -58,27 +59,36 @@ export async function POST(req: Request) {
         email: email || null,
       },
     })
-    
+
     // Logger la création (pour monitoring)
     console.log(`[REPORT] Nouveau signalement créé: ${report.id}`)
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       id: report.id,
       message: 'Signalement enregistré avec succès'
     })
-    
-  } catch (error: any) {
-    console.error('Erreur création signalement:', error)
-    return handleApiError(error, {
-      route: '/api/signalement',
-      operation: 'create_report',
-    })
+
+  } catch (error) {
+    console.error('[SIGNALEMENT POST ERROR]', error)
+    // ✅ FIX: Return proper JSON instead of relying on handleApiError
+    return NextResponse.json(
+      {
+        error: 'Erreur lors de la création du signalement',
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      },
+      { status: 500 }
+    )
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
+    // ✅ Sécurité : Lister les signalements est réservé aux admins
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+    }
+
     const url = new URL(req.url)
     const id = url.searchParams.get('id')
     const countOnly = url.searchParams.get('countOnly') === '1'
@@ -114,6 +124,36 @@ export async function GET(req: NextRequest) {
     return handleApiError(e, {
       route: '/api/signalement',
       operation: 'get_reports',
+    })
+  }
+}
+
+/**
+ * DELETE /api/signalement?id=...
+ * Route historique pour la suppression via paramètre de requête
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get("id")
+
+    if (!id) {
+      return NextResponse.json({ error: "ID manquant" }, { status: 400 })
+    }
+
+    await prisma.report.delete({ where: { id } })
+
+    console.log(`[REPORT] Signalement supprimé via query param: ${id}`)
+    return NextResponse.json({ success: true, message: "Signalement supprimé" })
+
+  } catch (error: any) {
+    return handleApiError(error, {
+      route: '/api/signalement',
+      operation: 'delete_report_query',
     })
   }
 }

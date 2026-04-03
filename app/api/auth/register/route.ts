@@ -87,11 +87,15 @@ export async function POST(request: Request) {
       message: 'Compte candidat créé avec succès',
       user
     }, { status: 201 })
-  } catch (error: any) {
-    console.error('Erreur lors de la création du compte candidat:', error)
-    return handleApiError(error, {
-      route: '/api/auth/register',
-      operation: 'register',
-    })
+  } catch (error) {
+    console.error('[REGISTER ERROR]', error)
+    // ✅ FIX: Return proper JSON instead of relying on handleApiError
+    return NextResponse.json(
+      {
+        error: 'Erreur lors de la création du compte',
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      },
+      { status: 500 }
+    )
   }
 }
