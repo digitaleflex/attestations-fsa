@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client/edge';
+import { PrismaClient } from '@prisma/client';
 import { withAccelerate } from '@prisma/extension-accelerate';
 
 // Extend the PrismaClient type to include our custom extensions
@@ -6,25 +6,29 @@ type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
 
 // Create a type-safe Prisma client with extensions
 declare global {
-   
   var prisma: ExtendedPrismaClient | undefined;
+  var rawPrisma: PrismaClient | undefined;
 }
 
-function createPrismaClient() {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn'] 
-      : ['error'],
-  }).$extends(withAccelerate());
+const baseClient = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' 
+    ? ['query', 'error', 'warn'] 
+    : ['error'],
+});
+
+function createPrismaClient(base: PrismaClient) {
+  return base.$extends(withAccelerate());
 }
 
-const prismaClient = createPrismaClient();
+const prismaClient = createPrismaClient(baseClient);
 
 export const prisma = global.prisma || prismaClient;
+export const rawPrisma = global.rawPrisma || baseClient;
 
 // En développement, évite de créer plusieurs instances de Prisma Client
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
+  global.rawPrisma = rawPrisma;
 }
 
 // Fonction pour tester la connexion à la base de données

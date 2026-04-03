@@ -8,9 +8,10 @@ datasource db {
 }
 
 enum AttestationStatus {
-  PENDING
-  VALIDATED
-  REJECTED
+  PENDING      // Code généré mais pas encore réclamé
+  CLAIMED      // Code réclamé par le candidat
+  VALIDATED    // Attestation validée (après examen réussi)
+  REJECTED     // Attestation refusée (examen échoué)
 }
 
 enum AttestationType {
@@ -46,29 +47,43 @@ enum QuestionType {
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?  @db.Text
-  session_state     String?
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String    @default("")
+  providerId            String    @default("")
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
+  @@unique([providerId, accountId])
 }
 
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique
+  expiresAt    DateTime
+  token        String   @unique
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   userId       String
-  expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
 }
 
 model User {
@@ -85,13 +100,32 @@ model User {
   birthPlace    String?
   phone         String?
   address       String?
+  gender        Gender?
+  
+  // Code d'attestation pour débloquer le compte
+  attestationCode String? @unique
+  attestationStatus String @default("PENDING") // PENDING, CLAIMED, VALIDATED
+  
+  // Formation et examen associés
+  formationId   String?
+  formation     Formation? @relation(fields: [formationId], references: [id])
+  examId        String?
+  exam          Exam? @relation(fields: [examId], references: [id])
+  
+  // Dates importantes
+  enrolledAt    DateTime?
+  examScheduledAt DateTime?
 
+  correctionRequests CorrectionRequest[]
+  attestations  Attestation[]
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   accounts      Account[]
   sessions      Session[]
-  submissions   ExamSubmission[]
+  examSessions  ExamSession[]
+  internships   InternshipRequest[]
 }
 
 model VerificationToken {
@@ -111,6 +145,7 @@ model Formation {
   createdAt    DateTime    @default(now())
   attestations Attestation[]
   exams        Exam[]
+  users        User[]
 }
 
 model Attestation {
@@ -152,6 +187,9 @@ model Attestation {
   
   // Métadonnées
   pdfUrl         String?
+  userId         String?
+  user           User?             @relation(fields: [userId], references: [id])
+  correctionRequests CorrectionRequest[]
 }
 
 model Settings {
@@ -223,8 +261,10 @@ model Exam {
   updatedAt       DateTime        @updatedAt
   formationId     String?
   formation       Formation?      @relation(fields: [formationId], references: [id])
+  users           User[]
   parts           ExamPart[]
-  submissions     ExamSubmission[]
+  sessions        ExamSession[]
+  scheduledAt     DateTime?
 }
 
 model ExamPart {
@@ -259,20 +299,22 @@ model QuestionOption {
   isCorrect       Boolean         @default(false)
 }
 
-model ExamSubmission {
+model ExamSession {
   id              String          @id @default(uuid())
   examId          String
   exam            Exam            @relation(fields: [examId], references: [id])
   userId          String
-  user            User            @relation(fields: [userId], references: [id])
-  status          String          @default("PENDING") // PENDING, GRADED
+  candidate       User            @relation(fields: [userId], references: [id])
+  status          String          @default("PENDING") // PENDING, GRADED, IN_PROGRESS, COMPLETED
   scorePart1      Float           @default(0)
   scorePart2      Float           @default(0)
   scorePart3      Float           @default(0)
+  score           Float           @default(0) // mapping totalScore to score for current_problems compatibility
   totalScore      Float           @default(0)
   gradedBy        String?         // Admin name or ID
   gradedAt        DateTime?
-  submittedAt     DateTime        @default(now())
+  startedAt       DateTime        @default(now())
+  submittedAt     DateTime?       @default(now())
   updatedAt       DateTime        @updatedAt
   answers         Json?           @default("{}")
   scans           CompositionScan[]
@@ -281,7 +323,7 @@ model ExamSubmission {
 model CompositionScan {
   id            String    @id @default(uuid())
   submissionId  String
-  submission    ExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  session       ExamSession @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   url           String
   pageNumber    Int       @default(1)
   fileName      String
@@ -289,6 +331,7 @@ model CompositionScan {
   uploadedBy    String    // Admin ID
   uploadedAt    DateTime  @default(now())
 }
+
 enum InternshipStatus {
   PENDING
   REVIEWING
@@ -299,15 +342,80 @@ enum InternshipStatus {
 
 model InternshipRequest {
   id              String           @id @default(uuid())
+  userId          String?
+  user            User?            @relation(fields: [userId], references: [id])
   fullName        String
   email           String
   phone           String
   university      String?
   level           String?          // e.g. "Bac +3"
-  position        String           // Desired internship role
-  cvUrl           String?          // Link to uploaded CV
+  position        String           // Desired role
   message         String?          @db.Text
   status          InternshipStatus @default(PENDING)
+  cvUrl           String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CorrectionRequest {
+  id             String            @id @default(uuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+
+  attestationId  String?
+  attestation    Attestation?      @relation(fields: [attestationId], references: [id])
+
+  field          String            // e.g. "fullName", "birthDate", "birthPlace"
+  oldValue       String?
+  newValue       String
+  reason         String?           // Why the change is needed
+
+  status         CorrectionStatus  @default(PENDING)
+
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+// Security & Audit Logs (à ajouter pour la traçabilité)
+model SecurityLog {
+  id        String   @id @default(uuid())
+  eventType String
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  resource  String?
+  resourceId String?
+  action    String?
+  status    String
+  severity  String
+  details   Json?
+  timestamp DateTime @default(now())
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([severity])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([timestamp])
 }
