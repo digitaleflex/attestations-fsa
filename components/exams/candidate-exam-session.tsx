@@ -23,29 +23,35 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 
+// ✅ FIX: Proper types instead of `any`
+type QuestionOption = { id: string; text: string };
+type Question = {
+  id: string;
+  text: string;
+  type: string;
+  options: QuestionOption[];
+};
+type ExamPart = {
+  id: string;
+  title: string;
+  type: string;
+  duration: number;
+  scenario: string | null;
+  questions: Question[];
+};
 type Exam = {
   id: string;
   title: string;
-  parts: Array<{
-    id: string;
-    title: string;
-    type: string;
-    duration: number;
-    scenario: string | null;
-    questions: Array<{
-      id: string;
-      text: string;
-      type: string;
-      options: Array<{ id: string, text: string }>;
-    }>;
-  }>;
+  parts: ExamPart[];
 };
+// Answers can be string (for open questions) or string (option ID for MCQ)
+type Answers = Record<string, string>;
 
 export function CandidateExamSession({ examId }: { examId: string }) {
   const router = useRouter();
   const [exam, setExam] = useState<Exam | null>(null);
   const [currentPart, setCurrentPart] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<Answers>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -79,7 +85,7 @@ export function CandidateExamSession({ examId }: { examId: string }) {
     }
   }, [timeLeft, isStarted]);
 
-  const updateAnswer = (questionId: string, val: any) => {
+  const updateAnswer = (questionId: string, val: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: val }));
   };
 
