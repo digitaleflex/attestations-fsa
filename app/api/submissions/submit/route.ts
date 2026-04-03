@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     // 3. Créer la soumission
     // On stocke les réponses brutes (answers) dans un champ de métadonnées si besoin, 
     // ou on crée un modèle de réponse détaillé. Pour l'instant, on reste simple.
-    const submission = await prisma.examSubmission.create({
+    const submission = await prisma.examSession.create({
       data: {
         examId,
         userId: session.user.id,

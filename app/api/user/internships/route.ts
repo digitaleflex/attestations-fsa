@@ -17,9 +17,11 @@ async function isAuthenticatedUser() {
 
 // Schéma de validation pour une candidature
 const InternshipApplicationSchema = z.object({
-  internshipId: z.string().uuid('ID de stage invalide'),
-  coverLetter: z.string().min(10, 'La lettre de motivation doit contenir au moins 10 caractères').optional(),
-  cvUrl: z.string().url('URL du CV invalide').optional(),
+  university: z.string().min(2, 'L’université est requise').optional(),
+  level: z.string().min(2, 'Le niveau est requis').optional(),
+  position: z.string().min(2, 'Le poste souhaité est requis'),
+  cvUrl: z.string().url('URL du CV invalide').optional().or(z.literal('')),
+  message: z.string().min(10, 'La motivation doit contenir au moins 10 caractères').optional(),
 });
 
 // GET /api/user/internships - Récupérer les candidatures de l'utilisateur
@@ -30,21 +32,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Non autorisé - Connexion requise' }, { status: 401 });
     }
     
-    // Récupérer les candidatures du candidat
-    const applications = await prisma.candidateProfile.findMany({
-      where: {
-        userId: userId
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          }
-        }
-      },
+    // Récupérer les candidatures liées à cet utilisateur
+    const applications = await prisma.internshipRequest.findMany({
+      where: { userId: userId },
       orderBy: { createdAt: 'desc' }
     });
     
@@ -52,7 +42,7 @@ export async function GET(request: Request) {
     const stats = {
       total: applications.length,
       pending: applications.filter((a: any) => a.status === 'PENDING').length,
-      inReview: applications.filter((a: any) => a.status === 'IN_REVIEW').length,
+      inReview: applications.filter((a: any) => a.status === 'REVIEWING').length,
       accepted: applications.filter((a: any) => a.status === 'ACCEPTED').length,
       rejected: applications.filter((a: any) => a.status === 'REJECTED').length,
     };
@@ -88,37 +78,31 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    const { internshipId, coverLetter, cvUrl } = parse.data;
-    
-    // Vérifier que le candidat n'a pas déjà postulé
-    const existingApplication = await prisma.candidateProfile.findFirst({
-      where: {
-        userId: userId,
-        // Ajoutez ici un filtre par internshipId si votre schema le permet
-      }
+    const { university, level, position, cvUrl, message } = parse.data;
+
+    // Récupérer les infos de l'utilisateur pour pré-remplir la demande
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, phone: true }
     });
-    
-    if (existingApplication) {
-      return NextResponse.json({ 
-        message: 'Vous avez déjà postulé à ce stage' 
-      }, { status: 400 });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
     }
     
     // Créer la candidature
-    const application = await prisma.candidateProfile.create({
+    const application = await prisma.internshipRequest.create({
       data: {
         userId: userId,
-        // Adaptez les champs selon votre schema
+        fullName: user.name || "Candidat Anonyme",
+        email: user.email || "",
+        phone: user.phone || "",
+        university,
+        level,
+        position,
+        cvUrl: cvUrl || null,
+        message,
         status: 'PENDING',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        }
       }
     });
     

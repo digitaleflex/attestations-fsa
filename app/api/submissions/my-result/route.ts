@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "ID de l'examen manquant" }, { status: 400 });
     }
 
-    const submission = await prisma.examSubmission.findFirst({
+    const submission = await prisma.examSession.findFirst({
       where: {
         examId,
         userId: session.user.id

@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
     if (userId) where.userId = userId;
     if (examId) where.examId = examId;
 
-    const submissions = await prisma.examSubmission.findMany({
+    const submissions = await prisma.examSession.findMany({
       where,
       include: {
         exam: true,
-        user: true
+        candidate: true
       },
       orderBy: { submittedAt: 'desc' }
     });
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
 
     const totalScore = (scorePart1 || 0) + (scorePart2 || 0) + (scorePart3 || 0);
 
-    const submission = await prisma.examSubmission.update({
+    const submission = await prisma.examSession.update({
       where: { id },
       data: {
         scorePart1,

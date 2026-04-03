@@ -1,11 +1,9 @@
 // app/api/auth/[...all]/route.ts
-import { getAuth } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { toNextJsHandler } from "better-auth/next-js"
 
-// Création d'un gestionnaire asynchrone pour les routes
-const handler = async () => {
-  const auth = await getAuth()
-  return toNextJsHandler(auth.handler)
-}
-
-export const { GET, POST } = await handler()
+/**
+ * Gestionnaire des routes Better Auth pour Next.js (App Router)
+ * Traite automatiquement toutes les routes sous /api/auth/*
+ */
+export const { GET, POST } = toNextJsHandler(auth.handler)

@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
         ]
       },
       include: {
-        _count: {
-          select: { submissions: { where: { userId: session.user.id } } }
+        sessions: {
+          where: { userId: session.user.id }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Check if the user already has a submission
     const examsWithStatus = exams.map(exam => ({
       ...exam,
-      hasSubmitted: exam._count.submissions > 0
+      hasSubmitted: (exam as any).sessions.length > 0
     }));
 
     return NextResponse.json(examsWithStatus);

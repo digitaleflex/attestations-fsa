@@ -20,10 +20,10 @@ export async function POST(
     const { scorePart2, scorePart3, observations } = body;
 
     // 1. Récupérer la soumission existante
-    const submission = await prisma.examSubmission.findUnique({
+    const submission = await prisma.examSession.findUnique({
       where: { id },
       include: {
-        user: true,
+        candidate: true,
         exam: {
           include: {
             formation: true
@@ -41,7 +41,7 @@ export async function POST(
     const totalScore = totalRaw / 5; // Conversion sur 20
 
     // 3. Mettre à jour la soumission
-    const updatedSubmission = await prisma.examSubmission.update({
+    const updatedSubmission = await prisma.examSession.update({
       where: { id },
       data: {
         scorePart2: scorePart2 || 0,
@@ -78,16 +78,20 @@ export async function POST(
       const hash = nanoid();
       attestationCode = `FSA-${year}-${month}-${seq}-${hash}`;
 
+      // Calcul des dates réelles (Début = Inscription, Fin = Soumission de l'examen)
+      const startDate = submission.candidate.enrolledAt || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const endDate = submission.submittedAt || now;
+
       // Création de l'attestation
       await prisma.attestation.create({
         data: {
           code: attestationCode,
-          fullName: submission.user.name || "Candidat Anonyme",
-          birthDate: submission.user.birthDate || new Date(1990, 0, 1), // Default if missing
-          birthPlace: submission.user.birthPlace || "Non spécifié",
+          fullName: submission.candidate.name || "Candidat Anonyme",
+          birthDate: submission.candidate.birthDate || new Date(1990, 0, 1),
+          birthPlace: submission.candidate.birthPlace || "Non spécifié",
           formationId: submission.exam.formationId,
-          startDate: new Date(), // Date de début (à affiner si possible)
-          endDate: new Date(),   // Date de fin
+          startDate: startDate,
+          endDate: endDate,
           location: "Abomey-Calavi",
           instructor: "Ferme St André",
           issuingCompany: "Ferme Agro-Piscicole Cité St André",
@@ -102,8 +106,8 @@ export async function POST(
 
     // 5. Envoi de l'email de résultat au candidat
     await emailService.sendExamResults(
-      submission.user.email,
-      submission.user.name || "Candidat",
+      submission.candidate.email || "",
+      submission.candidate.name || "Candidat",
       submission.exam.title,
       updatedSubmission.totalScore,
       totalScore >= 12

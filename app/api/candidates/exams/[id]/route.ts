@@ -114,8 +114,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       });
     }
 
-    // 3. Create submission
-    const submission = await prisma.examSubmission.create({
+    // 3. Create session
+    const sessionRecord = await prisma.examSession.create({
       data: {
         examId: id,
         userId: session.user.id,
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       }
     });
 
-    return NextResponse.json(submission);
+    return NextResponse.json(sessionRecord);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Erreur lors de la soumission" }, { status: 500 });

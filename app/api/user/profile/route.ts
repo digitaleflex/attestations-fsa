@@ -10,8 +10,11 @@ const UserProfileSchema = z.object({
   email: z.string().email('Email invalide').optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
+  birthDate: z.string().optional(),
+  birthPlace: z.string().optional(),
   oldPassword: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').optional(),
   newPassword: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').optional(),
+  gender: z.enum(['M', 'F']).optional(),
 });
 
 // Helper pour vérifier l'authentification user
@@ -45,6 +48,7 @@ export async function GET() {
         phone: true,
         address: true,
         role: true,
+        gender: true,
         emailVerified: true,
         createdAt: true,
       }
@@ -79,12 +83,12 @@ export async function PATCH(request: Request) {
       }, { status: 400 });
     }
     
-    const { name, email, phone, address, oldPassword, newPassword } = parse.data;
+    const { name, email, phone, address, birthDate, birthPlace, gender, oldPassword, newPassword } = parse.data;
     
     // Vérifier les conflits d'email
     if (email) {
-      const existingUser = await prisma.user.findUnique({
-        where: { email, id: { not: userId } }
+      const existingUser = await prisma.user.findFirst({
+        where: { email, NOT: { id: userId } }
       });
       if (existingUser) {
         return NextResponse.json({ 
@@ -100,6 +104,9 @@ export async function PATCH(request: Request) {
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
+    if (birthDate) updateData.birthDate = new Date(birthDate);
+    if (birthPlace) updateData.birthPlace = birthPlace;
+    if (gender) updateData.gender = gender;
     
     // Gestion du changement de mot de passe
     if (oldPassword && newPassword) {
@@ -136,6 +143,7 @@ export async function PATCH(request: Request) {
         address: true,
         birthDate: true,
         birthPlace: true,
+        gender: true,
       }
     });
     

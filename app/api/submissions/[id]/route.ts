@@ -13,10 +13,11 @@ export async function GET(
 
     const { id } = params;
 
-    const submission = await prisma.examSubmission.findUnique({
+    const submission = await prisma.examSession.findUnique({
       where: { id },
       include: {
-        user: true,
+        candidate: true,
+        scans: true, // Inclusion des scans pour la correction physique
         exam: {
           include: {
             parts: {

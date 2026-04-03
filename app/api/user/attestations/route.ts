@@ -1,60 +1,58 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+import { AttestationType, AttestationStatus } from '@prisma/client';
+import { z } from "zod";
+import { getCurrentUser } from '@/lib/auth';
 
-// Helper pour vérifier l'authentification user
-async function isAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-  
-  if (!session || !session.value) return null;
-  if (role?.value !== 'USER') return null;
-  
-  return session.value;
+// Schéma de validation des paramètres
+const QuerySchema = z.object({
+  status: z.nativeEnum(AttestationStatus).optional().or(z.literal("all")),
+  type: z.nativeEnum(AttestationType).optional().or(z.literal("all")),
+  limit: z.coerce.number().min(1).max(100).optional(),
+});
+
+interface AttestationStats {
+  total: number;
+  validated: number;
+  pending: number;
+  rejected: number;
 }
 
-// GET /api/user/attestations - Récupérer les attestations de l'utilisateur
 export async function GET(request: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
-      return NextResponse.json({ error: 'Non autorisé - Connexion requise' }, { status: 401 });
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
     
-    // Récupérer les paramètres de requête
+    const userId = user.id;
+    
+    // Validation avec Zod (Sécurité Totale)
     const url = new URL(request.url);
-    const status = url.searchParams.get('status');
-    const type = url.searchParams.get('type');
-    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
-    
-    // Construire le filtre WHERE
-    const where: any = {
-      // Les attestations sont liées à l'utilisateur via le nom et la date de naissance
-      // On utilise une correspondance approximative
-      OR: [
-        { 
-          // Correspondance exacte sur le nom (à améliorer avec un vrai système de liaison)
-          fullName: { 
-            contains: await getUserName(userId),
-            mode: 'insensitive'
-          } 
-        }
-      ]
-    };
-    
-    // Filtres optionnels
-    if (status && status !== 'all') {
-      where.status = status;
+    const params = QuerySchema.safeParse({
+      status: url.searchParams.get('status'),
+      type: url.searchParams.get('type'),
+      limit: url.searchParams.get('limit'),
+    });
+
+    if (!params.success) {
+      return NextResponse.json({ error: 'Paramètres invalides', details: params.error.format() }, { status: 400 });
     }
+
+    const { status: statusParam, type: typeParam, limit } = params.data;
     
-    if (type && type !== 'all') {
-      where.type = type;
-    }
-    
-    // Récupérer les attestations
+    // Mapping des Enums
+    const status = (statusParam && statusParam !== 'all') ? (statusParam as AttestationStatus) : undefined;
+    const type = (typeParam && typeParam !== 'all') ? (typeParam as AttestationType) : undefined;
+
+    // Récupérer les attestations directement par userId (Optimisé par Index)
     const attestations = await prisma.attestation.findMany({
-      where,
+      where: {
+        userId: userId,
+        ...(status ? { status } : {}),
+        ...(type ? { type } : {}),
+      },
       include: {
         formation: {
           select: {
@@ -68,12 +66,12 @@ export async function GET(request: Request) {
       ...(limit ? { take: limit } : {})
     });
     
-    // Compter par statut
-    const stats = {
+    // Calcul des statistiques (en mémoire) - Type Safe
+    const stats: AttestationStats = {
       total: attestations.length,
-      validated: attestations.filter((a: any) => a.status === 'VALIDATED').length,
-      pending: attestations.filter((a: any) => a.status === 'PENDING').length,
-      rejected: attestations.filter((a: any) => a.status === 'REJECTED').length,
+      validated: attestations.filter(a => a.status === 'VALIDATED').length,
+      pending: attestations.filter(a => a.status === 'PENDING').length,
+      rejected: attestations.filter(a => a.status === 'REJECTED').length,
     };
     
     return NextResponse.json({
@@ -81,19 +79,10 @@ export async function GET(request: Request) {
       stats
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur attestations user:', error);
     return NextResponse.json({ 
       error: 'Erreur lors de la récupération des attestations' 
     }, { status: 500 });
   }
-}
-
-// Helper pour récupérer le nom de l'utilisateur
-async function getUserName(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { name: true }
-  });
-  return user?.name || '';
 }

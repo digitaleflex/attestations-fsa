@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // Cache results for 1 hour
 
 export async function GET() {
     try {
@@ -17,10 +17,11 @@ export async function GET() {
         return NextResponse.json({
             validated,
             pending,
+            cachedAt: new Date().toISOString()
         }, {
             status: 200,
             headers: {
-                'Cache-Control': 'no-store, max-age=0',
+                'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=59',
             }
         });
     } catch (error) {

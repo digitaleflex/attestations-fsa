@@ -1,98 +1,148 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
+import { z } from 'zod';
+import { getCurrentUser } from '@/lib/auth';
 
-// Helper pour vérifier l'authentification user
-async function isAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-  
-  if (!session || !session.value) return null;
-  if (role?.value !== 'USER') return null;
-  
-  return session.value;
-}
+// Schéma de validation pour les examens
+const ExamsQuerySchema = z.object({
+  search: z.string().optional(),
+  category: z.string().optional(),
+  limit: z.coerce.number().min(1).max(50).optional(),
+});
 
-// GET /api/user/exams - Récupérer les examens de l'utilisateur
 export async function GET(request: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
-      return NextResponse.json({ error: 'Non autorisé - Connexion requise' }, { status: 401 });
+    const userAuth = await getCurrentUser(request);
+    if (!userAuth) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
     
-    // Récupérer les paramètres de requête
-    const url = new URL(request.url);
-    const status = url.searchParams.get('status'); // available, in-progress, completed
-    
-    // Récupérer l'utilisateur pour avoir ses infos
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        birthDate: true,
-      }
+    const userId = userAuth.id;
+
+    const { searchParams } = new URL(request.url);
+    const params = ExamsQuerySchema.safeParse({
+        search: searchParams.get('search'),
+        category: searchParams.get('category'),
+        limit: searchParams.get('limit'),
     });
+
+    if (!params.success) {
+        return NextResponse.json({ error: 'Paramètres invalides', details: params.error.format() }, { status: 400 });
+    }
+    
+    // Requêtes PARALLÈLES (Gain de temps massif)
+    const [user, availableExams, submissions] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { examId: true }
+      }),
+      prisma.exam.findMany({
+        where: { 
+            status: 'PUBLISHED',
+            // On pourrait ajouter des filtres ici basés sur params.data
+        },
+        select: {
+          id: true,
+          title: true,
+          name: true,
+          description: true,
+          totalPoints: true,
+          passingScore: true,
+          duration: true,
+          part1Questions: true,
+          part2Questions: true,
+          part3Enabled: true,
+        },
+        ...(params.data.limit ? { take: params.data.limit } : {})
+      }),
+      prisma.examSession.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          examId: true,
+          totalScore: true,
+          submittedAt: true,
+          status: true,
+          exam: {
+            select: {
+              title: true,
+              name: true,
+              description: true,
+              totalPoints: true,
+              passingScore: true,
+              duration: true,
+              part1Questions: true,
+              part2Questions: true,
+              part3Enabled: true,
+            }
+          }
+        }
+      })
+    ]);
     
     if (!user) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
     }
     
-    // Récupérer les sessions d'examens du candidat
-    const examSessions = await prisma.examSession.findMany({
-      where: {
-        candidateId: userId
-      },
-      include: {
-        exam: {
-          include: {
-            questions: {
-              include: {
-                question: true
-              }
-            }
-          }
-        }
-      },
-      orderBy: { startedAt: 'desc' }
+    // Formater les données pour le Frontend
+    const submittedExamIds = new Set(submissions.map(s => s.examId));
+    
+    // 1. Ajouter les examens complétés
+    const completedExams = submissions.map(sub => {
+      const exam = sub.exam;
+      const qCount = exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0);
+      return {
+        id: sub.examId,
+        submissionId: sub.id,
+        examName: exam.title || exam.name,
+        examDescription: exam.description,
+        status: sub.status === 'GRADED' ? 'COMPLETED' : 'IN_PROGRESS', 
+        score: sub.totalScore,
+        maxScore: exam.totalPoints || 100,
+        passingScore: exam.passingScore || 65,
+        startedAt: sub.submittedAt,
+        completedAt: sub.submittedAt,
+        duration: `${Math.round(exam.duration / 60)} minutes`,
+        questionCount: qCount,
+      };
     });
+
+    // 2. Ajouter les examens disponibles (non encore soumis)
+    const availableResult = availableExams
+      .filter(exam => !submittedExamIds.has(exam.id))
+      .filter(exam => !user.examId || user.examId === exam.id)
+      .map(exam => ({
+        id: exam.id,
+        examName: exam.title || exam.name,
+        examDescription: exam.description,
+        status: 'AVAILABLE',
+        score: 0,
+        maxScore: exam.totalPoints || 100,
+        passingScore: exam.passingScore || 65,
+        startedAt: null,
+        completedAt: null,
+        duration: `${Math.round(exam.duration / 60)} minutes`,
+        questionCount: exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0),
+      }));
+
+    const examsResult = [...completedExams, ...availableResult];
     
-    // Formater les données
-    const exams = examSessions.map((session: any) => ({
-      id: session.id,
-      examId: session.examId,
-      examName: session.exam?.name,
-      examDescription: session.exam?.description,
-      status: session.status,
-      score: session.score,
-      maxScore: session.maxScore,
-      startedAt: session.startedAt,
-      completedAt: session.completedAt,
-      duration: session.duration,
-      questionCount: session.exam?.questions?.length || 0,
-    }));
-    
-    // Statistiques
+    // Statistiques pour le header des candidats
     const stats = {
-      total: exams.length,
-      completed: exams.filter((e: any) => e.status === 'COMPLETED').length,
-      inProgress: exams.filter((e: any) => e.status === 'IN_PROGRESS').length,
-      available: exams.filter((e: any) => e.status === 'AVAILABLE').length,
-      passed: exams.filter((e: any) => e.status === 'COMPLETED' && e.score >= 70).length,
+      total: examsResult.length,
+      completed: examsResult.filter((e) => e.status === 'COMPLETED').length,
+      inProgress: examsResult.filter((e) => e.status === 'IN_PROGRESS').length,
+      available: examsResult.filter((e) => e.status === 'AVAILABLE').length,
+      passed: examsResult.filter((e) => e.status === 'COMPLETED' && e.score >= (e.maxScore * (e.passingScore / 100))).length,
     };
     
     return NextResponse.json({
-      exams,
+      exams: examsResult,
       stats
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur examens user:', error);
-    return NextResponse.json({ 
-      error: 'Erreur lors de la récupération des examens' 
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

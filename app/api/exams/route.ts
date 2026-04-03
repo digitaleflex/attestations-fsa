@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const exams = await prisma.exam.findMany({
       include: {
         _count: {
-          select: { submissions: true }
+          select: { sessions: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
     const exam = await prisma.exam.create({
       data: {
         title,
+        name: title, // title and name are both in schema
         description,
         status,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
