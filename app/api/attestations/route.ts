@@ -35,38 +35,42 @@ const AttestationSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
-  const url = new URL(request.url);
-  const status = url.searchParams.get('status');
-  const countOnly = url.searchParams.get('count') === '1';
-  const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
-  const order = url.searchParams.get('order') === 'asc' ? 'asc' : 'desc';
-  const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
-  const search = url.searchParams.get('search') || '';
-
-  // Filtre dynamique
-  const where: any = {};
-  if (status) where.status = status;
-  if (search) {
-    where.OR = [
-      { fullName: { contains: search, mode: 'insensitive' } },
-      { code: { contains: search, mode: 'insensitive' } },
-      { type: { contains: search, mode: 'insensitive' } },
-      { formation: { name: { contains: search, mode: 'insensitive' } } },
-    ];
+  try {
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+  } catch (authError) {
+    console.error('[GET /api/attestations] Auth error:', authError);
+    return NextResponse.json({ error: 'Erreur d\'authentification' }, { status: 500 });
   }
 
-  if (countOnly) {
-    try {
+  try {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const countOnly = url.searchParams.get('count') === '1';
+    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
+    const order = url.searchParams.get('order') === 'asc' ? 'asc' : 'desc';
+    const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
+    const search = url.searchParams.get('search') || '';
+
+    // Filtre dynamique
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
+        { type: { contains: search, mode: 'insensitive' } },
+        { formation: { name: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (countOnly) {
       const count = await prisma.attestation.count({ where });
       return NextResponse.json({ count });
-    } catch (error) {
-      return NextResponse.json({ message: "Erreur lors du comptage des attestations" }, { status: 500 });
     }
-  }
-  try {
+
     const attestations = await prisma.attestation.findMany({
       where,
       orderBy: { issuedAt: order },
@@ -76,7 +80,11 @@ export async function GET(request: Request) {
     });
     return NextResponse.json(attestations);
   } catch (error) {
-    return NextResponse.json({ message: "Erreur lors de la récupération des attestations" }, { status: 500 });
+    console.error('[GET /api/attestations] Error:', error);
+    return NextResponse.json(
+      { error: 'Erreur lors de la récupération des attestations', details: error instanceof Error ? error.message : 'Unknown' },
+      { status: 500 }
+    );
   }
 }
 
