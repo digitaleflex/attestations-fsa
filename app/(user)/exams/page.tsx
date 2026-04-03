@@ -4,10 +4,11 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock, CheckCircle, Play, BarChart3, Filter, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { BookOpen, Clock, CheckCircle, Play, BarChart3, Filter, X, ChevronRight } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,7 @@ import {
 
 export default function UserExamsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
 
   const { data, isLoading } = useQuery({
@@ -67,37 +69,18 @@ export default function UserExamsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
-          <p className="text-slate-500">Chargement...</p>
+      <div className="space-y-8">
+        <SkeletonStats />
+        <Card className="p-4 bg-white animate-pulse h-16" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-800">Centre d'Examens</h1>
-              <p className="text-xs text-slate-500">Passez vos examens en ligne</p>
-            </div>
-          </div>
-          <Link href="/user/dashboard">
-            <Button variant="outline" size="sm">← Retour</Button>
-          </Link>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="space-y-8">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="p-4 bg-white shadow-sm">
@@ -219,8 +202,32 @@ export default function UserExamsPage() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-3 border-t">
-                    <Link href={`/user/exams/${exam.id}`} className="flex-1">
-                      <Button className="w-full gap-2" variant={exam.status === "AVAILABLE" ? "default" : "outline"}>
+                    <Link href={exam.status === "COMPLETED" ? `/results/${exam.submissionId}` : `/exams/${exam.id}`} className="flex-1">
+                      <Button 
+                        className="w-full gap-2 group transition-all" 
+                        variant={exam.status === "AVAILABLE" ? "default" : "outline"}
+                        onMouseEnter={() => {
+                          if (exam.status !== "COMPLETED") {
+                            queryClient.prefetchQuery({
+                              queryKey: ["exam", exam.id],
+                              queryFn: async () => {
+                                const res = await fetch(`/api/exams/${exam.id}`);
+                                return res.json();
+                              },
+                              staleTime: 5 * 60 * 1000,
+                            });
+                          } else if (exam.submissionId) {
+                            queryClient.prefetchQuery({
+                              queryKey: ["user-result", exam.submissionId],
+                              queryFn: async () => {
+                                const res = await fetch(`/api/user/results/${exam.submissionId}`);
+                                return res.json();
+                              },
+                              staleTime: 5 * 60 * 1000,
+                            });
+                          }
+                        }}
+                      >
                         {exam.status === "AVAILABLE" ? (
                           <>
                             <Play className="w-4 h-4" />
@@ -234,9 +241,10 @@ export default function UserExamsPage() {
                         ) : (
                           <>
                             <BarChart3 className="w-4 h-4" />
-                            Résultats
+                            Voir mes notes
                           </>
                         )}
+                        <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                       </Button>
                     </Link>
                   </div>
@@ -245,7 +253,6 @@ export default function UserExamsPage() {
             ))}
           </div>
         )}
-      </main>
     </div>
   );
 }

@@ -15,10 +15,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { PlusCircle } from "lucide-react";
 
 export default function UserInternshipsPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    university: "",
+    level: "",
+    position: "",
+    message: "",
+    cvUrl: ""
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["user-internships"],
@@ -33,6 +56,35 @@ export default function UserInternshipsPage() {
     staleTime: 2 * 60 * 1000,
   });
 
+  const submitMutation = useMutation({
+    mutationFn: async (newApp: any) => {
+      const res = await fetch("/api/user/internships", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newApp),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Erreur");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-internships"] });
+      toast.success("✅ Candidature soumise !");
+      setIsDialogOpen(false);
+      setFormData({ university: "", level: "", position: "", message: "", cvUrl: "" });
+    },
+    onError: (err: any) => {
+      toast.error(err.message);
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitMutation.mutate(formData);
+  };
+
   const filteredApplications = data?.applications?.filter((app: any) => {
     if (statusFilter === "all") return true;
     return app.status === statusFilter;
@@ -42,7 +94,7 @@ export default function UserInternshipsPage() {
     switch (status) {
       case "ACCEPTED": return "bg-emerald-100 text-emerald-700 border-emerald-200";
       case "REJECTED": return "bg-rose-100 text-rose-700 border-rose-200";
-      case "IN_REVIEW": return "bg-blue-100 text-blue-700 border-blue-200";
+      case "REVIEWING": return "bg-blue-100 text-blue-700 border-blue-200";
       default: return "bg-amber-100 text-amber-700 border-amber-200";
     }
   };
@@ -51,7 +103,7 @@ export default function UserInternshipsPage() {
     switch (status) {
       case "ACCEPTED": return "Accepté";
       case "REJECTED": return "Refusé";
-      case "IN_REVIEW": return "En revue";
+      case "REVIEWING": return "En revue";
       default: return "En attente";
     }
   };
@@ -68,25 +120,7 @@ export default function UserInternshipsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <header className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-800">Mes Candidatures</h1>
-              <p className="text-xs text-slate-500">Suivez vos stages</p>
-            </div>
-          </div>
-          <Link href="/user/dashboard">
-            <Button variant="outline" size="sm">← Retour</Button>
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="space-y-8">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="p-4 bg-white shadow-sm">
             <p className="text-sm text-slate-500">Total</p>
@@ -123,11 +157,86 @@ export default function UserInternshipsPage() {
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="PENDING">En attente</SelectItem>
-                <SelectItem value="IN_REVIEW">En revue</SelectItem>
+                <SelectItem value="REVIEWING">En revue</SelectItem>
                 <SelectItem value="ACCEPTED">Accepté</SelectItem>
                 <SelectItem value="REJECTED">Refusé</SelectItem>
               </SelectContent>
             </Select>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all">
+                  <PlusCircle className="w-4 h-4" />
+                  Nouvelle demande
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[550px]">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold text-slate-800">Postuler pour un stage</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-5 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="univ">Université / École</Label>
+                      <Input 
+                        id="univ" 
+                        placeholder="Ex: UAC, ENEAM..." 
+                        value={formData.university}
+                        onChange={(e) => setFormData({...formData, university: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="level">Niveau d'études</Label>
+                      <Input 
+                        id="level" 
+                        placeholder="Ex: Licence 3, Master 1..." 
+                        value={formData.level}
+                        onChange={(e) => setFormData({...formData, level: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pos">Poste souhaité <span className="text-rose-500">*</span></Label>
+                    <Input 
+                      id="pos" 
+                      placeholder="Ex: Stagiaire Comptable, Assistant de Direction..." 
+                      required
+                      value={formData.position}
+                      onChange={(e) => setFormData({...formData, position: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cv">Lien vers CV (URL optionnelle)</Label>
+                    <Input 
+                      id="cv" 
+                      type="url"
+                      placeholder="https://mon-cv.pdf" 
+                      value={formData.cvUrl}
+                      onChange={(e) => setFormData({...formData, cvUrl: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="msg">Motivation / Message</Label>
+                    <Textarea 
+                      id="msg" 
+                      placeholder="Dites-nous pourquoi vous souhaitez rejoindre la Ferme FSA..." 
+                      rows={4}
+                      value={formData.message}
+                      onChange={(e) => setFormData({...formData, message: e.target.value})}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
+                      disabled={submitMutation.isPending}
+                    >
+                      {submitMutation.isPending ? "Envoi..." : "Soumettre ma candidature"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </Card>
 
@@ -151,7 +260,7 @@ export default function UserInternshipsPage() {
                       <Briefcase className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-800">Candidature stage</h3>
+                      <h3 className="font-bold text-slate-800">{app.position}</h3>
                       <p className="text-sm text-slate-500">
                         Soumise le {new Date(app.createdAt).toLocaleDateString("fr-FR")}
                       </p>
@@ -165,7 +274,6 @@ export default function UserInternshipsPage() {
             ))}
           </div>
         )}
-      </main>
     </div>
   );
 }

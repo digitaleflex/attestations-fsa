@@ -1,16 +1,55 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import CertificateTemplate from "@/components/CertificateTemplate";
+
+// Import dynamique pour éviter SSR
+const html2pdf = dynamic(() => import("html2pdf.js"), { ssr: false });
 
 export default function UserDashboardPage() {
   const router = useRouter();
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [claimCode, setClaimCode] = useState("");
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  const handleClaimCode = async () => {
+    if (!claimCode || claimCode.length < 5) {
+      toast.error("Veuillez entrer au moins les 5 derniers caractères de votre code.");
+      return;
+    }
+
+    setIsClaiming(true);
+    try {
+      const response = await fetch("/api/user/claim-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codePart: claimCode.trim() }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+      }
+
+      await response.json();
+      toast.success("Succès ! Votre dossier a été lié et votre profil a été mis à jour.");
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la liaison du code");
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   // Fetch user profile
   const { data: user, isLoading: userLoading } = useQuery({
@@ -67,9 +106,35 @@ export default function UserDashboardPage() {
     router.push("/");
   };
 
-  const handleDownload = async (code: string) => {
-    toast.success(`Téléchargement de l'attestation ${code}...`);
-    // TODO: Implement PDF download
+  const handleDownload = async (att: any) => {
+    setDownloading(att.code);
+    toast.info(`Préparation de l'attestation ${att.code}...`);
+
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      const element = document.getElementById(`cert-template-dash-${att.id}`);
+      
+      if (!element) {
+        toast.error("Erreur technique : Template introuvable");
+        return;
+      }
+
+      const opt = {
+        margin: 0,
+        filename: `Attestation_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      toast.success("✅ Attestation téléchargée !");
+    } catch (error) {
+      console.error("PDF Error:", error);
+      toast.error("Erreur lors de la génération");
+    } finally {
+      setDownloading(null);
+    }
   };
 
   if (userLoading) {
@@ -84,34 +149,7 @@ export default function UserDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">FSA</span>
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-800">Espace Candidat</h1>
-              <p className="text-xs text-slate-500">Ferme St André</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2">
-              <User className="w-4 h-4 text-slate-400" />
-              <span className="text-sm font-medium text-slate-700">{user?.name}</span>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Déconnexion</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="space-y-8">
         {/* Welcome Card */}
         <Card className="p-6 bg-gradient-to-r from-emerald-500 to-blue-600 text-white shadow-lg">
           <div className="flex items-center justify-between">
@@ -124,6 +162,44 @@ export default function UserDashboardPage() {
             <Award className="w-16 h-16 text-white opacity-20 hidden sm:block" />
           </div>
         </Card>
+
+        {/* Section Smart Link - Clé Magique (Visible si aucune attestation liée) */}
+        {(!user?.attestations || user.attestations.length === 0) && (
+          <Card className="border-emerald-200 bg-emerald-50/30 overflow-hidden relative group transition-all duration-300 hover:shadow-lg">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <LinkIcon className="w-32 h-32 text-emerald-800 rotate-12" />
+            </div>
+            <CardHeader>
+              <CardTitle className="text-emerald-900 flex items-center gap-2">
+                <LinkIcon className="w-6 h-6" />
+                Récupérer mon dossier FSA
+              </CardTitle>
+              <CardDescription className="text-emerald-700/80">
+                Utilisez votre **code d'examen** (fourni par l'administration) pour lier automatiquement votre dossier et pré-remplir votre profil.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-4 max-w-2xl">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                  <Input 
+                    placeholder="Entrez les 5 derniers caractères (ex: 6ccab)..." 
+                    className="pl-10 border-emerald-200 focus:ring-emerald-500 font-mono uppercase"
+                    value={claimCode}
+                    onChange={(e) => setClaimCode(e.target.value)}
+                  />
+                </div>
+                <Button 
+                  onClick={handleClaimCode} 
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white min-w-[120px]"
+                  disabled={isClaiming}
+                >
+                  {isClaiming ? "Vérification..." : "Lier mon dossier"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -189,7 +265,7 @@ export default function UserDashboardPage() {
                 </h3>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{attestationsData?.attestations?.length || 0}</Badge>
-                  <Link href="/user/attestations">
+                  <Link href="/attestations">
                     <Button variant="ghost" size="sm">Voir tout</Button>
                   </Link>
                 </div>
@@ -236,10 +312,14 @@ export default function UserDashboardPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDownload(att.code)}
-                            disabled={att.status !== "VALIDATED"}
+                            onClick={() => handleDownload(att)}
+                            disabled={att.status !== "VALIDATED" || downloading === att.code}
                           >
-                            <Download className="w-4 h-4" />
+                            {downloading === att.code ? (
+                              <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -258,7 +338,7 @@ export default function UserDashboardPage() {
                 </h3>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{examsData?.stats?.completed || 0}</Badge>
-                  <Link href="/user/exams">
+                  <Link href="/exams">
                     <Button variant="ghost" size="sm">Voir tout</Button>
                   </Link>
                 </div>
@@ -340,7 +420,7 @@ export default function UserDashboardPage() {
                   </div>
                 </div>
               </div>
-              <Link href="/user/profile">
+              <Link href="/profile">
                 <Button variant="outline" className="w-full mt-4">
                   Voir le profil
                 </Button>
@@ -354,25 +434,25 @@ export default function UserDashboardPage() {
                 Actions rapides
               </h3>
               <div className="space-y-2">
-                <Link href="/user/attestations" className="block">
+                <Link href="/attestations" className="block">
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <FileText className="w-4 h-4" />
                     Mes attestations
                   </Button>
                 </Link>
-                <Link href="/user/exams" className="block">
+                <Link href="/exams" className="block">
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <BookOpen className="w-4 h-4" />
                     Passer un examen
                   </Button>
                 </Link>
-                <Link href="/user/internships" className="block">
+                <Link href="/internships" className="block">
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <Briefcase className="w-4 h-4" />
                     Candidatures stages
                   </Button>
                 </Link>
-                <Link href="/user/results" className="block">
+                <Link href="/results" className="block">
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <CheckCircle className="w-4 h-4" />
                     Mes résultats
@@ -400,7 +480,27 @@ export default function UserDashboardPage() {
             )}
           </div>
         </div>
-      </main>
+      {/* Templates cachés pour la génération PDF */}
+      <div className="hidden">
+        {attestationsData?.attestations?.filter((a: any) => a.status === "VALIDATED").map((att: any) => (
+          <CertificateTemplate 
+            key={att.id}
+            id={`cert-template-dash-${att.id}`}
+            data={{
+              fullName: att.fullName,
+              formationName: att.formation?.name || "Formation Saint André",
+              code: att.code,
+              issuedAt: att.issuedAt,
+              startDate: att.startDate,
+              endDate: att.endDate,
+              score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
+              hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
+              type: att.type,
+              gender: att.gender
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

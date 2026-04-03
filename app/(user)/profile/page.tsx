@@ -6,18 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { User, Mail, Phone, MapPin, Calendar, Lock, Save, CheckCircle, AlertCircle } from "lucide-react";
+import { AlertCircle, User, Mail, Phone, MapPin, Calendar, Lock, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import Link from "next/link";
+import { CorrectionModal } from "@/components/CorrectionModal";
 
 export default function UserProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  
+  // États de Correction
+  const [correctionField, setCorrectionField] = useState<{ field: string, label: string } | null>(null);
+  const [correctionValue, setCorrectionValue] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
 
   const { data: user, isLoading } = useQuery({
     queryKey: ["user-profile"],
@@ -37,6 +41,8 @@ export default function UserProfilePage() {
     email: "",
     phone: "",
     address: "",
+    birthDate: "",
+    birthPlace: "",
     oldPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -49,6 +55,8 @@ export default function UserProfilePage() {
         email: user.email || "",
         phone: user.phone || "",
         address: user.address || "",
+        birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : "",
+        birthPlace: user.birthPlace || "",
         oldPassword: "",
         newPassword: "",
         confirmPassword: "",
@@ -74,282 +82,205 @@ export default function UserProfilePage() {
       setIsEditing(false);
       toast.success("Profil mis à jour avec succès !");
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Erreur lors de la mise à jour");
+    onError: (error: any) => toast.error(error.message || "Erreur lors de la mise à jour"),
+  });
+
+  const correctionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/user/profile/correction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      setCorrectionField(null);
+      toast.success("Demande de correction envoyée !");
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (showPasswordForm) {
-      if (form.newPassword !== form.confirmPassword) {
-        toast.error("Les mots de passe ne correspondent pas");
-        return;
-      }
-      if (form.newPassword.length < 8) {
-        toast.error("Le mot de passe doit contenir au moins 8 caractères");
-        return;
-      }
-      updateMutation.mutate({
-        oldPassword: form.oldPassword,
-        newPassword: form.newPassword,
-      });
+      if (form.newPassword !== form.confirmPassword) return toast.error("Les mots de passe ne correspondent pas");
+      updateMutation.mutate({ oldPassword: form.oldPassword, newPassword: form.newPassword });
     } else {
       updateMutation.mutate({
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        address: form.address,
+        name: form.name, email: form.email, phone: form.phone,
+        address: form.address, birthDate: form.birthDate, birthPlace: form.birthPlace
       });
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
-          <p className="text-slate-500">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="p-8 text-center">Chargement...</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <header className="bg-white border-b shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-800">Mon Profil</h1>
-              <p className="text-xs text-slate-500">Gérez vos informations</p>
-            </div>
+    <div className="space-y-8 max-w-5xl mx-auto">
+      {/* En-tête */}
+      <Card className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-xl">
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md">
+            <User className="w-10 h-10" />
           </div>
-          <Link href="/user/dashboard">
-            <Button variant="outline" size="sm">← Retour</Button>
-          </Link>
+          <div>
+            <h2 className="text-3xl font-bold">{user?.name}</h2>
+            <p className="text-blue-100 opacity-80">{user?.email}</p>
+            <Badge className="mt-3 bg-white/20 hover:bg-white/30 border-none px-3 py-1">Candidat FSA</Badge>
+          </div>
         </div>
-      </header>
+      </Card>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Info Card */}
-        <Card className="p-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center">
-              <User className="w-10 h-10" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold">{user?.name || "Candidat"}</h2>
-              <p className="text-blue-100">{user?.email}</p>
-              <Badge className="mt-2 bg-white/20 text-white border-white/30">
-                {user?.role === "USER" ? "Candidat" : user?.role}
-              </Badge>
-            </div>
-          </div>
-        </Card>
-
-        {/* Form */}
-        <Card className="p-6 bg-white shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-500" />
-              Informations personnelles
-            </h3>
+      {/* Formulaire Informations Personnelles */}
+      <Card className="p-8 bg-white shadow-md border-slate-100 relative overflow-hidden">
+        <div className="flex items-center justify-between mb-8 border-b pb-4">
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <User className="w-6 h-6 text-blue-600" />
+            Détails du Profil
+          </h3>
+          <div className="flex gap-2">
             {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)} size="sm">
-                Modifier
-              </Button>
+              <Button onClick={() => setIsEditing(true)}>Modifier</Button>
             ) : (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                  Annuler
+              <>
+                <Button variant="ghost" onClick={() => setIsEditing(false)}>Annuler</Button>
+                <Button onClick={handleSubmit} disabled={updateMutation.isPending} className="bg-blue-600 shadow-lg shadow-blue-200">
+                  <Save className="w-4 h-4 mr-2" /> Enregistrer
                 </Button>
-                <Button size="sm" onClick={handleSubmit} disabled={updateMutation.isPending}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Enregistrer
-                </Button>
-              </div>
+              </>
             )}
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name" className="text-sm font-semibold text-slate-700">
-                <User className="w-4 h-4 inline mr-1" />
-                Nom complet
-              </Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                disabled={!isEditing}
-                className="mt-1.5 h-11"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          <ProfileField 
+            label="Nom complet" value={form.name} id="name" icon={User}
+            isEditing={isEditing} 
+            onChange={(v: string) => setForm({...form, name: v})}
+            onCorrection={() => { setCorrectionField({ field: "fullName", label: "Nom complet" }); setCorrectionValue(form.name); }}
+          />
+          <ProfileField 
+            label="Email" value={form.email} id="email" icon={Mail}
+            isEditing={isEditing} 
+            onChange={(v: string) => setForm({...form, email: v})}
+          />
+          <ProfileField 
+            label="Téléphone" value={form.phone} id="phone" icon={Phone}
+            isEditing={isEditing} 
+            onChange={(v: string) => setForm({...form, phone: v})}
+          />
+          <ProfileField 
+            label="Adresse" value={form.address} id="address" icon={MapPin}
+            isEditing={isEditing} 
+            onChange={(v: string) => setForm({...form, address: v})}
+          />
+          <ProfileField 
+            label="Date de naissance" value={form.birthDate} id="birthDate" icon={Calendar}
+            isEditing={isEditing} type="date"
+            onChange={(v: string) => setForm({...form, birthDate: v})}
+            onCorrection={() => { setCorrectionField({ field: "birthDate", label: "Date de naissance" }); setCorrectionValue(form.birthDate); }}
+          />
+          <ProfileField 
+            label="Lieu de naissance" value={form.birthPlace} id="birthPlace" icon={MapPin}
+            isEditing={isEditing} 
+            onChange={(v: string) => setForm({...form, birthPlace: v})}
+            onCorrection={() => { setCorrectionField({ field: "birthPlace", label: "Lieu de naissance" }); setCorrectionValue(form.birthPlace); }}
+          />
+        </div>
+      </Card>
 
-            <div>
-              <Label htmlFor="email" className="text-sm font-semibold text-slate-700">
-                <Mail className="w-4 h-4 inline mr-1" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                disabled={!isEditing}
-                className="mt-1.5 h-11"
-              />
-            </div>
+      {/* Section Sécurité */}
+      <Card className="p-8 bg-white shadow-md border-slate-100">
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Lock className="w-6 h-6 text-indigo-600" /> Sécurité & Mot de passe
+          </h3>
+          <Button variant="outline" onClick={() => setShowPasswordForm(!showPasswordForm)}>
+            {showPasswordForm ? "Masquer" : "Changer mon mot de passe"}
+          </Button>
+        </div>
 
-            <div>
-              <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">
-                <Phone className="w-4 h-4 inline mr-1" />
-                Téléphone
-              </Label>
-              <Input
-                id="phone"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                disabled={!isEditing}
-                className="mt-1.5 h-11"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="address" className="text-sm font-semibold text-slate-700">
-                <MapPin className="w-4 h-4 inline mr-1" />
-                Adresse
-              </Label>
-              <Input
-                id="address"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                disabled={!isEditing}
-                className="mt-1.5 h-11"
-              />
-            </div>
+        {showPasswordForm ? (
+          <form className="space-y-6 max-w-2xl animate-in fade-in slide-in-from-top-2 duration-300">
+             <div className="space-y-4">
+                <Label>Ancien mot de passe</Label>
+                <Input type="password" value={form.oldPassword} onChange={e => setForm({...form, oldPassword: e.target.value})} className="h-11" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nouveau mot de passe</Label>
+                    <Input type="password" value={form.newPassword} onChange={e => setForm({...form, newPassword: e.target.value})} className="h-11" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirmer</Label>
+                    <Input type="password" value={form.confirmPassword} onChange={e => setForm({...form, confirmPassword: e.target.value})} className="h-11" />
+                  </div>
+                </div>
+             </div>
+             <Button onClick={handleSubmit} disabled={updateMutation.isPending} className="w-full h-11 bg-indigo-600">
+               {updateMutation.isPending ? "Modification..." : "Mettre à jour le mot de passe"}
+             </Button>
+          </form>
+        ) : (
+          <div className="p-4 bg-slate-50 rounded-xl flex items-center gap-4 text-slate-600 border border-slate-100 italic">
+            <Lock className="w-5 h-5 text-slate-400" /> Vos accès sont protégés de bout en bout.
           </div>
+        )}
+      </Card>
 
-          {user?.birthDate && (
-            <div className="mt-4 pt-4 border-t">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700">
-                    <Calendar className="w-4 h-4 inline mr-1" />
-                    Date de naissance
-                  </Label>
-                  <p className="mt-1.5 text-sm text-slate-600">
-                    {new Date(user.birthDate).toLocaleDateString("fr-FR")}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700">
-                    <MapPin className="w-4 h-4 inline mr-1" />
-                    Lieu de naissance
-                  </Label>
-                  <p className="mt-1.5 text-sm text-slate-600">
-                    {user.birthPlace || "-"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </Card>
+      <CorrectionModal
+        field={correctionField}
+        value={correctionValue}
+        reason={correctionReason}
+        onValueChange={setCorrectionValue}
+        onReasonChange={setCorrectionReason}
+        onClose={() => setCorrectionField(null)}
+        onSubmit={() => correctionMutation.mutate({ 
+          field: correctionField?.field, newValue: correctionValue, 
+          reason: correctionReason, attestationId: user?.attestations?.[0]?.id 
+        })}
+        isPending={correctionMutation.isPending}
+      />
+    </div>
+  );
+}
 
-        {/* Password */}
-        <Card className="p-6 bg-white shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-blue-500" />
-              Sécurité
-            </h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setShowPasswordForm(!showPasswordForm);
-                setIsEditing(true);
-              }}
-            >
-              {showPasswordForm ? "Annuler" : "Changer le mot de passe"}
-            </Button>
-          </div>
+// Sous-composant pour les champs du profil (lisibilité)
+interface ProfileFieldProps {
+  label: string;
+  value: string;
+  id: string;
+  icon: any;
+  isEditing: boolean;
+  onChange: (value: string) => void;
+  type?: string;
+  onCorrection?: () => void;
+}
 
-          {showPasswordForm && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="oldPassword" className="text-sm font-semibold text-slate-700">
-                  Ancien mot de passe
-                </Label>
-                <Input
-                  id="oldPassword"
-                  type="password"
-                  value={form.oldPassword}
-                  onChange={(e) => setForm({ ...form, oldPassword: e.target.value })}
-                  className="mt-1.5 h-11"
-                  required={showPasswordForm}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="newPassword" className="text-sm font-semibold text-slate-700">
-                    Nouveau mot de passe
-                  </Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={form.newPassword}
-                    onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-                    className="mt-1.5 h-11"
-                    required={showPasswordForm}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700">
-                    Confirmer le mot de passe
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={form.confirmPassword}
-                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                    className="mt-1.5 h-11"
-                    required={showPasswordForm}
-                  />
-                </div>
-              </div>
-              <Button type="submit" disabled={updateMutation.isPending} className="gap-2">
-                {updateMutation.isPending ? (
-                  <>
-                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    Modification...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4" />
-                    Changer le mot de passe
-                  </>
-                )}
-              </Button>
-            </form>
-          )}
-
-          {!showPasswordForm && (
-            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
-              <Lock className="w-5 h-5 text-slate-400" />
-              <div>
-                <p className="text-sm font-medium text-slate-700">Mot de passe actuel</p>
-                <p className="text-xs text-slate-500">••••••••</p>
-              </div>
-            </div>
-          )}
-        </Card>
-      </main>
+function ProfileField({ label, value, id, icon: Icon, isEditing, onChange, type = "text", onCorrection }: ProfileFieldProps) {
+  return (
+    <div className="space-y-1.5 transition-all duration-200">
+      <Label htmlFor={id} className="text-sm font-semibold text-slate-600 flex items-center gap-1.5 ml-1">
+        <Icon className="w-3.5 h-3.5" /> {label}
+      </Label>
+      <div className="flex gap-2 items-center group">
+        <Input
+          id={id} type={type} value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={!isEditing}
+          className={`h-11 flex-1 transition-colors ${!isEditing ? "bg-slate-50/50 border-transparent text-slate-800 font-medium" : "bg-white border-blue-200 ring-blue-100"}`}
+        />
+        {!isEditing && onCorrection && (
+          <Button 
+            variant="ghost" size="icon" 
+            className="w-11 h-11 rounded-lg text-slate-300 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
+            onClick={onCorrection}
+            title="Signaler une erreur sur ce champ"
+          >
+            <AlertCircle className="w-5 h-5" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

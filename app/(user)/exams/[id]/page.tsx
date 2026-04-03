@@ -76,7 +76,7 @@ export default function ExamSessionPage() {
     },
     onSuccess: () => {
       toast.success("✅ Examen soumis avec succès !");
-      router.push("/user/exams/results");
+      router.push("/results");
     },
     onError: (error: any) => {
       toast.error(error.message || "Erreur lors de la soumission");

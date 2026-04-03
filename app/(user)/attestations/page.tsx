@@ -5,12 +5,18 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Search, Filter, X, QrCode } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
+import dynamic from "next/dynamic";
+import CertificateTemplate from "@/components/CertificateTemplate";
+import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
+
+// Import dynamique de html2pdf pour éviter les erreurs SSR
+const html2pdf = dynamic(() => import("html2pdf.js"), { ssr: false });
 import {
   Select,
   SelectContent,
@@ -27,11 +33,13 @@ import {
 
 export default function UserAttestationsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedAttestation, setSelectedAttestation] = useState<any>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["user-attestations"],
@@ -46,9 +54,44 @@ export default function UserAttestationsPage() {
     staleTime: 2 * 60 * 1000,
   });
 
-  const handleDownload = async (code: string) => {
-    toast.success(`Téléchargement de l'attestation ${code}...`);
-    // TODO: Implement actual PDF download
+  const handleDownload = async (att: any) => {
+    setDownloading(att.code);
+    toast.info(`Préparation de l'attestation ${att.code}...`);
+
+    try {
+      // Importation dynamique côté client uniquement
+      const html2pdf = (await import("html2pdf.js")).default;
+      
+      // On attend un court instant pour s'assurer que le template soit bien dans le DOM si nécessaire
+      // Bien qu'ici on le crée à la volée ou on utilise un ID unique
+      const element = document.getElementById(`cert-template-${att.id}`);
+      
+      if (!element) {
+        toast.error("Erreur technique : Template introuvable");
+        return;
+      }
+
+      const opt = {
+        margin: 0,
+        filename: `Attestation_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      toast.success("✅ Attestation téléchargée !");
+    } catch (error) {
+      console.error("PDF Error:", error);
+      toast.error("Erreur lors de la génération du PDF");
+    } finally {
+      setDownloading(null);
+    }
   };
 
   const filteredAttestations = data?.attestations?.filter((att: any) => {
@@ -78,37 +121,20 @@ export default function UserAttestationsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
-          <p className="text-slate-500">Chargement...</p>
+      <div className="space-y-8">
+        <div className="space-y-4">
+           <SkeletonStats />
+        </div>
+        <Card className="p-4 bg-white shadow-sm h-16 animate-pulse" />
+        <div className="grid grid-cols-1 gap-4">
+          {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">FSA</span>
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-800">Mes Attestations</h1>
-              <p className="text-xs text-slate-500">Retrouvez toutes vos attestations</p>
-            </div>
-          </div>
-          <Link href="/user/dashboard">
-            <Button variant="outline" size="sm">← Retour</Button>
-          </Link>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="space-y-8">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4 bg-white shadow-sm">
@@ -226,7 +252,28 @@ export default function UserAttestationsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <Link href={`/attestations/${att.id}`}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onMouseEnter={() => {
+                          queryClient.prefetchQuery({
+                            queryKey: ["user-attestation", att.id],
+                            queryFn: async () => {
+                                const res = await fetch(`/api/attestations/${att.id}`);
+                                return res.json();
+                              },
+                            staleTime: 5 * 60 * 1000,
+                          });
+                        }}
+                        className="gap-2 group shadow-sm hover:border-emerald-200 transition-all"
+                        disabled={att.status !== "VALIDATED"}
+                      >
+                        <Eye className="w-4 h-4 text-slate-400 group-hover:text-emerald-500" />
+                        <span className="group-hover:text-emerald-600">Voir l'aperçu</span>
+                      </Button>
+                    </Link>
                     <Button
                       variant="outline"
                       size="sm"
@@ -234,16 +281,25 @@ export default function UserAttestationsPage() {
                         setSelectedAttestation(att);
                         setQrDialogOpen(true);
                       }}
+                      title="Partager le QR Code"
+                      aria-label={`Partager le QR Code de l'attestation ${att.code}`}
                     >
                       <QrCode className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDownload(att.code)}
-                      disabled={att.status !== "VALIDATED"}
+                      onClick={() => handleDownload(att)}
+                      disabled={att.status !== "VALIDATED" || downloading === att.code}
+                      className="gap-2"
+                      title="Télécharger en PDF"
+                      aria-label={`Télécharger l'attestation ${att.code} au format PDF`}
                     >
-                      <Download className="w-4 h-4" />
+                      {downloading === att.code ? (
+                        <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -251,7 +307,6 @@ export default function UserAttestationsPage() {
             ))}
           </div>
         )}
-      </main>
 
       {/* QR Code Dialog */}
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
@@ -279,6 +334,28 @@ export default function UserAttestationsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Templates cachés pour la génération PDF */}
+      <div className="hidden">
+        {data?.attestations?.filter((a: any) => a.status === "VALIDATED").map((att: any) => (
+          <CertificateTemplate 
+            key={att.id}
+            id={`cert-template-${att.id}`}
+            data={{
+              fullName: att.fullName,
+              formationName: att.formation?.name || "Formation Saint André",
+              code: att.code,
+              issuedAt: att.issuedAt,
+              startDate: att.startDate,
+              endDate: att.endDate,
+              score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
+              hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
+              type: att.type,
+              gender: att.gender
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
