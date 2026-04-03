@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { z } from 'zod';
 
 // Schéma de validation pour la mise à jour d'une attestation
@@ -34,7 +34,10 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdminAuthenticated())) {
+  const user = await getCurrentUser(request);
+  const isAdmin = await isAdminAuthenticated(request);
+  
+  if (!user && !isAdmin) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
@@ -46,9 +49,16 @@ export async function GET(
         formation: { select: { name: true, category: true, description: true, skills: true } }
       }
     });
+
     if (!attestation) {
       return NextResponse.json({ message: 'Attestation non trouvée' }, { status: 404 });
     }
+
+    // Sécurité: Un simple utilisateur ne peut voir que SA propre attestation
+    if (!isAdmin && attestation.userId !== user?.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
     return NextResponse.json(attestation);
   } catch (error) {
     console.error("Erreur lors de la récupération de l'attestation:", error);

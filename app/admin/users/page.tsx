@@ -74,6 +74,8 @@ export default function AdminUsersPage() {
   const [saving, setSaving] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -172,15 +174,19 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/users/${deleteId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erreur lors de la suppression");
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setUsers((prev) => prev.filter((u) => u.id !== deleteId));
       toast.success("Utilisateur supprimé !");
     } catch (err: any) {
       toast.error(err.message || "Erreur inconnue");
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -414,7 +420,7 @@ export default function AdminUsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(u.id)}
+                          onClick={() => setDeleteId(u.id)}
                           className="text-rose-600 hover:text-rose-700"
                           title="Supprimer"
                         >
@@ -521,6 +527,45 @@ export default function AdminUsersPage() {
           )}
           <AlertDialogFooter>
             <AlertDialogCancel>Fermer</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
+              <Trash2 className="w-6 h-6" />
+              Supprimer l'utilisateur ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+              Cette action supprimera définitivement le compte de l'utilisateur. 
+              <span className="block mt-2 font-bold text-rose-600 underline">Ses données d'examen et son historique seront perdus.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel 
+              disabled={isDeleting}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression en cours...
+                </>
+              ) : (
+                "Confirmer la suppression"
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

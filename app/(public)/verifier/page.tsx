@@ -8,6 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ShieldCheck, XCircle, Sparkles, Loader2 } from "lucide-react";
 import CertificateTemplate from "@/components/CertificateTemplate";
 import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 // Confetti simple (SVG fallback)
 
 const schema = z.object({
@@ -94,141 +96,142 @@ function VerifierContent() {
       const timeout = setTimeout(() => setShowConfetti(false), 3000);
       return () => clearTimeout(timeout);
     }
-  }, [showConfetti]);
+  }, [showConfetti]);  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0f172a] relative overflow-hidden p-4">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 rounded-full blur-[120px]" />
+      <div className="absolute top-[20%] right-[10%] w-[20%] h-[20%] bg-purple-600/5 rounded-full blur-[80px]" />
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-      <div className="w-full max-w-xl mx-auto bg-white/60 backdrop-blur-md border border-gray-200 rounded-2xl shadow-xl p-8 flex flex-col items-center animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <ShieldCheck className="w-8 h-8 text-green-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Vérifier une Attestation</h1>
-        </div>
-        {/* Formulaire */}
-        <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col gap-4 mb-6">
-          <label htmlFor="code" className="text-sm font-medium text-gray-700">Code d'attestation</label>
-          <input
-            id="code"
-            type="text"
-            placeholder="3f8b6 ou FSA-2025-M07-00001-3f8b6"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-lg bg-white/80 backdrop-blur"
-            {...register("code")}
-            autoComplete="off"
-            disabled={loading}
-          />
-          <p className="text-xs text-gray-500 mt-1">Vous pouvez saisir les 5 derniers caractères du code ou le code complet.</p>
-          {errors.code && <span className="text-red-600 text-sm">{errors.code.message}</span>}
-          <button
-            type="submit"
-            className="w-full py-3 mt-2 rounded-lg bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold text-lg shadow-lg hover:scale-105 hover:shadow-2xl focus:scale-105 transition-transform duration-150 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-60"
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : "Vérifier"}
-          </button>
-        </form>
-        {/* Résultat */}
-        {result && (
-          (() => {
-            let color = "green";
-            let message = "Attestation validée";
-            let subtitle = "Félicitations !";
-            let badgeClass = "bg-green-600";
-            let textClass = "text-green-900";
-            let borderClass = "border-green-200";
-            let infoClass = "text-green-700";
-            if (result.status === "PENDING") {
-              color = "yellow";
-              message = "Attestation en attente de validation";
-              subtitle = "Cette attestation n'a pas encore été validée.";
-              badgeClass = "bg-yellow-500";
-              textClass = "text-yellow-900";
-              borderClass = "border-yellow-300";
-              infoClass = "text-yellow-700";
-            } else if (result.status === "REJECTED") {
-              color = "red";
-              message = "Attestation rejetée";
-              subtitle = "Cette attestation a été refusée.";
-              badgeClass = "bg-red-600";
-              textClass = "text-red-900";
-              borderClass = "border-red-200";
-              infoClass = "text-red-700";
-            }
-            return (
-              <div className={`w-full animate-fade-in-up rounded-xl ${borderClass} bg-white/70 backdrop-blur-md p-6 mt-2 ${textClass} relative overflow-hidden`}>
-                {/* Confetti SVG simple */}
-                {showConfetti && color === "green" && (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 400 120" fill="none">
-                    <circle cx="40" cy="30" r="6" fill="#16a34a" opacity="0.7" />
-                    <circle cx="120" cy="20" r="4" fill="#facc15" opacity="0.7" />
-                    <circle cx="200" cy="35" r="7" fill="#2563eb" opacity="0.7" />
-                    <circle cx="300" cy="25" r="5" fill="#f59e42" opacity="0.7" />
-                    <circle cx="360" cy="40" r="6" fill="#16a34a" opacity="0.7" />
-                    <circle cx="80" cy="60" r="5" fill="#f59e42" opacity="0.7" />
-                    <circle cx="250" cy="60" r="4" fill="#facc15" opacity="0.7" />
-                    <circle cx="340" cy="70" r="6" fill="#2563eb" opacity="0.7" />
-                  </svg>
-                )}
-                {/* Illustration de succès/attente/refus */}
-                <div className="flex items-center gap-4 mb-4">
-                  <svg viewBox="0 0 60 60" width={60} height={60} aria-hidden className="drop-shadow-lg">
-                    <circle cx="30" cy="30" r="28" fill="#f0fdf4" stroke={color === "green" ? "#16a34a" : color === "yellow" ? "#facc15" : "#dc2626"} strokeWidth="3" />
-                    <ShieldCheck x="15" y="15" width="30" height="30" color={color === "green" ? "#16a34a" : color === "yellow" ? "#facc15" : "#dc2626"} />
-                    {color === "green" && <Sparkles x="38" y="10" width="16" height="16" color="#facc15" />}
-                  </svg>
-                  <div>
-                    <span className={`inline-block px-3 py-1 rounded-full ${badgeClass} text-white text-sm font-bold animate-pulse`}>{message}</span>
-                    <div className={`text-lg font-bold mt-1 ${textClass}`}>{subtitle}</div>
-                  </div>
-                </div>
-                {/* Info de base */}
-                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-                    <div className="p-3 bg-slate-50 rounded-lg">
-                        <span className="block text-[10px] font-black text-slate-400 uppercase">Détenteur</span>
-                        <span className="font-bold text-slate-900">{result.fullName}</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-lg">
-                        <span className="block text-[10px] font-black text-slate-400 uppercase">Formation</span>
-                        <span className="font-bold text-slate-900 truncate block">{result.formation?.name || '-'}</span>
-                    </div>
-                </div>
-
-                {result.status === "VALIDATED" && (
-                    <div className="mt-6 pt-6 border-t border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-center italic">Aperçu officiel du document</p>
-                        <div className="overflow-hidden rounded-xl border border-slate-200 shadow-inner flex justify-center bg-slate-50 p-4">
-                            <div className="scale-[0.35] origin-top mb-[-480px]">
-                                <CertificateTemplate 
-                                    data={{
-                                        fullName: result.fullName,
-                                        formationName: result.formation?.name || "Formation Professionnelle",
-                                        code: codeParam || "",
-                                        issuedAt: new Date().toISOString(),
-                                        startDate: result.startDate,
-                                        endDate: result.endDate,
-                                        type: result.type
-                                    }}
-                                    settings={settings}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
-                
-                <div className={`mt-4 ${infoClass} text-xs italic text-center`}>La Ferme St André s’engage pour la confiance et la transparence de vos parcours professionnels.</div>
-              </div>
-            );
-          })()
-        )}
-        {error && (
-          <div className="w-full animate-fade-in rounded-xl border border-red-200 bg-red-50 p-6 mt-2 text-red-900 flex items-center gap-2">
-            <XCircle className="w-6 h-6 text-red-600" />
-            <span className="font-bold">{error}</span>
+      <div className="w-full max-w-2xl mx-auto z-20">
+        <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] p-10 flex flex-col items-center animate-in fade-in zoom-in duration-700">
+          
+          {/* Header Area */}
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-400 to-blue-600 p-0.5 mb-8 shadow-2xl shadow-emerald-500/20 group hover:rotate-6 transition-transform duration-500">
+            <div className="w-full h-full bg-[#0f172a] rounded-[1.4rem] flex items-center justify-center">
+              <ShieldCheck className="w-10 h-10 text-emerald-400 group-hover:scale-110 transition-transform duration-500" />
+            </div>
           </div>
-        )}
+
+          <div className="text-center mb-10 space-y-2">
+            <h1 className="text-4xl font-black text-white tracking-tighter">Vérification FSA</h1>
+            <p className="text-slate-400 font-medium">Authentifiez instantanément un certificat officiel</p>
+          </div>
+
+          {/* Form Area */}
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-6 mb-8 group">
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
+              <input
+                id="code"
+                type="text"
+                placeholder="Ex: 3f8b6 ou FSA-2026..."
+                className="relative w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-xl font-mono text-white placeholder:text-slate-600 backdrop-blur-xl transition-all"
+                {...register("code")}
+                autoComplete="off"
+                disabled={loading}
+              />
+            </div>
+            
+            <button
+              type="submit"
+              className="w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-blue-600 text-white font-black text-lg shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)] hover:shadow-[0_20px_40px_-5px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 text-emerald-200" />
+                  Analyser le code
+                </>
+              )}
+            </button>
+            <p className="text-center text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Service de certification Ferme St André</p>
+          </form>
+
+          {/* Results Area */}
+          {result && (
+            <div className="w-full animate-in slide-in-from-top-4 fade-in duration-500">
+               <div className={`relative overflow-hidden rounded-3xl border ${result.status === 'VALIDATED' ? 'border-emerald-500/30 bg-emerald-500/5' : result.status === 'PENDING' ? 'border-amber-500/30 bg-amber-500/5' : 'border-rose-500/30 bg-rose-500/5'} p-8 backdrop-blur-3xl`}>
+                  
+                  {/* Status Badge Group */}
+                  <div className="flex items-center gap-5 mb-8">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl ${result.status === 'VALIDATED' ? 'bg-emerald-500 text-white shadow-emerald-500/20' : result.status === 'PENDING' ? 'bg-amber-500 text-white shadow-amber-500/20' : 'bg-rose-500 text-white shadow-rose-500/20'}`}>
+                      {result.status === 'VALIDATED' ? <ShieldCheck className="w-8 h-8" /> : <XCircle className="w-8 h-8" />}
+                    </div>
+                    <div>
+                      <Badge className={`border-none px-4 py-1.5 text-[10px] font-black uppercase tracking-widest ${result.status === 'VALIDATED' ? 'bg-emerald-500/20 text-emerald-400' : result.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                        {result.status === 'VALIDATED' ? 'Attestation Authentifiée' : result.status === 'PENDING' ? 'En cours de validation' : 'Authenticité Réfutée'}
+                      </Badge>
+                      <h3 className="text-xl font-bold text-white mt-1">
+                        {result.status === 'VALIDATED' ? 'Document Officiel' : result.status === 'PENDING' ? 'Dossier en traitement' : 'Document Invalide'}
+                      </h3>
+                    </div>
+                  </div>
+
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Détenteur</span>
+                        <span className="text-white font-bold">{result.fullName}</span>
+                      </div>
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Type</span>
+                        <span className="text-white font-bold truncate block">{result.type} • {result.formation?.name || "Formation"}</span>
+                      </div>
+                  </div>
+
+                  {/* Certificate Preview (Mini) */}
+                  {result.status === "VALIDATED" && (
+                    <div className="space-y-4">
+                       <p className="text-center text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperçu du certificat sécurisé</p>
+                       <div className="bg-white rounded-xl overflow-hidden shadow-2xl relative group">
+                          <div className="scale-[0.38] origin-top mb-[-460px] opacity-90 group-hover:opacity-100 transition-opacity">
+                              <CertificateTemplate 
+                                  data={{
+                                      fullName: result.fullName,
+                                      formationName: result.formation?.name || "Formation Professionnelle",
+                                      code: codeParam || "",
+                                      issuedAt: new Date().toISOString(),
+                                      startDate: result.startDate,
+                                      endDate: result.endDate,
+                                      type: result.type
+                                  }}
+                                  settings={settings}
+                              />
+                          </div>
+                       </div>
+                    </div>
+                  )}
+
+                  <div className="mt-8 text-center">
+                    <p className="text-[10px] text-slate-500 italic">Plateforme de confiance Saint André © 2026</p>
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="w-full animate-in slide-in-from-bottom-4 fade-in duration-500 mt-6">
+               <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-rose-400 flex items-center gap-4">
+                  <XCircle className="w-8 h-8 shrink-0" />
+                  <div className="font-bold">{error}</div>
+               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Nav Optional */}
+        <div className="mt-12 flex justify-center gap-8">
+            <Link href="/" className="text-slate-500 hover:text-white transition-colors text-sm font-bold">Accueil</Link>
+            <Link href="/faq" className="text-slate-500 hover:text-white transition-colors text-sm font-bold">Support</Link>
+            <Link href="/admin/login" className="text-slate-500 hover:text-white transition-colors text-sm font-bold">Admin Portal</Link>
+        </div>
       </div>
     </div>
   );
-} 
+}
 
 export default function VerifierPage() {
   return (

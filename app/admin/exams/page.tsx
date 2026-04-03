@@ -35,6 +35,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Exam = {
   id: string;
@@ -52,6 +62,8 @@ export default function AdminExamsPage() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchExams();
@@ -69,15 +81,19 @@ export default function AdminExamsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cet examen ?")) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/exams/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/exams/${deleteId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erreur lors de la suppression");
-      setExams((prev) => prev.filter((e) => e.id !== id));
+      setExams((prev) => prev.filter((e) => e.id !== deleteId));
       toast.success("Examen supprimé !");
     } catch (err: any) {
       toast.error(err.message || "Erreur inconnue");
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -199,7 +215,7 @@ export default function AdminExamsPage() {
                                 <Link href={`/admin/submissions?examId=${exam.id}`}>Voir les résultats</Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={() => handleDelete(exam.id)}
+                                onClick={() => setDeleteId(exam.id)}
                                 className="text-rose-600 focus:text-rose-700 focus:bg-rose-50"
                               >
                                 Supprimer
@@ -216,6 +232,45 @@ export default function AdminExamsPage() {
           </Table>
         </div>
       </Card>
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
+              <Trash2 className="w-6 h-6" />
+              Supprimer cet examen ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+              Toutes les questions et configurations liées à cet examen seront supprimées du système. 
+              <span className="block mt-2 font-bold text-rose-600 underline">Cette action ne peut pas être annulée.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel 
+              disabled={isDeleting}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression en cours...
+                </>
+              ) : (
+                "Confirmer la suppression"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

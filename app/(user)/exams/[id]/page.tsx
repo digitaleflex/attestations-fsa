@@ -13,6 +13,17 @@ import {
   Clock, AlertCircle, CheckCircle, ChevronRight, ChevronLeft, 
   BookOpen, FileText, PenTool, Eye, Save
 } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -31,6 +42,7 @@ export default function ExamSessionPage() {
   const [showInstructions, setShowInstructions] = useState(true);
   const [showPart3Subject, setShowPart3Subject] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout>();
@@ -125,10 +137,6 @@ export default function ExamSessionPage() {
   const handleSubmit = () => {
     if (isSubmitting) return;
     
-    if (!confirm("Êtes-vous sûr de vouloir soumettre votre examen ?")) {
-      return;
-    }
-
     setIsSubmitting(true);
     submitMutation.mutate(answers);
     
@@ -218,8 +226,8 @@ export default function ExamSessionPage() {
                     )}
                   </ul>
                   <p className="mt-3 font-semibold">
-                    🎯 Note minimale requise : <span className="text-emerald-700">
-                      {Math.round((exam?.passingScore / 100) * exam?.totalPoints)}/{exam?.totalPoints} ({exam?.passingScore}%)
+                    🎯 Note minimale requise : <span className="text-emerald-700 font-bold">
+                      {exam?.passingScore || 65}% soit {Math.round(((exam?.passingScore || 65) / 100) * 20)}/20
                     </span> pour obtenir l'attestation
                   </p>
                 </AlertDescription>
@@ -284,12 +292,12 @@ export default function ExamSessionPage() {
     );
   }
 
-  // Exam Interface
-  const questions = exam?.questions || [];
-  const part1Questions = questions.filter((q: any) => q.part === 1);
-  const part2Questions = questions.filter((q: any) => q.part === 2);
+  // Exam Interface - Extraction des questions depuis les parties
+  const parts = exam?.parts || [];
+  const part1Questions = parts.find((p: any) => p.order === 1 || p.type === "QCM")?.questions || [];
+  const part2Questions = parts.find((p: any) => p.order === 2 || p.type === "OPEN")?.questions || [];
   const hasPart3 = exam?.part3Enabled ?? true;
-  const part3Mode = exam?.part3Mode || "digital"; // "digital" or "physical"
+  const part3Mode = exam?.part3Mode || "digital"; 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -349,7 +357,7 @@ export default function ExamSessionPage() {
               <div>
                 <h2 className="text-xl font-bold text-slate-800">Partie 1 - QCM</h2>
                 <p className="text-sm text-slate-500">
-                  {part1Questions.length} questions • 20 points
+                  {part1Questions.length} questions • {exam?.part1Points || 20} points
                 </p>
               </div>
             </div>
@@ -440,7 +448,7 @@ export default function ExamSessionPage() {
               <div>
                 <h2 className="text-xl font-bold text-slate-800">Partie 2 - Questions ouvertes</h2>
                 <p className="text-sm text-slate-500">
-                  {part2Questions.length} questions • 40 points
+                  {part2Questions.length} questions • {exam?.part2Points || 40} points
                 </p>
               </div>
             </div>
@@ -498,13 +506,42 @@ export default function ExamSessionPage() {
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Terminer l'examen
-                  </Button>
+                  <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 shadow-lg shadow-emerald-200"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Terminer l'examen
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-emerald-600 font-bold text-xl">
+                          <CheckCircle className="w-6 h-6" />
+                          Soumettre l'examen ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+                          Vous êtes sur le point de finaliser votre session. 
+                          Assurez-vous d'avoir répondu à toutes les questions avant de confirmer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="mt-6 gap-3">
+                        <AlertDialogCancel className="border-slate-200 text-slate-600 hover:bg-slate-50">
+                          Continuer l'examen
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSubmit();
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200"
+                        >
+                          Oui, soumettre maintenant
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
             </div>
@@ -521,7 +558,7 @@ export default function ExamSessionPage() {
               <div>
                 <h2 className="text-xl font-bold text-slate-800">Partie 3 - Étude de cas</h2>
                 <p className="text-sm text-slate-500">
-                  40 points • {part3Mode === "digital" ? "Réponse numérique" : "Feuilles de composition"}
+                  {exam?.part3Points || 40} points • {part3Mode === "digital" ? "Réponse numérique" : "Feuilles de composition"}
                 </p>
               </div>
             </div>

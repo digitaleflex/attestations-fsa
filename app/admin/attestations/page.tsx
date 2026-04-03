@@ -14,6 +14,16 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Attestation = {
   id: string;
@@ -33,6 +43,8 @@ export default function AdminAttestationsPage() {
   const [type, setType] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Statistiques
   const stats = {
@@ -71,14 +83,18 @@ export default function AdminAttestationsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette attestation ?")) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await apiFetch(`/api/attestations/${id}`, { method: "DELETE" });
-      setAttestations((prev) => prev.filter((a) => a.id !== id));
+      await apiFetch(`/api/attestations/${deleteId}`, { method: "DELETE" });
+      setAttestations((prev) => prev.filter((a) => a.id !== deleteId));
       toast.success("Attestation supprimée !");
     } catch (err: any) {
-      // toast is already handled by apiFetch
+      // Error handled by apiFetch
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -367,7 +383,7 @@ export default function AdminAttestationsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(a.id)}
+                      onClick={() => setDeleteId(a.id)}
                       className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -428,7 +444,7 @@ export default function AdminAttestationsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(a.id)}
+                          onClick={() => setDeleteId(a.id)}
                           className="text-rose-600 hover:text-rose-700"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -443,6 +459,46 @@ export default function AdminAttestationsPage() {
         </>
       ) }
       </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
+              <Trash2 className="w-6 h-6" />
+              Confirmer la suppression
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+              Cette action est <span className="font-bold text-slate-900">irréversible</span>. 
+              L'attestation sera définitivement supprimée du système et ne pourra plus être vérifiée par QR Code.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 gap-3">
+            <AlertDialogCancel 
+              disabled={isDeleting}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression en cours...
+                </>
+              ) : (
+                "Supprimer définitivement"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

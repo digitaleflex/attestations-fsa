@@ -46,6 +46,8 @@ export interface ExamFormData {
   part2Enabled?: boolean;
   part3Enabled?: boolean;
   parts: Part[];
+  randomizeQuestions?: boolean;
+  showResults?: boolean;
 }
 
 export const DEFAULT_PARTS: Part[] = [
@@ -78,5 +80,6 @@ export const DEFAULT_PARTS: Part[] = [
     order: 3,
     enabled: true,
     questions: [],
+    scenario: "",
   },
 ];

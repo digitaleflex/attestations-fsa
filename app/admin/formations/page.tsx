@@ -11,6 +11,16 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Formation = {
   id: string;
@@ -27,6 +37,8 @@ export default function AdminFormationsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     apiFetch("/api/formations")
@@ -40,14 +52,18 @@ export default function AdminFormationsPage() {
       });
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette formation ?")) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await apiFetch(`/api/formations/${id}`, { method: "DELETE" });
-      setFormations((prev) => prev.filter((f) => f.id !== id));
+      await apiFetch(`/api/formations/${deleteId}`, { method: "DELETE" });
+      setFormations((prev) => prev.filter((f) => f.id !== deleteId));
       toast.success("Formation supprimée !");
     } catch (err: any) {
-      // toast is already handled by apiFetch
+      // Error handled by apiFetch
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -252,7 +268,7 @@ export default function AdminFormationsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(f.id)}
+                      onClick={() => setDeleteId(f.id)}
                       className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -264,6 +280,46 @@ export default function AdminFormationsPage() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
+              <Trash2 className="w-6 h-6" />
+              Supprimer cette formation ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+              Vous allez supprimer cette formation du catalogue. 
+              <span className="block mt-2 font-bold text-rose-600 italic">Attention : Cela ne supprimera pas les attestations déjà délivrées liées à cette formation.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel 
+              disabled={isDeleting}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression en cours...
+                </>
+              ) : (
+                "Confirmer la suppression"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

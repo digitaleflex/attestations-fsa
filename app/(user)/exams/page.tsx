@@ -152,21 +152,25 @@ export default function UserExamsPage() {
               <Card key={exam.id} className="p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
                 <div className="space-y-4">
                   {/* Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                        <BookOpen className="w-6 h-6 text-white" />
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                        < BookOpen className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-800 truncate">{exam.examName}</h3>
-                        <p className="text-sm text-slate-500 mt-1 line-clamp-2">
-                          {exam.examDescription || "Aucune description"}
+                        <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors">
+                          {exam.examName}
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
+                          {exam.examDescription || "Aucune description disponible pour cet examen."}
                         </p>
                       </div>
                     </div>
-                    <Badge className={getStatusBadgeColor(exam.status)}>
-                      {getStatusLabel(exam.status)}
-                    </Badge>
+                    <div className="flex-shrink-0 sm:mt-1">
+                      <Badge className={`${getStatusBadgeColor(exam.status)} px-3 py-1 shadow-sm font-medium`}>
+                        {getStatusLabel(exam.status)}
+                      </Badge>
+                    </div>
                   </div>
 
                   {/* Info */}

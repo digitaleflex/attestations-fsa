@@ -24,6 +24,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // ❌ BLOQUER LES ADMINS : Les attestations doivent être liées à un compte USER
+    if (user.role === 'ADMIN') {
+      return NextResponse.json(
+        { error: "Action non autorisée pour les administrateurs. Veuillez utiliser un compte candidat." },
+        { status: 403 }
+      );
+    }
+
     // ✅ Validation des données
     const body = await req.json();
     const parse = ClaimCodeSchema.safeParse(body);

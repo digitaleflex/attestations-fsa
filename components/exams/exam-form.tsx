@@ -3,15 +3,15 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  ChevronRight, 
-  ChevronLeft, 
-  CheckCircle2, 
-  Layout, 
-  ListTodo, 
-  MessageSquare, 
+import {
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle2,
+  Layout,
+  ListTodo,
+  MessageSquare,
   BookOpen,
-  Save
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -24,13 +24,15 @@ export function ExamForm({ initialData }: { initialData?: any }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState<ExamFormData>(initialData || {
-    title: "",
-    description: "",
-    status: "DRAFT",
-    scheduledAt: "",
-    parts: DEFAULT_PARTS
-  });
+  const [formData, setFormData] = useState<ExamFormData>(
+    initialData || {
+      title: "",
+      description: "",
+      status: "DRAFT",
+      scheduledAt: "",
+      parts: DEFAULT_PARTS,
+    },
+  );
 
   const steps = [
     { label: "Informations", icon: Layout },
@@ -56,20 +58,52 @@ export function ExamForm({ initialData }: { initialData?: any }) {
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      const url = initialData ? `/api/exams/${initialData.id}` : "/api/exams";
+      // Use admin API endpoint
+      const url = initialData
+        ? `/api/admin/exams/${initialData.id}`
+        : "/api/admin/exams";
       const method = initialData ? "PATCH" : "POST";
-      
+
+      // Build the parts array from formData
+      const partsData = formData.parts
+        .filter((p) => p.enabled)
+        .map((p, i) => ({
+          title: p.title,
+          type: p.type,
+          duration: p.duration,
+          points: p.points,
+          order: i + 1,
+          enabled: p.enabled,
+          scenario: p.scenario || p.subject,
+          questions: p.questions.map((q, qIdx) => ({
+            text: q.text,
+            type: q.type,
+            points: q.points,
+            order: qIdx + 1,
+            options: q.options?.map((o) => ({
+              text: o.text,
+              isCorrect: o.isCorrect,
+              feedback: o.feedback || "",
+            })),
+          })),
+        }));
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-           ...formData,
-           parts: formData.parts.map((p, i) => ({ ...p, order: i }))
+          name: formData.title,
+          title: formData.title,
+          description: formData.description,
+          status: formData.status,
+          scheduledAt: formData.scheduledAt,
+          formationId: formData.formationId,
+          parts: partsData,
         }),
       });
 
       if (!res.ok) throw new Error("Erreur lors de l'enregistrement");
-      
+
       toast.success(initialData ? "Examen modifié !" : "Examen créé !");
       router.push("/admin/exams");
     } catch (err: any) {
@@ -89,21 +123,41 @@ export function ExamForm({ initialData }: { initialData?: any }) {
           const isDone = step > i;
           return (
             <React.Fragment key={s.label}>
-              <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => setStep(i)}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                  isActive ? 'border-primary bg-primary text-white scale-110 shadow-lg' : 
-                  isDone ? 'border-emerald-500 bg-emerald-50 text-emerald-500' : 'border-slate-200 text-slate-400'
-                }`}>
-                  {isDone ? <CheckCircle2 className="w-6 h-6" /> : <Icon className="w-5 h-5" />}
+              <div
+                className="flex flex-col items-center gap-2 group cursor-pointer"
+                onClick={() => setStep(i)}
+              >
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                    isActive
+                      ? "border-primary bg-primary text-white scale-110 shadow-lg"
+                      : isDone
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-500"
+                        : "border-slate-200 text-slate-400"
+                  }`}
+                >
+                  {isDone ? (
+                    <CheckCircle2 className="w-6 h-6" />
+                  ) : (
+                    <Icon className="w-5 h-5" />
+                  )}
                 </div>
-                <span className={`text-[10px] uppercase tracking-wider font-bold ${
-                  isActive ? 'text-primary' : isDone ? 'text-emerald-500' : 'text-slate-400'
-                }`}>
+                <span
+                  className={`text-[10px] uppercase tracking-wider font-bold ${
+                    isActive
+                      ? "text-primary"
+                      : isDone
+                        ? "text-emerald-500"
+                        : "text-slate-400"
+                  }`}
+                >
                   {s.label}
                 </span>
               </div>
               {i < steps.length - 1 && (
-                <div className={`flex-1 h-[2px] mx-4 transition-colors duration-300 ${step > i ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                <div
+                  className={`flex-1 h-[2px] mx-4 transition-colors duration-300 ${step > i ? "bg-emerald-500" : "bg-slate-200"}`}
+                />
               )}
             </React.Fragment>
           );
@@ -115,18 +169,18 @@ export function ExamForm({ initialData }: { initialData?: any }) {
           <StepGeneral formData={formData} updateFormData={updateFormData} />
         )}
 
-        {(step >= 1 && step <= 3) && (
-          <StepPartBuilder 
-            part={formData.parts[step-1]} 
-            onUpdatePart={(updates) => updatePart(step-1, updates)} 
+        {step >= 1 && step <= 3 && (
+          <StepPartBuilder
+            part={formData.parts[step - 1]}
+            onUpdatePart={(updates) => updatePart(step - 1, updates)}
           />
         )}
 
         {step === 4 && (
-          <StepSummary 
-            formData={formData} 
-            saving={saving} 
-            onSave={handleSubmit} 
+          <StepSummary
+            formData={formData}
+            saving={saving}
+            onSave={handleSubmit}
           />
         )}
 

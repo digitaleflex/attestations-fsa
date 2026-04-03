@@ -13,10 +13,22 @@ import {
   Target, 
   Mail, 
   PenLine, 
-  Image as ImageIcon 
+  Image as ImageIcon,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import CertificateTemplate from "@/components/CertificateTemplate";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Settings = {
   id: string;
@@ -36,6 +48,8 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<Settings>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // 1. Fetch current settings
   const { data: settings, isLoading } = useQuery<Settings>({
@@ -107,7 +121,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <Button 
-          onClick={handleSave} 
+          onClick={() => setShowConfirm(true)} 
           disabled={isSaving} 
           size="lg" 
           className="bg-slate-900 hover:bg-slate-800 gap-2 h-14 px-8 shadow-xl hover:shadow-2xl transition-all"
@@ -116,6 +130,54 @@ export default function SettingsPage() {
           Enregistrer les modifications
         </Button>
       </div>
+
+      {/* Real-time Preview Toggle */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                <Eye className="w-5 h-5" />
+            </div>
+            <div>
+                <p className="text-sm font-bold text-slate-800">Aperçu en temps réel</p>
+                <p className="text-xs text-slate-500">Visualisez les changements sur le certificat officiel</p>
+            </div>
+        </div>
+        <Button 
+            variant={showPreview ? "default" : "outline"}
+            onClick={() => setShowPreview(!showPreview)}
+            className={showPreview ? "bg-blue-600 hover:bg-blue-700" : "border-slate-200"}
+        >
+            {showPreview ? "Masquer l'aperçu" : "Afficher l'aperçu"}
+        </Button>
+      </div>
+
+      {showPreview && (
+        <Card className="p-10 border-none shadow-2xl bg-slate-900 overflow-hidden animate-in slide-in-from-top-4 duration-500">
+             <div className="flex justify-center">
+                <div className="scale-[0.55] origin-top mb-[-340px] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden">
+                    <CertificateTemplate 
+                        settings={{
+                            ...settings,
+                            institutionName: formData.institutionName || settings?.institutionName || "",
+                            institutionLogo: formData.institutionLogo || settings?.institutionLogo || null,
+                            instructorName: formData.instructorName || settings?.instructorName || "",
+                            instructorTitle: formData.instructorTitle || settings?.instructorTitle || "",
+                            signatureUrl: formData.signatureUrl || settings?.signatureUrl || null
+                        } as any}
+                        data={{
+                            fullName: "JEAN DUPONT (EXEMPLE)",
+                            formationName: "FORMATION EN AGRO-PISCICULTURE (EXEMPLE)",
+                            code: "FSA-2026-M04-00123-abcde",
+                            issuedAt: new Date().toISOString(),
+                            startDate: new Date().toISOString(),
+                            endDate: new Date().toISOString(),
+                            type: "FORMATION"
+                        }}
+                    />
+                </div>
+             </div>
+        </Card>
+      )}
 
       <form className="grid gap-10 lg:grid-cols-2" onSubmit={handleSave}>
         
@@ -266,6 +328,49 @@ export default function SettingsPage() {
             </div>
         </Card>
       </form>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl max-w-[450px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-slate-900 font-bold text-xl">
+              <Save className="w-6 h-6 text-blue-600" />
+              Confirmer les modifications ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+                Ces changements affecteront l'apparence de <span className="font-bold text-slate-900">toutes les nouvelles attestations</span> ainsi que le branding du portail.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel 
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                setShowConfirm(false);
+                handleSave(e as any);
+              }}
+              className="bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 gap-2 px-6"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Calcul...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Appliquer les changements
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

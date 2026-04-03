@@ -384,32 +384,43 @@ export default function AdminSignalementsPage() {
 
       {/* Modern Confirmation Dialog */}
       <AlertDialog open={!!reportToDelete} onOpenChange={() => setReportToDelete(null)}>
-        <AlertDialogContent className="max-w-[400px]">
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl max-w-[450px]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-rose-600">
-              <AlertTriangle className="w-5 h-5" />
-              Confirmer la suppression
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
+              <Trash2 className="w-6 h-6" />
+              Supprimer le signalement ?
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce signalement ? Cette action est irréversible.
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+              Êtes-vous sûr de vouloir supprimer ce signalement ? 
+              <span className="block mt-2 font-bold text-rose-600 underline underline-offset-4">Cette action est définitive et irréversible.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteLoading}>Annuler</AlertDialogCancel>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel 
+              disabled={deleteLoading}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Annuler
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
                 handleDelete();
               }}
-              className="bg-rose-600 hover:bg-rose-700 text-white gap-2"
+              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 gap-2 px-6"
               disabled={deleteLoading}
             >
               {deleteLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Suppression...
+                </>
               ) : (
-                <Trash2 className="w-4 h-4" />
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Confirmer la suppression
+                </>
               )}
-              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

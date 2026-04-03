@@ -12,21 +12,44 @@ const ExamSchema = z.object({
   formationId: z.string(),
   duration: z.number().default(3600),
   passingScore: z.number().default(60),
-  part1Enabled: z.boolean().default(true),
-  part1Questions: z.number().default(20),
-  part1Points: z.number().default(20),
-  part2Enabled: z.boolean().default(true),
-  part2Questions: z.number().default(5),
-  part2Points: z.number().default(40),
-  part3Enabled: z.boolean().default(true),
-  part3Subject: z.string().optional(),
-  part3Points: z.number().default(40),
-  part3Mode: z.string().default("digital"),
   randomizeQuestions: z.boolean().default(false),
   showResults: z.boolean().default(false),
   status: z.string().default("DRAFT"),
-  qcmQuestions: z.array(z.any()).default([]),
-  openQuestions: z.array(z.any()).default([]),
+  scheduledAt: z.string().optional(),
+  // Use parts array format (same as PATCH) for complete exam structure
+  parts: z
+    .array(
+      z.object({
+        title: z.string(),
+        type: z.string(),
+        duration: z.number().optional(),
+        points: z.number(),
+        order: z.number(),
+        enabled: z.boolean().default(true),
+        subject: z.string().optional(),
+        scenario: z.string().optional(),
+        questions: z
+          .array(
+            z.object({
+              text: z.string(),
+              type: z.string(),
+              points: z.number(),
+              order: z.number().optional(),
+              options: z
+                .array(
+                  z.object({
+                    text: z.string(),
+                    isCorrect: z.boolean(),
+                    feedback: z.string().optional(),
+                  }),
+                )
+                .optional(),
+            }),
+          )
+          .default([]),
+      }),
+    )
+    .default([]),
 });
 
 // POST /api/admin/exams - create a new exam
@@ -61,19 +84,11 @@ export async function POST(request: Request) {
       formationId,
       duration,
       passingScore,
-      part1Enabled,
-      part1Points,
-      part2Enabled,
-      part2Points,
-      part3Enabled,
-      part3Subject,
-      part3Points,
-      part3Mode,
       randomizeQuestions,
       showResults,
       status,
-      qcmQuestions = [],
-      openQuestions = [],
+      scheduledAt,
+      parts = [],
     } = parse.data;
 
     // Verify formation exists
@@ -90,10 +105,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalPoints =
-      (part1Enabled ? part1Points : 0) +
-      (part2Enabled ? part2Points : 0) +
-      (part3Enabled ? part3Points : 0);
+    const totalPoints = parts.reduce(
+      (sum: number, p: any) => sum + (p.enabled ? p.points : 0),
+      0,
+    );
 
     if (totalPoints === 0) {
       return NextResponse.json(
@@ -104,7 +119,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ Step 1: Create Exam (Core Informations)
+    // ✅ Step 1: Create Exam (Core Information)
+    const enabledParts = parts.filter((p: any) => p.enabled);
     const newExam = await prisma.exam.create({
       data: {
         name,
@@ -115,100 +131,61 @@ export async function POST(request: Request) {
         duration,
         passingScore,
         totalPoints,
-        part1Enabled,
-        part1Questions: qcmQuestions.length || 0,
-        part1Points,
-        part2Enabled,
-        part2Questions: openQuestions.length || 0,
-        part2Points,
-        part3Enabled,
-        part3Subject,
-        part3Points,
-        part3Mode,
         randomizeQuestions,
         showResults,
         status: status as any,
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        // Legacy fields for backward compatibility
+        part1Enabled: enabledParts.some((p: any) => p.type === "QCM"),
+        part2Enabled: enabledParts.some((p: any) => p.type === "OPEN"),
+        part3Enabled: enabledParts.some((p: any) => p.type === "CASE_STUDY"),
+        part1Questions:
+          enabledParts.find((p: any) => p.type === "QCM")?.questions?.length ||
+          0,
+        part2Questions:
+          enabledParts.find((p: any) => p.type === "OPEN")?.questions?.length ||
+          0,
+        part1Points:
+          enabledParts.find((p: any) => p.type === "QCM")?.points || 0,
+        part2Points:
+          enabledParts.find((p: any) => p.type === "OPEN")?.points || 0,
+        part3Points:
+          enabledParts.find((p: any) => p.type === "CASE_STUDY")?.points || 0,
       },
     });
 
     const createdPartIds: string[] = [];
 
-    // ✅ Step 2-4: Create Exam Parts in a single efficient transaction
-    const partsToCreate: any[] = [];
-
-    if (part1Enabled && qcmQuestions.length > 0) {
-      partsToCreate.push({
-        examId: newExam.id,
-        title: "Partie 1 : QCM",
-        type: "QCM",
-        duration: Math.floor(duration / 3 / 60) || 30,
-        points: part1Points,
-        order: 1,
-        questions: qcmQuestions.map((q: any, i: number) => ({
-          text: q.text || `Question QCM ${i + 1}`,
-          type: (q.type as any) || "SINGLE_CHOICE",
-          points: q.points || 1,
-          order: i + 1,
-          options: (q.options || []).map((opt: any) => ({
-            text: opt.text || "...",
-            isCorrect: opt.isCorrect,
-            feedback: opt.feedback || "",
-          })),
-        })),
-      });
-    }
-
-    if (part2Enabled && openQuestions.length > 0) {
-      partsToCreate.push({
-        examId: newExam.id,
-        title: "Partie 2 : Questions Ouvertes",
-        type: "OPEN",
-        duration: Math.floor(duration / 3 / 60) || 30,
-        points: part2Points,
-        order: 2,
-        questions: openQuestions.map((q: any, i: number) => ({
-          text: q.text || `Question ouverte ${i + 1}`,
-          type: "OPEN",
-          points: q.points || 5,
-          order: i + 1,
-        })),
-      });
-    }
-
-    if (part3Enabled) {
-      partsToCreate.push({
-        examId: newExam.id,
-        title: "Partie 3 : Étude de Cas",
-        type: "CASE_STUDY",
-        duration: Math.floor(duration / 3 / 60) || 30,
-        points: part3Points,
-        order: 3,
-        scenario: part3Subject,
-      });
-    }
-
-    // ✅ Execute part creation (without transaction to avoid Accelerate timeout)
+    // ✅ Step 2-4: Create Exam Parts using the provided parts array (same as PATCH)
     try {
-      for (const partData of partsToCreate) {
-        const { questions, ...partInfo } = partData;
-
+      for (let pIdx = 0; pIdx < enabledParts.length; pIdx++) {
+        const partData = enabledParts[pIdx];
         const part = await prisma.examPart.create({
-          data: partInfo,
+          data: {
+            examId: newExam.id,
+            title: partData.title,
+            type: partData.type as any,
+            duration: partData.duration || 30,
+            points: partData.points,
+            order: partData.order ?? pIdx + 1,
+            scenario: partData.scenario || partData.subject,
+          },
         });
         createdPartIds.push(part.id);
 
-        // Create questions (individual inserts, faster than transaction)
-        if (questions && questions.length > 0) {
-          for (const q of questions) {
+        // Create questions for this part
+        if (partData.questions && partData.questions.length > 0) {
+          for (let qIdx = 0; qIdx < partData.questions.length; qIdx++) {
+            const q = partData.questions[qIdx];
             await prisma.question.create({
               data: {
                 partId: part.id,
                 text: q.text,
-                type: q.type as any,
+                type: q.type as "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "OPEN",
                 points: q.points,
-                order: q.order,
+                order: q.order ?? qIdx + 1,
                 options:
-                  q.options?.length > 0 ? { create: q.options } : undefined,
+                  (q.options?.length || 0) > 0 ? { create: q.options } : undefined,
               },
             });
           }

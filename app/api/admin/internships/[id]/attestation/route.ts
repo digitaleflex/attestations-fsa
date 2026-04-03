@@ -68,7 +68,7 @@ export async function POST(
     });
     const seq = String(count + 1).padStart(5, '0');
     const hash = nanoid();
-    const attestationCode = `FSA-STG-${year}-${month}-${seq}-${hash}`;
+    const attestationCode = `FSA-${year}-${month}-${seq}-${hash}`;
 
     // 5. Créer l'attestation
     const attestation = await prisma.attestation.create({

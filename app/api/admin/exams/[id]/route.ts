@@ -1,13 +1,14 @@
+// app/api/admin/exams/[id]/route.ts
+// Admin exam update route
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated, getCurrentUser } from "@/lib/auth";
+import { isAdminAuthenticated } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await getCurrentUser(request);
-  if (!user && !(await isAdminAuthenticated())) {
+  if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -17,6 +18,7 @@ export async function GET(
     const exam = await prisma.exam.findUnique({
       where: { id },
       include: {
+        formation: true,
         parts: {
           orderBy: { order: "asc" },
           include: {
@@ -28,7 +30,6 @@ export async function GET(
             },
           },
         },
-        sessions: true,
       },
     });
 
@@ -61,16 +62,26 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { title, description, status, scheduledAt, parts } = body;
+    const {
+      name,
+      title,
+      description,
+      status,
+      scheduledAt,
+      parts,
+      formationId,
+    } = body;
 
     // 1. Update basic exam info first
     await prisma.exam.update({
       where: { id },
       data: {
-        title,
+        name: name || title,
+        title: title,
         description,
         status,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        formationId,
       },
     });
 
@@ -79,6 +90,31 @@ export async function PATCH(
       // Delete all existing parts (Cascade will handle questions and options)
       await prisma.examPart.deleteMany({
         where: { examId: id },
+      });
+
+      // Calculate total points
+      const totalPoints = parts.reduce(
+        (sum: number, p: any) => sum + (p.enabled ? p.points : 0),
+        0,
+      );
+
+      // Update exam with parts info
+      await prisma.exam.update({
+        where: { id },
+        data: {
+          totalPoints,
+          part1Enabled: parts.some((p: any) => p.type === "QCM"),
+          part2Enabled: parts.some((p: any) => p.type === "OPEN"),
+          part3Enabled: parts.some((p: any) => p.type === "CASE_STUDY"),
+          part1Questions:
+            parts.find((p: any) => p.type === "QCM")?.questions?.length || 0,
+          part2Questions:
+            parts.find((p: any) => p.type === "OPEN")?.questions?.length || 0,
+          part1Points: parts.find((p: any) => p.type === "QCM")?.points || 0,
+          part2Points: parts.find((p: any) => p.type === "OPEN")?.points || 0,
+          part3Points:
+            parts.find((p: any) => p.type === "CASE_STUDY")?.points || 0,
+        },
       });
 
       // Create new parts one by one
@@ -128,6 +164,7 @@ export async function PATCH(
     const exam = await prisma.exam.findUnique({
       where: { id },
       include: {
+        formation: true,
         parts: {
           orderBy: { order: "asc" },
           include: {

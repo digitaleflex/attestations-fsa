@@ -14,6 +14,18 @@ import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
 import { QRCodeSVG } from "qrcode.react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 /**
  * Page de détails de l'attestation - FSA Admin
@@ -59,6 +71,8 @@ export default function AttestationDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [pdfLib, setPdfLib] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Pré-chargement de html2pdf pour éviter de recharger la page entre deux clics
   useEffect(() => {
@@ -109,13 +123,14 @@ export default function AttestationDetailsPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("⚠️ Voulez-vous vraiment supprimer définitivement cette attestation ?")) return;
+    setIsDeleting(true);
     try {
       await apiFetch(`/api/attestations/${id}`, { method: "DELETE" });
       toast.success("🗑️ Attestation supprimée avec succès");
       router.push("/admin/attestations");
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de la suppression");
+      setIsDeleting(false);
     }
   };
 
@@ -482,17 +497,55 @@ export default function AttestationDetailsPage() {
                     </Button>
                   </>
                 )}
-                <Button
-                  onClick={handleDelete}
-                  variant="destructive"
-                  className="w-full gap-2"
-                  disabled={actionLoading}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Supprimer
-                </Button>
+                    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          className="w-full gap-2"
+                          disabled={actionLoading || isDeleting}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Supprimer
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
+                            <Trash2 className="w-6 h-6" />
+                            Confirmer la suppression
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="text-slate-600 mt-2 text-base leading-relaxed">
+                            Cette action est <span className="font-bold text-slate-900 underline decoration-rose-200">définitive</span>. 
+                            L'attestation <strong>{data.code}</strong> sera effacée définitivement de la base de données.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="mt-8 gap-3">
+                          <AlertDialogCancel 
+                            disabled={isDeleting}
+                            className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                          >
+                            Annuler
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDelete();
+                            }}
+                            className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+                            disabled={isDeleting}
+                          >
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Suppression en cours...
+                                </>
+                            ) : (
+                                "Supprimer l'attestation"
+                            )}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
               </div>
             </Card>
           </div>

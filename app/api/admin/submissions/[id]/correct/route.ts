@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
+import { emailService } from '@/lib/email';
 
 // Helper pour vérifier l'authentification admin
 async function isAuthenticatedAdmin() {
@@ -133,6 +134,17 @@ export async function POST(
       } catch (error: any) {
         console.error('Erreur génération attestation:', error);
       }
+    }
+
+    // Notification du candidat (Optionnel, n'échoue pas la requête si l'email échoue)
+    if (submission.candidate.email) {
+       emailService.sendExamResults(
+        submission.candidate.email,
+        submission.candidate.name || "",
+        submission.exam.title,
+        totalScore,
+        isPassing
+      ).catch(err => console.error("[EMAIL_NOTIF_ERROR]", err));
     }
 
     return NextResponse.json({

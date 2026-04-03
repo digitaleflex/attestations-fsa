@@ -6,7 +6,7 @@ import { customAlphabet } from 'nanoid'
 import { isAdminAuthenticated } from '@/lib/auth';
 import { z } from 'zod';
 
-const nanoid = customAlphabet('0123456789ABCDEFGHJKLMNPQRSTUVWXYZ', 6)
+const nanoid = customAlphabet('1234567890abcdef', 5)
 
 // Schéma de validation pour la création d'une attestation
 const AttestationSchema = z.object({
@@ -111,11 +111,27 @@ export async function POST(request: Request) {
     }
     const formationId = formationRecord.id
 
-    // Génération du code d'attestation propre et pro
+    // Génération du code d'attestation propre et pro : FSA-2026-M04-00003-f0f9a
     const now = new Date()
     const year = now.getFullYear()
+    const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`
+    
+    // Compter les attestations du mois pour la séquence
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+    
+    const count = await prisma.attestation.count({
+      where: {
+        issuedAt: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        }
+      }
+    })
+    
+    const seq = String(count + 1).padStart(5, '0')
     const hash = nanoid()
-    const code = `FSA-${year}-${hash}`
+    const code = `FSA-${year}-${month}-${seq}-${hash}`
 
     console.log('[POST /api/attestations] Creating record with code:', code);
 

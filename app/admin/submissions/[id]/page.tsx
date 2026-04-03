@@ -17,10 +17,22 @@ import {
   Save,
   AlertCircle,
   ClipboardList,
-  Eye
+  Eye,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Submission = {
   id: string;
@@ -54,6 +66,7 @@ export default function GradeSubmissionPage() {
   const [score3, setScore3] = useState<number>(0);
   const [obs, setObs] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     fetch(`/api/submissions/${id}`) // Assuming a GET route exists or we use the submission API
@@ -135,9 +148,9 @@ export default function GradeSubmissionPage() {
           </div>
           <Button 
             disabled={isSaving} 
-            onClick={handleSave} 
+            onClick={() => setShowConfirm(true)} 
             size="lg" 
-            className="bg-slate-900 hover:bg-slate-800 gap-2 h-12 px-8"
+            className="bg-slate-900 hover:bg-slate-800 gap-2 h-12 px-8 shadow-xl hover:shadow-2xl transition-all"
           >
             {isSaving ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
             Valider la note
@@ -287,6 +300,50 @@ export default function GradeSubmissionPage() {
            ))}
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl max-w-[450px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-slate-900 font-bold text-xl">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+              Confirmer la notation ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+                Vous êtes sur le point de valider la note de <span className="font-bold text-slate-900">{finalScore.toFixed(2)}/20</span>. 
+                Une fois validée, le candidat pourra consulter son résultat et, s'il a réussi, son attestation sera générée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel 
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                setShowConfirm(false);
+                handleSave();
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 gap-2 px-6 border-none"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Validation...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Confirmer et Envoyer
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

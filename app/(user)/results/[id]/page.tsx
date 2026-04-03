@@ -34,6 +34,7 @@ export default function ResultDetailsPage() {
 
   if (!result) return <div className="p-8 text-center">Résultat non trouvé</div>;
 
+  const isGraded = result.status === "GRADED";
   const passed = result.totalScore >= (result.exam.passingScore / 100) * result.exam.totalPoints;
   const scorePercent = Math.round((result.totalScore / result.exam.totalPoints) * 100);
 
@@ -53,16 +54,22 @@ export default function ResultDetailsPage() {
             <p className="text-sm text-slate-500">{result.exam.name}</p>
           </div>
         </div>
-        <Badge className={`px-4 py-1.5 text-sm ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-          {passed ? "Succès" : "Échec"}
-        </Badge>
+        {!isGraded ? (
+          <Badge className="px-4 py-1.5 text-sm bg-amber-100 text-amber-700 border border-amber-200">
+            Correction en cours
+          </Badge>
+        ) : (
+          <Badge className={`px-4 py-1.5 text-sm ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+            {passed ? "Succès" : "Échec"}
+          </Badge>
+        )}
       </div>
 
       {/* Résumé du Score */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 bg-white shadow-sm flex flex-col items-center justify-center border-b-4 border-b-blue-500">
           <p className="text-sm font-medium text-slate-500 mb-1">Score Global</p>
-          <p className={`text-4xl font-bold ${passed ? 'text-emerald-600' : 'text-rose-600'}`}>{scorePercent}%</p>
+          <p className={`text-4xl font-bold ${!isGraded ? 'text-amber-600' : passed ? 'text-emerald-600' : 'text-rose-600'}`}>{scorePercent}%</p>
           <p className="text-xs text-slate-400 mt-1">{result.totalScore} / {result.exam.totalPoints} points</p>
         </Card>
 
@@ -186,7 +193,31 @@ export default function ResultDetailsPage() {
           </h2>
 
           <div className="space-y-4">
-            {passed ? (
+            {!isGraded ? (
+              <Card className="p-6 bg-blue-50 border-blue-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-10">
+                  <Clock className="w-16 h-16 text-blue-900" />
+                </div>
+                <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  Correction en cours...
+                </h4>
+                <p className="text-sm text-blue-700 mb-4 leading-relaxed">
+                  Votre examen a bien été reçu ! Les points de la <strong>Partie 1 (QCM)</strong> sont déjà visibles. 
+                  L'administration doit maintenant corriger les <strong>Parties 2 et 3</strong> manuellement.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <div className="p-3 bg-white/50 rounded border border-blue-100 text-xs text-blue-600 italic">
+                    Un statut définitif (Succès ou Échec) s'affichera une fois la correction terminée.
+                  </div>
+                  <Link href="/results">
+                    <Button variant="outline" className="w-full mt-2 border-blue-200 text-blue-700 bg-white hover:bg-blue-50">
+                      Retourner à la liste
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            ) : passed ? (
               <>
                 <Card className="p-6 bg-emerald-50 border-emerald-100">
                   <h4 className="font-bold text-emerald-800 mb-2">Félicitations !</h4>
