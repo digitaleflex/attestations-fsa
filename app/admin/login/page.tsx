@@ -49,9 +49,9 @@ export default function AdminLoginPage() {
       if (data.user.role === 'ADMIN') {
         router.push("/admin/dashboard");
       } else {
-        // User candidat - redirection vers l'accueil (pas d'accès admin)
-        toast.info("Vous n'avez pas accès à l'interface admin");
-        router.push("/");
+        // User candidat - redirection vers le tableau de bord candidat (/exams)
+        toast.success("Bienvenue dans votre espace candidat !");
+        router.push("/exams");
       }
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");

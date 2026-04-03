@@ -15,7 +15,8 @@ import {
   Award, 
   Save,
   AlertCircle,
-  ClipboardList
+  ClipboardList,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -30,7 +31,8 @@ type Submission = {
   totalScore: number;
   answers: any;
   submittedAt: string;
-  user: { name: string, email: string };
+  scans: any[];
+  candidate: { name: string, email: string };
   exam: {
     title: string;
     parts: any[];
@@ -145,11 +147,11 @@ export default function GradeSubmissionPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase">Nom complet</p>
-                <p className="text-slate-800 font-medium">{submission.user.name}</p>
+                <p className="text-slate-800 font-medium">{submission.candidate?.name || "N/A"}</p>
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase">Email</p>
-                <p className="text-slate-800">{submission.user.email}</p>
+                <p className="text-slate-800">{submission.candidate?.email || "N/A"}</p>
               </div>
               <div className="pt-4 border-t border-slate-100">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Examen</p>
@@ -211,6 +213,36 @@ export default function GradeSubmissionPage() {
               </div>
               <p className="text-sm text-slate-500 italic">Cette partie a été notée par le système lors de la soumission candidate.</p>
            </Card>
+
+           {/* SCANS (Si présents) */}
+           {submission.scans && submission.scans.length > 0 && (
+             <div className="mb-8 space-y-4">
+               <div className="flex items-center gap-3">
+                 <Badge className="bg-blue-600 text-white uppercase px-3 py-1 font-black">Feuilles de composition</Badge>
+                 <h4 className="font-black text-slate-900 uppercase">Documents numérisés</h4>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {submission.scans.map((scan: any) => (
+                   <div key={scan.id} className="group relative overflow-hidden rounded-2xl border-4 border-white shadow-xl bg-slate-200 aspect-[3/4] transition-all hover:shadow-2xl">
+                     <img 
+                       src={scan.url} 
+                       alt={`Copie - Page ${scan.pageNumber}`} 
+                       className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                     />
+                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
+                       <p className="text-white font-black uppercase text-sm mb-1">Page {scan.pageNumber}</p>
+                       <p className="text-slate-300 text-[10px] truncate mb-4">{scan.fileName}</p>
+                       <a href={scan.url} target="_blank" rel="noopener noreferrer">
+                         <Button variant="secondary" size="sm" className="w-full gap-2 font-bold uppercase tracking-wider h-10">
+                           <Eye className="w-4 h-4" /> Agrandir
+                         </Button>
+                       </a>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
 
            {/* REPONSES OUVERTES */}
            {submission.exam.parts.filter(p => p.type !== "QCM").map((part: any, pIdx: number) => (

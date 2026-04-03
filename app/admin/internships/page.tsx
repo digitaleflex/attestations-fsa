@@ -16,7 +16,9 @@ import {
   Eye,
   Search,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Award,
+  Plus
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -54,6 +56,15 @@ export default function AdminInternshipsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Request | null>(null);
   const [filter, setFilter] = useState('ALL');
+  const [attestModal, setAttestModal] = useState<Request | null>(null);
+  const [attestForm, setAttestForm] = useState({
+    startDate: '',
+    endDate: '',
+    instructor: 'Formateur Ferme St André',
+    location: 'Abomey-Calavi',
+    observations: 'Stage effectué avec succès.'
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     fetchRequests();
@@ -86,6 +97,35 @@ export default function AdminInternshipsPage() {
       }
     } catch (error) {
       toast.error("Erreur de mise à jour");
+    }
+  };
+
+  const generateAttestation = async () => {
+    if (!attestModal) return;
+    if (!attestForm.startDate || !attestForm.endDate) {
+        toast.error("Veuillez remplir les dates de début et fin.");
+        return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const res = await fetch(`/api/admin/internships/${attestModal.id}/attestation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attestForm)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Attestation générée : ${data.code}`);
+        setAttestModal(null);
+        fetchRequests();
+      } else {
+        throw new Error();
+      }
+    } catch (error) {
+        toast.error("Erreur de génération d'attestation");
+    } finally {
+        setIsGenerating(false);
     }
   };
 
@@ -151,9 +191,20 @@ export default function AdminInternshipsPage() {
                    <Button variant="ghost" size="icon" className="text-emerald-500 hover:bg-emerald-50" onClick={() => updateStatus(r.id, 'ACCEPTED')}>
                       <CheckCircle className="w-4 h-4" />
                    </Button>
-                   <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50" onClick={() => updateStatus(r.id, 'REJECTED')}>
+                    <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50" onClick={() => updateStatus(r.id, 'REJECTED')}>
                       <XCircle className="w-4 h-4" />
-                   </Button>
+                    </Button>
+                    {r.status === 'ACCEPTED' && (
+                        <Button 
+                         variant="ghost" 
+                         size="icon" 
+                         className="text-amber-500 hover:bg-amber-50" 
+                         onClick={() => setAttestModal(r)}
+                         title="Délivrer attestation"
+                        >
+                            <Award className="w-4 h-4" />
+                        </Button>
+                    )}
                 </div>
               </div>
             </Card>
@@ -233,6 +284,87 @@ export default function AdminInternshipsPage() {
             </div>
           )}
         </DialogContent>
+      </Dialog>
+
+      {/* MODAL GENERATION ATTESTATION */}
+      <Dialog open={!!attestModal} onOpenChange={() => setAttestModal(null)}>
+          <DialogContent className="max-w-md p-6">
+              <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-amber-500" />
+                    Générer une Attestation de Stage
+                  </DialogTitle>
+                  <DialogDescription>
+                      Produire l'attestation officielle pour <strong>{attestModal?.fullName}</strong>.
+                  </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase">Début du stage</label>
+                          <input 
+                            type="date" 
+                            className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50"
+                            value={attestForm.startDate}
+                            onChange={(e) => setAttestForm({...attestForm, startDate: e.target.value})}
+                          />
+                      </div>
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase">Fin du stage</label>
+                          <input 
+                            type="date" 
+                            className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50"
+                            value={attestForm.endDate}
+                            onChange={(e) => setAttestForm({...attestForm, endDate: e.target.value})}
+                          />
+                      </div>
+                  </div>
+
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase">Lieu</label>
+                      <input 
+                        type="text" 
+                        placeholder="Abomey-Calavi"
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                        value={attestForm.location}
+                        onChange={(e) => setAttestForm({...attestForm, location: e.target.value})}
+                      />
+                  </div>
+
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase">Formateur / Responsable</label>
+                      <input 
+                        type="text" 
+                        placeholder="Nom du responsable"
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                        value={attestForm.instructor}
+                        onChange={(e) => setAttestForm({...attestForm, instructor: e.target.value})}
+                      />
+                  </div>
+
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase">Observations</label>
+                      <textarea 
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm min-h-[80px]"
+                        value={attestForm.observations}
+                        onChange={(e) => setAttestForm({...attestForm, observations: e.target.value})}
+                      />
+                  </div>
+              </div>
+
+              <div className="flex gap-2 mt-6">
+                  <Button variant="outline" className="flex-1" onClick={() => setAttestModal(null)}>Annuler</Button>
+                  <Button 
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 gap-2 text-white" 
+                    onClick={generateAttestation}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? <Loader2 className="animate-spin" /> : <Award className="w-4 h-4" />}
+                    Générer
+                  </Button>
+              </div>
+          </DialogContent>
       </Dialog>
     </div>
   );

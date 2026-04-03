@@ -28,6 +28,7 @@ type AttestationData = {
   startDate: string;
   endDate: string;
   location: string;
+  certificationHours?: number;
   instructor: string;
   issuingCompany: string;
   status: string;
@@ -220,7 +221,7 @@ export default function AttestationDetailsPage() {
                   Je soussigné(e), la direction de <strong>{data.issuingCompany}</strong>, atteste que :
                 </p>
                 <p className="text-xl font-semibold text-center my-6">
-                  M./Mme {data.fullName}
+                  {data.gender === "F" ? "Mme " : data.gender === "M" ? "M. " : ""}{data.fullName}
                 </p>
                 <p style={{ fontSize: 15, color: "#444", marginBottom: 4 }}>
                   Né(e) le <DateLocale date={data.birthDate} /> à <strong>{data.birthPlace}</strong>
@@ -288,7 +289,7 @@ export default function AttestationDetailsPage() {
 
               <div className="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
                 Fait à {data.location.split(",")[0] || "Abomey-Calavi"}, le{" "}
-                <DateLocale date={data.issuedAt} options={{ day: "numeric", month: "long", year: "numeric" }}>.
+                <DateLocale date={data.issuedAt} options={{ day: "numeric", month: "long", year: "numeric" }} />.
               </div>
             </div>
           </Card>
