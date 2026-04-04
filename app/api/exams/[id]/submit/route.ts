@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { applyRateLimitByUser } from '@/lib/rate-limit';
 import { analyzeAnswerPattern, logCheatingDetection } from '@/lib/anti-cheat';
+import { createAuditLog } from '@/lib/audit';
 
 // In-memory idempotency cache (key -> timestamp)
 // Prevents duplicate processing of the same request
@@ -173,6 +174,16 @@ export async function POST(
         { status: 409 }
       );
     }
+
+    // Enregistrer le log d'audit
+    await createAuditLog({
+      userId: user.id,
+      action: 'EXAM_SUBMITTED',
+      resource: 'EXAM',
+      resourceId: examId,
+      newValue: { status: 'COMPLETED', scorePart1: Math.round(scorePart1 * 100) / 100 },
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+    });
 
     // ✅ ANTI-CHEAT: Analyze answer patterns (async, non-blocking)
     // This runs after successful submission to flag suspicious behavior

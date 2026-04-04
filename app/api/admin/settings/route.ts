@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { createAuditLog } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const adminUser = await getCurrentUser(request);
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
@@ -56,6 +58,21 @@ export async function PATCH(request: NextRequest) {
       where: { id },
       data: updateData
     });
+
+    // Audit log
+    if (adminUser) {
+      await createAuditLog({
+        userId: adminUser.id, // Comme c'est une action globale, on lie à l'admin (qui est aussi un User dans ce système pour simplifier)
+        action: 'SETTINGS_UPDATED',
+        resource: 'SYSTEM_SETTINGS',
+        resourceId: id,
+        newValue: { 
+          changes: data,
+          adminName: adminUser.name 
+        },
+        ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

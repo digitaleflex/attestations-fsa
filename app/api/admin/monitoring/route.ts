@@ -44,7 +44,11 @@ export async function GET(request: Request) {
         prisma.securityLog.count({ where: { severity: "HIGH" } }),
         prisma.securityLog.count({ where: { action: "SUBMISSION_TOO_FAST" } }),
         prisma.examSession.count({ where: { status: "COMPLETED" } }),
-        prisma.user.count({ where: { role: "USER" } })
+        prisma.user.count({ where: { role: "USER" } }),
+        // ✅ EXAM MONITORING: Tab switches and cheating detections
+        prisma.securityLog.count({ where: { eventType: "EXAM_MONITORING" } }),
+        prisma.securityLog.count({ where: { eventType: "CHEATING_DETECTED" } }),
+        prisma.securityLog.count({ where: { severity: "CRITICAL" } }),
       ])
     ]);
 
@@ -55,7 +59,11 @@ export async function GET(request: Request) {
         highSeverityCount: stats[0],
         submissionFlags: stats[1],
         totalExamsCompleted: stats[2],
-        totalCandidates: stats[3]
+        totalCandidates: stats[3],
+        // ✅ EXAM MONITORING stats
+        tabSwitchEvents: stats[4],
+        cheatingDetections: stats[5],
+        criticalEvents: stats[6],
       }
     });
   } catch (error) {

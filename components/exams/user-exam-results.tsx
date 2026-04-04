@@ -10,7 +10,9 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Save, 
-  FileEdit 
+  FileEdit,
+  Sparkles,
+  RefreshCw 
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +32,7 @@ export function UserExamResults({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [gradingId, setGradingId] = useState<string | null>(null);
   const [gradingData, setGradingData] = useState({ p1: 0, p2: 0, p3: 0 });
+  const [isAutoGrading, setIsAutoGrading] = useState(false);
 
   useEffect(() => {
     fetch(`/api/submissions?userId=${userId}`)
@@ -44,6 +47,21 @@ export function UserExamResults({ userId }: { userId: string }) {
   const handleStartGrading = (s: Submission) => {
     setGradingId(s.id);
     setGradingData({ p1: s.scorePart1, p2: s.scorePart2, p3: s.scorePart3 });
+  };
+
+  const handleAutoGrade = async (id: string) => {
+    setIsAutoGrading(true);
+    try {
+      const res = await fetch(`/api/submissions/${id}/grade`, { method: "POST" });
+      if (!res.ok) throw new Error("Erreur");
+      const { autoScoreP1 } = await res.json();
+      setGradingData(prev => ({ ...prev, p1: autoScoreP1 }));
+      toast.success(`Score QCM calculé : ${autoScoreP1}/20`);
+    } catch {
+      toast.error("Échec du calcul automatique");
+    } finally {
+      setIsAutoGrading(false);
+    }
   };
 
   const handleSaveGrade = async (id: string) => {
@@ -110,12 +128,24 @@ export function UserExamResults({ userId }: { userId: string }) {
                 <div className="p-2 bg-white rounded-lg border border-slate-100 text-center">
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Partie 1 (QCM)</p>
                   {gradingId === s.id ? (
-                    <Input 
-                      type="number" 
-                      value={gradingData.p1} 
-                      onChange={(e) => setGradingData({...gradingData, p1: parseFloat(e.target.value) || 0})}
-                      className="h-7 text-center font-bold text-sm mt-1"
-                    />
+                    <div className="space-y-1">
+                      <Input 
+                        type="number" 
+                        value={gradingData.p1} 
+                        onChange={(e) => setGradingData({...gradingData, p1: parseFloat(e.target.value) || 0})}
+                        className="h-7 text-center font-bold text-sm mt-1"
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-6 w-full text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                        onClick={() => handleAutoGrade(s.id)}
+                        disabled={isAutoGrading}
+                      >
+                         {isAutoGrading ? <RefreshCw className="w-2 h-2 animate-spin" /> : <Sparkles className="w-2 h-2" />}
+                         Calcule QCM
+                      </Button>
+                    </div>
                   ) : (
                     <p className="font-bold text-slate-700">{s.scorePart1}/20</p>
                   )}

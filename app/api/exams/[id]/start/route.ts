@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { createAuditLog } from '@/lib/audit';
 
 /**
  * POST /api/exams/[id]/start
@@ -71,6 +72,16 @@ export async function POST(
         status: 'IN_PROGRESS',
         startedAt: new Date(),
       }
+    });
+
+    // Enregistrer le log d'audit
+    await createAuditLog({
+      userId: user.id,
+      action: 'EXAM_STARTED',
+      resource: 'EXAM',
+      resourceId: examId,
+      newValue: { sessionId: session.id, startedAt: session.startedAt },
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
     return NextResponse.json({

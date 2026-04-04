@@ -196,6 +196,19 @@ export default function AttestationDetailsPage() {
 
           // 4. Générer et sauvegarder le PDF
           await html2pdf().set(opt).from(element).save();
+
+          // 5. Logger le téléchargement dans l'audit trail
+          await fetch("/api/admin/audit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: isTranscript ? 'TRANSCRIPT_EXPORTED' : 'ATTESTATION_EXPORTED',
+              resource: 'ATTESTATION',
+              resourceId: id,
+              userId: data.userId,
+              details: { fileName, docType: activeDoc }
+            })
+          });
         } catch (error: any) {
           console.error("PDF Generation Error (Admin):", error);
           throw error;
@@ -227,6 +240,20 @@ export default function AttestationDetailsPage() {
                 link: "/results"
             })
         });
+
+        // Logger la transmission dans l'audit trail
+        await fetch("/api/admin/audit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: 'TRANSCRIPT_TRANSMITTED',
+              resource: 'ATTESTATION',
+              resourceId: id,
+              userId: data.userId,
+              details: { method: 'PORTAL_NOTIFICATION' }
+            })
+        });
+
         toast.success("🚀 Relevé transmis au candidat !");
     } catch (e) {
         toast.error("Échec de la transmission");

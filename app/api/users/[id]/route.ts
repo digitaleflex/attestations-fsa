@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 
 const UpdateUserSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères").optional(),
@@ -13,6 +14,9 @@ const UpdateUserSchema = z.object({
   birthPlace: z.string().optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
+  status: z.enum(["ACTIVE", "BLOCKED", "SUSPENDED"]).optional(),
+  resetPasswordRequired: z.boolean().optional(),
+  blockedReason: z.string().optional(),
 });
 
 // GET - Détails d'un utilisateur
@@ -104,6 +108,15 @@ export async function PATCH(
       }
     }
 
+    // Récupérer l'utilisateur actuel avant modification pour le log d'audit
+    const currentUser = await prisma.user.findUnique({ 
+      where: { id },
+      select: { status: true, role: true }
+    });
+    if (!currentUser) {
+      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    }
+
     // Préparer les données pour la mise à jour
     const updateData: Record<string, unknown> = {};
     if (data.name) updateData.name = data.name;
@@ -113,6 +126,14 @@ export async function PATCH(
     if (data.birthPlace) updateData.birthPlace = data.birthPlace;
     if (data.phone) updateData.phone = data.phone;
     if (data.address) updateData.address = data.address;
+    if (data.status) {
+      updateData.status = data.status;
+      if (data.status === 'BLOCKED' || data.status === 'SUSPENDED') {
+        updateData.lastBlockedAt = new Date();
+      }
+    }
+    if (data.resetPasswordRequired !== undefined) updateData.resetPasswordRequired = data.resetPasswordRequired;
+    if (data.blockedReason !== undefined) updateData.blockedReason = data.blockedReason;
 
     // Hacher le mot de passe si fourni
     if (data.password) {
@@ -131,8 +152,21 @@ export async function PATCH(
         birthPlace: true,
         phone: true,
         address: true,
+        status: true,
+        resetPasswordRequired: true,
         updatedAt: true,
       },
+    });
+
+    // Enregistrer le log d'audit
+    await createAuditLog({
+      userId: id,
+      action: data.status ? (data.status === 'ACTIVE' ? 'ACCOUNT_UNBLOCKED' : 'ACCOUNT_BLOCKED') : 'ADMIN_UPDATE_PROFILE',
+      resource: 'USER',
+      resourceId: id,
+      oldValue: { status: currentUser.status, role: currentUser.role },
+      newValue: { status: user.status, role: user.role, resetPasswordRequired: user.resetPasswordRequired },
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
     return NextResponse.json(

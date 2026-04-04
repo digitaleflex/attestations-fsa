@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock, CheckCircle, Play, BarChart3, Filter, X, ChevronRight } from "lucide-react";
+import { BookOpen, Clock, CheckCircle, Play, BarChart3, Filter, X, ChevronRight, Calendar } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
+import { CountdownTimer } from "@/components/CountdownTimer";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,15 @@ export default function UserExamsPage() {
       return apiFetch("/api/user/exams");
     },
     staleTime: 2 * 60 * 1000,
+  });
+
+  // Fetch scheduled exams for countdown
+  const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
+    queryKey: ["scheduled-exams"],
+    queryFn: async () => {
+      return apiFetch("/api/exams?status=SCHEDULED");
+    },
+    staleTime: 60 * 1000, // Update every minute for countdown
   });
 
   const filteredExams = data?.exams?.filter((exam: any) => {
@@ -99,7 +109,43 @@ export default function UserExamsPage() {
             <p className="text-sm text-slate-500">Réussis</p>
             <p className="text-2xl font-bold text-purple-600">{data?.stats?.passed || 0}</p>
           </Card>
+          {!scheduledLoading && scheduledData?.exams && (
+            <Card className="p-4 bg-white shadow-sm border-l-4 border-l-blue-500">
+              <p className="text-sm text-slate-500">Programmés</p>
+              <p className="text-2xl font-bold text-blue-600">{scheduledData.exams.length}</p>
+            </Card>
+          )}
         </div>
+
+        {/* ✅ SCHEDULED EXAMS: Countdown Section */}
+        {!scheduledLoading && scheduledData?.exams && scheduledData.exams.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Examens Programmés</h2>
+                <p className="text-sm text-slate-500">
+                  {scheduledData.exams.length} examen(s) à venir
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {scheduledData.exams.map((exam: any) => (
+                <CountdownTimer
+                  key={exam.id}
+                  scheduledAt={exam.scheduledAt}
+                  examId={exam.id}
+                  examName={exam.name || exam.title}
+                  examDescription={exam.description}
+                  duration={exam.duration}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filter */}
         <Card className="p-4 bg-white shadow-sm">

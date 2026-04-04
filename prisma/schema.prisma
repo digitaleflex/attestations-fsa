@@ -53,6 +53,12 @@ enum ResourceType {
   OTHER
 }
 
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  SUSPENDED
+}
+
 model Account {
   id                    String    @id @default(cuid())
   userId                String
@@ -116,6 +122,12 @@ model User {
   // Portfolio public
   portfolioSlug String? // Slug unique pour le portfolio public (ex: "jean-boko-abc123")
   portfolioEnabled Boolean @default(false) // Si le portfolio est visible publiquement
+  
+  // Sécurité et Statut
+  status        UserStatus @default(ACTIVE)
+  resetPasswordRequired Boolean @default(false)
+  blockedReason String?
+  lastBlockedAt DateTime?
   
   // Formation et examen associés
   formationId   String?

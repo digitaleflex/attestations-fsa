@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  Shield, 
-  Activity, 
-  AlertTriangle, 
-  UserCheck, 
-  Search, 
+import {
+  Shield,
+  Activity,
+  AlertTriangle,
+  UserCheck,
+  Search,
   RefreshCcw,
   Clock,
   ShieldAlert,
@@ -25,6 +25,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+
+// Add orange and emerald to colors
 
 type SecurityLog = {
   id: string;
@@ -142,33 +144,58 @@ export default function MonitoringDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-        <StatsCard 
-          title="Alertes Critiques" 
-          value={data?.stats.highSeverityCount} 
+        <StatsCard
+          title="Alertes Critiques"
+          value={data?.stats.criticalEvents || data?.stats.highSeverityCount}
           icon={ShieldAlert}
           color="rose"
-          description="Incidents de sévérité haute"
+          description="Incidents de sévérité critique"
         />
-        <StatsCard 
-          title="Drapeaux de Triche" 
-          value={data?.stats.submissionFlags} 
-          icon={AlertTriangle}
-          color="amber"
-          description="Soumissions suspectes (Rapides)"
-        />
-        <StatsCard 
-          title="Examens Terminés" 
-          value={data?.stats.totalExamsCompleted} 
+        <StatsCard
+          title="Changements d'Onglet"
+          value={data?.stats.tabSwitchEvents}
           icon={Activity}
-          color="blue"
-          description="Total des sessions validées"
+          color="amber"
+          description="Détections de navigation suspecte"
         />
-        <StatsCard 
-          title="Candidats Actifs" 
-          value={data?.stats.totalCandidates} 
+        <StatsCard
+          title="Triche Détectée"
+          value={data?.stats.cheatingDetections}
+          icon={AlertTriangle}
+          color="blue"
+          description="Soumissions suspectes (patterns)"
+        />
+        <StatsCard
+          title="Examens Terminés"
+          value={data?.stats.totalExamsCompleted}
           icon={UserCheck}
           color="indigo"
+          description="Total des sessions validées"
+        />
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        <StatsCard
+          title="Soumissions Trop Rapides"
+          value={data?.stats.submissionFlags}
+          icon={Clock}
+          color="orange"
+          description="Temps de completion suspect"
+        />
+        <StatsCard
+          title="Candidats Actifs"
+          value={data?.stats.totalCandidates}
+          icon={UserCheck}
+          color="emerald"
           description="Utilisateurs enregistrés"
+        />
+        <StatsCard
+          title="Alertes Hautes"
+          value={data?.stats.highSeverityCount}
+          icon={Shield}
+          color="purple"
+          description="Sévérité haute totale"
         />
       </div>
 
@@ -220,14 +247,20 @@ function StatsCard({ title, value, icon: Icon, color, description }: any) {
     rose: "from-rose-500 to-rose-600 shadow-rose-100 text-white",
     amber: "from-amber-500 to-amber-600 shadow-amber-100 text-white",
     blue: "from-blue-500 to-blue-600 shadow-blue-100 text-white",
-    indigo: "from-indigo-500 to-indigo-600 shadow-indigo-100 text-white"
+    indigo: "from-indigo-500 to-indigo-600 shadow-indigo-100 text-white",
+    orange: "from-orange-500 to-orange-600 shadow-orange-100 text-white",
+    emerald: "from-emerald-500 to-emerald-600 shadow-emerald-100 text-white",
+    purple: "from-purple-500 to-purple-600 shadow-purple-100 text-white"
   };
 
   const bgLight: any = {
     rose: "bg-rose-50",
     amber: "bg-amber-50",
     blue: "bg-blue-50",
-    indigo: "bg-indigo-50"
+    indigo: "bg-indigo-50",
+    orange: "bg-orange-50",
+    emerald: "bg-emerald-50",
+    purple: "bg-purple-50"
   };
 
   return (

@@ -18,9 +18,11 @@ import {
   Users,
   Search,
   LayoutGrid,
-  History,
+  List,
+  History as HistoryIcon,
   TrendingUp,
-  FileText
+  FileText,
+  ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -59,8 +61,11 @@ export default function AdminExamsPage() {
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     fetchExams();
   }, []);
 
@@ -92,11 +97,11 @@ export default function AdminExamsPage() {
     }
   };
 
-  const statusConfig = {
+  const statusConfig: Record<Exam['status'], { label: string; color: string; icon: any; dot: string }> = {
     DRAFT: { label: "Brouillon", color: "text-slate-500 bg-slate-50 border-slate-100", icon: Edit, dot: "bg-slate-300" },
     PUBLISHED: { label: "En ligne", color: "text-emerald-700 bg-emerald-50 border-emerald-100", icon: CheckCircle2, dot: "bg-emerald-500" },
     SCHEDULED: { label: "Programmé", color: "text-blue-700 bg-blue-50 border-blue-100", icon: Calendar, dot: "bg-blue-500" },
-    ARCHIVED: { label: "Archivé", color: "text-amber-700 bg-amber-50 border-amber-100", icon: History, dot: "bg-amber-500" },
+    ARCHIVED: { label: "Archivé", color: "text-amber-700 bg-amber-50 border-amber-100", icon: HistoryIcon, dot: "bg-amber-500" },
   };
 
   const filteredExams = exams.filter((e) =>
@@ -123,6 +128,27 @@ export default function AdminExamsPage() {
                 className="pl-10 w-full md:w-80 bg-white border-slate-200 focus:ring-blue-500 transition-all rounded-xl"
             />
           </div>
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+            <Button 
+                variant={view === 'grid' ? 'default' : 'ghost'} 
+                size="sm" 
+                onClick={() => setView('grid')}
+                className={`rounded-lg h-9 px-3 ${view === 'grid' ? 'bg-blue-600 shadow-blue-100' : 'text-slate-400'}`}
+            >
+                <LayoutGrid className="w-4 h-4 mr-2" />
+                Grille
+            </Button>
+            <Button 
+                variant={view === 'list' ? 'default' : 'ghost'} 
+                size="sm" 
+                onClick={() => setView('list')}
+                className={`rounded-lg h-9 px-3 ${view === 'list' ? 'bg-blue-600 shadow-blue-100' : 'text-slate-400'}`}
+            >
+                <List className="w-4 h-4 mr-2" />
+                Liste
+            </Button>
+          </div>
+
           <Link href="/admin/exams/new">
             <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 rounded-xl shadow-lg shadow-blue-100">
                 <Plus className="w-5 h-5" />
@@ -146,9 +172,10 @@ export default function AdminExamsPage() {
           <p className="text-slate-400 text-sm mt-1">Commencez par créer votre première épreuve d'évaluation.</p>
         </div>
       ) : (
+        view === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredExams.map((exam) => {
-            const config = statusConfig[exam.status];
+            const config = statusConfig[exam.status as keyof typeof statusConfig];
             const StatusIcon = config.icon;
             
             return (
@@ -156,7 +183,7 @@ export default function AdminExamsPage() {
                 {/* Header Decoration */}
                 <div className={`h-1.5 w-full ${config.dot === 'bg-emerald-500' ? 'bg-emerald-500' : config.dot === 'bg-blue-500' ? 'bg-blue-500' : 'bg-slate-300'}`} />
                 
-                <div className="p-8">
+                <div className="p-8 flex flex-col h-full">
                     <div className="flex items-start justify-between mb-6">
                         <div className={`p-4 rounded-2xl ${config.color} border shadow-sm`}>
                             <StatusIcon className="w-6 h-6" />
@@ -223,7 +250,7 @@ export default function AdminExamsPage() {
                         <div className="flex flex-col">
                             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
                                 <Clock className="w-3.5 h-3.5" />
-                                {new Date(exam.status === 'SCHEDULED' && exam.scheduledAt ? exam.scheduledAt : exam.createdAt).toLocaleDateString("fr-FR", { month: 'short', day: 'numeric', year: 'numeric' })}
+                                {mounted ? new Date(exam.status === 'SCHEDULED' && exam.scheduledAt ? exam.scheduledAt : exam.createdAt).toLocaleDateString("fr-FR", { month: 'short', day: 'numeric', year: 'numeric' }) : '...'}
                             </div>
                         </div>
                         <Link href={`/admin/exams/${exam.id}/edit`}>
@@ -237,6 +264,68 @@ export default function AdminExamsPage() {
             );
           })}
         </div>
+        ) : (
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+             <table className="w-full text-left border-collapse">
+               <thead>
+                 <tr className="bg-slate-50/50 border-b border-slate-100">
+                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Épreuve</th>
+                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Statut</th>
+                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Points</th>
+                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-slate-50">
+                 {filteredExams.map((exam) => {
+                   const config = statusConfig[exam.status as keyof typeof statusConfig];
+                   return (
+                     <tr key={exam.id} className="hover:bg-slate-50/30 transition-colors group">
+                       <td className="px-8 py-5">
+                          <div className="flex items-center gap-4">
+                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${config.color} border shadow-sm`}>
+                                <config.icon className="w-5 h-5" />
+                             </div>
+                             <div>
+                                <p className="font-black text-slate-900 leading-tight">{exam.title}</p>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider italic flex items-center gap-1">
+                                   <Users className="w-3 h-3" /> {exam._count.submissions} candidats inscrits
+                                </p>
+                             </div>
+                          </div>
+                       </td>
+                       <td className="px-8 py-5">
+                         <div className="flex items-center gap-2">
+                           <div className={`h-2 w-2 rounded-full ${config.dot}`} />
+                           <span className="text-xs font-bold text-slate-600">{config.label}</span>
+                         </div>
+                       </td>
+                       <td className="px-8 py-5">
+                         <span className="text-sm font-black text-slate-800">{exam.totalPoints} pts</span>
+                       </td>
+                       <td className="px-8 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                             <Link href={`/admin/exams/${exam.id}/edit`}>
+                                <Button size="sm" variant="ghost" className="rounded-lg h-9 w-9 p-0 hover:bg-white hover:shadow-sm">
+                                   <Edit className="w-4 h-4 text-slate-400" />
+                                </Button>
+                             </Link>
+                             <Button size="sm" variant="ghost" className="rounded-lg h-9 w-9 p-0 hover:bg-white hover:shadow-sm text-rose-500" onClick={() => setDeleteId(exam.id)}>
+                                <Trash2 className="w-4 h-4" />
+                             </Button>
+                             <Link href={`/admin/exams/${exam.id}/edit`}>
+                                <Button size="sm" variant="outline" className="rounded-xl h-9 px-4 font-bold bg-slate-50 hover:bg-blue-600 hover:text-white transition-all">
+                                   Gérer <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                             </Link>
+                          </div>
+                       </td>
+                     </tr>
+                   )
+                 })}
+               </tbody>
+             </table>
+          </div>
+        )
       )}
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

@@ -33,10 +33,10 @@ export function StepSummary({ formData, saving, onSave }: Props) {
           </h3>
           <div className="space-y-2">
             <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Titre:</span> <span className="font-semibold">{formData.title || "Sans titre"}</span></div>
-            <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Statut:</span> <Badge variant="outline" className="uppercase text-[10px]">{formData.status}</Badge></div>
+            <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Statut:</span> <Badge variant="outline" className="uppercase text-[10px]">{formData.status === 'SCHEDULED' ? '📅 Programmé' : formData.status === 'PUBLISHED' ? '✅ Publié' : formData.status === 'DRAFT' ? '📝 Brouillon' : '📦 Archivé'}</Badge></div>
             {formData.status === 'SCHEDULED' && formData.scheduledAt && (
-              <div className="text-sm text-blue-600 flex items-center gap-2">
-                <span className="text-blue-400">Programmé le:</span> {new Date(formData.scheduledAt).toLocaleString("fr-FR")}
+              <div className="text-sm text-blue-600 flex items-center gap-2 font-medium">
+                <span className="text-blue-400">📅 Programmé le:</span> {new Date(formData.scheduledAt).toLocaleString("fr-FR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
           </div>
