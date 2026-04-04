@@ -52,8 +52,10 @@ export async function GET(request: Request) {
     ]);
 
     return NextResponse.json({
-      portfolios: users.map((u) => ({
+      portfolios: users.map((u: any) => ({
         ...u,
+        attestationCount: u._count?.attestations || 0,
+        examCount: u._count?.examSessions || 0,
         // Generate public URL
         portfolioUrl: `/portfolios/${u.portfolioSlug}`,
         // Anonymize email

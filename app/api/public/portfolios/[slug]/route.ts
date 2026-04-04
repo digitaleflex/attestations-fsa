@@ -44,12 +44,9 @@ export async function GET(
             },
             startDate: true,
             endDate: true,
-            scorePart1: true,
-            scorePart2: true,
-            totalScore: true,
-            createdAt: true,
+            issuedAt: true,
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { issuedAt: "desc" },
         },
         examSessions: {
           select: {
@@ -57,7 +54,7 @@ export async function GET(
             status: true,
             totalScore: true,
             scorePart1: true,
-            createdAt: true,
+            startedAt: true,
             exam: {
               select: {
                 name: true,
@@ -65,7 +62,7 @@ export async function GET(
               },
             },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { startedAt: "desc" },
         },
         _count: {
           select: {
@@ -94,18 +91,17 @@ export async function GET(
       portfolioSlug: user.portfolioSlug,
       memberSince: user.createdAt,
       // Counts
-      attestationCount: user._count.attestations,
-      examCount: user._count.examSessions,
+      attestationCount: (user as any)._count?.attestations || 0,
+      examCount: (user as any)._count?.examSessions || 0,
       // Public attestations (only VALIDATED)
-      attestations: user.attestations
+      attestations: (user as any).attestations
         .filter((a: any) => a.status === "VALIDATED")
         .map((a: any) => ({
           ...a,
-          // Hide full email
           fullName: a.fullName,
         })),
       // Recent exams
-      recentExams: user.examSessions.slice(0, 5),
+      recentExams: (user as any).examSessions.slice(0, 5),
     };
 
     return NextResponse.json(publicProfile);
