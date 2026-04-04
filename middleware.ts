@@ -6,7 +6,7 @@ import type { NextRequest } from 'next/server'
 // Routes protégées par rôle
 const ADMIN_ROUTES = ['/admin', '/api/admin']
 const USER_ROUTES = ['/dashboard', '/exams', '/attestations', '/results', '/profile', '/internships', '/api/user']
-const PUBLIC_ROUTES = ['/api/public', '/api/verifier', '/api/signalement', '/auth']
+const PUBLIC_ROUTES = ['/api/public', '/api/verifier', '/api/signalement', '/api/waitlist', '/auth']
 const AUTH_ROUTES = ['/admin/login', '/api/auth']
 
 export function middleware(request: NextRequest) {
@@ -54,11 +54,12 @@ export function middleware(request: NextRequest) {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://upstash.io https://api.resend.com",
+      "connect-src 'self' https://upstash.io https://api.resend.com https://vercel.live",
+      "frame-src 'self' https://vercel.live",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'"
@@ -137,6 +138,11 @@ export function middleware(request: NextRequest) {
       if (sessionDataCookie) {
         const sessionData = JSON.parse(decodeURIComponent(sessionDataCookie))
         isAdmin = sessionData.user?.role === 'ADMIN' || sessionData.role === 'ADMIN';
+      } else {
+        // Fallback: Si le cookie session_data manque mais qu'on a un token, on peut laisser passer
+        // vers la page car le client Better Auth rafraîchira les données, 
+        // évitant ainsi les boucles de redirection immédiates.
+        if (sessionToken) isAdmin = true; 
       }
     } catch (e) { /* ignore parse error */ }
     

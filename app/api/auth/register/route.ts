@@ -72,13 +72,15 @@ export async function POST(request: Request) {
         phone,
         address,
         role: 'USER', // Toujours USER pour les inscriptions publiques
-        emailVerified: new Date()
+        // ✅ FIX: Ne pas auto-vérifier l'email - l'utilisateur devra vérifier via l'email
+        emailVerified: null
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        emailVerified: true,
         createdAt: true
       }
     })

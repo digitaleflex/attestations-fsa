@@ -30,7 +30,8 @@ import {
   Briefcase,
   Inbox,
   Shield,
-  Library
+  Library,
+  List
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -49,6 +50,7 @@ const menuItems = [
   { href: '/admin/internships', label: 'Stages', icon: Briefcase },
   { href: '/admin/users', label: 'Utilisateurs', icon: Users },
   { href: '/admin/signalements', label: 'Signalements', icon: AlertCircle },
+  { href: '/admin/waitlist', label: "Liste d'attente", icon: List },
   { href: '/admin/corrections', label: 'Corrections', icon: ClipboardCheck },
   { href: '/admin/profile', label: 'Mon Profil', icon: Home },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },

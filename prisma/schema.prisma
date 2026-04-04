@@ -244,6 +244,18 @@ model Report {
   status          String   @default("NOUVEAU") // Statut du traitement
 }
 
+// ✅ WAITLIST: Model for portfolio waitlist signups
+model Waitlist {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String?
+  message     String?
+  status      String   @default("PENDING") // PENDING, CONTACTED, CONVERTED, REJECTED
+  source      String   @default("PORTFOLIO") // PORTFOLIO, NEWSLETTER, OTHER
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Admin {
   id            String    @id @default(uuid())
   email         String    @unique

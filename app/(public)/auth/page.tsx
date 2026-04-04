@@ -338,8 +338,8 @@ export default function AuthPage() {
   // === Formulaire de Connexion ===
   if (isLogin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
-        <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-md px-8 py-10 border border-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-2 sm:p-4">
+        <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg lg:max-w-xl px-6 py-10 sm:px-12 sm:py-14 border border-gray-100 animate-in zoom-in-95 duration-500">
           <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <LogIn className="w-8 h-8 text-white" />
@@ -500,8 +500,8 @@ export default function AuthPage() {
 
   // === Formulaire d'Inscription (Wizard) ===
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4 py-8">
-      <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-lg px-8 py-8 border border-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-2 sm:p-4 py-8">
+      <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl lg:max-w-3xl px-6 py-10 sm:px-12 sm:py-14 border border-gray-100 animate-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             <UserPlus className="w-8 h-8 text-white" />

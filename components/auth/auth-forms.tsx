@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock, UserPlus, LogIn, Github } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export function LoginForm() {
   const router = useRouter();
@@ -33,11 +34,14 @@ export function LoginForm() {
 
       if (error) {
         setError(error.message || "Identifiants invalides");
+        toast.error("Erreur de connexion", { description: error.message });
       } else {
+        toast.success("Ravi de vous revoir !", { description: "Connexion réussie." });
         router.push("/admin/dashboard");
       }
     } catch (err) {
       setError("Une erreur inattendue est survenue");
+      toast.error("Erreur système", { description: "Impossible de se connecter." });
     } finally {
       setLoading(false);
     }
@@ -88,8 +92,17 @@ export function LoginForm() {
             </div>
           </div>
           <Button type="submit" className="w-full font-semibold transition-all hover:scale-[1.02]" disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
-            Connexion
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connexion en cours...
+              </>
+            ) : (
+              <>
+                <LogIn className="mr-2 h-4 w-4" />
+                Se connecter
+              </>
+            )}
           </Button>
         </form>
       </CardContent>
@@ -128,11 +141,14 @@ export function SignupForm() {
 
       if (error) {
         setError(error.message || "Erreur lors de l'inscription");
+        toast.error("Erreur d'inscription", { description: error.message });
       } else {
+        toast.success("Bienvenue à la FSA !", { description: "Votre compte a été créé avec succès." });
         router.push("/admin/dashboard");
       }
     } catch (err) {
       setError("Une erreur inattendue est survenue");
+      toast.error("Erreur système", { description: "Une erreur est survenue lors de l'inscription." });
     } finally {
       setLoading(false);
     }
@@ -197,8 +213,17 @@ export function SignupForm() {
             </div>
           </div>
           <Button type="submit" className="w-full font-semibold transition-all hover:scale-[1.02]" disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-            S'inscrire
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Inscription en cours...
+              </>
+            ) : (
+               <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                S'inscrire
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

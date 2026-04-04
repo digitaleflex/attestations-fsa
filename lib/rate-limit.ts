@@ -90,6 +90,22 @@ export const rateLimits = {
     analytics: true,
     prefix: "ratelimit:email-verify",
   }) : null,
+
+  // Waitlist (portfolio signup)
+  waitlist: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "1 h"),  // 5 inscriptions / heure
+    analytics: true,
+    prefix: "ratelimit:waitlist",
+  }) : null,
+
+  // Internship applications
+  internship: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(3, "1 h"),  // 3 candidatures / heure
+    analytics: true,
+    prefix: "ratelimit:internship",
+  }) : null,
 }
 
 // ✅ FIX: Accept Request instead of NextRequest

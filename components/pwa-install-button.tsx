@@ -9,6 +9,17 @@ export function PwaInstallButton() {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
+        // Enregistrement du Service Worker pour le mode Offline
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                    console.log('[SW] Service Worker enregistré avec succès !', reg.scope);
+                }).catch((err) => {
+                    console.error('[SW] Échec de l\'enregistrement du Service Worker', err);
+                });
+            });
+        }
+
         const handler = (e: any) => {
             e.preventDefault();
             setDeferredPrompt(e);

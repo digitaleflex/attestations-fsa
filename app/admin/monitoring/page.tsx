@@ -117,10 +117,10 @@ export default function MonitoringDashboard() {
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">
             Surveillance du Système
           </h1>
-          <p className="text-slate-500 font-medium flex items-center gap-2">
+          <div className="text-slate-500 font-medium flex items-center gap-2">
             Supervision en temps réel des activités candidats et serveurs.
             <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 animate-pulse">Live</Badge>
-          </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative group">

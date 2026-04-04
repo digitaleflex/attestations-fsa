@@ -64,10 +64,7 @@ export default function Home() {
       {/* --- QUICK ACCESS CARDS --- */}
       <QuickAccessCards />
 
-      {/* --- STATS SECTION --- */}
-      <section className="w-full flex flex-col items-center">
-         <StatsDisplay />
-      </section>
+      {/* --- STATS SECTION - RETIRÉ --- */}
 
       {/* --- HOW IT WORKS --- */}
       <section className="w-full max-w-7xl px-4">

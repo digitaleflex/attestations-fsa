@@ -8,6 +8,7 @@ import { z } from "zod";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { handleApiError } from "@/lib/error-handler";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { sanitizeInput } from "@/lib/sanitization";
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
@@ -85,8 +86,12 @@ export async function POST(request: Request) {
 
     const { name, email, password, role } = parse.data;
 
+    // ✅ SANITIZATION - Clean email input before DB storage
+    const sanitizedEmail = sanitizeInput(email).toLowerCase();
+    const sanitizedName = sanitizeInput(name);
+
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
     if (existingUser) {
       return NextResponse.json(
         { error: "Un utilisateur avec cet email existe déjà" },
@@ -100,8 +105,8 @@ export async function POST(request: Request) {
     // Créer l'utilisateur
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: sanitizedName,
+        email: sanitizedEmail,
         password: hashedPassword,
         role: role || "USER",
         emailVerified: new Date(),

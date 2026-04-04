@@ -106,7 +106,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                     <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:scale-110">
                       <Phone className="w-3.5 h-3.5" />
                     </div>
-                    <span>+229 01 01 01 01</span>
+                    <span>+229 01 07 60 93</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-600 font-medium group cursor-pointer hover:text-emerald-600 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:scale-110">
