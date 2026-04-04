@@ -8,6 +8,8 @@ import { z } from 'zod'
 import { applyRateLimit } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/error-handler'
 import { sanitizeInput } from '@/lib/sanitization'
+import { emailService } from '@/lib/email'
+import { randomBytes } from 'crypto'
 
 // Schéma de validation pour l'inscription candidat (formulaire public)
 const RegisterSchema = z.object({
@@ -85,8 +87,34 @@ export async function POST(request: Request) {
       }
     })
 
+    // ✅ ENVOYER EMAIL DE VÉRIFICATION
+    try {
+      const token = randomBytes(32).toString('hex')
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+
+      await prisma.verification.create({
+        data: {
+          identifier: `email_verify:${user.id}`,
+          value: token,
+          expiresAt,
+        }
+      })
+
+      const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/user/verify-email?token=${token}`
+
+      // Send email (non-blocking, don't fail registration if email fails)
+      emailService.sendVerificationEmail(
+        sanitizedEmail,
+        sanitizedName,
+        verifyLink
+      ).catch(err => console.error('[REGISTER] Verification email failed:', err))
+    } catch (emailError) {
+      // Don't fail registration if email fails
+      console.error('[REGISTER] Email setup error:', emailError)
+    }
+
     return NextResponse.json({
-      message: 'Compte candidat créé avec succès',
+      message: 'Compte candidat créé avec succès. Un email de vérification a été envoyé.',
       user
     }, { status: 201 })
   } catch (error) {
