@@ -228,7 +228,7 @@ export async function GET() {
   try {
     const isAdmin = await isAdminAuthenticated();
     if (!isAdmin) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 0 }); // Fallback code 0 for legacy but unauthorized
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
     const exams = await prisma.exam.findMany({

@@ -1,18 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
-
-// Helper pour vérifier l'authentification admin
-async function isAuthenticatedAdmin() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-  
-  if (!session || !session.value) return null;
-  if (role?.value !== 'ADMIN') return null;
-  
-  return session.value;
-}
+import { isAdminAuthenticated } from '@/lib/auth';
 
 // GET /api/admin/submissions/[id] - Récupérer une soumission spécifique
 export async function GET(
@@ -20,8 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await isAuthenticatedAdmin();
-    if (!adminId) {
+    if (!await isAdminAuthenticated()) {
       return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
     }
 

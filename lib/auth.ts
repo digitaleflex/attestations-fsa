@@ -124,8 +124,8 @@ export async function isAdminAuthenticated(request?: Request): Promise<boolean> 
             ? await auth.api.getSession({ headers: request.headers })
             : await auth.api.getSession({ headers: await headers() });
 
-        // ✅ FIX: Use typed helper instead of `as any`
-        if (session?.user && getUserRole(session.user) === 'ADMIN') {
+        // ✅ FIX: Case-insensitive role check (Better Auth stores 'admin', legacy uses 'ADMIN')
+        if (session?.user && getUserRole(session.user)?.toLowerCase() === 'admin') {
             return true;
         }
 
@@ -136,7 +136,7 @@ export async function isAdminAuthenticated(request?: Request): Promise<boolean> 
                 where: { id: legacyId },
                 select: { id: true, role: true }
             });
-            return user?.role === 'ADMIN';
+            return user?.role?.toUpperCase() === 'ADMIN';
         }
 
         return false;

@@ -135,6 +135,14 @@
       transform: translateY(-20px);
     }
   }
+  @keyframes vortex-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes vortex-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
 }
 
 @layer base {
@@ -243,5 +251,31 @@
 
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600;
+  }
+
+  /* Vortex Animation Classes */
+  .vortex-overlay {
+    @apply fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-xl animate-in fade-in duration-500;
+  }
+
+  .vortex-halo {
+    @apply relative w-24 h-24 mb-6;
+  }
+
+  .vortex-ring {
+    @apply absolute inset-0 rounded-full border-4 border-transparent opacity-70;
+    background: conic-gradient(from 0deg, var(--vortex-color-1), var(--vortex-color-2), transparent);
+    animation: vortex-spin 2s linear infinite;
+  }
+
+  .vortex-ring-inner {
+    @apply absolute inset-2 rounded-full border-2 border-transparent opacity-50;
+    background: conic-gradient(from 180deg, var(--vortex-color-2), var(--vortex-color-1), transparent);
+    animation: vortex-spin 3s linear reverse infinite;
+  }
+
+  .vortex-core {
+    @apply absolute inset-4 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,1)] flex items-center justify-center;
+    animation: vortex-pulse 2s ease-in-out infinite;
   }
 }

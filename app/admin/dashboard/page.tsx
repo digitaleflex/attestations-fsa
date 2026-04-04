@@ -94,8 +94,8 @@ export default function AdminDashboardPage() {
           const date = new Date(u.createdAt);
           return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
         }).length,
-        admins: users.filter((u: any) => u.role === "ADMIN").length,
-        candidates: users.filter((u: any) => u.role === "USER").length,
+        admins: users.filter((u: any) => u.role === "admin").length,
+        candidates: users.filter((u: any) => u.role === "user").length,
       };
     },
     staleTime: 5 * 60 * 1000,

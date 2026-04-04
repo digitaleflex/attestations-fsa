@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     const where: any = {};
     if (isAdmin) {
       if (unreadOnly) {
-        where.senderRole = "USER";
+        where.senderRole = "user";
         where.isRead = false;
       } else if (targetUserId) {
         where.userId = targetUserId;
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
 
     if (!unreadOnly && messages.length > 0) {
         const lastMessages = messages.filter((m: any) => 
-            (isAdmin && m.senderRole === "USER") || (!isAdmin && m.senderRole === "ADMIN")
+            (isAdmin && m.senderRole === "user") || (!isAdmin && m.senderRole === "admin")
         );
         
         if (lastMessages.length > 0) {
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
 
     const finalUserId = isAdmin ? targetUserId : user?.id;
     const senderId = isAdmin ? "ADMIN_SYSTEM" : user?.id;
-    const senderRole = isAdmin ? "ADMIN" : "USER";
+    const senderRole = isAdmin ? "admin" : "user";
 
     if (!finalUserId) return NextResponse.json({ error: "Destinataire manquant" }, { status: 400 });
     if (!senderId) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
         await pusherServer.trigger(`chat-${finalUserId}`, "message", message);
         
         // Alerte globale pour les admins s'il s'agit d'un message d'un USER
-        if (senderRole === "USER") {
+        if (senderRole === "user") {
             await pusherServer.trigger("admin-events", "message", {
                 id: message.id,
                 userId: finalUserId,

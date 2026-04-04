@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,15 +39,17 @@ export default function AdminLoginPage() {
           setError(ctx.error.message || "Échec de la connexion");
           toast.error(ctx.error.message || "Échec de la connexion");
         },
-        onSuccess: (ctx) => {
-          toast.success("Connexion réussie !");
-          router.push("/admin/dashboard");
+        onSuccess: () => {
+          toast.success("Connexion réussie ! Redirection...", {
+            description: "Veuillez patienter...",
+            duration: 3000,
+          });
+          // callbackURL handles the redirect automatically
         }
       });
 
       if (authError) {
         setError(authError.message || "Échec de la connexion");
-        return;
       }
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");

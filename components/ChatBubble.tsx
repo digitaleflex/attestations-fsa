@@ -86,7 +86,7 @@ export default function ChatBubble() {
     const optimisticMsg = {
         id: tempId,
         content: newMessage,
-        senderRole: "USER",
+        senderRole: "user",
         senderId: "temp",
         createdAt: new Date().toISOString(),
         attachments: []
@@ -129,7 +129,7 @@ export default function ChatBubble() {
         className="fixed bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all z-50 group border-4 border-white"
       >
         <MessageCircle className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-        {messages.some(m => m.senderRole === "ADMIN" && !m.isRead) && (
+        {messages.some(m => m.senderRole === "admin" && !m.isRead) && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white animate-bounce" />
         )}
       </button>
@@ -175,7 +175,7 @@ export default function ChatBubble() {
                         </div>
                     ) : (
                         messages.map((m, i) => {
-                            const isMe = m.senderRole === "USER";
+                            const isMe = m.senderRole === "user";
                             return (
                                 <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[80%] p-3 rounded-2xl shadow-sm relative ${

@@ -10,6 +10,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed",
     "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {
@@ -108,5 +113,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.36.0",
     "webpack": "^5.99.9"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts"
   }
 }

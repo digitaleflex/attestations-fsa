@@ -413,7 +413,7 @@ model Admin {
   name          String?
   createdAt     DateTime  @default(now())
   emailVerified DateTime?
-  role          String    @default("ADMIN")
+  role          String    @default("admin")
   updatedAt     DateTime
   address       String?
   birthDate     DateTime?

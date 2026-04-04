@@ -65,8 +65,8 @@ export default function AdminMessagesPage() {
       const res = await fetch("/api/users"); 
       const users = await res.json();
       
-      // On filtre les candidats (role USER)
-      setConversations(users.filter((u: any) => u.role === "USER")); 
+      // On filtre les candidats (role user)
+      setConversations(users.filter((u: any) => u.role === "user")); 
     } catch (err) {} finally {
       setConvLoading(false);
     }
@@ -91,7 +91,7 @@ export default function AdminMessagesPage() {
     const optimisticMsg = {
         id: tempId,
         content: newMessage,
-        senderRole: "ADMIN",
+        senderRole: "admin",
         senderId: "ADMIN_SYSTEM",
         createdAt: new Date().toISOString(),
         attachments: []
@@ -207,7 +207,7 @@ export default function AdminMessagesPage() {
             {/* Messages Area */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6">
                {messages.map((m) => {
-                 const isMe = m.senderRole === "ADMIN";
+                 const isMe = m.senderRole === "admin";
                  return (
                    <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                       <div className={`max-w-[70%] group`}>

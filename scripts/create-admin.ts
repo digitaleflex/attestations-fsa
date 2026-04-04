@@ -1,75 +1,66 @@
 import 'dotenv/config';
-import { prisma } from '../lib/prisma';
-import { scryptSync, randomBytes } from 'node:crypto';
+import { PrismaClient } from '@prisma/client';
+import { hashPassword } from 'better-auth/crypto';
 
-// Fonction de hachage compatible Better Auth (Scrypt standard)
-function hashPassword(pass: string): string {
-  const salt = randomBytes(16).toString('hex');
-  const derivedKey = scryptSync(pass, salt, 64, {
-    N: 16384,
-    r: 8,
-    p: 1
-  }).toString('hex');
-  // Format attendu par certains adaptateurs ou simplement pour stockage propre
-  // Better Auth stocke souvent le salt séparément, mais ici on va assurer 
-  // que le format est compatible avec la validation.
-  return `${salt}.${derivedKey}`;
-}
+const prisma = new PrismaClient();
+
+const admins = [
+  { email: 'eflexcloud@gmail.com', password: 'AdminFSA1452.', name: 'Super Admin' },
+  { email: 'admin@fermestandre.com', password: 'AdminFSA1452.', name: 'FSA Admin' },
+  { email: 'admin@fsa.bj', password: 'AdminFSA1452.', name: 'FSAbj Admin' },
+];
 
 async function main() {
-  const admins = [
-    { email: 'eflexcloud@gmail.com', password: 'AdminFSA1452.', name: 'Super Admin' },
-    { email: 'admin@fermestandre.com', password: 'AdminFSA1452.', name: 'FSA Admin' },
-    { email: 'admin@fsa.bj', password: 'AdminFSA1452.', name: 'FSAbj Admin' }
-  ];
-
   for (const admin of admins) {
-    console.log(`🚀 Injection Scrypt native pour : ${admin.email}...`);
+    console.log(`\n── ${admin.email} ──`);
 
     try {
-      const hashedPassword = hashPassword(admin.password);
-      
-      const user = await prisma.user.upsert({
+      // 1. Supprimer l'ancien compte
+      const existingUser = await prisma.user.findUnique({
         where: { email: admin.email },
-        update: {
-          password: hashedPassword,
-          role: 'ADMIN'
-        },
-        create: {
-          email: admin.email,
-          password: hashedPassword,
-          role: 'ADMIN',
-          name: admin.name,
-          emailVerified: new Date()
-        }
       });
 
-      await prisma.account.upsert({
-        where: { 
-          providerId_accountId: {
-            providerId: 'credential',
-            accountId: admin.email
-          }
-        },
-        update: {
+      if (existingUser) {
+        console.log(`  🗑️  Suppression de l'ancien compte (id: ${existingUser.id})...`);
+        await prisma.account.deleteMany({ where: { userId: existingUser.id } });
+        await prisma.session.deleteMany({ where: { userId: existingUser.id } });
+        await prisma.user.delete({ where: { id: existingUser.id } });
+      }
+
+      // 2. Hash avec l'algorithme interne de Better Auth
+      const hashedPassword = await hashPassword(admin.password);
+      console.log(`  🔐 Hash Better Auth généré: ${hashedPassword.slice(0, 20)}...`);
+
+      // 3. Créer le user
+      const user = await prisma.user.create({
+        data: {
+          email: admin.email,
+          name: admin.name,
           password: hashedPassword,
-          updatedAt: new Date()
+          role: 'admin',
+          emailVerified: new Date(),
         },
-        create: {
+      });
+      console.log(`  👤 User créé (id: ${user.id})`);
+
+      // 4. Créer l'Account credential
+      await prisma.account.create({
+        data: {
           userId: user.id,
           providerId: 'credential',
           accountId: admin.email,
           password: hashedPassword,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
+        },
       });
-
-      console.log(`✅ ${admin.email} synchronisé (Natif Scrypt).`);
+      console.log(`  🔑 Account credential créé`);
+      console.log(`  ✅ ${admin.name} créé avec succès`);
     } catch (error) {
-      console.error(`❌ Erreur pour ${admin.email} :`, error);
+      console.error(`  ❌ Erreur pour ${admin.email} :`, error);
     }
   }
+
+  console.log('\n✅ Terminé.');
+  await prisma.$disconnect();
   process.exit(0);
 }
 

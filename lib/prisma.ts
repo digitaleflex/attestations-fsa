@@ -11,9 +11,7 @@ declare global {
 }
 
 const baseClient = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'error', 'warn'] 
-    : ['error'],
+  log: ['error'],
 });
 
 function createPrismaClient(base: PrismaClient) {
@@ -36,7 +34,6 @@ export const rawPrisma = baseClient;
 // Safe connection tester (non-blocking)
 if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
   prisma.$connect()
-    .then(() => console.log('✅ Connecté à la base de données'))
     .catch(err => console.error('❌ Erreur DB:', err.message));
 }
 

@@ -67,7 +67,7 @@ type UserForm = {
   name: string;
   email: string;
   password: string;
-  role: "ADMIN" | "USER";
+  role: "admin" | "user";
   birthDate?: string;
   birthPlace?: string;
   phone?: string;
@@ -84,7 +84,7 @@ export default function AdminUsersPage() {
     name: "",
     email: "",
     password: "",
-    role: "USER",
+    role: "user",
   });
   const [saving, setSaving] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -116,7 +116,7 @@ export default function AdminUsersPage() {
         name: user.name || "",
         email: user.email || "",
         password: "",
-        role: user.role as "ADMIN" | "USER",
+        role: user.role as "admin" | "user",
         birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : "",
         birthPlace: user.birthPlace || "",
         phone: user.phone || "",
@@ -128,7 +128,7 @@ export default function AdminUsersPage() {
         name: "", 
         email: "", 
         password: "", 
-        role: "USER",
+        role: "user",
         birthDate: "",
         birthPlace: "",
         phone: "",
@@ -304,12 +304,12 @@ export default function AdminUsersPage() {
                   id="role"
                   value={form.role}
                   onChange={(e) =>
-                    setForm({ ...form, role: e.target.value as "ADMIN" | "USER" })
+                    setForm({ ...form, role: e.target.value as "admin" | "user" })
                   }
                   className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md"
                 >
-                  <option value="USER">Utilisateur</option>
-                  <option value="ADMIN">Administrateur</option>
+                  <option value="user">Utilisateur</option>
+                  <option value="admin">Administrateur</option>
                 </select>
               </div>
               
@@ -438,12 +438,12 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <span
                         className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          u.role === "ADMIN"
+                          u.role === "admin"
                             ? "bg-purple-100 text-purple-700"
                             : "bg-slate-100 text-slate-700"
                         }`}
                       >
-                        {u.role === "ADMIN" ? "Administrateur" : "Utilisateur"}
+                        {u.role === "admin" ? "Administrateur" : "Utilisateur"}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -591,12 +591,12 @@ export default function AdminUsersPage() {
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Rôle</p>
                       <span
                         className={`inline-block text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${
-                          viewingUser.role === "ADMIN"
+                          viewingUser.role === "admin"
                             ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                             : "bg-white/10 text-white border border-white/20 shadow-sm"
                         }`}
                       >
-                        {viewingUser.role === "ADMIN" ? "Administrateur" : "Utilisateur"}
+                        {viewingUser.role === "admin" ? "Administrateur" : "Utilisateur"}
                       </span>
                     </div>
                   </div>

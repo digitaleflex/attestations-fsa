@@ -1,6 +1,6 @@
 -- Fix HTML-encoded apostrophes in names
 -- sanitizeInput was encoding ' to &#x27; before storing in DB
--- This migration restores proper apostrophes
+-- This script restores proper apostrophes
 
 -- Fix User names
 UPDATE "User"

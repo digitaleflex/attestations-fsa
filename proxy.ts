@@ -47,7 +47,7 @@ export default async function middleware(request: NextRequest) {
         }
 
         // Vérification stricte du rôle ADMIN
-        if (session.user.role !== 'ADMIN') {
+        if (session.user.role !== 'admin') {
             return NextResponse.redirect(new URL('/admin/login?error=unauthorized', request.url));
         }
     }

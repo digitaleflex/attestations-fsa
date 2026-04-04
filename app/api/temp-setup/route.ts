@@ -40,8 +40,13 @@ export async function GET() {
             password: password,
             name: admin.name,
             role: "admin",
-            emailVerified: true,
           }
+        });
+
+        // 3. Validation de l'email manuellement (car non supporté dans le body de createUser)
+        await db.user.update({
+            where: { id: result.user.id },
+            data: { emailVerified: new Date() }
         });
         
         results.push({ email: admin.email, id: result.user.id });

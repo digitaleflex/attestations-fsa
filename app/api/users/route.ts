@@ -14,7 +14,7 @@ const CreateUserSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   email: z.string().email("Email invalide"),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
-  role: z.enum(["ADMIN", "USER"]).optional(),
+  role: z.enum(["admin", "user"]).optional(),
 });
 
 // GET - Liste des utilisateurs (✅ Admin uniquement)
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
         name: sanitizedName,
         email: sanitizedEmail,
         password: hashedPassword,
-        role: role || "USER",
+        role: role || "user",
         emailVerified: new Date(),
       },
       select: {

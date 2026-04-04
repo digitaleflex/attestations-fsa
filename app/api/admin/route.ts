@@ -19,8 +19,12 @@ const AdminProfileSchema = z.object({
 
 // GET /api/admin - Récupérer le profil de l'admin connecté
 export async function GET() {
+  if (!await isAdminAuthenticated()) {
+    return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
+  }
+
   const user = await getCurrentUser();
-  if (!user || user.role !== 'ADMIN') {
+  if (!user) {
     return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
   }
 
@@ -43,8 +47,12 @@ export async function GET() {
 
 // PATCH /api/admin - Mettre à jour le profil de l'admin
 export async function PATCH(request: Request) {
+  if (!await isAdminAuthenticated()) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+  }
+
   const user = await getCurrentUser();
-  if (!user || user.role !== 'ADMIN') {
+  if (!user) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 

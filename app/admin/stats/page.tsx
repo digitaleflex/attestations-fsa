@@ -25,8 +25,8 @@ export default function AdminStatsPage() {
       const users = await res.json();
       return {
         total: users.length,
-        admins: users.filter((u: any) => u.role === "ADMIN").length,
-        candidates: users.filter((u: any) => u.role === "USER").length,
+        admins: users.filter((u: any) => u.role === "admin").length,
+        candidates: users.filter((u: any) => u.role === "user").length,
       };
     },
     staleTime: 5 * 60 * 1000,

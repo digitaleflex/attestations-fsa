@@ -159,6 +159,7 @@ export default function AuthPage() {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -283,6 +284,7 @@ export default function AuthPage() {
 
         toast.success("Connexion réussie !");
         
+        setIsRedirecting(true); // Déclenchement Vortex
         // Redirection intelligente
         if ((data?.user as any)?.role === 'ADMIN') {
           router.push("/admin/dashboard");
@@ -306,6 +308,7 @@ export default function AuthPage() {
 
         toast.success("Compte créé avec succès !");
         
+        setIsRedirecting(true); // Déclenchement Vortex
         // Si l'utilisateur est un admin (cas exceptionnel), rediriger vers admin
         if ((data?.user as any)?.role === 'ADMIN') {
             router.push("/admin/dashboard");
@@ -487,6 +490,21 @@ export default function AuthPage() {
             </Link>
           </div>
         </Card>
+
+        {/* Vortex Redirection Overlay - Candidat (Azure/Emerald) */}
+        {isRedirecting && (
+          <div className="vortex-overlay" style={{ "--vortex-color-1": "#10b981", "--vortex-color-2": "#2563eb" } as any}>
+            <div className="vortex-halo">
+              <div className="vortex-ring" />
+              <div className="vortex-ring-inner" />
+              <div className="vortex-core">
+                 <span className="text-2xl">🎓</span>
+              </div>
+            </div>
+            <p className="text-emerald-900 font-bold text-xl animate-pulse">Accès en cours...</p>
+            <p className="text-emerald-700 text-sm mt-2">Vérification de sécurité et redirection</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -803,9 +821,9 @@ export default function AuthPage() {
               <Button
                 type="button"
                 onClick={handleNextStep}
-                className="flex-1 h-11 font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md"
+                className="flex-1 h-11 font-semibold bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all"
               >
-                Suivant
+                Continuer
               </Button>
             ) : (
               <Button

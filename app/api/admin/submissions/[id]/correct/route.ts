@@ -1,20 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
+import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
 import { emailService } from '@/lib/email';
-
-// Helper pour vérifier l'authentification admin
-async function isAuthenticatedAdmin() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-  
-  if (!session || !session.value) return null;
-  if (role?.value !== 'ADMIN') return null;
-  
-  return session.value;
-}
 
 // POST /api/admin/submissions/[id]/correct - Corriger une soumission
 export async function POST(
@@ -22,14 +10,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await isAuthenticatedAdmin();
-    if (!adminId) {
+    if (!await isAdminAuthenticated()) {
       return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await request.json();
     const { part2Score, part3Score } = body;
+
+    const admin = await getCurrentUser();
 
     // Récupérer la soumission avec l'examen
     const submission = await prisma.examSession.findUnique({
@@ -77,7 +66,7 @@ export async function POST(
         gradedAt: new Date(),
         scorePart2: part2Score,
         scorePart3: part3Score,
-        gradedBy: adminId
+        gradedBy: admin?.id
       },
       include: {
         candidate: true,

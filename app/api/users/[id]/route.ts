@@ -9,7 +9,7 @@ const UpdateUserSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères").optional(),
   email: z.string().email("Email invalide").optional(),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères").optional(),
-  role: z.enum(["ADMIN", "USER"]).optional(),
+  role: z.enum(["admin", "user"]).optional(),
   birthDate: z.string().or(z.date()).optional(),
   birthPlace: z.string().optional(),
   phone: z.string().optional(),

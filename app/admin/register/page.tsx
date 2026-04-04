@@ -27,6 +27,7 @@ export default function AdminRegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -68,7 +69,7 @@ export default function AdminRegisterPage() {
         email: form.email,
         password: form.password,
         name: form.name,
-        role: "ADMIN", // Forced role for this specific admin registration page
+        role: "admin", // Forced role for this specific admin registration page
         callbackURL: "/admin/dashboard",
       } as any, {
         onRequest: () => setLoading(true),
@@ -79,6 +80,7 @@ export default function AdminRegisterPage() {
         },
         onSuccess: () => {
           toast.success("Compte administrateur créé avec succès !");
+          setIsRedirecting(true); // Déclenchement Vortex
           router.push("/admin/dashboard");
         }
       });
@@ -222,6 +224,21 @@ export default function AdminRegisterPage() {
           </Link>
         </div>
       </Card>
+
+      {/* Vortex Redirection Overlay */}
+      {isRedirecting && (
+        <div className="vortex-overlay" style={{ "--vortex-color-1": "#f59e0b", "--vortex-color-2": "#ea580c" } as any}>
+          <div className="vortex-halo">
+            <div className="vortex-ring" />
+            <div className="vortex-ring-inner" />
+            <div className="vortex-core">
+               <span className="text-2xl">⚡</span>
+            </div>
+          </div>
+          <p className="text-slate-800 font-bold text-xl animate-pulse">Veuillez patienter...</p>
+          <p className="text-slate-500 text-sm mt-2">Création sécurisée de votre accès</p>
+        </div>
+      )}
     </div>
   );
 }
