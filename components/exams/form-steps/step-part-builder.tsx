@@ -12,7 +12,12 @@ import {
   Trash2, 
   Clock, 
   FileText, 
-  XCircle 
+  XCircle,
+  Laptop2,
+  HandMetal,
+  CheckCircle2,
+  FileEdit,
+  PenTool
 } from "lucide-react";
 import { Part, Question, Option } from "../types";
 
@@ -95,17 +100,69 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
       </div>
 
       {part.type === 'CASE_STUDY' && (
-        <div className="space-y-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-          <Label className="text-sm font-bold text-blue-700 flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Mise en situation / Scénario
-          </Label>
-          <Textarea
-            placeholder="Décrivez l'étude de cas ici..."
-            value={part.scenario}
-            onChange={(e) => onUpdatePart({ scenario: e.target.value })}
-            className="min-h-[150px] border-blue-200 focus:ring-blue-100"
-          />
+        <div className="space-y-6">
+          <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100 shadow-sm">
+            <Label className="text-sm font-black text-amber-800 flex items-center gap-2 uppercase tracking-widest mb-4">
+              <FileEdit className="w-5 h-5" />
+              Configuration de l'Étude de Cas
+            </Label>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <Card
+                className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group ${
+                  part.mode === "digital"
+                    ? "border-2 border-blue-500 bg-blue-50/50 shadow-md"
+                    : "border-2 border-slate-200 hover:border-blue-200 bg-white"
+                }`}
+                onClick={() => onUpdatePart({ mode: "digital" })}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${part.mode === "digital" ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500"}`}>
+                    <Laptop2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800">Numérique</h4>
+                    <p className="text-[10px] text-slate-500 font-medium">Rédaction directe en ligne</p>
+                  </div>
+                  {part.mode === "digital" && <CheckCircle2 className="w-5 h-5 text-blue-500 ml-auto" />}
+                </div>
+              </Card>
+
+              <Card
+                className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group ${
+                  part.mode === "physical"
+                    ? "border-2 border-amber-500 bg-amber-50/50 shadow-md"
+                    : "border-2 border-slate-200 hover:border-amber-200 bg-white"
+                }`}
+                onClick={() => onUpdatePart({ mode: "physical" })}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${part.mode === "physical" ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-amber-100 group-hover:text-amber-500"}`}>
+                    <HandMetal className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800">Physique</h4>
+                    <p className="text-[10px] text-slate-500 font-medium">Rédaction sur papier</p>
+                  </div>
+                  {part.mode === "physical" && <CheckCircle2 className="w-5 h-5 text-amber-500 ml-auto" />}
+                </div>
+              </Card>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-600 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-slate-400" />
+                Mise en situation / Scénario détaillé
+              </Label>
+              <Textarea
+                placeholder="Décrivez l'étude de cas, le contexte et les enjeux..."
+                value={part.scenario || ""}
+                onChange={(e) => onUpdatePart({ scenario: e.target.value })}
+                className="min-h-[200px] border-amber-200 focus:ring-amber-100 bg-white rounded-xl resize-none font-medium text-slate-700"
+              />
+              <p className="text-[10px] text-slate-400 font-medium italic">Cet énoncé sera affiché en haut de la page pour le candidat.</p>
+            </div>
+          </div>
         </div>
       )}
 

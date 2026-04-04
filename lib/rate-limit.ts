@@ -149,3 +149,74 @@ export async function applyRateLimit(
     },
   } as const
 }
+
+/**
+ * Apply rate limiting by userId (in addition to IP)
+ * This prevents a user with multiple IPs from bypassing limits
+ */
+export async function applyRateLimitByUser(
+  request: Request,
+  userId: string,
+  limitType: keyof typeof rateLimits
+) {
+  // Si Redis n'est pas configuré, on bypass le rate limiting
+  if (!ratelimitEnabled) {
+    return {
+      allowed: true,
+      headers: {} as Record<string, string>,
+    } as const
+  }
+
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const limit = rateLimits[limitType]
+
+  if (!limit) {
+    console.warn(`[RATE LIMIT] Type de limit inconnu: ${limitType}`)
+    return {
+      allowed: true,
+      headers: {} as Record<string, string>,
+    } as const
+  }
+
+  // Apply BOTH IP-based and user-based limits
+  // User gets blocked if EITHER limit is exceeded
+  const userIdentifiers = [
+    `ip:${ip}`,
+    `user:${userId}`,
+  ]
+
+  for (const identifier of userIdentifiers) {
+    const { success, limit: max, reset, remaining } = await limit.limit(identifier)
+
+    if (!success) {
+      return {
+        allowed: false,
+        response: NextResponse.json(
+          {
+            error: 'Trop de requêtes. Veuillez réessayer plus tard.',
+            code: 'RATE_LIMIT_EXCEEDED',
+            retryAfter: new Date(reset).toISOString(),
+          },
+          {
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': max.toString(),
+              'X-RateLimit-Remaining': remaining.toString(),
+              'X-RateLimit-Reset': new Date(reset).toISOString(),
+              'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+            },
+          }
+        ),
+      } as const
+    }
+  }
+
+  return {
+    allowed: true,
+    headers: {
+      'X-RateLimit-Limit': '100',
+      'X-RateLimit-Remaining': '99',
+      'X-RateLimit-Reset': new Date(Date.now() + 60000).toISOString(),
+    },
+  } as const
+}

@@ -27,6 +27,7 @@ export interface Part {
   enabled: boolean;
   subject?: string;
   scenario?: string;
+  mode?: "digital" | "physical";
   questions: Question[];
 }
 
@@ -40,7 +41,7 @@ export interface ExamFormData {
   duration?: number;
   passingScore?: number;
   totalPoints?: number;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SCHEDULED";
   scheduledAt: string;
   part1Enabled?: boolean;
   part2Enabled?: boolean;
@@ -81,5 +82,6 @@ export const DEFAULT_PARTS: Part[] = [
     enabled: true,
     questions: [],
     scenario: "",
+    mode: "digital",
   },
 ];

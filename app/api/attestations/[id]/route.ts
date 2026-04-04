@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { z } from 'zod';
+import { createNotification } from '@/lib/notifications';
 
 // Schéma de validation pour la mise à jour d'une attestation
 const AttestationUpdateSchema = z.object({
@@ -110,10 +111,34 @@ export async function PATCH(
     if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
     if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
     // Mise à jour
+    const oldAttestation = await prisma.attestation.findUnique({ where: { id }, select: { status: true, userId: true, fullName: true, code: true } });
+    
     const attestation = await prisma.attestation.update({
       where: { id },
       data: updateData,
     });
+
+    // Créer une notification si le statut a changé et qu'un userId existe
+    if (oldAttestation?.userId && data.status && oldAttestation.status !== data.status) {
+      if (data.status === 'VALIDATED') {
+        await createNotification({
+          userId: oldAttestation.userId,
+          type: 'ATTESTATION_VALIDATED',
+          title: 'Attestation validée ! 🎉',
+          message: `Votre attestation "${oldAttestation.fullName}" (${oldAttestation.code}) a été validée avec succès.`,
+          link: `/attestations/${id}`,
+        });
+      } else if (data.status === 'REJECTED') {
+        await createNotification({
+          userId: oldAttestation.userId,
+          type: 'ATTESTATION_REJECTED',
+          title: 'Attestation rejetée',
+          message: `Votre attestation "${oldAttestation.fullName}" (${oldAttestation.code}) a été rejetée. Contactez le support pour plus d'informations.`,
+          link: `/attestations/${id}`,
+        });
+      }
+    }
+
     return NextResponse.json(attestation);
   } catch (error) {
     console.error("Erreur lors de la mise à jour de l'attestation:", error);

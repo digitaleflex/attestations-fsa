@@ -22,8 +22,18 @@ import { toast } from "sonner";
 
 export default function SupportPage() {
   const [subject, setSubject] = useState("");
+  const [category, setCategory] = useState("TECH");
+  const [urgency, setUrgency] = useState("MEDIUM");
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+  const categories = [
+    { id: "TECH", label: "Problème Technique", icon: "🛠️" },
+    { id: "EXAM", label: "Session d'Examen", icon: "📝" },
+    { id: "DOCS", label: "Attestation & Documents", icon: "🎓" },
+    { id: "PLAN", label: "Emploi du temps", icon: "📅" },
+    { id: "OTHER", label: "Autre demande", icon: "💡" },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +44,11 @@ export default function SupportPage() {
       const res = await fetch("/api/support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, message }),
+        body: JSON.stringify({ 
+          subject: `[${category}] ${subject} (${urgency})`, 
+          message,
+          metadata: { category, urgency }
+        }),
       });
       
       if (!res.ok) throw new Error("Erreur serveur");
@@ -54,25 +68,27 @@ export default function SupportPage() {
     {
       icon: MessageCircle,
       title: "Chat WhatsApp",
-      description: "Réponse instantanée pour les urgences d'examen.",
-      action: "Ouvrir WhatsApp",
-      link: "https://wa.me/22900000000",
-      color: "bg-emerald-50 text-emerald-600 border-emerald-100"
+      description: "Prévu prochainement pour les urgences d'examen.",
+      action: "Bientôt disponible",
+      link: "#",
+      color: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      comingSoon: true
     },
     {
       icon: Phone,
       title: "Assistance Téléphonique",
-      description: "Disponible du lundi au vendredi, 8h - 18h.",
-      action: "Appeler le +229 XX XX XX XX",
-      link: "tel:+22900000000",
-      color: "bg-blue-50 text-blue-600 border-blue-100"
+      description: "Notre centre d'appel est en cours de configuration.",
+      action: "Bientôt disponible",
+      link: "#",
+      color: "bg-blue-50 text-blue-600 border-blue-100",
+      comingSoon: true
     },
     {
       icon: Mail,
-      title: "Support Email",
-      description: "Pour les demandes administratives et corrections.",
-      action: "Envoyer un email",
-      link: "mailto:support@fsa.bj",
+      title: "Support Email Officiel",
+      description: "Utilisez cet email pour toute demande urgente.",
+      action: "contact@eurinhash.com",
+      link: "mailto:contact@eurinhash.com",
       color: "bg-purple-50 text-purple-600 border-purple-100"
     }
   ];
@@ -111,40 +127,111 @@ export default function SupportPage() {
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-              <div className="space-y-2">
-                <Label htmlFor="subject" className="text-sm font-bold text-slate-700 ml-1">Sujet de votre demande</Label>
-                <Input 
-                  id="subject" 
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Ex: Problème d'affichage de mon nom" 
-                  className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-100 transition-all rounded-xl"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Catégorie</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {categories.slice(0, 4).map(cat => (
+                            <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => setCategory(cat.id)}
+                                className={`flex items-center gap-2 p-3 rounded-xl border text-[11px] font-bold transition-all ${
+                                    category === cat.id 
+                                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
+                                    : "bg-white border-slate-100 text-slate-600 hover:border-blue-200"
+                                }`}
+                            >
+                                <span>{cat.icon}</span>
+                                <span className="truncate">{cat.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Niveau d'urgence</Label>
+                    <div className="flex bg-slate-50 p-1 rounded-xl gap-1">
+                        {[
+                            { id: "LOW", label: "Basse", color: "text-slate-500", active: "bg-white text-slate-900" },
+                            { id: "MEDIUM", label: "Moyenne", color: "text-amber-500", active: "bg-amber-500 text-white" },
+                            { id: "HIGH", label: "Haute", color: "text-rose-500", active: "bg-rose-500 text-white" },
+                        ].map(level => (
+                            <button
+                                key={level.id}
+                                type="button"
+                                onClick={() => setUrgency(level.id)}
+                                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${
+                                    urgency === level.id ? level.active + " shadow-sm" : "text-slate-400 hover:text-slate-600"
+                                }`}
+                            >
+                                {level.label}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400 italic px-1">
+                        {urgency === "HIGH" ? "⚠️ Réservé aux problèmes bloquants pendant l'examen." : "Traitement standard sous 24h."}
+                    </p>
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="message" className="text-sm font-bold text-slate-700 ml-1">Message détaillé</Label>
+                <Label htmlFor="subject" className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Objet bref de votre demande</Label>
+                <div className="relative">
+                    <Input 
+                        id="subject" 
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        placeholder="Ex: Erreur d'orthographe sur mon certificat" 
+                        className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-100 transition-all rounded-xl pl-4 text-sm font-medium"
+                    />
+                    {subject.length > 5 && commonQuestions.some(q => q.toLowerCase().includes(subject.toLowerCase())) && (
+                        <div className="absolute top-full left-0 right-0 mt-2 p-3 bg-blue-50 border border-blue-100 rounded-xl z-20 animate-in fade-in slide-in-from-top-2">
+                            <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">Suggestion intelligente :</p>
+                            <p className="text-xs text-blue-800">C'est une question fréquente ! <span className="underline font-bold cursor-pointer">Consultez notre guide dédié ici.</span></p>
+                        </div>
+                    )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="message" className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Message détaillé</Label>
+                    <span className={`text-[10px] font-bold ${message.length > 50 ? 'text-emerald-500' : 'text-slate-300'}`}>
+                        {message.length} caractères
+                    </span>
+                </div>
                 <Textarea 
                   id="message" 
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Expliquez-nous votre souci le plus précisément possible..." 
-                  className="min-h-[180px] border-slate-200 focus:border-blue-500 focus:ring-blue-100 transition-all rounded-xl"
+                  placeholder="Aidez-nous à vous aider en étant le plus précis possible..." 
+                  className="min-h-[160px] border-slate-200 focus:border-blue-500 focus:ring-blue-100 transition-all rounded-2xl p-4 text-sm resize-none"
                 />
               </div>
-              <Button 
-                type="submit" 
-                disabled={isSending}
-                className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
-              >
-                {isSending ? (
-                  "Envoi en cours..."
-                ) : (
-                  <>
-                    <Send className="w-5 h-5 mr-3" />
-                    Soumettre ma demande
-                  </>
-                )}
-              </Button>
+
+              <div className="pt-2">
+                <Button 
+                    type="submit" 
+                    disabled={isSending || message.length < 10}
+                    className="w-full h-14 bg-slate-900 hover:bg-black text-white font-bold rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98] group flex items-center justify-center gap-3"
+                >
+                    {isSending ? (
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Traitement sécurisé...
+                    </div>
+                    ) : (
+                    <>
+                        <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                        Soumettre mon ticket d'assistance
+                    </>
+                    )}
+                </Button>
+                <p className="text-center text-[10px] text-slate-400 mt-4 font-medium italic">
+                    En soumettant ce formulaire, vous acceptez d'être recontacté(e) par notre équipe.
+                </p>
+              </div>
             </form>
           </Card>
 
@@ -185,9 +272,9 @@ export default function SupportPage() {
           
           <div className="space-y-4">
             {contactMethods.map((method, idx) => (
-              <Card key={idx} className="p-5 border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all group">
+              <Card key={idx} className={`p-5 border-slate-100 transition-all group ${method.comingSoon ? "grayscale-[0.5] opacity-80" : "hover:shadow-xl hover:-translate-y-1"}`}>
                 <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-2xl ${method.color} shadow-sm transition-transform group-hover:scale-110`}>
+                  <div className={`p-3 rounded-2xl ${method.color} shadow-sm transition-transform ${!method.comingSoon ? "group-hover:scale-110" : "opacity-60"}`}>
                     <method.icon className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
@@ -195,12 +282,13 @@ export default function SupportPage() {
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">{method.description}</p>
                     <a 
                         href={method.link} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-slate-900 hover:translate-x-1 transition-transform"
+                        className={`inline-flex items-center gap-1.5 mt-3 text-xs font-bold transition-transform ${
+                            method.comingSoon ? "text-slate-400 cursor-not-allowed" : "text-slate-900 hover:translate-x-1"
+                        }`}
+                        onClick={method.comingSoon ? (e) => e.preventDefault() : undefined}
                     >
                       {method.action}
-                      <ExternalLink className="w-3 h-3" />
+                      {!method.comingSoon && <ExternalLink className="w-3 h-3" />}
                     </a>
                   </div>
                 </div>

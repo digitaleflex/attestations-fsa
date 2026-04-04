@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { customAlphabet } from 'nanoid';
 import { emailService } from '@/lib/email';
+import { createNotification } from '@/lib/notifications';
 import type { ExamSessionStatus, AttestationStatus, AttestationType } from '@/lib/prisma-types';
 
 const nanoid = customAlphabet('1234567890abcdef', 5);
@@ -122,6 +123,20 @@ export async function POST(
       updatedSession.totalScore,
       totalScore >= 12
     );
+
+    // 6. Créer une notification pour le candidat
+    if (session.userId) {
+      const passed = totalScore >= 12;
+      await createNotification({
+        userId: session.userId,
+        type: 'EXAM_RESULT_PUBLISHED',
+        title: passed ? 'Examen réussi ! 🎉' : 'Résultat d\'examen disponible',
+        message: passed
+          ? `Félicitations ! Vous avez réussi l'examen "${session.exam.title}" avec un score de ${updatedSession.totalScore}/20.${attestationCreated ? ` Une attestation a été créée (code: ${attestationCode}).` : ''}`
+          : `Votre résultat pour l'examen "${session.exam.title}" est de ${updatedSession.totalScore}/20. Vous pouvez retenter l'examen.`,
+        link: passed ? `/attestations` : `/results/${id}`,
+      });
+    }
 
     // ✅ FIX: Logger l'action de notation pour audit
     console.log(

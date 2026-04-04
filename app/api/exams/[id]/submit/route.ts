@@ -1,9 +1,12 @@
 // app/api/exams/[id]/submit/route.ts
 // Optimized exam submission with atomic double-submit prevention
 // Supports 50+ concurrent candidates safely
+// ✅ ANTI-CHEAT: Time-based detection and answer pattern analysis
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { applyRateLimitByUser } from '@/lib/rate-limit';
+import { analyzeAnswerPattern, logCheatingDetection } from '@/lib/anti-cheat';
 
 // In-memory idempotency cache (key -> timestamp)
 // Prevents duplicate processing of the same request
@@ -30,12 +33,58 @@ export async function POST(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
+    // ✅ ANTI-CHEAT: Per-user rate limiting (prevents bypass with multiple IPs)
+    const rateLimit = await applyRateLimitByUser(request, user.id, 'submission');
+    if (!rateLimit.allowed) {
+      return rateLimit.response;
+    }
+
     const { id: examId } = await params;
     const body = await request.json();
-    const { answers, idempotencyKey } = body;
+    const { answers, idempotencyKey, startedAt } = body;
 
     if (!answers || typeof answers !== 'object') {
       return NextResponse.json({ error: 'Réponses manquantes ou invalides' }, { status: 400 });
+    }
+
+    // ✅ ANTI-CHEAT: Time-based detection
+    // Verify exam duration is realistic (prevent instant submissions)
+    if (startedAt) {
+      const startTime = new Date(startedAt).getTime();
+      const submitTime = Date.now();
+      const elapsedSeconds = Math.floor((submitTime - startTime) / 1000);
+      
+      // Minimum 30 seconds for any exam (suspicious if faster)
+      if (elapsedSeconds < 30) {
+        // Log suspicious activity
+        await prisma.securityLog.create({
+          data: {
+            eventType: 'SUSPICIOUS_ACTIVITY',
+            userId: user.id,
+            ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+            userAgent: request.headers.get('user-agent') || '',
+            resource: 'exam_submission',
+            resourceId: examId,
+            action: 'SUBMISSION_TOO_FAST',
+            status: 'FLAGGED',
+            severity: 'HIGH',
+            details: {
+              elapsedSeconds,
+              examId,
+              answerCount: Object.keys(answers).length,
+            } as any,
+          },
+        });
+
+        return NextResponse.json(
+          { 
+            error: 'Soumission trop rapide détectée. Votre examen sera vérifié.',
+            code: 'SUSPICIOUS_TIMING',
+            elapsedSeconds,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // ✅ Idempotency check: return cached response if same key seen recently
@@ -123,6 +172,38 @@ export async function POST(
         { error: 'Session déjà soumise' },
         { status: 409 }
       );
+    }
+
+    // ✅ ANTI-CHEAT: Analyze answer patterns (async, non-blocking)
+    // This runs after successful submission to flag suspicious behavior
+    try {
+      const detection = await analyzeAnswerPattern(answers, examId, user.id);
+      
+      if (detection.isSuspicious) {
+        // Log the cheating detection
+        await logCheatingDetection(
+          user.id,
+          examId,
+          request.headers.get('x-forwarded-for') || 'unknown',
+          request.headers.get('user-agent') || '',
+          detection
+        );
+
+        // Update session with cheating flag
+        await prisma.examSession.updateMany({
+          where: {
+            examId,
+            userId: user.id,
+            status: 'COMPLETED',
+          },
+          data: {
+            scorePart2: -1, // Use negative score to flag (will be reviewed)
+          },
+        });
+      }
+    } catch (error) {
+      // Don't fail submission if anti-cheat analysis fails
+      console.error('[ANTI-CHEAT ERROR] Pattern analysis failed:', error);
     }
 
     // Fetch the updated session for the response

@@ -5,20 +5,26 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { 
-  LayoutDashboard, 
-  FileText, 
-  BookOpen, 
-  Briefcase, 
-  CheckCircle, 
-  User, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  FileText,
+  BookOpen,
+  Briefcase,
+  CheckCircle,
+  User,
+  LogOut,
   Menu,
   X,
   BarChart3,
   HelpCircle,
-  LifeBuoy
+  LifeBuoy,
+  MessageCircle,
+  Bell,
+  GraduationCap
 } from "lucide-react";
+import ChatBubble from "@/components/ChatBubble";
+import NotificationBell from "@/components/NotificationBell";
+import { getCurrentUser } from "@/lib/auth";
 
 export default function UserLayout({
   children,
@@ -58,6 +64,8 @@ export default function UserLayout({
     { name: "Examens", href: "/exams", icon: BookOpen },
     { name: "Stages", href: "/internships", icon: Briefcase },
     { name: "Résultats", href: "/results", icon: BarChart3 },
+    { name: "Relevé de notes", href: "/transcript", icon: GraduationCap },
+    { name: "Notifications", href: "/notifications", icon: Bell },
     { name: "Support", href: "/support", icon: HelpCircle },
     { name: "Mon Profil", href: "/profile", icon: User },
   ];
@@ -163,6 +171,7 @@ export default function UserLayout({
           </div>
 
           <div className="flex items-center gap-5">
+            <NotificationBell />
             <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-default">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-100 to-blue-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-sm shadow-inner">
                 {user?.name?.charAt(0) || <User className="w-4 h-4" />}
@@ -192,6 +201,9 @@ export default function UserLayout({
             </button>
           </Link>
         </div>
+
+        {/* Real-time Messaging System */}
+        <ChatBubble />
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -256,7 +268,7 @@ export default function UserLayout({
             { name: "Examens", href: "/exams", icon: BookOpen },
             { name: "Résultats", href: "/results", icon: BarChart3 },
             { name: "Attestations", href: "/attestations", icon: FileText },
-            { name: "Support", href: "/support", icon: LifeBuoy },
+            { name: "Notifs", href: "/notifications", icon: Bell },
             { name: "Profil", href: "/profile", icon: User },
           ].map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);

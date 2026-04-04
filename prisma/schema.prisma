@@ -46,6 +46,13 @@ enum QuestionType {
   OPEN
 }
 
+enum ResourceType {
+  BOOK
+  VIDEO
+  REVISION_FILE
+  OTHER
+}
+
 model Account {
   id                    String    @id @default(cuid())
   userId                String
@@ -105,6 +112,10 @@ model User {
   // Code d'attestation pour débloquer le compte
   attestationCode String? @unique
   attestationStatus String @default("PENDING") // PENDING, CLAIMED, VALIDATED
+
+  // Portfolio public
+  portfolioSlug String? // Slug unique pour le portfolio public (ex: "jean-boko-abc123")
+  portfolioEnabled Boolean @default(false) // Si le portfolio est visible publiquement
   
   // Formation et examen associés
   formationId   String?
@@ -119,6 +130,7 @@ model User {
   correctionRequests CorrectionRequest[]
   attestations  Attestation[]
   auditLogs     AuditLog[]
+  notifications Notification[]
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -127,6 +139,7 @@ model User {
   sessions      Session[]
   examSessions  ExamSession[]
   internships   InternshipRequest[]
+  chatMessages  ChatMessage[]
 }
 
 model VerificationToken {
@@ -201,7 +214,7 @@ model Settings {
   instructorTitle     String  @default("Responsable des Formations")
   signatureUrl        String? // URL of the scanned signature
   location            String  @default("Abomey-Calavi")
-  supportEmail        String  @default("contact@fsa.bj")
+  supportEmail        String  @default("contact@eurinhash.com")
   replyTo             String?
   targetInscriptions  Int     @default(500)
   targetAttestations  Int     @default(300)
@@ -309,6 +322,23 @@ model QuestionOption {
   feedback        String?         // Explication/Correction pour cette option
 
   @@index([questionId])
+}
+
+model Resource {
+  id          String       @id @default(uuid())
+  title       String
+  description String?      @db.Text
+  type        ResourceType @default(BOOK)
+  url         String       // Link to media/file
+  thumbnail   String?      // Optional thumbnail URL
+  category    String?      // e.g. "Pisciculture", "Agriculture"
+  isPublished Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([category])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model ExamSession {
@@ -436,4 +466,48 @@ model AuditLog {
   @@index([action])
   @@index([resource])
   @@index([timestamp])
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  content     String   @db.Text
+  senderId    String
+  senderRole  String   // "USER" or "ADMIN"
+  userId      String   // The candidate user ID for this chat thread
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isRead      Boolean  @default(false)
+  attachments Json?    // Array of image URLs
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  ATTESTATION_VALIDATED
+  ATTESTATION_REJECTED
+  EXAM_RESULT_PUBLISHED
+  INTERNSHIP_ACCEPTED
+  INTERNSHIP_REJECTED
+  CORRECTION_APPROVED
+  CORRECTION_REJECTED
+  SUPPORT_REPLY
+  GENERAL
+}
+
+model Notification {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String            @db.Text
+  isRead    Boolean           @default(false)
+  link      String?           // URL to navigate to when clicked
+  metadata  Json?             // Additional data
+  createdAt DateTime          @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
 }

@@ -28,6 +28,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { useExamMonitoring, reportMonitoringEvents, MonitoringEvent, MonitoringState } from "@/lib/useExamMonitoring";
 
 export default function ExamSessionPage() {
   const router = useRouter();
@@ -46,6 +47,22 @@ export default function ExamSessionPage() {
 
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout>();
+
+  // ✅ ANTI-CHEAT: Exam monitoring
+  const monitoring = useExamMonitoring({
+    examId: id as string,
+    userId: undefined, // Will be set when exam starts
+    maxTabSwitches: 3,
+    onViolation: (event: MonitoringEvent, state: MonitoringState) => {
+      // Show warning to user
+      if (state.tabSwitches >= 3) {
+        toast.warning(
+          `⚠️ Attention: Vous avez quitté l'examen ${state.tabSwitches} fois. Cet incident sera signalé.`,
+          { duration: 5000 }
+        );
+      }
+    },
+  });
 
   // Fetch exam data
   const { data: exam, isLoading: examLoading } = useQuery({
@@ -134,12 +151,26 @@ export default function ExamSessionPage() {
   };
 
   // Submit exam
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmitting) return;
-    
+
     setIsSubmitting(true);
+
+    // ✅ ANTI-CHEAT: Report monitoring events before submission
+    if (monitoring.totalSuspiciousEvents > 0) {
+      try {
+        await reportMonitoringEvents(
+          monitoring.events,
+          id as string,
+          'user-id' // Will be replaced with actual userId from session
+        );
+      } catch (error) {
+        console.error('Failed to report monitoring events:', error);
+      }
+    }
+
     submitMutation.mutate(answers);
-    
+
     if (timerRef.current) clearInterval(timerRef.current);
   };
 
@@ -266,8 +297,25 @@ export default function ExamSessionPage() {
                 <Save className="w-5 h-5 text-purple-600" />
                 <AlertTitle className="text-purple-800">Sauvegarde automatique</AlertTitle>
                 <AlertDescription className="text-purple-700">
-                  Vos réponses sont sauvegardées automatiquement toutes les 30 secondes. 
+                  Vos réponses sont sauvegardées automatiquement toutes les 30 secondes.
                   En cas de problème technique, vous pourrez reprendre où vous vous êtes arrêté.
+                </AlertDescription>
+              </Alert>
+
+              <Alert className="bg-red-50 border-red-200">
+                <Eye className="w-5 h-5 text-red-600" />
+                <AlertTitle className="text-red-800">🔍 Surveillance active pendant l'examen</AlertTitle>
+                <AlertDescription className="text-red-700">
+                  <p className="mt-2 font-semibold">Ce système surveille automatiquement :</p>
+                  <ul className="list-disc list-inside space-y-1 mt-2">
+                    <li>Les changements d'onglet ou de fenêtre</li>
+                    <li>Les pertes de focus (clic hors navigateur)</li>
+                    <li>L'ouverture de plusieurs onglets pour le même examen</li>
+                  </ul>
+                  <p className="mt-3 text-sm">
+                    ⚠️ <strong>Tout incident est enregistré</strong> et sera vérifié par l'administrateur.
+                    Plus de 3 changements d'onglet entraîneront un signalement automatique.
+                  </p>
                 </AlertDescription>
               </Alert>
             </div>
@@ -303,6 +351,21 @@ export default function ExamSessionPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header with Timer */}
       <header className="bg-white border-b shadow-sm sticky top-0 z-10">
+        {/* ✅ ANTI-CHEAT: Warning banner if suspicious activity detected */}
+        {monitoring.totalSuspiciousEvents > 0 && (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-3">
+            <div className="max-w-7xl mx-auto flex items-center gap-3 text-sm">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <p className="text-amber-800 font-medium">
+                ⚠️ {monitoring.tabSwitches} changement(s) d'onglet détecté(s) | {monitoring.blurCount} perte(s) de focus
+              </p>
+              <Badge variant="outline" className="text-xs">
+                {monitoring.totalSuspiciousEvents} événement(s) suspect(s)
+              </Badge>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

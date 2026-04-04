@@ -9,6 +9,7 @@ import { applyRateLimit } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/error-handler'
 import { sanitizeInput } from '@/lib/sanitization'
 import { isAdminAuthenticated } from '@/lib/auth'
+import { pusherServer } from '@/lib/pusher'
 
 // Schéma de validation pour un signalement
 const SignalementSchema = z.object({
@@ -59,6 +60,19 @@ export async function POST(req: Request) {
         email: email || null,
       },
     })
+
+    // Déclencher Pusher pour l'admin
+    try {
+      if (process.env.PUSHER_APP_ID) {
+        await pusherServer.trigger("admin-events", "report", {
+            id: report.id,
+            motif: report.motif,
+            time: report.createdAt
+        });
+      }
+    } catch (pusherError) {
+      console.error("Erreur Pusher Admin Report:", pusherError);
+    }
 
     // Logger la création (pour monitoring)
     console.log(`[REPORT] Nouveau signalement créé: ${report.id}`)

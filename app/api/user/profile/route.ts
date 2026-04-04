@@ -51,6 +51,10 @@ export async function GET() {
         gender: true,
         emailVerified: true,
         createdAt: true,
+        correctionRequests: {
+          where: { status: "PENDING" },
+          take: 1
+        }
       }
     });
     
@@ -85,6 +89,25 @@ export async function PATCH(request: Request) {
     
     const { name, email, phone, address, birthDate, birthPlace, gender, oldPassword, newPassword } = parse.data;
     
+    // 🔒 SÉCURITÉ: Vérifier si l'utilisateur tente de changer des données d'identité critiques
+    // après avoir déjà passé un examen ou obtenu une attestation.
+    const hasCritialUpdate = name || birthDate || birthPlace;
+    
+    if (hasCritialUpdate) {
+      const hasOfficialHistory = await prisma.examSession.findFirst({
+        where: { userId }
+      }) || await prisma.attestation.findFirst({
+        where: { userId }
+      });
+      
+      if (hasOfficialHistory) {
+        return NextResponse.json({ 
+          message: 'Vos données d\'identité (nom, date/lieu de naissance) sont verrouillées car vous avez un historique officiel (examen ou attestation). Veuillez utiliser le formulaire de demande de correction.',
+          code: 'IDENTITY_LOCKED'
+        }, { status: 403 });
+      }
+    }
+
     // Vérifier les conflits d'email
     if (email) {
       const existingUser = await prisma.user.findFirst({

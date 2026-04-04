@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(pnpm add *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npx *)"
     ]
   },
   "$version": 3

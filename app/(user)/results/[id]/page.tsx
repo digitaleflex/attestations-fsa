@@ -10,10 +10,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
   CheckCircle, XCircle, Clock, ArrowLeft, 
   BookOpen, FileText, PenTool, Award,
-  AlertCircle, History
+  AlertCircle, History, Download, ClipboardList
 } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
+import { toast } from "sonner";
+import TranscriptDocumentComponent from "@/components/TranscriptDocument";
+import { useState } from "react";
 
 export default function ResultDetailsPage() {
   const { id } = useParams();
@@ -23,6 +26,10 @@ export default function ResultDetailsPage() {
     queryKey: ["user-result", id],
     queryFn: () => apiFetch(`/api/user/results/${id}`),
   });
+
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [transcriptData, setTranscriptData] = useState<any>(null);
+  const [isFetchingTranscript, setIsFetchingTranscript] = useState(false);
 
   if (isLoading) {
     return (
@@ -54,14 +61,57 @@ export default function ResultDetailsPage() {
             <p className="text-sm text-slate-500">{result.exam.name}</p>
           </div>
         </div>
-        {!isGraded ? (
+        {isGraded ? (
+          <div className="flex gap-2">
+            <Button 
+                onClick={async () => {
+                    if (transcriptData) {
+                        handleDownload();
+                        return;
+                    }
+                    setIsFetchingTranscript(true);
+                    try {
+                        const transcript = await apiFetch(`/api/user/transcript/${id}`, {}, false);
+                        setTranscriptData(transcript);
+                        // Un petit délai pour le re-render du composant caché
+                        setTimeout(() => handleDownload(transcript), 300);
+                    } catch (e) {
+                        toast.error("Votre relevé n'est pas encore prêt.");
+                    } finally {
+                        setIsFetchingTranscript(false);
+                    }
+                }}
+                disabled={isFetchingTranscript || isPrinting}
+                className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100"
+            >
+                {isFetchingTranscript ? (
+                    <Clock className="w-4 h-4 animate-spin" />
+                ) : (
+                    <Download className="w-4 h-4" />
+                )}
+                Mon Relevé (PDF)
+            </Button>
+            <Badge className={`px-4 py-1.5 text-sm ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                {passed ? "Succès" : "Échec"}
+            </Badge>
+          </div>
+        ) : (
           <Badge className="px-4 py-1.5 text-sm bg-amber-100 text-amber-700 border border-amber-200">
             Correction en cours
           </Badge>
-        ) : (
-          <Badge className={`px-4 py-1.5 text-sm ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-            {passed ? "Succès" : "Échec"}
-          </Badge>
+        )}
+      </div>
+
+      {/* Instance cachée pour l'impression */}
+      <div className="hidden">
+        {transcriptData && (
+            <div id="transcript-download-area">
+                <TranscriptDocumentComponent 
+                    id="transcript-pdf-render"
+                    isPrinting={isPrinting}
+                    data={transcriptData}
+                />
+            </div>
         )}
       </div>
 
@@ -271,4 +321,41 @@ export default function ResultDetailsPage() {
       </div>
     </div>
   );
+
+  async function handleDownload(dataOverride?: any) {
+    const data = dataOverride || transcriptData;
+    if (!data) return;
+    
+    toast.promise(
+      (async () => {
+        try {
+          setIsPrinting(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          const html2pdf = (await import("html2pdf.js")).default;
+          const element = document.getElementById("transcript-pdf-render");
+          
+          if (!element) throw new Error("Document non trouvé");
+
+          const opt = {
+            margin: 0,
+            filename: `Releve_${data.fullName.replace(/\s+/g, '_')}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, width: 1120, windowWidth: 1120 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          };
+
+          await html2pdf().set(opt).from(element).save();
+        } catch (error: any) {
+          throw error;
+        } finally {
+          setIsPrinting(false);
+        }
+      })(),
+      {
+        loading: 'Génération de votre relevé de notes...',
+        success: 'Téléchargement réussi !',
+        error: 'Échec de la génération PDF.',
+      }
+    );
+  }
 }

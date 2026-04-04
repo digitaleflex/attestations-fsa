@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ShieldCheck, Menu, X, LogIn, Sprout } from "lucide-react";
+import { ShieldCheck, Menu, X, LogIn, Sprout, BookOpen } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { useSession, signOut } from "@/lib/auth-client";
 import Image from "next/image";
 
@@ -31,8 +32,16 @@ export function PublicHeader() {
         <Link href="/demande-stage" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-blue-700 hover:bg-blue-50/50 transition-all text-xs uppercase tracking-wider">
           Stages
         </Link>
+        <Link href="/portfolios" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50/50 transition-all text-xs uppercase tracking-wider relative group">
+          Talents
+          <span className="absolute -top-1 -right-1 bg-indigo-100 text-indigo-700 text-[8px] font-black px-1.5 py-0.5 rounded-md border border-indigo-200 uppercase tracking-tighter shadow-sm animate-pulse group-hover:animate-none">Soon</span>
+        </Link>
         <Link href="/exams" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/50 transition-all text-xs uppercase tracking-wider">
           Examens
+        </Link>
+        <Link href="/ressources" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-amber-700 hover:bg-amber-50/50 transition-all text-xs uppercase tracking-wider relative group">
+          Ressources
+          <span className="absolute -top-1 -right-1 bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded-md border border-amber-200 uppercase tracking-tighter shadow-sm animate-bounce group-hover:animate-none">Soon</span>
         </Link>
         
         <div className="w-px h-6 bg-slate-200 mx-2" />
@@ -71,7 +80,15 @@ export function PublicHeader() {
            <div className="grid grid-cols-1 gap-2">
                 <Link href="/" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-slate-50 font-bold text-slate-800 uppercase text-xs tracking-widest">Accueil</Link>
                 <Link href="/demande-stage" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-blue-50 text-blue-700 font-bold uppercase text-xs tracking-widest">Stages</Link>
+                <Link href="/portfolios" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-indigo-50 text-indigo-700 font-bold uppercase text-xs tracking-widest flex items-center justify-between">
+                    Talents
+                    <Badge variant="outline" className="bg-indigo-100 text-indigo-700 border-indigo-200 text-[8px]">Soon</Badge>
+                </Link>
                 <Link href="/exams" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-emerald-50 text-emerald-700 font-bold uppercase text-xs tracking-widest">Examens</Link>
+                <Link href="/ressources" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-amber-50 text-amber-700 font-bold uppercase text-xs tracking-widest flex items-center justify-between">
+                    Ressources
+                    <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[8px]">Soon</Badge>
+                </Link>
                 <div className="h-px bg-slate-100 mx-2" />
                 <Link href="/auth" onClick={() => setOpen(false)} className="p-4 rounded-2xl text-slate-600 font-bold uppercase text-xs tracking-widest flex items-center gap-2">
                     <LogIn className="w-4 h-4" /> Se connecter

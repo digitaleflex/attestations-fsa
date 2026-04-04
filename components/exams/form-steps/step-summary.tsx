@@ -7,7 +7,9 @@ import {
   Layout, 
   ClipboardCheck, 
   Save, 
-  Loader2 
+  Loader2,
+  Laptop2,
+  HandMetal
 } from "lucide-react";
 import { ExamFormData } from "../types";
 
@@ -48,6 +50,12 @@ export function StepSummary({ formData, saving, onSave }: Props) {
               <div key={i} className="flex items-center justify-between text-xs">
                 <span className="font-medium text-slate-600">{p.title}</span>
                 <div className="flex gap-2">
+                  {p.type === 'CASE_STUDY' && (
+                    <Badge variant="outline" className={`px-1 h-5 text-[10px] ${p.mode === 'physical' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>
+                      {p.mode === 'physical' ? <HandMetal className="w-2.5 h-2.5 mr-1" /> : <Laptop2 className="w-2.5 h-2.5 mr-1" />}
+                      {p.mode === 'physical' ? 'Papier' : 'Digital'}
+                    </Badge>
+                  )}
                   <Badge variant="outline" className="bg-white px-1 h-5 text-[10px]">{p.questions.length} Qs</Badge>
                   <Badge variant="outline" className="bg-white px-1 h-5 text-[10px]">{p.duration} Min</Badge>
                   <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-none font-bold px-1 h-5 text-[10px]">{p.points} Pts</Badge>

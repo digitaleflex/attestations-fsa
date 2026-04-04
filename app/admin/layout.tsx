@@ -27,17 +27,24 @@ import {
   LogOut,
   Home,
   ClipboardCheck,
-  Briefcase
+  Briefcase,
+  Inbox,
+  Shield,
+  Library
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import NotificationCenter from '@/components/admin/NotificationCenter';
 
 const menuItems = [
   { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+  { href: '/admin/messages', label: 'Messagerie', icon: Inbox },
   { href: '/admin/stats', label: 'Statistiques', icon: BarChart3 },
   { href: '/admin/attestations', label: 'Attestations', icon: FileText },
   { href: '/admin/formations', label: 'Formations', icon: GraduationCap },
+  { href: '/admin/monitoring', label: 'Surveillance', icon: Shield },
+  { href: '/admin/resources', label: 'Ressources', icon: Library },
   { href: '/admin/exams', label: 'Examens', icon: ClipboardCheck },
   { href: '/admin/internships', label: 'Stages', icon: Briefcase },
   { href: '/admin/users', label: 'Utilisateurs', icon: Users },
@@ -172,10 +179,16 @@ function AdminLayoutInner({ children, admin, onLogout }: { children: React.React
         !isMobile && desktopPadding
       )}>
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-white px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
-            <div className="h-4 w-px bg-slate-200 mx-2" />
-            <h1 className="text-sm font-medium text-slate-600">Admin | Ferme Agro-Piscicole Cité St André</h1>
+          <div className="flex-1 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="-ml-1" />
+              <div className="h-4 w-px bg-slate-200 mx-2" />
+              <h1 className="hidden sm:block text-sm font-medium text-slate-600">Admin | Ferme Agro-Piscicole Cité St André</h1>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <NotificationCenter />
+            </div>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">

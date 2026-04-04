@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Award, CheckCircle, XCircle, Clock, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AttestationWatermark } from "@/components/AttestationWatermark";
 
 interface OfficialDocumentProps {
   data: {
@@ -100,6 +101,15 @@ export default function OfficialDocument({ data, id = "official-document-content
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.02] pointer-events-none" style={{ color: "#000000" }}>
                 <Award size={400} />
             </div>
+
+            {/* ✅ ANTI-FORGERY: Security watermark */}
+            <AttestationWatermark
+              attestationId={data.id}
+              userId={data.id} // Will be replaced with actual userId
+              code={data.code}
+              generatedAt={new Date(data.issuedAt).toISOString()}
+              invisible={false}
+            />
 
             <div className="relative z-10 flex flex-col items-center w-full space-y-12">
                 <div className="space-y-3 text-center">

@@ -166,6 +166,8 @@ export default function UserDashboardPage() {
 
   if (userLoading) return <div className="min-h-screen flex items-center justify-center grayscale"><Loader2 className="animate-spin text-slate-300" /></div>;
 
+  const hasPendingCorrection = user?.correctionRequests?.length > 0;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         
@@ -187,21 +189,29 @@ export default function UserDashboardPage() {
         </Card>
 
         {/* Profile Verification Module */}
-        <Card className="p-8 border-none shadow-premium bg-white relative overflow-hidden">
+        <Card className={`p-8 border-none shadow-premium relative overflow-hidden transition-all duration-500 ${
+            hasPendingCorrection ? 'bg-slate-100 grayscale-[0.3]' : 'bg-white'
+        }`}>
           <div className="absolute top-0 right-0 p-8 opacity-5">
              <User size={120} />
           </div>
           <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-              <div className="flex-1 space-y-4">
+              <div className={`flex-1 space-y-4 ${hasPendingCorrection ? 'opacity-60' : ''}`}>
                  <div className="flex items-center gap-2">
-                    <Badge className="bg-blue-100 text-blue-700 border-none px-2 py-0.5 text-[9px] uppercase font-bold">Étape Importante</Badge>
+                    <Badge className={`${
+                        hasPendingCorrection ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                    } border-none px-2 py-0.5 text-[9px] uppercase font-bold`}>
+                        {hasPendingCorrection ? 'Demande en cours' : 'Étape Importante'}
+                    </Badge>
                     <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                        Vérifiez vos informations officielles
+                        {hasPendingCorrection ? 'Traitement de vos informations' : 'Vérifiez vos informations officielles'}
                     </h3>
                  </div>
                  <p className="text-slate-500 text-sm leading-relaxed max-w-2xl">
-                   Avant que nous n'émettions vos documents officiels, assurez-vous que votre nom, date et lieu de naissance sont corrects. 
-                   <span className="font-bold text-slate-900"> Ces informations apparaîtront telles quelles sur vos diplômes.</span>
+                   {hasPendingCorrection 
+                     ? "Une demande de modification est actuellement entre les mains de nos administrateurs. Vos documents seront mis à jour dès validation."
+                     : "Avant que nous n'émettions vos documents officiels, assurez-vous que votre nom, date et lieu de naissance sont corrects. Ces informations apparaîtront telles quelles sur vos diplômes."
+                   }
                  </p>
                  
                  <div className="flex flex-wrap gap-4 py-2">
@@ -220,16 +230,25 @@ export default function UserDashboardPage() {
                  </div>
 
                  <div className="flex gap-3">
-                   <Link href="/profile">
-                    <Button className="bg-blue-600 hover:bg-blue-700 h-11 px-6 rounded-xl font-bold shadow-lg shadow-blue-100">
-                        Vérifier et Valider
-                    </Button>
-                   </Link>
-                   <Link href="/support">
-                    <Button variant="outline" className="h-11 px-6 rounded-xl font-bold border-slate-200">
-                        Signaler une erreur
-                    </Button>
-                   </Link>
+                   {hasPendingCorrection ? (
+                     <div className="px-6 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm shadow-xl shadow-amber-100 flex items-center gap-2">
+                        <Clock className="w-4 h-4 animate-pulse" />
+                        Traitement en cours...
+                     </div>
+                   ) : (
+                     <>
+                        <Link href="/profile">
+                          <Button className="bg-blue-600 hover:bg-blue-700 h-11 px-6 rounded-xl font-bold shadow-lg shadow-blue-100">
+                              Vérifier et Valider
+                          </Button>
+                        </Link>
+                        <Link href="/support">
+                          <Button variant="outline" className="h-11 px-6 rounded-xl font-bold border-slate-200">
+                              Signaler une erreur
+                          </Button>
+                        </Link>
+                     </>
+                   )}
                  </div>
               </div>
           </div>

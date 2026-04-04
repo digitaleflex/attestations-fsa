@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { pusherServer } from "@/lib/pusher";
 import { z } from "zod";
 
 const CorrectionRequestSchema = z.object({
@@ -44,6 +45,20 @@ export async function POST(req: Request) {
         status: "PENDING",
       },
     });
+
+    // Déclencher Pusher pour l'admin
+    try {
+      if (process.env.PUSHER_APP_ID) {
+        await pusherServer.trigger("admin-events", "correction", {
+            id: correctionRequest.id,
+            userName: user.name,
+            field: correctionRequest.field,
+            time: correctionRequest.createdAt
+        });
+      }
+    } catch (pusherError) {
+      console.error("Erreur Pusher Admin Correction:", pusherError);
+    }
 
     return NextResponse.json({
       success: true,

@@ -74,7 +74,8 @@ export function ExamForm({ initialData }: { initialData?: any }) {
           points: p.points,
           order: i + 1,
           enabled: p.enabled,
-          scenario: p.scenario || p.subject,
+          scenario: p.scenario || "",
+          mode: p.mode || "digital",
           questions: p.questions.map((q, qIdx) => ({
             text: q.text,
             type: q.type,

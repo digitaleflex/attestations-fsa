@@ -65,34 +65,36 @@ export function middleware(request: NextRequest) {
     ].join('; ')
   )
 
-  /* 
   // ============================================
-  // 2. PROTECTION CSRF (US-SEC-01) - TEMPORAIREMENT DÉSACTIVÉE POUR DÉVELOPPEMENT
+  // 2. PROTECTION CSRF (US-SEC-01)
   // ============================================
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
     const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
     const isAuthRoute = AUTH_ROUTES.some(route => pathname.startsWith(route))
-    
+
+    // Skip CSRF for public webhooks and verification endpoints
     if (!isPublicRoute && !isAuthRoute) {
       const csrfToken = request.cookies.get('csrf_token')?.value
       const headerToken = request.headers.get('x-csrf-token')
-      
+
       if (!csrfToken) {
+        // No token yet - generate one
         const newToken = generateCSRFToken()
         response.cookies.set('csrf_token', newToken, {
-          httpOnly: false, 
+          httpOnly: false,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           path: '/',
           maxAge: 60 * 60 * 24,
         })
       } else if (!headerToken || csrfToken !== headerToken) {
-        // Désactivé temporairement : return new NextResponse(...)
-        console.warn('[CSRF] Validation skipped for development');
+        return new NextResponse(
+          JSON.stringify({ error: 'Token CSRF invalide ou manquant', code: 'CSRF_INVALID' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        )
       }
     }
   }
-  */
 
   // ============================================
   // 3. VÉRIFICATION AUTHENTIFICATION ROBUSTE

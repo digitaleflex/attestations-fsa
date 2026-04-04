@@ -22,14 +22,16 @@ function createPrismaClient(base: PrismaClient) {
 
 const prismaClient = createPrismaClient(baseClient);
 
-export const prisma = global.prisma || prismaClient;
-export const rawPrisma = global.rawPrisma || baseClient;
-
-// En développement, évite de créer plusieurs instances de Prisma Client
+// En développement, on remplace systématiquement le client global pour pick-up les changements de schéma
 if (process.env.NODE_ENV !== 'production') {
-  global.prisma = prisma;
-  global.rawPrisma = rawPrisma;
+  // Optionnel : ne le faire que si le client n'a pas les nouveaux modèles ? 
+  // Non, on force pour être sûr.
+  global.prisma = prismaClient;
+  global.rawPrisma = baseClient;
 }
+
+export const prisma = prismaClient;
+export const rawPrisma = baseClient;
 
 // Fonction pour tester la connexion à la base de données
 const testConnection = async () => {
