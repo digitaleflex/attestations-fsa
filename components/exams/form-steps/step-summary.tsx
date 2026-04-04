@@ -20,6 +20,13 @@ type Props = {
 };
 
 export function StepSummary({ formData, saving, onSave }: Props) {
+  const formatSeconds = (totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="border-l-4 border-emerald-500 pl-4 mb-4">
@@ -34,6 +41,19 @@ export function StepSummary({ formData, saving, onSave }: Props) {
           <div className="space-y-2">
             <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Titre:</span> <span className="font-semibold">{formData.title || "Sans titre"}</span></div>
             <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Statut:</span> <Badge variant="outline" className="uppercase text-[10px]">{formData.status === 'SCHEDULED' ? '📅 Programmé' : formData.status === 'PUBLISHED' ? '✅ Publié' : formData.status === 'DRAFT' ? '📝 Brouillon' : '📦 Archivé'}</Badge></div>
+            {formData.session && <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Session:</span> <span className="font-bold text-slate-800 uppercase italic">{formData.session}</span></div>}
+            <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Durée Totale:</span> <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-none font-bold">{formatSeconds(formData.duration || 0)}</Badge></div>
+            <div className="text-sm flex items-center gap-2">
+              <span className="text-slate-400">Seuil de Réussite:</span> 
+              <span className="font-bold text-emerald-600">{formData.passingScore || 60}%</span>
+              <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-black border border-emerald-100">
+                ({((formData.passingScore || 60) * 20) / 100}/20)
+              </span>
+            </div>
+            <div className="flex gap-2 pt-1">
+              {formData.randomizeQuestions && <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[9px] font-bold uppercase tracking-tight">🔀 Aléatoire</Badge>}
+              {formData.showResults && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none text-[9px] font-bold uppercase tracking-tight">👁️ Résultats</Badge>}
+            </div>
             {formData.status === 'SCHEDULED' && formData.scheduledAt && (
               <div className="text-sm text-blue-600 flex items-center gap-2 font-medium">
                 <span className="text-blue-400">📅 Programmé le:</span> {new Date(formData.scheduledAt).toLocaleString("fr-FR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}

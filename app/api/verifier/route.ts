@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     
     if (!parse.success) {
       return NextResponse.json({ 
-        error: 'Code requis ou invalide (minimum 5 caractères)', 
+        error: 'Le code est requis et doit contenir au moins 5 caractères.', 
         details: parse.error.errors 
       }, { status: 400 })
     }
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     if (!attestation) {
       // Message générique pour ne pas révéler si le code existe
       return NextResponse.json({ 
-        error: "Aucune attestation trouvée pour ce code." 
+        error: "Aucun certificat n'a été trouvé avec ce code. Veuillez vérifier la saisie." 
       }, { status: 404 })
     }
 

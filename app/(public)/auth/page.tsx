@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
+import { translateAuthError } from "@/lib/error-translator";
 
 // === Schémas de validation ===
 const LoginSchema = z.object({
@@ -286,7 +287,7 @@ export default function AuthPage() {
         
         setIsRedirecting(true); // Déclenchement Vortex
         // Redirection intelligente
-        if ((data?.user as any)?.role === 'ADMIN') {
+        if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
           router.push("/admin/dashboard");
         } else {
           router.push("/exams");
@@ -310,7 +311,7 @@ export default function AuthPage() {
         
         setIsRedirecting(true); // Déclenchement Vortex
         // Si l'utilisateur est un admin (cas exceptionnel), rediriger vers admin
-        if ((data?.user as any)?.role === 'ADMIN') {
+        if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
             router.push("/admin/dashboard");
         } else {
             router.push("/exams");
@@ -318,7 +319,7 @@ export default function AuthPage() {
       }
     } catch (err: any) {
       console.error("Erreur lors de l'authentification:", err);
-      const errorMessage = err.message || "Une erreur inattendue est survenue";
+      const errorMessage = translateAuthError(err.message || "Une erreur inattendue est survenue");
       setError(errorMessage);
       toast.error(errorMessage);
       

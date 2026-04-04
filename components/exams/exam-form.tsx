@@ -12,6 +12,8 @@ import {
   MessageSquare,
   BookOpen,
   Save,
+  ShieldCheck,
+  RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -24,12 +26,18 @@ export function ExamForm({ initialData }: { initialData?: any }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [formData, setFormData] = useState<ExamFormData>(
     initialData || {
       title: "",
       description: "",
       status: "DRAFT",
       scheduledAt: "",
+      session: "",
+      duration: 3600,
+      passingScore: 60,
+      randomizeQuestions: false,
+      showResults: false,
       parts: DEFAULT_PARTS,
     },
   );
@@ -41,6 +49,41 @@ export function ExamForm({ initialData }: { initialData?: any }) {
     { label: "Partie 3: Cas", icon: BookOpen },
     { label: "Récapitulatif", icon: Save },
   ];
+
+  // 🔄 AUTO-SAVE LOGIC
+  const STORAGE_KEY = "fsa_exam_draft";
+
+  // Load draft on mount (only for new exams)
+  React.useEffect(() => {
+    if (!initialData) {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setFormData(parsed);
+          toast.info("Brouillon d'examen restauré automatiquement", {
+            action: {
+              label: "Effacer",
+              onClick: () => {
+                localStorage.removeItem(STORAGE_KEY);
+                window.location.reload();
+              }
+            }
+          });
+        } catch (e) {
+          console.error("Failed to parse draft", e);
+        }
+      }
+    }
+  }, [initialData]);
+
+  // Save to localStorage whenever formData changes
+  React.useEffect(() => {
+    if (!initialData) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+      setLastSaved(new Date().toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }
+  }, [formData, initialData]);
 
   const handleNext = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const handlePrev = () => setStep((s) => Math.max(s - 1, 0));
@@ -99,11 +142,19 @@ export function ExamForm({ initialData }: { initialData?: any }) {
           status: formData.status,
           scheduledAt: formData.scheduledAt,
           formationId: formData.formationId,
+          session: formData.session,
+          duration: formData.duration,
+          passingScore: formData.passingScore,
+          randomizeQuestions: formData.randomizeQuestions,
+          showResults: formData.showResults,
           parts: partsData,
         }),
       });
 
       if (!res.ok) throw new Error("Erreur lors de l'enregistrement");
+
+      // Clear draft on success
+      localStorage.removeItem(STORAGE_KEY);
 
       toast.success(initialData ? "Examen modifié !" : "Examen créé !");
       router.push("/admin/exams");
@@ -164,6 +215,22 @@ export function ExamForm({ initialData }: { initialData?: any }) {
           );
         })}
       </div>
+      
+      {/* 🛡️ AUTO-SAVE INDICATOR */}
+      {!initialData && (
+        <div className="flex justify-center -mb-4">
+          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-100 rounded-full shadow-sm animate-in fade-in zoom-in duration-500">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
+              Sauvegarde auto active {lastSaved && `• ${lastSaved}`}
+            </span>
+          </div>
+        </div>
+      )}
 
       <Card className="p-8 shadow-xl border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {step === 0 && (

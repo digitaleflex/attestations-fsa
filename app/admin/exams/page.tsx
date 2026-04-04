@@ -52,6 +52,7 @@ type Exam = {
   scheduledAt: string | null;
   totalPoints: number;
   createdAt: string;
+  session: string | null;
   _count: {
     submissions: number;
   };
@@ -229,6 +230,11 @@ export default function AdminExamsPage() {
                         <h3 className="text-xl font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors min-h-[3rem] line-clamp-2">
                             {exam.title}
                         </h3>
+                        {exam.session && (
+                          <div className="flex items-center gap-1 mt-1">
+                             <Badge variant="outline" className="bg-slate-900 text-white border-none rounded-md px-2 py-0 text-[9px] font-black">{exam.session}</Badge>
+                          </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-8 pt-4 border-t border-slate-50">
@@ -290,7 +296,7 @@ export default function AdminExamsPage() {
                              <div>
                                 <p className="font-black text-slate-900 leading-tight">{exam.title}</p>
                                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider italic flex items-center gap-1">
-                                   <Users className="w-3 h-3" /> {exam._count.submissions} candidats inscrits
+                                   <Users className="w-3 h-3" /> {exam._count.submissions} candidats inscrits {exam.session && `• SESSION ${exam.session}`}
                                 </p>
                              </div>
                           </div>

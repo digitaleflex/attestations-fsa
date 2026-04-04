@@ -41,7 +41,7 @@ export const auth = betterAuth({
         provider: "postgresql",
     }),
     secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "fallback-secret-for-dev-only",
-    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : "http://localhost:3000"),
     session: {
         expiresIn: 60 * 60 * 24 * 30, // 30 jours
         updateAge: 60 * 60 * 24 * 1,   // 1 jour

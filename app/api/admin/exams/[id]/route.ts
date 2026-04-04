@@ -70,6 +70,11 @@ export async function PATCH(
       scheduledAt,
       parts,
       formationId,
+      session,
+      duration,
+      passingScore,
+      randomizeQuestions,
+      showResults,
     } = body;
 
     // 1. Update basic exam info first
@@ -82,6 +87,11 @@ export async function PATCH(
         status,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         formationId,
+        session,
+        duration: duration ? parseInt(duration.toString()) : undefined,
+        passingScore: passingScore ? parseInt(passingScore.toString()) : undefined,
+        randomizeQuestions: randomizeQuestions === true,
+        showResults: showResults === true,
       },
     });
 

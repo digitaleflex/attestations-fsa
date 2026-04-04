@@ -10,6 +10,7 @@ import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { translateAuthError } from "@/lib/error-translator";
 
 export default function AdminLoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -36,8 +37,9 @@ export default function AdminLoginPage() {
         onRequest: () => setLoading(true),
         onResponse: () => setLoading(false),
         onError: (ctx) => {
-          setError(ctx.error.message || "Échec de la connexion");
-          toast.error(ctx.error.message || "Échec de la connexion");
+          const translated = translateAuthError(ctx.error.message || "Échec de la connexion");
+          setError(translated);
+          toast.error(translated);
         },
         onSuccess: () => {
           toast.success("Connexion réussie ! Redirection...", {
@@ -49,7 +51,7 @@ export default function AdminLoginPage() {
       });
 
       if (authError) {
-        setError(authError.message || "Échec de la connexion");
+        setError(translateAuthError(authError.message || "Échec de la connexion"));
       }
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");

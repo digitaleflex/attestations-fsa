@@ -1,11 +1,13 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ExamFormData } from "../types";
 import { useEffect, useState } from "react";
-import { Calendar, Clock, FileText, BookOpen, Info } from "lucide-react";
+import { Calendar, Clock, FileText, BookOpen, Info, Target, Shuffle, Eye } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 type Props = {
   formData: ExamFormData;
@@ -111,70 +113,244 @@ export function StepGeneral({ formData, updateFormData }: Props) {
           />
         </div>
 
-        {/* ✅ SCHEDULING: Date and Time Picker */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
-          <div className="flex items-center gap-2 mb-2">
+        {/* ✅ PROGRAMMATION & STATUT */}
+        <div className="p-5 bg-blue-50 border border-blue-200 rounded-xl space-y-5">
+          <div className="flex items-center gap-2 mb-1">
             <Calendar className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-blue-800">📅 Programmation de l'Examen</h3>
+            <h3 className="font-extrabold text-blue-800 uppercase tracking-tight text-sm">Programmation & Statut</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="scheduledAt" className="text-sm font-semibold text-blue-900">
-                Date et Heure de l'Examen
+              <Label className="text-sm font-semibold text-blue-900">
+                Date de l'Examen (JJ/MM/AAAA)
+              </Label>
+              <DateInput
+                value={formData.scheduledAt?.split("T")[0] || ""}
+                onChange={(e) => {
+                  const date = e.target.value;
+                  const time = formData.scheduledAt?.split("T")[1] || "08:00";
+                  updateFormData({ scheduledAt: `${date}T${time}` });
+                }}
+                className="h-12 focus:ring-2 focus:ring-blue-500/20 font-bold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-blue-900">
+                Heure (Format 24h)
               </Label>
               <Input
-                id="scheduledAt"
-                type="datetime-local"
-                value={formData.scheduledAt || ""}
-                onChange={(e) => updateFormData({ scheduledAt: e.target.value })}
-                className="h-12 focus:ring-2 focus:ring-blue-500/20"
-                min={new Date().toISOString().slice(0, 16)}
+                type="time"
+                value={formData.scheduledAt?.split("T")[1] || "08:00"}
+                onChange={(e) => {
+                  const time = e.target.value;
+                  const date = formData.scheduledAt?.split("T")[0] || new Date().toISOString().split("T")[0];
+                  updateFormData({ scheduledAt: `${date}T${time}` });
+                }}
+                className="h-12 focus:ring-2 focus:ring-blue-500/20 font-bold"
               />
-              {formData.scheduledAt && (
-                <p className="text-xs text-blue-700 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  Prévu le: {formatScheduledDate(formData.scheduledAt)}
-                </p>
-              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status" className="text-sm font-semibold text-blue-900">
-                Statut de l'Examen
-              </Label>
-              <select
-                id="status"
-                className="w-full h-11 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-                value={formData.status}
-                onChange={(e: any) => handleStatusChange(e.target.value)}
-              >
-                <option value="DRAFT">📝 Brouillon</option>
-                <option value="SCHEDULED">📅 Programmé</option>
-                <option value="PUBLISHED">✅ Publié (Disponible)</option>
-                <option value="ARCHIVED">📦 Archivé</option>
-              </select>
-            </div>
-          </div>
-
-          {formData.status === "SCHEDULED" && !formData.scheduledAt && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-              <Info className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-800">
-                <strong>Attention:</strong> Vous devez sélectionner une date et une heure pour programmer cet examen.
-              </p>
-            </div>
-          )}
-
-          {formData.status === "SCHEDULED" && formData.scheduledAt && (
-            <div className="flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-md">
-              <Calendar className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-emerald-800">
-                <p className="font-semibold">Examen programmé avec succès</p>
-                <p>Les candidats verront un compte à rebours jusqu'à cette date.</p>
+            <div className="md:col-span-2">
+              <div className="space-y-2">
+                <Label htmlFor="status" className="text-sm font-semibold text-blue-900">
+                  Statut de publication
+                </Label>
+                <select
+                  id="status"
+                  className="w-full h-11 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 outline-none bg-white"
+                  value={formData.status}
+                  onChange={(e: any) => handleStatusChange(e.target.value)}
+                >
+                  <option value="DRAFT">📝 Brouillon</option>
+                  <option value="SCHEDULED">📅 Programmé</option>
+                  <option value="PUBLISHED">✅ Publié (Disponible)</option>
+                  <option value="ARCHIVED">📦 Archivé</option>
+                </select>
               </div>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* ⚙️ PARAMÈTRES DE SESSION ET DURÉE */}
+        <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Info className="w-5 h-5 text-slate-600" />
+            <h3 className="font-extrabold text-slate-800 uppercase tracking-tight text-sm">Détails de l'épreuve</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-slate-700">
+                Session de l'Examen
+              </Label>
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 h-12 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-slate-400/20 outline-none bg-white font-bold"
+                  value={formData.session?.split(" ")[0] || ""}
+                  onChange={(e) => {
+                    const month = e.target.value;
+                    const year = formData.session?.split(" ")[1] || new Date().getFullYear().toString();
+                    updateFormData({ session: `${month} ${year}`.trim() });
+                  }}
+                >
+                  <option value="">Mois</option>
+                  {["JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN", "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"].map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <Input
+                  type="number"
+                  placeholder="Année"
+                  className="w-24 h-12 font-bold"
+                  value={formData.session?.split(" ")[1] || new Date().getFullYear().toString()}
+                  onChange={(e) => {
+                    const year = e.target.value;
+                    const month = formData.session?.split(" ")[0] || "JANVIER";
+                    updateFormData({ session: `${month} ${year}`.trim() });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-sm font-semibold text-slate-700">Durée Totale (HH:MM:SS)</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    placeholder="HH"
+                    min="0"
+                    value={Math.floor((formData.duration || 0) / 3600)}
+                    onChange={(e) => {
+                      const h = parseInt(e.target.value) || 0;
+                      const current = formData.duration || 0;
+                      const m = Math.floor((current % 3600) / 60);
+                      const s = current % 60;
+                      updateFormData({ duration: h * 3600 + m * 60 + s });
+                    }}
+                    className="text-center font-black"
+                  />
+                  <p className="text-[9px] text-center text-slate-400 mt-1 font-bold">HEURES</p>
+                </div>
+                <span className="text-xl font-bold text-slate-300 mb-4">:</span>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    placeholder="MM"
+                    min="0"
+                    max="59"
+                    value={Math.floor(((formData.duration || 0) % 3600) / 60)}
+                    onChange={(e) => {
+                      const m = parseInt(e.target.value) || 0;
+                      const current = formData.duration || 0;
+                      const h = Math.floor(current / 3600);
+                      const s = current % 60;
+                      updateFormData({ duration: h * 3600 + m * 60 + s });
+                    }}
+                    className="text-center font-black"
+                  />
+                  <p className="text-[9px] text-center text-slate-400 mt-1 font-bold">MINUTES</p>
+                </div>
+                <span className="text-xl font-bold text-slate-300 mb-4">:</span>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    placeholder="SS"
+                    min="0"
+                    max="59"
+                    value={(formData.duration || 0) % 60}
+                    onChange={(e) => {
+                      const s = parseInt(e.target.value) || 0;
+                      const current = formData.duration || 0;
+                      const h = Math.floor(current / 3600);
+                      const m = Math.floor((current % 3600) / 60);
+                      updateFormData({ duration: h * 3600 + m * 60 + s });
+                    }}
+                    className="text-center font-black"
+                  />
+                  <p className="text-[9px] text-center text-slate-400 mt-1 font-bold">SECONDES</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 🏆 CONFIGURATION DE RÉUSSITE & OPTIONS */}
+        <div className="p-6 bg-emerald-50/30 border border-emerald-100 rounded-2xl space-y-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-5 h-5 text-emerald-600" />
+            <h3 className="font-black text-emerald-800 uppercase tracking-tight text-sm">Paramètres de l'Épreuve</h3>
+          </div>
+
+          <div className="space-y-6">
+            {/* PASSING SCORE */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-sm font-bold text-slate-700">Seuil de Réussite</Label>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Note minimum sur 20 requise</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-24">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="20"
+                      step="0.5"
+                      placeholder="12"
+                      value={((formData.passingScore || 60) * 20) / 100}
+                      onChange={(e) => {
+                        const noteSur20 = parseFloat(e.target.value) || 0;
+                        updateFormData({ passingScore: (noteSur20 * 100) / 20 });
+                      }}
+                      className="h-10 pr-8 font-black text-emerald-600 text-center"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">/20</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 shadow-sm">
+                    <span className="text-xs font-bold text-emerald-500">Soit</span>
+                    <span className="text-sm font-black text-emerald-700">{Math.round(formData.passingScore || 60)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-emerald-100/50" />
+
+            {/* TOGGLES */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-emerald-50 shadow-sm hover:border-emerald-200 transition-colors">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Shuffle className="w-4 h-4 text-emerald-500" />
+                    <Label className="font-bold text-slate-800 cursor-pointer">Aléatoire</Label>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">Mélanger les questions</p>
+                </div>
+                <Switch
+                  checked={formData.randomizeQuestions || false}
+                  onCheckedChange={(checked) => updateFormData({ randomizeQuestions: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-emerald-50 shadow-sm hover:border-emerald-200 transition-colors">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-emerald-500" />
+                    <Label className="font-bold text-slate-800 cursor-pointer">Résultats</Label>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">Affichage immédiat du score</p>
+                </div>
+                <Switch
+                  checked={formData.showResults || false}
+                  onCheckedChange={(checked) => updateFormData({ showResults: checked })}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
