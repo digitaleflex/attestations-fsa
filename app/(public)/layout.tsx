@@ -124,11 +124,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <p className="text-slate-400 text-[11px] font-medium tracking-tight uppercase">
               &copy; {new Date().getFullYear()} <span className="text-slate-600 font-bold">Ferme St André</span>. Tous droits réservés.
             </p>
-            <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              <Link href="#" className="hover:text-emerald-600 transition-colors">Confidentialité</Link>
-              <Link href="#" className="hover:text-emerald-600 transition-colors">Conditions</Link>
-              <span className="w-1 h-1 rounded-full bg-slate-300" />
-              <Link href="#" className="hover:text-emerald-600 transition-colors">Plan du site</Link>
+            <div className="flex flex-wrap items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <Link href="/legal/confidentialite" className="hover:text-emerald-600 transition-colors">Confidentialité</Link>
+              <Link href="/legal/cgu" className="hover:text-emerald-600 transition-colors">CGU</Link>
+              <Link href="/legal/mentions-legales" className="hover:text-emerald-600 transition-colors">Mentions légales</Link>
+              <Link href="/legal/cookies" className="hover:text-emerald-600 transition-colors">Cookies</Link>
+              <Link href="/legal/attestations" className="hover:text-emerald-600 transition-colors">Attestations</Link>
             </div>
           </div>
         </div>

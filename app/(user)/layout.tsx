@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -71,7 +73,7 @@ export default function UserLayout({
   ];
 
   // Mode Focus pour les examens (Pas de sidebar, pas de header)
-  const isExamPage = pathname.startsWith("/exams/") && pathname !== "/exams";
+  const isExamPage = pathname ? pathname.startsWith("/exams/") && pathname !== "/exams" : false;
 
   if (isLoading) {
     return (
@@ -114,7 +116,7 @@ export default function UserLayout({
 
         <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-hide">
           {menuItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
             return (
               <Link key={item.name} href={item.href}>
                 <div 
@@ -166,7 +168,7 @@ export default function UserLayout({
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="hidden sm:block text-xl font-bold text-slate-800 tracking-tight">
-              {menuItems.find(i => pathname === i.href || pathname.startsWith(`${i.href}/`))?.name || "Espace Candidat"}
+              {menuItems.find(i => pathname === i.href || (pathname && pathname.startsWith(`${i.href}/`)))?.name || "Espace Candidat"}
             </h2>
           </div>
 
@@ -230,7 +232,7 @@ export default function UserLayout({
             </div>
             <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
               {menuItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
                 return (
                   <Link key={item.name} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
                     <div className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors font-medium border border-transparent ${
@@ -271,7 +273,7 @@ export default function UserLayout({
             { name: "Notifs", href: "/notifications", icon: Bell },
             { name: "Profil", href: "/profile", icon: User },
           ].map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
             return (
               <Link
                 key={item.name}

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { authClient } from "@/lib/auth-client";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -29,29 +30,26 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      const { data, error: authError } = await authClient.signIn.email({
+        email: form.email,
+        password: form.password,
+        callbackURL: "/admin/dashboard",
+      }, {
+        onRequest: () => setLoading(true),
+        onResponse: () => setLoading(false),
+        onError: (ctx) => {
+          setError(ctx.error.message || "Échec de la connexion");
+          toast.error(ctx.error.message || "Échec de la connexion");
+        },
+        onSuccess: (ctx) => {
+          toast.success("Connexion réussie !");
+          router.push("/admin/dashboard");
+        }
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Échec de la connexion");
-        toast.error(data.message || "Échec de la connexion");
+      if (authError) {
+        setError(authError.message || "Échec de la connexion");
         return;
-      }
-
-      toast.success("Connexion réussie !");
-      
-      // Redirection selon le rôle
-      if (data.user.role === 'ADMIN') {
-        router.push("/admin/dashboard");
-      } else {
-        // User candidat - redirection vers le tableau de bord candidat (/exams)
-        toast.success("Bienvenue dans votre espace candidat !");
-        router.push("/exams");
       }
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");

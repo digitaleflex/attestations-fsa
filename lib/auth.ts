@@ -25,11 +25,13 @@ export type SessionData = {
 };
 
 // Vérification de la clé secrète
-if (!process.env.AUTH_SECRET) {
+if (!process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRET) {
     if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ [AUTH WARN] AUTH_SECRET is not defined in environment variables');
+        console.warn('⚠️ [AUTH WARN] BETTER_AUTH_SECRET or AUTH_SECRET is not defined in environment variables');
     }
 }
+
+import { admin } from "better-auth/plugins"
 
 /**
  * Instance d'authentification Better Auth
@@ -38,7 +40,8 @@ export const auth = betterAuth({
     database: prismaAdapter(rawPrisma, {
         provider: "postgresql",
     }),
-    secret: process.env.AUTH_SECRET || "fallback-secret-for-dev-only",
+    secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "fallback-secret-for-dev-only",
+    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
     session: {
         expiresIn: 60 * 60 * 24 * 30, // 30 jours
         updateAge: 60 * 60 * 24 * 1,   // 1 jour
@@ -47,7 +50,23 @@ export const auth = betterAuth({
         additionalFields: {
             role: {
                 type: "string",
-                defaultValue: "USER"
+                defaultValue: "user"
+            },
+            phone: {
+                type: "string",
+                required: false,
+            },
+            birthDate: {
+                type: "date",
+                required: false,
+            },
+            birthPlace: {
+                type: "string",
+                required: false,
+            },
+            address: {
+                type: "string",
+                required: false,
             }
         }
     },
@@ -55,7 +74,12 @@ export const auth = betterAuth({
         enabled: true,
         minPasswordLength: 8,
     },
-    plugins: [nextCookies()],
+    plugins: [
+        nextCookies(),
+        admin({
+            adminUserIds: ["eflexcloud@gmail.com", "admin@fermestandre.com"]
+        })
+    ],
     advanced: {
         cookiePrefix: 'better-auth',
     },
@@ -105,14 +129,14 @@ export async function isAdminAuthenticated(request?: Request): Promise<boolean> 
             return true;
         }
 
-        // 2. Fallback avec session legacy
+        // 2. Fallback avec session legacy (Table User uniquement)
         const legacyId = await getLegacySessionId(request);
         if (legacyId) {
-            const admin = await prisma.admin.findUnique({
+            const user = await prisma.user.findUnique({
                 where: { id: legacyId },
-                select: { id: true }
+                select: { id: true, role: true }
             });
-            return !!admin;
+            return user?.role === 'ADMIN';
         }
 
         return false;
@@ -144,14 +168,6 @@ export async function getCurrentUser(request?: Request): Promise<SessionUser | {
         // 2. Fallback avec session legacy
         const legacyId = await getLegacySessionId(request);
         if (legacyId) {
-            // Chercher d'abord dans Admin, puis dans User
-            const admin = await prisma.admin.findUnique({
-                where: { id: legacyId },
-                select: { id: true, email: true, name: true, role: true }
-            });
-
-            if (admin) return admin;
-
             const user = await prisma.user.findUnique({
                 where: { id: legacyId },
                 select: { id: true, email: true, name: true, role: true }

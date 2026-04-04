@@ -2,8 +2,7 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
 import * as React from "react";
-
-import NextTopLoader from 'nextjs-toploader';
+import { TopLoader } from "@/components/TopLoader";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,17 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body className={inter.className}>
-        <NextTopLoader 
-          color="#16a34a"
-          initialPosition={0.08}
-          crawlSpeed={200}
-          height={3}
-          crawl={true}
-          showSpinner={false}
-          easing="ease"
-          speed={200}
-          shadow="0 0 10px #16a34a,0 0 5px #16a34a"
-        />
+        <TopLoader />
         <Providers>
           {children}
         </Providers>

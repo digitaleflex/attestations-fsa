@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +38,7 @@ export default function UserExamsPage() {
   const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
     queryKey: ["scheduled-exams"],
     queryFn: async () => {
-      return apiFetch("/api/exams?status=SCHEDULED");
+      return apiFetch("/api/exams/scheduled");
     },
     staleTime: 60 * 1000, // Update every minute for countdown
   });

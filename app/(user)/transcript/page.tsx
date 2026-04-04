@@ -1,16 +1,18 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Award, Download, FileText, TrendingUp, CheckCircle, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
-import dynamic from "next/dynamic";
+import dynImport from "next/dynamic";
 import TranscriptTemplate from "@/components/TranscriptTemplate";
 import { useState } from "react";
 
-const html2pdf = dynamic(() => import("html2pdf.js"), { ssr: false });
+const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 
 export default function TranscriptPage() {
   const [downloading, setDownloading] = useState(false);

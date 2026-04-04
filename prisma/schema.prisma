@@ -7,11 +7,425 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  scope                 String?
+  accessToken           String?
+  accessTokenExpiresAt  DateTime?
+  accountId             String    @default("")
+  createdAt             DateTime  @default(now())
+  idToken               String?
+  password              String?
+  providerId            String    @default("")
+  refreshToken          String?
+  refreshTokenExpiresAt DateTime?
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  ipAddress String?
+  token     String   @unique
+  updatedAt DateTime @updatedAt
+  userAgent String?
+  impersonatedBy String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+}
+
+model User {
+  id                    String              @id @default(uuid())
+  name                  String?
+  email                 String?             @unique
+  emailVerified         DateTime?
+  image                 String?
+  password              String?
+  role                  String              @default("user")
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Admin Plugin Fields
+  banned                Boolean?
+  banReason             String?
+  banExpires            DateTime?
+  
+  address               String?
+  birthDate             DateTime?
+  birthPlace            String?
+  phone                 String?
+  attestationCode       String?             @unique
+  attestationStatus     String              @default("PENDING")
+  enrolledAt            DateTime?
+  examId                String?
+  examScheduledAt       DateTime?
+  formationId           String?
+  gender                Gender?
+  portfolioEnabled      Boolean             @default(false)
+  portfolioSlug         String?
+  blockedReason         String?
+  lastBlockedAt         DateTime?
+  resetPasswordRequired Boolean             @default(false)
+  status                UserStatus          @default(ACTIVE)
+  accounts              Account[]
+  attestations          Attestation[]
+  auditLogs             AuditLog[]
+  chatMessages          ChatMessage[]
+  correctionRequests    CorrectionRequest[]
+  examSessions          ExamSession[]
+  internships           InternshipRequest[]
+  notifications         Notification[]
+  sessions              Session[]
+  exam                  Exam?               @relation(fields: [examId], references: [id])
+  formation             Formation?          @relation(fields: [formationId], references: [id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Formation {
+  id           String        @id @default(uuid())
+  name         String
+  category     String
+  description  String?
+  skills       String[]
+  createdAt    DateTime      @default(now())
+  attestations Attestation[]
+  exams        Exam[]
+  users        User[]
+}
+
+model Attestation {
+  id                        String                @id @default(uuid())
+  code                      String                @unique
+  issuedAt                  DateTime              @default(now())
+  type                      AttestationType       @default(FORMATION)
+  fullName                  String
+  birthDate                 DateTime
+  birthPlace                String
+  formationId               String
+  startDate                 DateTime
+  endDate                   DateTime
+  location                  String
+  instructor                String
+  issuingCompany            String
+  status                    AttestationStatus     @default(PENDING)
+  pdfUrl                    String?
+  certificationHours        Int?
+  certificationMention      CertificationMention?
+  certificationObservations String?
+  certificationScore        Float?
+  gender                    Gender?
+  stageHours                Int?
+  stageObservations         String?
+  stageScore                Float?
+  userId                    String?
+  formation                 Formation             @relation(fields: [formationId], references: [id])
+  user                      User?                 @relation(fields: [userId], references: [id])
+  correctionRequests        CorrectionRequest[]
+}
+
+model Settings {
+  id                 String   @id @default(uuid())
+  institutionName    String   @default("Ferme Agro-Piscicole Cité St André")
+  replyTo            String?
+  updatedAt          DateTime @updatedAt
+  targetAttestations Int      @default(300)
+  targetInscriptions Int      @default(500)
+  targetValidations  Int      @default(450)
+  institutionLogo    String?
+  instructorName     String   @default("Directeur Technique")
+  instructorTitle    String   @default("Responsable des Formations")
+  location           String   @default("Abomey-Calavi")
+  signatureUrl       String?
+  supportEmail       String   @default("contact@eurinhash.com")
+}
+
+model Report {
+  id              String   @id @default(uuid())
+  codeAttestation String?
+  motif           String
+  message         String
+  email           String?
+  createdAt       DateTime @default(now())
+  status          String   @default("NOUVEAU")
+}
+
+model Waitlist {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  message   String?
+  status    String   @default("PENDING")
+  source    String   @default("PORTFOLIO")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Exam {
+  id                 String        @id @default(uuid())
+  title              String
+  description        String?
+  status             ExamStatus    @default(DRAFT)
+  totalPoints        Int           @default(100)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  formationId        String?
+  duration           Int           @default(3600)
+  name               String
+  part1Enabled       Boolean       @default(true)
+  part1Points        Int           @default(20)
+  part1Questions     Int           @default(20)
+  part2Enabled       Boolean       @default(true)
+  part2Points        Int           @default(40)
+  part2Questions     Int           @default(5)
+  part3Enabled       Boolean       @default(true)
+  part3Mode          String        @default("digital")
+  part3Points        Int           @default(40)
+  part3Subject       String?
+  passingScore       Int           @default(60)
+  randomizeQuestions Boolean       @default(false)
+  showResults        Boolean       @default(false)
+  scheduledAt        DateTime?
+  session            String?
+  formation          Formation?    @relation(fields: [formationId], references: [id])
+  parts              ExamPart[]
+  sessions           ExamSession[]
+  users              User[]
+}
+
+model ExamPart {
+  id        String     @id @default(uuid())
+  examId    String
+  title     String
+  type      String
+  duration  Int
+  points    Int
+  order     Int
+  scenario  String?
+  exam      Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questions Question[]
+}
+
+model Question {
+  id      String           @id @default(uuid())
+  partId  String
+  text    String
+  type    QuestionType     @default(SINGLE_CHOICE)
+  points  Float            @default(1)
+  order   Int
+  part    ExamPart         @relation(fields: [partId], references: [id], onDelete: Cascade)
+  options QuestionOption[]
+
+  @@index([partId])
+}
+
+model QuestionOption {
+  id         String   @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean  @default(false)
+  feedback   String?
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model Resource {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  type        ResourceType @default(BOOK)
+  url         String
+  thumbnail   String?
+  category    String?
+  isPublished Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([category])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ExamSession {
+  id          String            @id @default(uuid())
+  examId      String
+  userId      String
+  status      String            @default("PENDING")
+  scorePart1  Float             @default(0)
+  scorePart2  Float             @default(0)
+  scorePart3  Float             @default(0)
+  score       Float             @default(0)
+  totalScore  Float             @default(0)
+  gradedBy    String?
+  gradedAt    DateTime?
+  startedAt   DateTime          @default(now())
+  submittedAt DateTime?         @default(now())
+  updatedAt   DateTime          @updatedAt
+  answers     Json?             @default("{}")
+  scans       CompositionScan[]
+  exam        Exam              @relation(fields: [examId], references: [id])
+  candidate   User              @relation(fields: [userId], references: [id])
+
+  @@index([userId, examId])
+  @@index([status])
+  @@index([examId, status])
+}
+
+model CompositionScan {
+  id           String      @id @default(uuid())
+  submissionId String
+  url          String
+  pageNumber   Int         @default(1)
+  fileName     String
+  fileSize     Int
+  uploadedBy   String
+  uploadedAt   DateTime    @default(now())
+  session      ExamSession @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
+
+model InternshipRequest {
+  id         String           @id @default(uuid())
+  fullName   String
+  email      String
+  phone      String
+  university String?
+  level      String?
+  position   String
+  cvUrl      String?
+  message    String?
+  status     InternshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id])
+}
+
+model CorrectionRequest {
+  id            String           @id @default(uuid())
+  userId        String
+  attestationId String?
+  field         String
+  oldValue      String?
+  newValue      String
+  reason        String?
+  status        CorrectionStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  attestation   Attestation?     @relation(fields: [attestationId], references: [id])
+  user          User             @relation(fields: [userId], references: [id])
+}
+
+model SecurityLog {
+  id         String   @id @default(uuid())
+  eventType  String
+  userId     String?
+  ipAddress  String?
+  userAgent  String?
+  resource   String?
+  resourceId String?
+  action     String?
+  status     String
+  severity   String
+  details    Json?
+  timestamp  DateTime @default(now())
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([severity])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([timestamp])
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  content     String
+  senderId    String
+  senderRole  String
+  userId      String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  attachments Json?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  link      String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model Admin {
+  id            String    @id
+  email         String    @unique
+  password      String
+  name          String?
+  createdAt     DateTime  @default(now())
+  emailVerified DateTime?
+  role          String    @default("ADMIN")
+  updatedAt     DateTime
+  address       String?
+  birthDate     DateTime?
+  birthPlace    String?
+  phone         String?
+}
+
 enum AttestationStatus {
-  PENDING      // Code généré mais pas encore réclamé
-  CLAIMED      // Code réclamé par le candidat
-  VALIDATED    // Attestation validée (après examen réussi)
-  REJECTED     // Attestation refusée (examen échoué)
+  PENDING
+  VALIDATED
+  REJECTED
+  CLAIMED
 }
 
 enum AttestationType {
@@ -59,350 +473,6 @@ enum UserStatus {
   SUSPENDED
 }
 
-model Account {
-  id                    String    @id @default(cuid())
-  userId                String
-  accountId             String    @default("")
-  providerId            String    @default("")
-  accessToken           String?   @db.Text
-  refreshToken          String?   @db.Text
-  idToken               String?   @db.Text
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([providerId, accountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  expiresAt    DateTime
-  token        String   @unique
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Verification {
-  id         String    @id @default(cuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime?
-  updatedAt  DateTime?
-}
-
-model User {
-  id            String    @id @default(uuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          String    @default("USER")
-
-  // Informations pour les attestations
-  birthDate     DateTime?
-  birthPlace    String?
-  phone         String?
-  address       String?
-  gender        Gender?
-  
-  // Code d'attestation pour débloquer le compte
-  attestationCode String? @unique
-  attestationStatus String @default("PENDING") // PENDING, CLAIMED, VALIDATED
-
-  // Portfolio public
-  portfolioSlug String? // Slug unique pour le portfolio public (ex: "jean-boko-abc123")
-  portfolioEnabled Boolean @default(false) // Si le portfolio est visible publiquement
-  
-  // Sécurité et Statut
-  status        UserStatus @default(ACTIVE)
-  resetPasswordRequired Boolean @default(false)
-  blockedReason String?
-  lastBlockedAt DateTime?
-  
-  // Formation et examen associés
-  formationId   String?
-  formation     Formation? @relation(fields: [formationId], references: [id])
-  examId        String?
-  exam          Exam? @relation(fields: [examId], references: [id])
-  
-  // Dates importantes
-  enrolledAt    DateTime?
-  examScheduledAt DateTime?
-
-  correctionRequests CorrectionRequest[]
-  attestations  Attestation[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts      Account[]
-  sessions      Session[]
-  examSessions  ExamSession[]
-  internships   InternshipRequest[]
-  chatMessages  ChatMessage[]
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-model Formation {
-  id           String      @id @default(uuid())
-  name         String
-  category     String
-  description  String?
-  skills       String[]
-  createdAt    DateTime    @default(now())
-  attestations Attestation[]
-  exams        Exam[]
-  users        User[]
-}
-
-model Attestation {
-  id             String            @id @default(uuid())
-  code           String            @unique
-  issuedAt       DateTime          @default(now())
-  type           AttestationType   @default(FORMATION)
-  
-  // Informations personnelles
-  fullName       String
-  gender         Gender?           // M ou F
-  birthDate      DateTime
-  birthPlace     String
-  
-  // Formation associée
-  formationId    String
-  formation      Formation         @relation(fields: [formationId], references: [id])
-  
-  // Détails de la formation
-  startDate      DateTime
-  endDate        DateTime
-  location       String
-  instructor     String
-  issuingCompany String
-  
-  // Statut
-  status         AttestationStatus @default(PENDING)
-  
-  // Champs spécifiques pour STAGE
-  stageHours     Int?              // Nombre d'heures de stage
-  stageScore     Float?            // Score du stage (0-100)
-  stageObservations String?        // Observations du tuteur
-  
-  // Champs spécifiques pour CERTIFICATION
-  certificationMention CertificationMention?  // Mention obtenue
-  certificationScore Float?         // Score de certification (0-100)
-  certificationHours Int?           // Heures de formation pour certification
-  certificationObservations String? // Observations du jury
-  
-  // Métadonnées
-  pdfUrl         String?
-  userId         String?
-  user           User?             @relation(fields: [userId], references: [id])
-  correctionRequests CorrectionRequest[]
-}
-
-model Settings {
-  id                  String  @id @default(uuid())
-  institutionName     String  @default("Ferme Agro-Piscicole Cité St André")
-  institutionLogo     String?
-  instructorName      String  @default("Directeur Technique")
-  instructorTitle     String  @default("Responsable des Formations")
-  signatureUrl        String? // URL of the scanned signature
-  location            String  @default("Abomey-Calavi")
-  supportEmail        String  @default("contact@eurinhash.com")
-  replyTo             String?
-  targetInscriptions  Int     @default(500)
-  targetAttestations  Int     @default(300)
-  targetValidations   Int     @default(450)
-  updatedAt           DateTime @updatedAt
-}
-
-model Report {
-  id              String   @id @default(uuid())
-  codeAttestation String?  // Code de l'attestation signalée (optionnel)
-  motif           String   // Motif du signalement
-  message         String   // Message détaillée
-  email           String?  // Email du déclarant (optionnel)
-  createdAt       DateTime @default(now())
-  status          String   @default("NOUVEAU") // Statut du traitement
-}
-
-// ✅ WAITLIST: Model for portfolio waitlist signups
-model Waitlist {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  name        String?
-  message     String?
-  status      String   @default("PENDING") // PENDING, CONTACTED, CONVERTED, REJECTED
-  source      String   @default("PORTFOLIO") // PORTFOLIO, NEWSLETTER, OTHER
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Admin {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String
-  name          String?
-  role          String    @default("ADMIN")
-  emailVerified DateTime?
-  
-  // Informations pour les attestations
-  birthDate     DateTime?
-  birthPlace    String?
-  phone         String?
-  address       String?
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
-model Exam {
-  id              String          @id @default(uuid())
-  name            String
-  title           String
-  session         String?         // e.g. "Avril 2026"
-  description     String?
-  status          ExamStatus      @default(DRAFT)
-  duration        Int             @default(3600) // seconds
-  passingScore    Int             @default(60) // percentage
-  totalPoints     Int             @default(100)
-  
-  // Configuration des parties
-  part1Enabled    Boolean         @default(true)
-  part1Questions  Int             @default(20)
-  part1Points     Int             @default(20)
-  part2Enabled    Boolean         @default(true)
-  part2Questions  Int             @default(5)
-  part2Points     Int             @default(40)
-  part3Enabled    Boolean         @default(true)
-  part3Subject    String?         @db.Text
-  part3Points     Int             @default(40)
-  part3Mode       String          @default("digital") // "digital" or "physical"
-  
-  // Options
-  randomizeQuestions Boolean      @default(false)
-  showResults     Boolean         @default(false)
-  
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  formationId     String?
-  formation       Formation?      @relation(fields: [formationId], references: [id])
-  users           User[]
-  parts           ExamPart[]
-  sessions        ExamSession[]
-  scheduledAt     DateTime?
-}
-
-model ExamPart {
-  id              String          @id @default(uuid())
-  examId          String
-  exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
-  title           String
-  type            String          // "QCM", "OPEN", "CASE_STUDY"
-  duration        Int             // Minutes
-  points          Int             // 20, 40, or 40
-  order           Int
-  questions       Question[]
-  scenario        String?         @db.Text
-}
-
-model Question {
-  id              String          @id @default(uuid())
-  partId          String
-  part            ExamPart        @relation(fields: [partId], references: [id], onDelete: Cascade)
-  text            String          @db.Text
-  type            QuestionType    @default(SINGLE_CHOICE)
-  points          Float           @default(1)
-  order           Int
-  options         QuestionOption[]
-
-  @@index([partId])
-}
-
-model QuestionOption {
-  id              String          @id @default(uuid())
-  questionId      String
-  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  text            String
-  isCorrect       Boolean         @default(false)
-  feedback        String?         // Explication/Correction pour cette option
-
-  @@index([questionId])
-}
-
-model Resource {
-  id          String       @id @default(uuid())
-  title       String
-  description String?      @db.Text
-  type        ResourceType @default(BOOK)
-  url         String       // Link to media/file
-  thumbnail   String?      // Optional thumbnail URL
-  category    String?      // e.g. "Pisciculture", "Agriculture"
-  isPublished Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  @@index([category])
-  @@index([type])
-  @@index([createdAt])
-}
-
-model ExamSession {
-  id              String          @id @default(uuid())
-  examId          String
-  exam            Exam            @relation(fields: [examId], references: [id])
-  userId          String
-  candidate       User            @relation(fields: [userId], references: [id])
-  status          String          @default("PENDING") // PENDING, GRADED, IN_PROGRESS, COMPLETED
-  scorePart1      Float           @default(0)
-  scorePart2      Float           @default(0)
-  scorePart3      Float           @default(0)
-  score           Float           @default(0) // mapping totalScore to score for current_problems compatibility
-  totalScore      Float           @default(0)
-  gradedBy        String?         // Admin name or ID
-  gradedAt        DateTime?
-  startedAt       DateTime        @default(now())
-  submittedAt     DateTime?       @default(now())
-  updatedAt       DateTime        @updatedAt
-  answers         Json?           @default("{}")
-  scans           CompositionScan[]
-
-  // ✅ Indexes for concurrent submission performance
-  @@index([userId, examId])
-  @@index([status])
-  @@index([examId, status])
-}
-
-model CompositionScan {
-  id            String    @id @default(uuid())
-  submissionId  String
-  session       ExamSession @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  url           String
-  pageNumber    Int       @default(1)
-  fileName      String
-  fileSize      Int       // in bytes
-  uploadedBy    String    // Admin ID
-  uploadedAt    DateTime  @default(now())
-}
-
 enum InternshipStatus {
   PENDING
   REVIEWING
@@ -411,100 +481,10 @@ enum InternshipStatus {
   ARCHIVED
 }
 
-model InternshipRequest {
-  id              String           @id @default(uuid())
-  userId          String?
-  user            User?            @relation(fields: [userId], references: [id])
-  fullName        String
-  email           String
-  phone           String
-  university      String?
-  level           String?          // e.g. "Bac +3"
-  position        String           // Desired role
-  message         String?          @db.Text
-  status          InternshipStatus @default(PENDING)
-  cvUrl           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-}
-
 enum CorrectionStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-model CorrectionRequest {
-  id             String            @id @default(uuid())
-  userId         String
-  user           User              @relation(fields: [userId], references: [id])
-
-  attestationId  String?
-  attestation    Attestation?      @relation(fields: [attestationId], references: [id])
-
-  field          String            // e.g. "fullName", "birthDate", "birthPlace"
-  oldValue       String?
-  newValue       String
-  reason         String?           // Why the change is needed
-
-  status         CorrectionStatus  @default(PENDING)
-
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-}
-
-// Security & Audit Logs (à ajouter pour la traçabilité)
-model SecurityLog {
-  id        String   @id @default(uuid())
-  eventType String
-  userId    String?
-  ipAddress String?
-  userAgent String?
-  resource  String?
-  resourceId String?
-  action    String?
-  status    String
-  severity  String
-  details   Json?
-  timestamp DateTime @default(now())
-
-  @@index([eventType])
-  @@index([userId])
-  @@index([timestamp])
-  @@index([severity])
-}
-
-model AuditLog {
-  id         String   @id @default(uuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  action     String
-  resource   String
-  resourceId String
-  oldValue   Json?
-  newValue   Json?
-  ipAddress  String?
-  timestamp  DateTime @default(now())
-
-  @@index([userId])
-  @@index([action])
-  @@index([resource])
-  @@index([timestamp])
-}
-
-model ChatMessage {
-  id          String   @id @default(uuid())
-  content     String   @db.Text
-  senderId    String
-  senderRole  String   // "USER" or "ADMIN"
-  userId      String   // The candidate user ID for this chat thread
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isRead      Boolean  @default(false)
-  attachments Json?    // Array of image URLs
-  createdAt   DateTime @default(now())
-
-  @@index([userId])
-  @@index([createdAt])
 }
 
 enum NotificationType {
@@ -517,21 +497,4 @@ enum NotificationType {
   CORRECTION_REJECTED
   SUPPORT_REPLY
   GENERAL
-}
-
-model Notification {
-  id        String            @id @default(uuid())
-  userId    String
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      NotificationType
-  title     String
-  message   String            @db.Text
-  isRead    Boolean           @default(false)
-  link      String?           // URL to navigate to when clicked
-  metadata  Json?             // Additional data
-  createdAt DateTime          @default(now())
-
-  @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
 }

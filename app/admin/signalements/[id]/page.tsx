@@ -33,7 +33,8 @@ type Report = {
 };
 
 export default function SignalementDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
   const [status, setStatus] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);

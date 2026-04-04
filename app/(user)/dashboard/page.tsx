@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +12,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import dynamic from "next/dynamic";
+import dynImport from "next/dynamic";
 import CertificateTemplate from "@/components/CertificateTemplate";
 import { 
   Chart as ChartJS, 
@@ -26,7 +28,7 @@ import { Bar } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 // Import dynamique pour éviter SSR
-const html2pdf = dynamic(() => import("html2pdf.js"), { ssr: false });
+const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 
 export default function UserDashboardPage() {
   const router = useRouter();

@@ -1,15 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Désactive complètement Turbopack
-  experimental: {
-    // Supprime la configuration turbo
-  },
+  // Next.js 16: Turbopack par défaut, on ajoute une config vide pour silencer le warning
+  turbopack: {},
   reactStrictMode: true,
   images: {
     domains: [],
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   webpack: (config, { isServer }) => {
     // Configuration de fallback pour le côté client uniquement

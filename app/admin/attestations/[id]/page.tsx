@@ -84,7 +84,8 @@ function DateLocale({ date, options }: { date: string | Date; options?: Intl.Dat
 }
 
 export default function AttestationDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
   const [data, setData] = useState<AttestationData | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);

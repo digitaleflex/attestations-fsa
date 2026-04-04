@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { z } from 'zod';
 
 // Schéma de validation pour la modification du profil admin
@@ -19,10 +19,13 @@ const AdminProfileSchema = z.object({
 
 // GET /api/admin - Récupérer le profil de l'admin connecté
 export async function GET() {
-  if (!(await isAdminAuthenticated())) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
   }
-  const admin = await prisma.admin.findFirst({
+
+  const admin = await prisma.user.findUnique({
+    where: { id: user.id },
     select: {
       id: true,
       name: true,
@@ -33,75 +36,75 @@ export async function GET() {
       address: true,
     }
   });
+
+  if (!admin) return NextResponse.json({ message: 'Compte introuvable' }, { status: 404 });
   return NextResponse.json(admin);
 }
 
 // PATCH /api/admin - Mettre à jour le profil de l'admin
 export async function PATCH(request: Request) {
-  if (!(await isAdminAuthenticated())) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
+
   const body = await request.json();
   const parse = AdminProfileSchema.safeParse(body);
   if (!parse.success) {
     return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
   }
+
   const { name, email, oldPassword, newPassword, birthDate, birthPlace, phone, address } = parse.data;
-  let admin = await prisma.admin.findFirst();
-  if (!admin) return NextResponse.json({ message: 'Admin introuvable' }, { status: 404 });
+  
+  // On récupère les infos complètes (incluant le password pour comparaison)
+  const currentUser = await prisma.user.findUnique({ 
+    where: { id: user.id } 
+  });
+
+  if (!currentUser) return NextResponse.json({ message: 'Admin introuvable' }, { status: 404 });
 
   const updateData: any = {};
 
-  // Modification du nom
-  if (name) {
-    updateData.name = name;
-  }
+  if (name) updateData.name = name;
 
-  // Modification de l'email
-  if (email && email !== admin.email) {
-    const existing = await prisma.admin.findFirst({ where: { email, id: { not: admin.id } } });
+  if (email && email !== currentUser.email) {
+    const existing = await prisma.user.findFirst({ 
+      where: { email, id: { not: currentUser.id } } 
+    });
     if (existing) {
       return NextResponse.json({ message: 'Cet email est déjà utilisé' }, { status: 400 });
     }
     updateData.email = email;
   }
 
-  // Modification du mot de passe
   if (oldPassword && newPassword) {
-    const ok = await bcrypt.compare(oldPassword, admin.password);
+    if (!currentUser.password) {
+        return NextResponse.json({ message: 'Compte sans mot de passe local' }, { status: 400 });
+    }
+    const ok = await bcrypt.compare(oldPassword, currentUser.password);
     if (!ok) {
       return NextResponse.json({ message: 'Ancien mot de passe incorrect' }, { status: 400 });
     }
     updateData.password = await bcrypt.hash(newPassword, 10);
   }
 
-  // Modification des informations personnelles
-  if (birthDate) {
-    updateData.birthDate = new Date(birthDate);
-  }
-  if (birthPlace) {
-    updateData.birthPlace = birthPlace;
-  }
-  if (phone) {
-    updateData.phone = phone;
-  }
-  if (address) {
-    updateData.address = address;
-  }
+  if (birthDate) updateData.birthDate = new Date(birthDate);
+  if (birthPlace) updateData.birthPlace = birthPlace;
+  if (phone) updateData.phone = phone;
+  if (address) updateData.address = address;
 
-  // Mettre à jour l'admin
-  admin = await prisma.admin.update({ 
-    where: { id: admin.id }, 
+  const updatedAdmin = await prisma.user.update({ 
+    where: { id: currentUser.id }, 
     data: updateData 
   });
 
   return NextResponse.json({ 
-    id: admin.id, 
-    name: admin.name, 
-    email: admin.email,
-    birthDate: admin.birthDate?.toISOString().slice(0, 10),
-    birthPlace: admin.birthPlace,
-    phone: admin.phone,
-    address: admin.address,
+    id: updatedAdmin.id, 
+    name: updatedAdmin.name, 
+    email: updatedAdmin.email,
+    birthDate: updatedAdmin.birthDate?.toISOString().slice(0, 10),
+    birthPlace: updatedAdmin.birthPlace,
+    phone: updatedAdmin.phone,
+    address: updatedAdmin.address,
   });
 }

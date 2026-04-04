@@ -57,7 +57,8 @@ type Submission = {
 };
 
 export default function GradeSubmissionPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
   
   const [submission, setSubmission] = useState<Submission | null>(null);

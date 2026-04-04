@@ -10,20 +10,32 @@ import {
 export function FaqSection() {
     const faqs = [
         {
+            question: "Comment passer un examen en ligne ?",
+            answer: "Créez votre compte, accédez à votre espace personnel et sélectionnez l'examen disponible. Vous pourrez répondre aux questions directement en ligne et recevoir vos résultats immédiatement après la soumission."
+        },
+        {
             question: "Comment vérifier l'authenticité d'une attestation ?",
-            answer: "Il vous suffit de saisir le code unique présent sur l'attestation dans la barre de recherche ci-dessus, ou de scanner le QR code si vous utilisez un appareil mobile. Le système confirmera instantanément si le document est valide."
+            answer: "Rendez-vous sur la page de vérification et saisissez le code unique présent sur le document. Le système confirmera instantanément sa validité avec les informations associées."
         },
         {
-            question: "Que faire si mon code est indiqué comme 'Invalide' ?",
-            answer: "Vérifiez d'abord que vous avez saisi le code exactement comme il apparaît (majuscules, tirets). Si le problème persiste, contactez l'administration de la FSA pour vérifier qu'il n'y a pas eu d'erreur lors de l'émission."
+            question: "Combien de temps faut-il pour recevoir mon attestation ?",
+            answer: "Une fois votre examen réussi, votre attestation est générée automatiquement et disponible dans votre espace personnel. Elle est vérifiable immédiatement grâce à son code unique."
         },
         {
-            question: "Puis-je partager mon attestation sur LinkedIn ?",
-            answer: "Absolument ! Nous vous encourageons à partager votre réussite. Vous pouvez mentionner votre code unique dans la section 'Licences et certifications' de votre profil LinkedIn pour que les recruteurs puissent le vérifier facilement."
+            question: "Que faire si mon code est indiqué comme invalide ?",
+            answer: "Vérifiez que le code est saisi exactement comme il apparaît (majuscules, tirets). Si le problème persiste, contactez l'administration FSA pour qu'on vérifie votre dossier."
         },
         {
-            question: "Les données des étudiants sont-elles publiques ?",
-            answer: "Non. Seules les informations essentielles à la vérification (Nom, Prénom, Formation, Date) sont affichées lorsqu'un code valide est saisi. Aucune donnée sensible (email, téléphone, adresse) n'est accessible publiquement."
+            question: "Puis-je partager mon attestation sur les réseaux sociaux ?",
+            answer: "Oui ! Vous pouvez partager votre réussite sur LinkedIn, WhatsApp, Facebook ou X en un clic. Nous vous encourageons à mentionner votre code unique dans la section certifications de LinkedIn."
+        },
+        {
+            question: "Le service de vérification est-il gratuit ?",
+            answer: "Oui, la vérification d'attestation est entièrement gratuite, publique et ne nécessite aucune inscription. N'importe qui peut vérifier un document à tout moment."
+        },
+        {
+            question: "Mes données personnelles sont-elles protégées ?",
+            answer: "Absolument. Seules les informations essentielles (Nom, Prénom, Formation, Date) sont affichées lors d'une vérification. Aucune donnée sensible (email, téléphone, adresse) n'est accessible publiquement."
         }
     ];
 

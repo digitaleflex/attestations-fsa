@@ -22,10 +22,10 @@ function SubmissionsList() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [examFilter, setExamFilter] = useState(searchParams.get("examId") || "all");
+  const [examFilter, setExamFilter] = useState(searchParams?.get("examId") || "all");
 
   useEffect(() => {
-    const eid = searchParams.get("examId");
+    const eid = searchParams?.get("examId");
     if (eid) setExamFilter(eid);
   }, [searchParams]);
 

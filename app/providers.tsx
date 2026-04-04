@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "sonner";
 
@@ -13,10 +13,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
             },
         },
     }));
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     return (
         <QueryClientProvider client={queryClient}>
-            <Toaster richColors position="top-center" closeButton />
+            {mounted && <Toaster richColors position="top-center" closeButton />}
             {children}
         </QueryClientProvider>
     );

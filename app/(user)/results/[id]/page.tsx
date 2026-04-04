@@ -19,7 +19,8 @@ import TranscriptDocumentComponent from "@/components/TranscriptDocument";
 import { useState } from "react";
 
 export default function ResultDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
 
   const { data: result, isLoading } = useQuery({

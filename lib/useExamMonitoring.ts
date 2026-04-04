@@ -135,12 +135,14 @@ export function useExamMonitoring({
     const examSessionKey = `exam-session-${examId}`;
     const sessionId = `${userId || 'anonymous'}-${Date.now()}`;
 
-    // Register this session
-    localStorage.setItem(examSessionKey, JSON.stringify({
-      sessionId,
-      startedAt: Date.now(),
-      tabId: sessionId,
-    }));
+    // Register this session (only on client)
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.setItem(examSessionKey, JSON.stringify({
+        sessionId,
+        startedAt: Date.now(),
+        tabId: sessionId,
+      }));
+    }
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === examSessionKey && e.newValue) {
@@ -160,7 +162,9 @@ export function useExamMonitoring({
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      localStorage.removeItem(examSessionKey);
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem(examSessionKey);
+      }
     };
   }, [examId, userId, addEvent]);
 

@@ -12,7 +12,7 @@ export default function EditExamPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/admin/exams/${params.id}`)
+    fetch(`/api/admin/exams/${params?.id}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.id) {
@@ -55,7 +55,7 @@ export default function EditExamPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [params.id]);
+  }, [params?.id]);
 
   if (loading) {
     return (

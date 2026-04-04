@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
+import { authClient } from "@/lib/auth-client";
 
 const RegisterSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
@@ -63,31 +64,29 @@ export default function AdminRegisterPage() {
     }
 
     try {
-      const { confirmPassword, ...registerData } = form;
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerData),
+      const { data, error: authError } = await authClient.signUp.email({
+        email: form.email,
+        password: form.password,
+        name: form.name,
+        role: "ADMIN", // Forced role for this specific admin registration page
+        callbackURL: "/admin/dashboard",
+      } as any, {
+        onRequest: () => setLoading(true),
+        onResponse: () => setLoading(false),
+        onError: (ctx) => {
+          setError(ctx.error.message || "Échec de l'inscription");
+          toast.error(ctx.error.message || "Échec de l'inscription");
+        },
+        onSuccess: () => {
+          toast.success("Compte administrateur créé avec succès !");
+          router.push("/admin/dashboard");
+        }
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Échec de l'inscription");
-        toast.error(data.message || "Échec de l'inscription");
+      if (authError) {
+        setError(authError.message || "Échec de l'inscription");
         return;
       }
-
-      toast.success("Compte créé avec succès ! Connexion en cours...");
-      
-      // Auto-login
-      await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
-      });
-
-      router.push("/admin/dashboard");
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
       toast.error(err.message || "Erreur inconnue");

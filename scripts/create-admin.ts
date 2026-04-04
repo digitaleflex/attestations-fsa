@@ -1,44 +1,76 @@
-import { PrismaClient } from '@prisma/client';
-import { hash } from 'bcryptjs';
+import 'dotenv/config';
+import { prisma } from '../lib/prisma';
+import { scryptSync, randomBytes } from 'node:crypto';
 
-const prisma = new PrismaClient();
+// Fonction de hachage compatible Better Auth (Scrypt standard)
+function hashPassword(pass: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = scryptSync(pass, salt, 64, {
+    N: 16384,
+    r: 8,
+    p: 1
+  }).toString('hex');
+  // Format attendu par certains adaptateurs ou simplement pour stockage propre
+  // Better Auth stocke souvent le salt séparément, mais ici on va assurer 
+  // que le format est compatible avec la validation.
+  return `${salt}.${derivedKey}`;
+}
 
 async function main() {
-  const email = 'eflexcloud@gmail.com';
-  const password = 'PasswordAdmin123!';
-  const name = 'Super Admin';
+  const admins = [
+    { email: 'eflexcloud@gmail.com', password: 'AdminFSA1452.', name: 'Super Admin' },
+    { email: 'admin@fermestandre.com', password: 'AdminFSA1452.', name: 'FSA Admin' },
+    { email: 'admin@fsa.bj', password: 'AdminFSA1452.', name: 'FSAbj Admin' }
+  ];
 
-  console.log(`🚀 Création de l'utilisateur admin : ${email}...`);
+  for (const admin of admins) {
+    console.log(`🚀 Injection Scrypt native pour : ${admin.email}...`);
 
-  try {
-    const adminExists = await prisma.admin.findFirst({
-      where: { email },
-    });
-
-    if (!adminExists) {
-      const hashedPassword = await hash(password, 12);
+    try {
+      const hashedPassword = hashPassword(admin.password);
       
-      await prisma.admin.create({
-        data: {
-          email,
+      const user = await prisma.user.upsert({
+        where: { email: admin.email },
+        update: {
+          password: hashedPassword,
+          role: 'ADMIN'
+        },
+        create: {
+          email: admin.email,
           password: hashedPassword,
           role: 'ADMIN',
-          name,
+          name: admin.name,
           emailVerified: new Date()
-        },
+        }
       });
 
-      console.log('✅ Compte administrateur créé avec succès !');
-      console.log(`📧 Email : ${email}`);
-      console.log(`🔑 Mot de passe : ${password}`);
-    } else {
-      console.log('ℹ️ Un compte administrateur avec cet email existe déjà.');
+      await prisma.account.upsert({
+        where: { 
+          providerId_accountId: {
+            providerId: 'credential',
+            accountId: admin.email
+          }
+        },
+        update: {
+          password: hashedPassword,
+          updatedAt: new Date()
+        },
+        create: {
+          userId: user.id,
+          providerId: 'credential',
+          accountId: admin.email,
+          password: hashedPassword,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
+      console.log(`✅ ${admin.email} synchronisé (Natif Scrypt).`);
+    } catch (error) {
+      console.error(`❌ Erreur pour ${admin.email} :`, error);
     }
-  } catch (error) {
-    console.error('❌ Erreur lors de la création de l\'admin :', error);
-  } finally {
-    await prisma.$disconnect();
   }
+  process.exit(0);
 }
 
 main();

@@ -4,30 +4,46 @@ import { hash } from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Vérifier si un admin existe déjà (modèle Admin)
-  const adminExists = await prisma.admin.findFirst({
-    where: { email: 'admin@fsa.bj' },
+  // Vérifier si un admin existe déjà (modèle User unifié)
+  const adminExists = await prisma.user.findFirst({
+    where: { 
+      email: 'admin@fsa.bj',
+      role: 'ADMIN'
+    },
   });
 
-  if (!adminExists) {
-    const hashedPassword = await hash('Admin123!', 12);
+  const adminPassword = 'AdminFSA1452.';
+  const hashedAdminPassword = await hash(adminPassword, 12);
 
-    await prisma.admin.create({
+  if (!adminExists) {
+    const newUser = await prisma.user.create({
       data: {
         email: 'admin@fsa.bj',
-        password: hashedPassword,
+        password: hashedAdminPassword,
         role: 'ADMIN',
         name: 'Administrateur FSA',
         emailVerified: new Date()
       },
     });
 
-    console.log('✅ Compte administrateur créé avec succès');
+    // Créer le compte 'credential' pour Better Auth dans le seed
+    await prisma.account.create({
+      data: {
+        userId: newUser.id,
+        providerId: 'credential',
+        accountId: 'admin@fsa.bj',
+        password: hashedAdminPassword,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('✅ Compte administrateur unifié créé avec succès (Better Auth Ready)');
     console.log('📧 Email: admin@fsa.bj');
-    console.log('🔑 Mot de passe: Admin123!');
+    console.log('🔑 Mot de passe:', adminPassword);
     console.log('\n⚠️  Veuillez changer ce mot de passe après votre première connexion !');
   } else {
-    console.log('ℹ️ Un compte administrateur existe déjà');
+    console.log('ℹ️ Un compte administrateur unifié existe déjà');
   }
   
   // Créer un utilisateur de test (candidat)

@@ -1,6 +1,6 @@
 {
   "name": "attestation-fsa",
-  "version": "0.1.0",
+  "version": "3.0. 1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -60,7 +60,7 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.264.0",
     "nanoid": "^5.1.6",
-    "next": "15.4.10",
+    "next": "16.2.2",
     "nextjs-toploader": "^3.9.17",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",

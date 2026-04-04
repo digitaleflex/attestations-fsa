@@ -15,7 +15,8 @@ import Link from "next/link";
 
 export default function EditFormationPage() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const [form, setForm] = useState({
     name: "",
     category: "",

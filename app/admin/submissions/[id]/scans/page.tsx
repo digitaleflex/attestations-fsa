@@ -17,7 +17,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 export default function AdminSubmissionScansPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);

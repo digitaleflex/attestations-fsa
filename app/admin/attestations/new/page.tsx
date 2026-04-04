@@ -78,6 +78,7 @@ export default function NewAttestationPage() {
 
   // 1. Charger le brouillon depuis localStorage au montage
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -101,6 +102,7 @@ export default function NewAttestationPage() {
 
     // Debounce save (500ms)
     const timeout = setTimeout(() => {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
       try {
         setIsSaving(true);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
@@ -164,8 +166,10 @@ export default function NewAttestationPage() {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         // Force immediate save
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-        toast.success("💾 Brouillon sauvegardé !");
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+          toast.success("💾 Brouillon sauvegardé !");
+        }
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "r") {
         e.preventDefault();
@@ -228,7 +232,9 @@ export default function NewAttestationPage() {
       setSuccess(true);
       toast.success("✅ Attestation créée avec succès !");
       // ✅ Supprimer le brouillon après succès
-      localStorage.removeItem(STORAGE_KEY);
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY);
+      }
       handleReset();
     } catch (err: any) {
       setError(err.message || "Erreur inconnue");
@@ -258,11 +264,14 @@ export default function NewAttestationPage() {
     setSuccess(false);
     setError("");
     // ✅ Supprimer le brouillon
-    localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
     toast.info("Formulaire réinitialisé");
   };
 
   const handleRestoreDraft = useCallback(() => {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {

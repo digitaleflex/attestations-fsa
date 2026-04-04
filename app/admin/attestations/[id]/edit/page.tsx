@@ -30,7 +30,8 @@ const GENDER_OPTIONS = [
 ];
 
 export default function EditAttestationPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
   const [form, setForm] = useState<any>(null);
   const [error, setError] = useState("");

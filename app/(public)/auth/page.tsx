@@ -11,6 +11,7 @@ import { Loader2, LogIn, UserPlus, Eye, EyeOff, Check, X, Mail, Phone, Calendar,
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
+import { authClient } from "@/lib/auth-client";
 
 // === Schémas de validation ===
 const LoginSchema = z.object({
@@ -266,70 +267,62 @@ export default function AuthPage() {
     }
 
     try {
-      const submitData: any = {
-        email: form.email,
-        password: form.password,
-        name: form.name,
-        birthDate: form.birthDate ? (() => {
-          // Convertir JJ/MM/AAAA en objet Date
-          const [day, month, year] = form.birthDate.split('/').map(Number);
-          return new Date(year, month - 1, day);
-        })() : undefined,
-        birthPlace: form.birthPlace,
-        phone: form.phone,
-        address: form.address,
-      };
+      const birthDate = form.birthDate ? (() => {
+        const [day, month, year] = form.birthDate.split('/').map(Number);
+        return new Date(year, month - 1, day);
+      })() : undefined;
 
-      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errorMessage = data.message || (isLogin ? "Échec de la connexion" : "Échec de l'inscription");
-        setError(errorMessage);
-        toast.error(errorMessage);
-        
-        // Gestion des erreurs spécifiques
-        if (errorMessage.includes("email") || errorMessage.includes("déjà")) {
-          setWizardStep(1);
-          setFieldErrors({ email: "Cette adresse email est déjà utilisée" });
-        }
-        if (errorMessage.includes("password") || errorMessage.includes("mot de passe")) {
-          setWizardStep(1);
-          setFieldErrors({ password: "Le mot de passe ne respecte pas les critères" });
-        }
-        
-        setLoading(false);
-        return;
-      }
-
-      const message = isLogin ? "Connexion réussie !" : "Compte créé avec succès !";
-      toast.success(message);
-
-      if (!isLogin) {
-        await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: form.email, password: form.password }),
+      if (isLogin) {
+        // Authentification Better Auth
+        const { data, error: authError } = await authClient.signIn.email({
+          email: form.email,
+          password: form.password,
         });
-      }
 
-      // Redirection selon le rôle
-      if (data.user?.role === 'ADMIN') {
-        router.push("/admin/dashboard");
+        if (authError) throw authError;
+
+        toast.success("Connexion réussie !");
+        
+        // Redirection intelligente
+        if ((data?.user as any)?.role === 'ADMIN') {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/exams");
+        }
       } else {
-        router.push("/exams");
+        // Inscription Better Auth
+        const { data, error: authError } = await authClient.signUp.email({
+          email: form.email,
+          password: form.password,
+          name: form.name,
+          phone: form.phone,
+          birthPlace: form.birthPlace,
+          address: form.address,
+          birthDate: birthDate,
+          callbackURL: "/exams",
+        } as any);
+
+        if (authError) throw authError;
+
+        toast.success("Compte créé avec succès !");
+        
+        // Si l'utilisateur est un admin (cas exceptionnel), rediriger vers admin
+        if ((data?.user as any)?.role === 'ADMIN') {
+            router.push("/admin/dashboard");
+        } else {
+            router.push("/exams");
+        }
       }
     } catch (err: any) {
       console.error("Erreur lors de l'authentification:", err);
       const errorMessage = err.message || "Une erreur inattendue est survenue";
       setError(errorMessage);
       toast.error(errorMessage);
+      
+      // Gestion visuelle des étapes si erreur email
+      if (errorMessage.toLowerCase().includes("email")) {
+        setWizardStep(1);
+      }
     } finally {
       setLoading(false);
     }

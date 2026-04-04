@@ -28,22 +28,22 @@ export function StatsDisplay() {
     if (error) return null;
 
     return (
-        <div className="w-full max-w-4xl px-6 mt-12 md:mt-16 overflow-visible">
+        <div className="w-full max-w-4xl mx-auto px-6 mt-12 md:mt-16 overflow-visible">
             <div className="text-center mb-10 space-y-2">
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100 shadow-sm">
                     Impact en Temps Réel
                 </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+            <div className="flex flex-wrap justify-center gap-8 md:gap-12">
                 {/* VALIDATED STATS */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     whileInView={{ opacity: 1, scale: 1, y: 0 }}
                     viewport={{ once: true }}
                     whileHover={{ y: -8, scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    className="relative group"
+                    className="relative group w-full sm:w-[calc(50%-2rem)] max-w-sm"
                 >
                     {/* Background Glow */}
                     <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500/20 to-teal-400/20 rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
@@ -97,13 +97,13 @@ export function StatsDisplay() {
                 </motion.div>
 
                 {/* PENDING STATS */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     whileInView={{ opacity: 1, scale: 1, y: 0 }}
                     viewport={{ once: true }}
                     whileHover={{ y: -8, scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
-                    className="relative group"
+                    className="relative group w-full sm:w-[calc(50%-2rem)] max-w-sm"
                 >
                     {/* Background Glow */}
                     <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-400/20 rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />

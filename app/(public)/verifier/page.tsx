@@ -43,7 +43,7 @@ function VerifierContent() {
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const searchParams = useSearchParams();
-  const codeParam = searchParams.get("code");
+  const codeParam = searchParams ? searchParams.get("code") : null;
 
   const { data: settings } = useQuery({
     queryKey: ["public-settings"],

@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,12 +13,12 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import dynamic from "next/dynamic";
+import dynImport from "next/dynamic";
 import CertificateTemplate from "@/components/CertificateTemplate";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
 
 // Import dynamique de html2pdf pour éviter les erreurs SSR
-const html2pdf = dynamic(() => import("html2pdf.js"), { ssr: false });
+const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 import {
   Select,
   SelectContent,

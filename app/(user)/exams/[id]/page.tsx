@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,8 @@ import { useExamMonitoring, reportMonitoringEvents, MonitoringEvent, MonitoringS
 
 export default function ExamSessionPage() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const queryClient = useQueryClient();
   
   // États de navigation
@@ -93,7 +96,9 @@ export default function ExamSessionPage() {
       }),
     onSuccess: () => {
       toast.success("✅ Examen soumis avec succès !");
-      localStorage.removeItem(`exam-${id}-draft`);
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`exam-${id}-draft`);
+      }
       router.push("/results");
     },
     onError: (error: any) => {
@@ -178,12 +183,14 @@ export default function ExamSessionPage() {
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       if (Object.keys(answers).length > 0 && !showInstructions) {
-        localStorage.setItem(`exam-${id}-draft`, JSON.stringify({
-          answers,
-          timeRemaining,
-          currentPart,
-        }));
-        console.log('💾 Brouillon sauvegardé automatiquement');
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+          localStorage.setItem(`exam-${id}-draft`, JSON.stringify({
+            answers,
+            timeRemaining,
+            currentPart,
+          }));
+          console.log('💾 Brouillon sauvegardé automatiquement');
+        }
       }
     }, 30000);
 
@@ -192,6 +199,7 @@ export default function ExamSessionPage() {
 
   // Load draft on mount
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
     const draft = localStorage.getItem(`exam-${id}-draft`);
     if (draft) {
       try {
@@ -201,7 +209,9 @@ export default function ExamSessionPage() {
         setCurrentPart(saved.currentPart || 1);
         toast.info("📝 Brouillon récupéré automatiquement");
       } catch (e) {
-        localStorage.removeItem(`exam-${id}-draft`);
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(`exam-${id}-draft`);
+        }
       }
     }
   }, [id]);
