@@ -46,7 +46,7 @@ export default function ExamSessionPage() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
   // Timer reference
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ✅ ANTI-CHEAT: Exam monitoring
   const monitoring = useExamMonitoring({

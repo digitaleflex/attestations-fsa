@@ -9,15 +9,14 @@ import { handleApiError } from "@/lib/error-handler"
  */
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     // ✅ Sécurité : Vérifier si l'utilisateur est admin
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
-
-    const { id } = params
 
     if (!id) {
       return NextResponse.json({ error: "ID manquant" }, { status: 400 })
@@ -45,9 +44,9 @@ export async function DELETE(
     })
 
   } catch (error: any) {
-    console.error(`[DELETE /api/signalement/${params.id}] Error:`, error)
+    console.error(`[DELETE /api/signalement/${id}] Error:`, error)
     return handleApiError(error, {
-      route: `/api/signalement/${params.id}`,
+      route: `/api/signalement/${id}`,
       operation: 'delete_report',
     })
   }
@@ -59,15 +58,16 @@ export async function DELETE(
  */
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     if (!(await isAdminAuthenticated())) {
         return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
     const report = await prisma.report.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!report) {
@@ -78,7 +78,7 @@ export async function GET(
 
   } catch (error: any) {
     return handleApiError(error, {
-      route: `/api/signalement/${params.id}`,
+      route: `/api/signalement/${id}`,
       operation: 'get_single_report',
     })
   }

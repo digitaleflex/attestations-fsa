@@ -38,6 +38,7 @@ export async function GET(request: Request) {
         birthPlace: true,
         phone: true,
         address: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
       },

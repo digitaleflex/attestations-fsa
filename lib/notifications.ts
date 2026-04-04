@@ -21,8 +21,8 @@ export async function createNotification(input: CreateNotificationInput) {
         type: input.type,
         title: input.title,
         message: input.message,
-        link: input.link || null,
-        metadata: input.metadata || null,
+        link: input.link || undefined,
+        metadata: (input.metadata as any) || undefined,
       },
     });
   } catch (error) {

@@ -8,7 +8,7 @@ import { useParams } from "next/navigation";
 
 export default function EditExamPage() {
   const params = useParams();
-  const [exam, setExam] = useState(null);
+  const [exam, setExam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
