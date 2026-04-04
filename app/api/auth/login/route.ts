@@ -36,21 +36,16 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
-    const { email, password } = parse.data
-
-    // Sanitization
-    const sanitizedEmail = sanitizeInput(email)
-
-    // Vérifier la connexion à la base de données
-    await prisma.$connect()
+    const { email, password } = parse.data;
+    const sanitizedEmail = sanitizeInput(email);
 
     // Chercher d'abord dans Admin, puis dans User
-    let user: any = await prisma.admin.findUnique({ where: { email: sanitizedEmail } })
-    let userType = 'ADMIN'
+    let user = await prisma.admin.findUnique({ where: { email: sanitizedEmail } });
+    let userType = 'ADMIN';
 
     if (!user) {
-      user = await prisma.user.findUnique({ where: { email: sanitizedEmail } })
-      userType = 'USER'
+      user = await (prisma.user as any).findUnique({ where: { email: sanitizedEmail } });
+      userType = 'USER';
     }
 
     // ⚠️ Message générique pour ne pas révéler si l'email existe
@@ -111,7 +106,5 @@ export async function POST(request: Request) {
       operation: 'login',
       ip: request.headers.get('x-forwarded-for') || undefined,
     })
-  } finally {
-    await prisma.$disconnect()
   }
 }

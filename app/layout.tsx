@@ -17,6 +17,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <head>
         <meta name="theme-color" content="#16a34a" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          // Force unregister all service workers to clear old cache issues
+          if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+                console.log('[SW CLEANUP] Unregistered old service worker');
+              }
+            });
+          }
+        `}} />
       </head>
       <body className={inter.className}>
         <NextTopLoader 

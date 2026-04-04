@@ -33,24 +33,11 @@ if (process.env.NODE_ENV !== 'production') {
 export const prisma = prismaClient;
 export const rawPrisma = baseClient;
 
-// Fonction pour tester la connexion à la base de données
-const testConnection = async () => {
-  try {
-    await prisma.$connect();
-    console.log('✅ Connecté à la base de données avec succès');
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error('❌ Erreur de connexion à la base de données:', error.message);
-    } else {
-      console.error('❌ Une erreur inconnue est survenue lors de la connexion à la base de données');
-    }
-    process.exit(1);
-  }
-};
-
-// Test the connection when the module is loaded
-if (process.env.NODE_ENV !== 'test') {
-  testConnection().catch(console.error);
+// Safe connection tester (non-blocking)
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+  prisma.$connect()
+    .then(() => console.log('✅ Connecté à la base de données'))
+    .catch(err => console.error('❌ Erreur DB:', err.message));
 }
 
 export default prisma;
