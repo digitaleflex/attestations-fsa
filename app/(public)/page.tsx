@@ -6,10 +6,13 @@ import {
   ClipboardCheck,
   Briefcase,
   Sprout,
-  ChevronRight
+  ChevronRight,
+  GraduationCap,
+  Award
 } from "lucide-react";
 
 import { StatsDisplay } from '@/components/stats-display';
+import { Card } from "@/components/ui/card";
 import { HowItWorks } from '@/components/how-it-works';
 import { QuickAccessCards } from '@/components/quick-access-cards';
 import { FaqSection } from '@/components/faq-section';
@@ -62,13 +65,58 @@ export default function Home() {
                         <ArrowRight className="w-5 h-5 ml-2 inline-block" />
                     </button>
                 </Link>
-                <Link href="/verifier">
+                <Link href="/formations">
                    <button className="px-10 py-5 rounded-2xl bg-white border-2 border-slate-200 text-slate-600 font-bold text-base hover:border-emerald-500 hover:text-emerald-600 transition-all hover:-translate-y-1 shadow-sm">
-                        Vérifier un certificat
+                        Explorer nos formations
                    </button>
                 </Link>
            </div>
         </div>
+      </section>
+
+      {/* --- FEATURED FORMATIONS PREVIEW --- */}
+      <section className="w-full max-w-7xl px-4 py-20">
+         <div className="flex flex-col md:flex-row items-end justify-between mb-12 gap-6">
+            <div className="max-w-2xl">
+               <Badge className="bg-emerald-100 text-emerald-700 border-none px-4 py-1.5 text-[10px] font-black tracking-widest uppercase mb-4">
+                  Expertise Technique
+               </Badge>
+               <h2 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight tracking-tight">
+                  Formations de pointe en <br />
+                  <span className="text-emerald-600">Agro-pisciculture.</span>
+               </h2>
+            </div>
+            <Link href="/formations">
+               <Button variant="ghost" className="text-emerald-600 font-black gap-2 hover:bg-emerald-50 rounded-xl px-6 h-14">
+                  Voir tout le catalogue
+                  <ChevronRight className="w-5 h-5" />
+               </Button>
+            </Link>
+         </div>
+
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+               { icon: Sprout, title: "Formation de base", category: "Pisciculture", color: "bg-emerald-500" },
+               { icon: GraduationCap, title: "Production d’alevins", category: "Technique", color: "bg-blue-500" },
+               { icon: Award, title: "Pisciculture intensive", category: "Expertise", color: "bg-amber-500" }
+            ].map((f, i) => (
+               <Card key={i} className="group p-8 rounded-[2.5rem] bg-white border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-emerald-900/5 transition-all duration-500">
+                  <div className={`w-14 h-14 rounded-2xl ${f.color} text-white flex items-center justify-center mb-6 shadow-lg shadow-emerald-200 transform group-hover:rotate-6 transition-transform`}>
+                     <f.icon className="w-7 h-7" />
+                  </div>
+                  <Badge variant="secondary" className="mb-3 bg-emerald-50 text-emerald-600 border-none font-bold">
+                     {f.category}
+                  </Badge>
+                  <h3 className="text-xl font-black text-slate-800 mb-4">{f.title}</h3>
+                  <Link href="/formations">
+                     <Button variant="link" className="p-0 text-emerald-600 font-bold h-auto hover:no-underline group/link">
+                        Découvrir le programme
+                        <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover/link:translate-x-1" />
+                     </Button>
+                  </Link>
+               </Card>
+            ))}
+         </div>
       </section>
 
       {/* --- QUICK ACCESS CARDS --- */}

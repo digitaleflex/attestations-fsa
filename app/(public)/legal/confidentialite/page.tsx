@@ -42,14 +42,14 @@ export default function ConfidentialitePage() {
           <h2 className="text-xl font-bold text-slate-900 mb-3">2. Responsable du traitement</h2>
           <p>
             Le responsable du traitement des données personnelles est la <strong>Ferme Agro-piscicole Saint André</strong>,
-            située à <strong>Cotonou, Bénin</strong>.
+            située à <strong>Abomey-Calavi, Bénin</strong>.
           </p>
           <p className="mt-2">
             Pour toute question relative à vos données, vous pouvez nous contacter :
           </p>
           <ul className="mt-2 space-y-1 ml-6 list-disc">
             <li>Téléphone : <strong>+229 01 91 07 60 93</strong></li>
-            <li>Adresse : <strong>Cotonou, Bénin</strong></li>
+            <li>Adresse : <strong>Abomey-Calavi, Bénin</strong></li>
           </ul>
         </section>
 
@@ -158,7 +158,7 @@ export default function ConfidentialitePage() {
 
         {/* 9 */}
         <section>
-          <h2 className="text-xl font-bold text-slate-900 mb-3">9. Vos droits</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-3">9. Votre droits</h2>
           <p>
             Conformément à la réglementation applicable en matière de protection des données, vous disposez des droits suivants :
           </p>
@@ -171,8 +171,8 @@ export default function ConfidentialitePage() {
             <li><strong>Droit à la limitation</strong> : demander la limitation du traitement de vos données</li>
           </ul>
           <p className="mt-2">
-            Pour exercer vos droits, contactez-nous à <strong>+229 01 91 07 60 93</strong> ou par courrier �
-            <strong> Cotonou, Bénin</strong>.
+            Pour exercer vos droits, contactez-nous à <strong>+229 01 91 07 60 93</strong> ou par courrier à
+            <strong> Abomey-Calavi, Bénin</strong>.
           </p>
         </section>
 
@@ -224,7 +224,7 @@ export default function ConfidentialitePage() {
           </p>
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
             <p><strong>Ferme Agro-piscicole Saint André</strong></p>
-            <p>Cotonou, Bénin</p>
+            <p>Abomey-Calavi, Bénin</p>
             <p>Téléphone : +229 01 91 07 60 93</p>
           </div>
         </section>

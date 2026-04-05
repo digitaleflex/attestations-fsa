@@ -69,7 +69,8 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                   {[
                     { label: 'Accueil', href: '/' },
                     { label: 'Stages & Formations', href: '/demande-stage' },
-                    { label: 'Examens & Résultats', href: '/exams' }
+                    { label: 'Examens & Résultats', href: '/exams' },
+                    { label: 'Contact & RDV', href: '/contact' }
                   ].map((item) => (
                     <li key={item.label}>
                       <Link href={item.href} className="text-slate-500 hover:text-emerald-600 text-sm transition-colors flex items-center group">
@@ -112,7 +113,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                     <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:scale-110">
                       <MapPin className="w-3.5 h-3.5" />
                     </div>
-                    <span>Cotonou, Bénin</span>
+                    <span>Abomey-Calavi, Bénin</span>
                   </div>
                 </div>
               </div>

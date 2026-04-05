@@ -128,7 +128,7 @@ export default function InternshipApplicationPage() {
                 <div className="relative">
                   <Input
                     id="fullName"
-                    placeholder="Jean Dupont"
+                    placeholder="Sènou Dossou"
                     value={formData.fullName}
                     onChange={(e) => setFormData({...formData, fullName: e.target.value})}
                     required
@@ -143,7 +143,7 @@ export default function InternshipApplicationPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="jean.dupont@email.com"
+                    placeholder="senou.dossou@gmail.com"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                     required

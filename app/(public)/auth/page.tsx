@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { Loader2, LogIn, UserPlus, Eye, EyeOff, Check, X, Mail, Phone, Calendar, MapPin, User, Shield, Lock } from "lucide-react";
+import { Loader2, LogIn, UserPlus, Eye, EyeOff, Check, X, Mail, Phone, Calendar, MapPin, User, Shield, Lock, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
@@ -158,10 +158,12 @@ function StepIndicator({ currentStep, totalSteps }: { currentStep: number; total
 // === Page Principale ===
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState("");
+  const [formationSelected, setFormationSelected] = useState<{id: string, name: string} | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
 
@@ -178,8 +180,34 @@ export default function AuthPage() {
     birthPlace: "",
     phone: "",
     address: "",
+    formationId: "",
     rememberMe: false,
   });
+
+  // Handle formationId from URL
+  useEffect(() => {
+    const fid = searchParams.get("formationId");
+    const regMode = searchParams.get("register");
+    
+    if (fid) {
+      setForm(prev => ({ ...prev, formationId: fid }));
+      if (regMode === "true") {
+        setIsLogin(false);
+        setWizardStep(1);
+      }
+      
+      // Optionnel: Fetch formation name
+      fetch(`/api/public/formations`)
+        .then(res => res.json())
+        .then(data => {
+          const found = data.find((f: any) => f.id === fid);
+          if (found) setFormationSelected({ id: found.id, name: found.name });
+        })
+        .catch(err => console.error("Error fetching formation details:", err));
+    } else if (regMode === "true") {
+        setIsLogin(false);
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -304,6 +332,7 @@ export default function AuthPage() {
           birthPlace: form.birthPlace,
           address: form.address,
           birthDate: birthDate,
+          formationId: form.formationId,
           callbackURL: "/exams",
         } as any);
 
@@ -573,6 +602,31 @@ export default function AuthPage() {
         {/* Step Indicator */}
         <StepIndicator currentStep={wizardStep} totalSteps={totalSteps} />
 
+        {formationSelected && !isLogin && (
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+             <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                   <GraduationCap className="w-5 h-5" />
+                </div>
+                <div>
+                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Formation choisie</p>
+                   <p className="text-sm font-bold text-slate-800">{formationSelected.name}</p>
+                </div>
+             </div>
+             <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-[10px] font-bold text-slate-400 hover:text-red-500"
+                onClick={() => {
+                    setFormationSelected(null);
+                    setForm(prev => ({ ...prev, formationId: "" }));
+                }}
+             >
+                Changer
+             </Button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Étape 1: Compte */}
           {wizardStep === 1 && (
@@ -788,6 +842,12 @@ export default function AuthPage() {
                     <span className="text-gray-500">Adresse</span>
                     <span className="font-medium text-gray-800">{form.address || '-'}</span>
                   </div>
+                  {formationSelected && (
+                    <div className="flex justify-between pt-2 border-t border-emerald-100 mt-2">
+                        <span className="text-emerald-700 font-bold italic">Formation</span>
+                        <span className="font-black text-emerald-800">{formationSelected.name}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

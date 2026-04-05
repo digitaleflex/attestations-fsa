@@ -150,7 +150,7 @@ export default function CookiesPage() {
         <section>
           <h2 className="text-xl font-bold text-slate-900 mb-3">6. Mise à jour</h2>
           <p>
-            Cette politique de cookies peut être modifiée à tout moment. Nous vous invitons �
+            Cette politique de cookies peut être modifiée à tout moment. Nous vous invitons à
             la consulter régulièrement.
           </p>
         </section>
@@ -163,7 +163,7 @@ export default function CookiesPage() {
           </p>
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
             <p><strong>Ferme Agro-piscicole Saint André</strong></p>
-            <p>Cotonou, Bénin</p>
+            <p>Abomey-Calavi, Bénin</p>
             <p>Téléphone : +229 01 91 07 60 93</p>
           </div>
         </section>

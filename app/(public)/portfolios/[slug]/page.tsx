@@ -84,7 +84,7 @@ export default function PortfolioDetailPage({ params }: { params: Promise<{ slug
                   </div>
                   <h3 className="text-xl font-bold">Certification Vérifiée</h3>
                   <p className="text-slate-400 text-sm leading-relaxed">
-                     Bientôt, ce badge contiendra un lien QR Code unique permettant à quiconque de vérifier instantanément le diplôme de ce technicien.
+                     Bientôt, ce badge contiendra un lien QR Code unique permettant à quiconque de vérifier instantanément l'attestation de ce technicien.
                   </p>
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                      <div className="w-3/4 h-full bg-emerald-500 animate-shimmer" />
