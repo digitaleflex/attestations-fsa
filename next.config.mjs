@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  images: {
-    domains: [],
-  },
+  // Use Webpack for production builds to avoid Turbopack prerendering bugs
   webpack: (config, { isServer }) => {
     if (!isServer && config.resolve) {
       config.resolve.fallback = {
