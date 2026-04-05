@@ -19,7 +19,7 @@ export default function UserProfilePage() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
-  
+
   // États de Correction
   const [correctionField, setCorrectionField] = useState<{ field: string, label: string } | null>(null);
   const [correctionValue, setCorrectionValue] = useState("");
@@ -156,36 +156,36 @@ export default function UserProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-          <ProfileField 
+          <ProfileField
             label="Nom complet" value={form.name} id="name" icon={User}
-            isEditing={isEditing} 
+            isEditing={isEditing}
             onChange={(v: string) => setForm({...form, name: v})}
             onCorrection={() => { setCorrectionField({ field: "fullName", label: "Nom complet" }); setCorrectionValue(form.name); }}
           />
-          <ProfileField 
+          <ProfileField
             label="Email" value={form.email} id="email" icon={Mail}
-            isEditing={isEditing} 
+            isEditing={isEditing}
             onChange={(v: string) => setForm({...form, email: v})}
           />
-          <ProfileField 
+          <ProfileField
             label="Téléphone" value={form.phone} id="phone" icon={Phone}
-            isEditing={isEditing} 
+            isEditing={isEditing}
             onChange={(v: string) => setForm({...form, phone: v})}
           />
-          <ProfileField 
+          <ProfileField
             label="Adresse" value={form.address} id="address" icon={MapPin}
-            isEditing={isEditing} 
+            isEditing={isEditing}
             onChange={(v: string) => setForm({...form, address: v})}
           />
-          <ProfileField 
+          <ProfileField
             label="Date de naissance" value={form.birthDate} id="birthDate" icon={Calendar}
             isEditing={isEditing} type="date"
             onChange={(v: string) => setForm({...form, birthDate: v})}
             onCorrection={() => { setCorrectionField({ field: "birthDate", label: "Date de naissance" }); setCorrectionValue(form.birthDate); }}
           />
-          <ProfileField 
+          <ProfileField
             label="Lieu de naissance" value={form.birthPlace} id="birthPlace" icon={MapPin}
-            isEditing={isEditing} 
+            isEditing={isEditing}
             onChange={(v: string) => setForm({...form, birthPlace: v})}
             onCorrection={() => { setCorrectionField({ field: "birthPlace", label: "Lieu de naissance" }); setCorrectionValue(form.birthPlace); }}
           />
@@ -237,9 +237,9 @@ export default function UserProfilePage() {
         onValueChange={setCorrectionValue}
         onReasonChange={setCorrectionReason}
         onClose={() => setCorrectionField(null)}
-        onSubmit={() => correctionMutation.mutate({ 
-          field: correctionField?.field, newValue: correctionValue, 
-          reason: correctionReason, attestationId: user?.attestations?.[0]?.id 
+        onSubmit={() => correctionMutation.mutate({
+          field: correctionField?.field, newValue: correctionValue,
+          reason: correctionReason, attestationId: user?.attestations?.[0]?.id
         })}
         isPending={correctionMutation.isPending}
       />
@@ -273,8 +273,8 @@ function ProfileField({ label, value, id, icon: Icon, isEditing, onChange, type 
           className={`h-11 flex-1 transition-colors ${!isEditing ? "bg-slate-50/50 border-transparent text-slate-800 font-medium" : "bg-white border-blue-200 ring-blue-100"}`}
         />
         {!isEditing && onCorrection && (
-          <Button 
-            variant="ghost" size="icon" 
+          <Button
+            variant="ghost" size="icon"
             className="w-11 h-11 rounded-lg text-slate-300 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
             onClick={onCorrection}
             title="Signaler une erreur sur ce champ"

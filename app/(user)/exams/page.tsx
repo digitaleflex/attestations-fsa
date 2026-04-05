@@ -251,8 +251,8 @@ export default function UserExamsPage() {
                   {/* Actions */}
                   <div className="flex gap-2 pt-3 border-t">
                     <Link href={exam.status === "COMPLETED" ? `/results/${exam.submissionId}` : `/exams/${exam.id}`} className="flex-1">
-                      <Button 
-                        className="w-full gap-2 group transition-all" 
+                      <Button
+                        className="w-full gap-2 group transition-all"
                         variant={exam.status === "AVAILABLE" ? "default" : "outline"}
                         onMouseEnter={() => {
                           if (exam.status !== "COMPLETED") {

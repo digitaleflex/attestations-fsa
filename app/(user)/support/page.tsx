@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  MessageSquare, 
-  Phone, 
-  Mail, 
-  HelpCircle, 
-  Clock, 
-  Send, 
-  MessageCircle, 
+import {
+  MessageSquare,
+  Phone,
+  Mail,
+  HelpCircle,
+  Clock,
+  Send,
+  MessageCircle,
   ExternalLink,
   ShieldCheck,
   CheckCircle2
@@ -40,21 +40,21 @@ export default function SupportPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject || !message) return toast.error("Veuillez remplir tous les champs");
-    
+
     setIsSending(true);
     try {
       const res = await fetch("/api/support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          subject: `[${category}] ${subject} (${urgency})`, 
+        body: JSON.stringify({
+          subject: `[${category}] ${subject} (${urgency})`,
           message,
           metadata: { category, urgency }
         }),
       });
-      
+
       if (!res.ok) throw new Error("Erreur serveur");
-      
+
       const data = await res.json();
       toast.success(data.message || "Message envoyé avec succès !");
       setSubject("");
@@ -122,7 +122,7 @@ export default function SupportPage() {
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                 <MessageSquare size={120} />
             </div>
-            
+
             <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                 <Send className="w-5 h-5 text-blue-600" />
                 Envoyer un ticket d'assistance
@@ -139,8 +139,8 @@ export default function SupportPage() {
                                 type="button"
                                 onClick={() => setCategory(cat.id)}
                                 className={`flex items-center gap-2 p-3 rounded-xl border text-[11px] font-bold transition-all ${
-                                    category === cat.id 
-                                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
+                                    category === cat.id
+                                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100"
                                     : "bg-white border-slate-100 text-slate-600 hover:border-blue-200"
                                 }`}
                             >
@@ -180,11 +180,11 @@ export default function SupportPage() {
               <div className="space-y-2">
                 <Label htmlFor="subject" className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Objet bref de votre demande</Label>
                 <div className="relative">
-                    <Input 
-                        id="subject" 
+                    <Input
+                        id="subject"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
-                        placeholder="Ex: Erreur d'orthographe sur mon certificat" 
+                        placeholder="Ex: Erreur d'orthographe sur mon certificat"
                         className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-100 transition-all rounded-xl pl-4 text-sm font-medium"
                     />
                     {subject.length > 5 && commonQuestions.some(q => q.toLowerCase().includes(subject.toLowerCase())) && (
@@ -203,18 +203,18 @@ export default function SupportPage() {
                         {message.length} caractères
                     </span>
                 </div>
-                <Textarea 
-                  id="message" 
+                <Textarea
+                  id="message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Aidez-nous à vous aider en étant le plus précis possible..." 
+                  placeholder="Aidez-nous à vous aider en étant le plus précis possible..."
                   className="min-h-[160px] border-slate-200 focus:border-blue-500 focus:ring-blue-100 transition-all rounded-2xl p-4 text-sm resize-none"
                 />
               </div>
 
               <div className="pt-2">
-                <Button 
-                    type="submit" 
+                <Button
+                    type="submit"
                     disabled={isSending || message.length < 10}
                     className="w-full h-14 bg-slate-900 hover:bg-black text-white font-bold rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98] group flex items-center justify-center gap-3"
                 >
@@ -271,7 +271,7 @@ export default function SupportPage() {
             <HelpCircle className="w-5 h-5 text-emerald-500" />
             Contacts Rapides
           </h3>
-          
+
           <div className="space-y-4">
             {contactMethods.map((method, idx) => (
               <Card key={idx} className={`p-5 border-slate-100 transition-all group ${method.comingSoon ? "grayscale-[0.5] opacity-80" : "hover:shadow-xl hover:-translate-y-1"}`}>
@@ -282,8 +282,8 @@ export default function SupportPage() {
                   <div className="flex-1">
                     <h4 className="font-bold text-slate-800 text-sm">{method.title}</h4>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">{method.description}</p>
-                    <a 
-                        href={method.link} 
+                    <a
+                        href={method.link}
                         className={`inline-flex items-center gap-1.5 mt-3 text-xs font-bold transition-transform ${
                             method.comingSoon ? "text-slate-400 cursor-not-allowed" : "text-slate-900 hover:translate-x-1"
                         }`}

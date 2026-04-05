@@ -93,9 +93,9 @@ export default function UserLayout({
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      
+
       {/* Sidebar Desktop */}
-      <aside 
+      <aside
         className={`hidden lg:flex flex-col bg-white border-r border-slate-200/60 shadow-[4px_0_24px_-10px_rgba(0,0,0,0.05)] transition-all duration-300 z-20 ${
           isSidebarOpen ? "w-64" : "w-20"
         }`}
@@ -119,10 +119,10 @@ export default function UserLayout({
             const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
             return (
               <Link key={item.name} href={item.href}>
-                <div 
+                <div
                   className={`flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-300 group ${
-                    isActive 
-                      ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-100" 
+                    isActive
+                      ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-100"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 active:scale-95"
                   }`}
                   title={!isSidebarOpen ? item.name : undefined}
@@ -138,7 +138,7 @@ export default function UserLayout({
         </div>
 
         <div className="p-4 border-t border-slate-100 bg-white">
-          <button 
+          <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-3 text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95"
             title={!isSidebarOpen ? "Déconnexion" : undefined}
@@ -151,17 +151,17 @@ export default function UserLayout({
 
       {/* Main content wrapper */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        
+
         {/* Header (Top Navbar) */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm flex items-center justify-between px-6 lg:px-10 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
             >
               <Menu className="w-6 h-6" />
             </button>
-            <button 
+            <button
               className="hidden lg:flex items-center justify-center w-10 h-10 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
@@ -211,8 +211,8 @@ export default function UserLayout({
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div 
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" 
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
             onClick={() => setIsMobileMenuOpen(false)}
           ></div>
           <div className="relative w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300 ease-out">
@@ -223,7 +223,7 @@ export default function UserLayout({
                 </div>
                 <span className="font-bold text-slate-800 tracking-tight">Portail Candidat</span>
               </div>
-              <button 
+              <button
                 className="p-2 text-slate-400 hover:text-slate-700 hover:bg-white rounded-full transition-colors shadow-sm"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -236,8 +236,8 @@ export default function UserLayout({
                 return (
                   <Link key={item.name} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
                     <div className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors font-medium border border-transparent ${
-                      isActive 
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm" 
+                      isActive
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm"
                         : "text-slate-600 hover:bg-slate-50"
                     }`}>
                       <item.icon className={`w-5 h-5 ${isActive ? "text-emerald-500" : "text-slate-400"}`} />
@@ -248,7 +248,7 @@ export default function UserLayout({
               })}
             </div>
             <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-              <button 
+              <button
                 onClick={handleLogout}
                 className="flex items-center justify-center gap-3 w-full px-4 py-3.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors font-semibold shadow-sm"
               >
@@ -264,7 +264,7 @@ export default function UserLayout({
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] rounded-3xl px-4 py-2 flex items-center justify-between relative overflow-hidden">
           {/* Subtle background glow */}
           <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-blue-500/5 -z-10" />
-          
+
           {[
             { name: "Accueil", href: "/dashboard", icon: LayoutDashboard },
             { name: "Examens", href: "/exams", icon: BookOpen },

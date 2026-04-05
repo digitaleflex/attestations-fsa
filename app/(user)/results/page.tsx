@@ -114,9 +114,9 @@ export default function UserResultsPage() {
                     </div>
                   </div>
                   <Link href={`/results/${result.id}`}>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onMouseEnter={() => {
                         queryClient.prefetchQuery({
                           queryKey: ["user-result", result.id],

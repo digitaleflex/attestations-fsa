@@ -180,18 +180,18 @@ export default function UserInternshipsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="univ">Université / École</Label>
-                      <Input 
-                        id="univ" 
-                        placeholder="Ex: UAC, ENEAM..." 
+                      <Input
+                        id="univ"
+                        placeholder="Ex: UAC, ENEAM..."
                         value={formData.university}
                         onChange={(e) => setFormData({...formData, university: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="level">Niveau d'études</Label>
-                      <Input 
-                        id="level" 
-                        placeholder="Ex: Licence 3, Master 1..." 
+                      <Input
+                        id="level"
+                        placeholder="Ex: Licence 3, Master 1..."
                         value={formData.level}
                         onChange={(e) => setFormData({...formData, level: e.target.value})}
                       />
@@ -199,9 +199,9 @@ export default function UserInternshipsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="pos">Poste souhaité <span className="text-rose-500">*</span></Label>
-                    <Input 
-                      id="pos" 
-                      placeholder="Ex: Stagiaire Comptable, Assistant de Direction..." 
+                    <Input
+                      id="pos"
+                      placeholder="Ex: Stagiaire Comptable, Assistant de Direction..."
                       required
                       value={formData.position}
                       onChange={(e) => setFormData({...formData, position: e.target.value})}
@@ -209,27 +209,27 @@ export default function UserInternshipsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cv">Lien vers CV (URL optionnelle)</Label>
-                    <Input 
-                      id="cv" 
+                    <Input
+                      id="cv"
                       type="url"
-                      placeholder="https://mon-cv.pdf" 
+                      placeholder="https://mon-cv.pdf"
                       value={formData.cvUrl}
                       onChange={(e) => setFormData({...formData, cvUrl: e.target.value})}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="msg">Motivation / Message</Label>
-                    <Textarea 
-                      id="msg" 
-                      placeholder="Dites-nous pourquoi vous souhaitez rejoindre la Ferme FSA..." 
+                    <Textarea
+                      id="msg"
+                      placeholder="Dites-nous pourquoi vous souhaitez rejoindre la Ferme FSA..."
                       rows={4}
                       value={formData.message}
                       onChange={(e) => setFormData({...formData, message: e.target.value})}
                     />
                   </div>
                   <DialogFooter>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full bg-emerald-600 hover:bg-emerald-700"
                       disabled={submitMutation.isPending}
                     >

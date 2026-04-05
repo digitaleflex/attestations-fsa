@@ -63,11 +63,11 @@ export default function UserAttestationsPage() {
     try {
       // Importation dynamique côté client uniquement
       const html2pdf = (await import("html2pdf.js")).default;
-      
+
       // On attend un court instant pour s'assurer que le template soit bien dans le DOM si nécessaire
       // Bien qu'ici on le crée à la volée ou on utilise un ID unique
       const element = document.getElementById(`cert-template-${att.id}`);
-      
+
       if (!element) {
         toast.error("Erreur technique : Template introuvable");
         return;
@@ -77,9 +77,9 @@ export default function UserAttestationsPage() {
         margin: 0,
         filename: `Attestation_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
           letterRendering: true,
           logging: false
         },
@@ -319,7 +319,7 @@ export default function UserAttestationsPage() {
           {selectedAttestation && (
             <div className="text-center space-y-4">
               <div className="flex justify-center">
-                <QRCodeSVG 
+                <QRCodeSVG
                   value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verifier/${selectedAttestation.code}`}
                   size={200}
                   level="H"
@@ -340,7 +340,7 @@ export default function UserAttestationsPage() {
       {/* Templates cachés pour la génération PDF */}
       <div className="hidden">
         {data?.attestations?.filter((a: any) => a.status === "VALIDATED").map((att: any) => (
-          <CertificateTemplate 
+          <CertificateTemplate
             key={att.id}
             id={`cert-template-${att.id}`}
             data={{
