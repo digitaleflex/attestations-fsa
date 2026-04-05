@@ -28,14 +28,20 @@ export function PublicHeader() {
         <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all text-xs uppercase tracking-wider">
           Accueil
         </Link>
-        <Link href="/demande-stage" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-blue-700 hover:bg-blue-50/50 transition-all text-xs uppercase tracking-wider">
+        <Link href="/demande-stage" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-blue-700 hover:bg-blue-50/50 transition-all text-xs uppercase tracking-wider text-center">
           Stages
+        </Link>
+        <Link href="/formations" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/50 transition-all text-xs uppercase tracking-wider text-center">
+          Formations
         </Link>
         <Link href="/exams" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/50 transition-all text-xs uppercase tracking-wider">
           Examens
         </Link>
         <Link href="/faq" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-slate-600 hover:text-amber-700 hover:bg-amber-50/50 transition-all text-xs uppercase tracking-wider">
           FAQ
+        </Link>
+        <Link href="/contact" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-emerald-600 hover:text-emerald-900 hover:bg-emerald-50/50 transition-all text-xs uppercase tracking-wider underline decoration-2 underline-offset-4">
+          Contact
         </Link>
 
         <div className="w-px h-6 bg-slate-200 mx-2" />
@@ -74,8 +80,10 @@ export function PublicHeader() {
            <div className="grid grid-cols-1 gap-2">
                 <Link href="/" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-slate-50 font-bold text-slate-800 uppercase text-xs tracking-widest">Accueil</Link>
                 <Link href="/demande-stage" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-blue-50 text-blue-700 font-bold uppercase text-xs tracking-widest">Stages</Link>
-                <Link href="/exams" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-emerald-50 text-emerald-700 font-bold uppercase text-xs tracking-widest">Examens</Link>
+                <Link href="/formations" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-emerald-50 text-emerald-700 font-bold uppercase text-xs tracking-widest">Formations</Link>
+                <Link href="/exams" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-blue-50 text-blue-700 font-bold uppercase text-xs tracking-widest">Examens</Link>
                 <Link href="/faq" onClick={() => setOpen(false)} className="p-4 rounded-2xl hover:bg-amber-50 text-amber-700 font-bold uppercase text-xs tracking-widest">FAQ</Link>
+                <Link href="/contact" onClick={() => setOpen(false)} className="p-4 rounded-2xl bg-emerald-50 text-emerald-700 font-black uppercase text-xs tracking-[0.2em] flex items-center gap-2">Contact</Link>
                 <div className="h-px bg-slate-100 mx-2" />
                 <Link href="/auth" onClick={() => setOpen(false)} className="p-4 rounded-2xl text-slate-600 font-bold uppercase text-xs tracking-widest flex items-center gap-2">
                     <LogIn className="w-4 h-4" /> Se connecter

@@ -73,6 +73,10 @@ export const auth = betterAuth({
             address: {
                 type: "string",
                 required: false,
+            },
+            formationId: {
+                type: "string",
+                required: false,
             }
         }
     },
