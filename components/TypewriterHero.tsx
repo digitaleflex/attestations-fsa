@@ -11,7 +11,7 @@ export function TypewriterHero({ messages }: { messages: string[] }) {
   useEffect(() => {
     const handleTyping = () => {
       const fullMessage = messages[currentMessageIndex];
-      
+
       if (!isDeleting) {
         setCurrentText(fullMessage.substring(0, currentText.length + 1));
         setTypingSpeed(70);
@@ -42,4 +42,4 @@ export function TypewriterHero({ messages }: { messages: string[] }) {
       <span className="inline-block w-[2px] h-6 bg-emerald-500 ml-1 animate-pulse" />
     </p>
   );
-} 
+}

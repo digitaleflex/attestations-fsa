@@ -54,7 +54,7 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
     if (formatted.length > 8) {
       formatted = formatted.slice(0, 8);
     }
-    
+
     if (formatted.length >= 5) {
       formatted = `${formatted.slice(0, 2)}/${formatted.slice(2, 4)}/${formatted.slice(4)}`;
     } else if (formatted.length >= 3) {
@@ -72,7 +72,7 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
       const dayNum = Number(day);
       const monthNum = Number(month);
       const yearNum = Number(year);
-      
+
       // Validation basique
       if (
         dayNum >= 1 && dayNum <= 31 &&
@@ -80,21 +80,21 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
         yearNum >= 1900 && yearNum <= 2100
       ) {
         const isoValue = `${year}-${month}-${day}`;
-        
+
         // Créer un événement avec la valeur ISO
         isInternalChange.current = true;
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
           HTMLInputElement.prototype,
           "value"
         )?.set;
-        
+
         if (nativeInputValueSetter && inputRef.current) {
           nativeInputValueSetter.call(inputRef.current, isoValue);
         }
-        
+
         // Mettre à jour l'affichage avec le format français
         setDisplayValue(`${day}/${month}/${year}`);
-        
+
         // Déclencher le onChange avec la valeur ISO
         if (inputRef.current) {
           const event = new Event("input", { bubbles: true }) as any;
@@ -102,7 +102,7 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
           inputRef.current.dispatchEvent(event);
           onChange?.(event as any);
         }
-        
+
         isInternalChange.current = false;
         return;
       }

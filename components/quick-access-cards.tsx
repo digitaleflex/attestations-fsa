@@ -56,10 +56,10 @@ export function QuickAccessCards() {
         >
           {/* Card Glow Effect */}
           <div className={`absolute -inset-2 bg-gradient-to-r ${card.glowColor} rounded-[2.5rem] blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
-          
+
           <Link href={card.href} className="block h-full relative z-10">
             <div className={`h-full p-8 md:p-10 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 hover:-translate-y-4 overflow-hidden rounded-[2.5rem] hover:border-emerald-300 hover:shadow-2xl`}>
-              
+
               {/* Background Glass Decoration */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-white/90 transition-colors" />
 
@@ -72,7 +72,7 @@ export function QuickAccessCards() {
                 <h3 className="text-3xl font-black text-slate-900 tracking-tight leading-none group-hover:text-emerald-700 transition-colors">
                   {card.title}
                 </h3>
-                
+
                 <p className="text-slate-500 font-bold text-base leading-relaxed">
                   {card.description}
                 </p>

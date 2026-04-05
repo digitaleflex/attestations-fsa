@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  FileText, Scan, ShieldCheck, Briefcase, 
-  Search, ClipboardCheck, GraduationCap, MapPin, 
-  Send, Users, Monitor, Award 
+import {
+  FileText, Scan, ShieldCheck, Briefcase,
+  Search, ClipboardCheck, GraduationCap, MapPin,
+  Send, Users, Monitor, Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -108,8 +108,8 @@ export function HowItWorks() {
                         key={key}
                         onClick={() => setActiveTab(key as any)}
                         className={`px-8 py-4 rounded-full text-xs md:text-sm font-bold transition-all flex items-center gap-2 relative z-10 ${
-                            activeTab === key 
-                            ? `${getColorClass(value.color)} scale-105` 
+                            activeTab === key
+                            ? `${getColorClass(value.color)} scale-105`
                             : 'text-slate-500 hover:text-slate-800 hover:bg-white/80'
                         }`}
                     >
@@ -143,7 +143,7 @@ export function HowItWorks() {
                                       }`}>
                                           {step.icon}
                                       </div>
-                                      
+
                                       <div className="space-y-3">
                                           <h3 className="text-xl font-extrabold text-slate-800">
                                               {index + 1}. {step.title}
@@ -153,7 +153,7 @@ export function HowItWorks() {
                                           </p>
                                       </div>
                                   </div>
-                                  
+
                                   {/* Connector (Desktop Only) */}
                                   {index < 2 && (
                                       <div className="hidden lg:block absolute top-10 -right-6 w-12 h-[2px] bg-slate-200/60" />
@@ -161,9 +161,9 @@ export function HowItWorks() {
                               </div>
                           ))}
                       </div>
-                      
+
                       {/* Scenario Highlight Bar */}
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="mt-20 p-8 rounded-[2.5rem] bg-white border border-slate-100 text-center shadow-xl shadow-slate-200/20"

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  User, 
-  Building, 
+import {
+  MessageCircle,
+  X,
+  Send,
+  User,
+  Building,
   Loader2,
   Minimize2,
   Maximize2,
@@ -33,10 +33,10 @@ export default function ChatBubble() {
   useEffect(() => {
     if (isOpen) {
       fetchMessages();
-      
+
       const pusher = getPusherClient();
       // On garde un polling de sécurité (mode dégradé robuste)
-      const interval = setInterval(fetchMessages, 4000); 
+      const interval = setInterval(fetchMessages, 4000);
       return () => clearInterval(interval);
     }
   }, [isOpen]);
@@ -47,7 +47,7 @@ export default function ChatBubble() {
         if (userId) {
             const pusher = getPusherClient();
             const channel = pusher.subscribe(`chat-${userId}`);
-            
+
             channel.bind("message", (newMsg: any) => {
                 setMessages(prev => {
                     // Éviter les doublons (optimistic vs real)
@@ -99,7 +99,7 @@ export default function ChatBubble() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
             content: optimisticMsg.content,
             attachments: []
         }),
@@ -124,7 +124,7 @@ export default function ChatBubble() {
 
   if (!isOpen) {
     return (
-      <button 
+      <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all z-50 group border-4 border-white"
       >
@@ -201,10 +201,10 @@ export default function ChatBubble() {
 
                 {/* Footer Input */}
                 <form onSubmit={handleSend} className="p-4 bg-white border-t border-slate-100 flex items-center gap-2">
-                    <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-11 w-11 rounded-xl text-slate-400"
                         onClick={() => {
                             const url = prompt("Lien de l'image ou capture :");
@@ -219,16 +219,16 @@ export default function ChatBubble() {
                     >
                         <ImageIcon className="w-4 h-4" />
                     </Button>
-                    <Input 
+                    <Input
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Écrivez un message..."
                         className="h-11 rounded-xl border-slate-100 bg-slate-50 text-xs focus:ring-blue-100"
                         disabled={isLoading}
                     />
-                    <Button 
-                        type="submit" 
-                        size="sm" 
+                    <Button
+                        type="submit"
+                        size="sm"
                         className="h-11 w-11 rounded-xl bg-slate-900 group shadow-lg"
                         disabled={isLoading || !newMessage.trim()}
                     >

@@ -15,7 +15,7 @@ export function SkeletonCard() {
           </div>
           <div className="w-16 h-6 bg-slate-100 rounded-full" />
         </div>
-        
+
         {/* Content */}
         <div className="space-y-2">
           <div className="h-3 bg-slate-50 rounded w-full" />

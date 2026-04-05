@@ -515,7 +515,7 @@ const SidebarMenuItem = React.forwardRef<
   React.ComponentProps<"li"> & { icon?: React.ReactNode; label?: string; href?: string; badge?: React.ReactNode }
 >(({ className, icon, label, href, badge, children, ...props }, ref) => {
   const { state } = useSidebar();
-  
+
   if (children) {
     return (
       <li

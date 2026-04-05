@@ -163,7 +163,7 @@ export function CountdownTimer({
                 Temps restant avant le début
               </span>
             </div>
-            
+
             <div className="grid grid-cols-4 gap-3 text-center">
               <div className={`p-3 rounded-md ${
                 time.isVerySoon ? 'bg-red-100' :
@@ -289,7 +289,7 @@ export function MiniCountdown({ scheduledAt }: { scheduledAt: string }) {
 
   if (time.isPast) return null;
 
-  const display = 
+  const display =
     time.days > 0 ? `${time.days}j ${time.hours}h` :
     time.hours > 0 ? `${time.hours}h ${time.minutes}m` :
     `${time.minutes}m ${time.seconds}s`;

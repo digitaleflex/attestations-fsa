@@ -47,7 +47,7 @@ export function StatsDisplay() {
                 >
                     {/* Background Glow */}
                     <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500/20 to-teal-400/20 rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    
+
                     <div className="relative flex flex-col items-center p-8 md:p-12 bg-white/80 backdrop-blur-3xl border border-emerald-100/50 rounded-[3rem] shadow-2xl shadow-emerald-500/5 overflow-hidden">
                         {/* Decorative Glass Ring */}
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -60,10 +60,10 @@ export function StatsDisplay() {
                                 <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-emerald-600 transition-colors">Validées</h3>
                                 {isFetching && (
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                        <motion.div 
-                                            animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }} 
+                                        <motion.div
+                                            animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
                                             transition={{ repeat: Infinity, duration: 2 }}
-                                            className="w-1.5 h-1.5 rounded-full bg-emerald-500" 
+                                            className="w-1.5 h-1.5 rounded-full bg-emerald-500"
                                         />
                                         <span className="text-[8px] font-bold text-emerald-500/70 tracking-tighter">SYNC</span>
                                     </div>
@@ -76,7 +76,7 @@ export function StatsDisplay() {
                                 <div className="h-12 md:h-20 w-32 md:w-48 bg-slate-100/50 animate-pulse rounded-3xl" />
                             ) : (
                                 <AnimatePresence mode="wait">
-                                    <motion.span 
+                                    <motion.span
                                         key={`stat-validated-${data?.validated || 0}`}
                                         initial={{ opacity: 0, y: 15, filter: "blur(5px)" }}
                                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -91,7 +91,7 @@ export function StatsDisplay() {
                                 LIVE
                             </div>
                         </div>
-                        
+
                         <p className="mt-8 text-slate-400 font-bold text-xs uppercase tracking-widest opacity-50">Attestations éligibles</p>
                     </div>
                 </motion.div>
@@ -107,7 +107,7 @@ export function StatsDisplay() {
                 >
                     {/* Background Glow */}
                     <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-400/20 rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    
+
                     <div className="relative flex flex-col items-center p-8 md:p-12 bg-white/80 backdrop-blur-3xl border border-amber-100/50 rounded-[3rem] shadow-2xl shadow-amber-500/5 overflow-hidden">
                         <div className="flex items-center gap-4 mb-6">
                             <div className="p-3 bg-amber-100/50 rounded-2xl text-amber-600 shadow-inner group-hover:bg-amber-500 group-hover:text-white transition-colors duration-500">
@@ -117,10 +117,10 @@ export function StatsDisplay() {
                                 <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-amber-600 transition-colors">En attente</h3>
                                 {isFetching && (
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                        <motion.div 
-                                            animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }} 
+                                        <motion.div
+                                            animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
                                             transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
-                                            className="w-1.5 h-1.5 rounded-full bg-amber-500" 
+                                            className="w-1.5 h-1.5 rounded-full bg-amber-500"
                                         />
                                         <span className="text-[8px] font-bold text-amber-500/70 tracking-tighter">SYNC</span>
                                     </div>
@@ -133,7 +133,7 @@ export function StatsDisplay() {
                                 <div className="h-12 md:h-20 w-32 md:w-48 bg-slate-100/50 animate-pulse rounded-3xl" />
                             ) : (
                                 <AnimatePresence mode="wait">
-                                    <motion.span 
+                                    <motion.span
                                         key={`stat-pending-${data?.pending || 0}`}
                                         initial={{ opacity: 0, y: 15, filter: "blur(5px)" }}
                                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -145,12 +145,12 @@ export function StatsDisplay() {
                                 </AnimatePresence>
                             )}
                         </div>
-                        
+
                         <p className="mt-8 text-slate-400 font-bold text-xs uppercase tracking-widest opacity-50">Dossiers en traitement</p>
                     </div>
                 </motion.div>
             </div>
-            
+
             {/* Quick Note */}
             <div className="mt-12 flex flex-col items-center gap-3">
                 <div className="flex items-center gap-3 text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
