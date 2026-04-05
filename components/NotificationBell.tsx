@@ -20,7 +20,7 @@ export default function NotificationBell() {
       const res = await fetch("/api/user/notifications?limit=10");
       if (!res.ok) return { notifications: [], unreadCount: 0 };
       const data = await res.json();
-      
+
       // On déclenche l'écouteur Pusher une fois qu'on a le userId des notifs
       if (data.notifications?.length > 0 || data.unreadCount >= 0) {
           // Note: on pourrait aussi récupérer le userId via une API de profil
@@ -38,11 +38,11 @@ export default function NotificationBell() {
     const setupPusher = async () => {
         const profilRes = await fetch("/api/user/profile");
         const profil = await profilRes.json();
-        
+
         if (profil?.id) {
             const pusher = getPusherClient();
             const channel = pusher.subscribe(`user-${profil.id}`);
-            
+
             channel.bind("notification", (newNotif: any) => {
                 queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
                 toast.success(newNotif.message, {
@@ -57,7 +57,7 @@ export default function NotificationBell() {
             return () => pusher.unsubscribe(`user-${profil.id}`);
         }
     };
-    
+
     const cleanup = setupPusher();
     return () => {
         cleanup.then(fn => fn && fn());

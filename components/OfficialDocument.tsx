@@ -52,7 +52,7 @@ export default function OfficialDocument({ data, id = "official-document-content
         {!hideStepper && (
             <div className="w-full max-w-sm mb-12 flex items-center justify-between relative no-pdf">
                 <div className="absolute top-4 left-0 w-full h-[1px] -z-0 bg-slate-100" />
-                
+
                 {/* Étape 1: Création */}
                 <div className="flex flex-col items-center gap-2 z-10">
                     <div className="w-8 h-8 rounded-full text-white flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm bg-blue-600">1</div>
@@ -64,8 +64,8 @@ export default function OfficialDocument({ data, id = "official-document-content
                     <div className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm transition-all duration-500",
                         data.status === "PENDING" ? "animate-pulse" : ""
-                    )} style={{ 
-                        backgroundColor: data.status === "PENDING" ? "#f59e0b" : 
+                    )} style={{
+                        backgroundColor: data.status === "PENDING" ? "#f59e0b" :
                                         (data.status === "VALIDATED" || data.status === "REJECTED") ? "#10b981" : "#f1f5f9",
                         color: (data.status === "PENDING" || data.status === "VALIDATED" || data.status === "REJECTED") ? "#ffffff" : "#94a3b8"
                     }}>
@@ -76,8 +76,8 @@ export default function OfficialDocument({ data, id = "official-document-content
 
                 {/* Étape 3: Décision */}
                 <div className="flex flex-col items-center gap-2 z-10">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm transition-all duration-500" style={{ 
-                        backgroundColor: data.status === "VALIDATED" ? "#059669" : 
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm transition-all duration-500" style={{
+                        backgroundColor: data.status === "VALIDATED" ? "#059669" :
                                         data.status === "REJECTED" ? "#dc2626" : "#f1f5f9",
                         color: (data.status === "VALIDATED" || data.status === "REJECTED") ? "#ffffff" : "#94a3b8"
                     }}>
@@ -89,12 +89,12 @@ export default function OfficialDocument({ data, id = "official-document-content
         )}
 
         {/* Le Document Officiel (Minimaliste) */}
-        <div 
-          id={id} 
+        <div
+          id={id}
           className={cn(
             "flex flex-col items-center p-8 md:p-12 rounded-[24px] relative bg-white overflow-hidden transition-all duration-300",
             isPrinting ? "w-[1120px] min-w-[1120px]" : "w-full shadow-sm"
-          )} 
+          )}
           style={{ border: "1px solid #f1f5f9" }}
         >
             {/* Filigrane discret */}
@@ -115,7 +115,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                 <div className="space-y-3 text-center">
                     <p className="text-xs uppercase tracking-[0.4em] font-black" style={{ color: "#2563eb" }}>Document Officiel</p>
                     <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-none" style={{ color: "#1e293b" }}>
-                        {data.type === "FORMATION" ? "Attestation de Formation" : 
+                        {data.type === "FORMATION" ? "Attestation de Formation" :
                          data.type === "STAGE" ? "Certificat de Stage" : "Diplôme de Réussite"}
                     </h2>
                 </div>
@@ -136,7 +136,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                             {data.formationName}
                         </p>
                     </div>
-                    
+
                     <div className="p-6 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
                         <p className="text-[10px] uppercase font-black mb-1.5 tracking-widest" style={{ color: "#64748b" }}>Période d&apos;évaluation</p>
                         <p className="font-bold text-lg" style={{ color: "#0f172a" }}>

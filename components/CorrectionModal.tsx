@@ -15,15 +15,15 @@ interface CorrectionModalProps {
   isPending: boolean;
 }
 
-export function CorrectionModal({ 
-  field, 
-  value, 
-  reason, 
-  onValueChange, 
-  onReasonChange, 
-  onClose, 
+export function CorrectionModal({
+  field,
+  value,
+  reason,
+  onValueChange,
+  onReasonChange,
+  onClose,
   onSubmit,
-  isPending 
+  isPending
 }: CorrectionModalProps) {
   if (!field) return null;
 
@@ -34,12 +34,12 @@ export function CorrectionModal({
         <p className="text-sm text-slate-500 mb-6">
           Vous demandez la correction du champ <strong className="text-slate-700">{field.label}</strong> sur vos documents officiels.
         </p>
-        
+
         <div className="space-y-4">
           <div>
             <Label>Valeur correcte souhaitée</Label>
-            <Input 
-              value={value} 
+            <Input
+              value={value}
               onChange={(e) => onValueChange(e.target.value)}
               placeholder="Entrez la valeur exacte..."
               className="mt-1"
@@ -47,8 +47,8 @@ export function CorrectionModal({
           </div>
           <div>
             <Label>Motif de la demande (optionnel)</Label>
-            <Input 
-              value={reason} 
+            <Input
+              value={reason}
               onChange={(e) => onReasonChange(e.target.value)}
               placeholder="Ex: Faute de frappe sur l'acte de naissance"
               className="mt-1"
@@ -60,8 +60,8 @@ export function CorrectionModal({
           <Button variant="outline" className="flex-1" onClick={onClose}>
             Annuler
           </Button>
-          <Button 
-            className="flex-1 bg-blue-600 hover:bg-blue-700" 
+          <Button
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
             onClick={onSubmit}
             disabled={isPending}
           >

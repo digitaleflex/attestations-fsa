@@ -120,7 +120,7 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
                         <div className="col-span-3 text-center text-lg font-black text-slate-900">{data.scorePart3.toFixed(2)}</div>
                         <div className="col-span-3 text-center text-slate-400 font-bold">40.00</div>
                     </div>
-                    
+
                     {/* Summary Row */}
                     <div className="grid grid-cols-12 p-6 bg-blue-50/30 items-center">
                         <div className="col-span-6">
@@ -148,7 +148,7 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
                         &quot;Nous certifions que l&apos;étudiant a validé avec succès l&apos;ensemble des modules d&apos;évaluation correspondant à la formation {data.formationName}.&quot;
                     </div>
                 </div>
-                
+
                 <div className="text-right space-y-3">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fait à Abomey-Calavi, le</p>
                     <p className="text-lg font-black text-slate-900">{formatDate(data.issuedAt)}</p>
