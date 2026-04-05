@@ -35,49 +35,31 @@ export async function GET(request: Request) {
     // Sanitization
     const validCode = sanitizeInput(parse.data.trim())
 
-    let attestation
-
-    // Si le code fait 5 caractères ou moins, chercher par suffixe
-    // Sinon, chercher par correspondance exacte
-    if (validCode.length <= 5) {
-      attestation = await prisma.attestation.findFirst({
-        where: { code: { endsWith: validCode } },
-        select: {
-          fullName: true,
-          type: true,
-          status: true,
-          startDate: true,
-          endDate: true,
-          location: true,
-          instructor: true,
-          formation: {
-            select: {
-              name: true,
-              category: true,
-            }
+    // ✅ RECHERCHE HYBRIDE: Correspondance exacte ou Suffixe (derniers caractères)
+    // On privilégie l'exactitude
+    let attestation = await prisma.attestation.findFirst({
+      where: {
+        OR: [
+          { code: { equals: validCode } }, // Correspondance exacte (priorité)
+          { code: { endsWith: validCode } } // Suffixe (ex: les 6 derniers caractères)
+        ]
+      },
+      select: {
+        fullName: true,
+        type: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        location: true,
+        instructor: true,
+        formation: {
+          select: {
+            name: true,
+            category: true,
           }
         }
-      })
-    } else {
-      attestation = await prisma.attestation.findUnique({
-        where: { code: validCode },
-        select: {
-          fullName: true,
-          type: true,
-          status: true,
-          startDate: true,
-          endDate: true,
-          location: true,
-          instructor: true,
-          formation: {
-            select: {
-              name: true,
-              category: true,
-            }
-          }
-        }
-      })
-    }
+      }
+    })
 
     if (!attestation) {
       // Message générique pour ne pas révéler si le code existe
