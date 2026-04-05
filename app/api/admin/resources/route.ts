@@ -57,10 +57,10 @@ export async function POST(request: Request) {
         action: 'RESOURCE_CREATED',
         resource: 'TRAINING_RESOURCE',
         resourceId: resource.id,
-        newValue: { 
+        newValue: {
           title: resource.title,
           type: resource.type,
-          adminId: adminUser.id 
+          adminId: adminUser.id
         },
         ipAddress: request.headers.get("x-forwarded-for") || "unknown"
       });
@@ -138,10 +138,10 @@ export async function PATCH(request: Request) {
         resource: 'TRAINING_RESOURCE',
         resourceId: id,
         oldValue: old,
-        newValue: { 
+        newValue: {
             changes: body,
             adminId: adminUser.id,
-            adminName: adminUser.name 
+            adminName: adminUser.name
         },
         ipAddress: request.headers.get("x-forwarded-for") || "unknown"
       });

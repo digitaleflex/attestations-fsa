@@ -63,10 +63,10 @@ export async function PATCH(request: Request) {
   }
 
   const { name, email, oldPassword, newPassword, birthDate, birthPlace, phone, address } = parse.data;
-  
+
   // On récupère les infos complètes (incluant le password pour comparaison)
-  const currentUser = await prisma.user.findUnique({ 
-    where: { id: user.id } 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: user.id }
   });
 
   if (!currentUser) return NextResponse.json({ message: 'Admin introuvable' }, { status: 404 });
@@ -76,8 +76,8 @@ export async function PATCH(request: Request) {
   if (name) updateData.name = name;
 
   if (email && email !== currentUser.email) {
-    const existing = await prisma.user.findFirst({ 
-      where: { email, id: { not: currentUser.id } } 
+    const existing = await prisma.user.findFirst({
+      where: { email, id: { not: currentUser.id } }
     });
     if (existing) {
       return NextResponse.json({ message: 'Cet email est déjà utilisé' }, { status: 400 });
@@ -101,14 +101,14 @@ export async function PATCH(request: Request) {
   if (phone) updateData.phone = phone;
   if (address) updateData.address = address;
 
-  const updatedAdmin = await prisma.user.update({ 
-    where: { id: currentUser.id }, 
-    data: updateData 
+  const updatedAdmin = await prisma.user.update({
+    where: { id: currentUser.id },
+    data: updateData
   });
 
-  return NextResponse.json({ 
-    id: updatedAdmin.id, 
-    name: updatedAdmin.name, 
+  return NextResponse.json({
+    id: updatedAdmin.id,
+    name: updatedAdmin.name,
     email: updatedAdmin.email,
     birthDate: updatedAdmin.birthDate?.toISOString().slice(0, 10),
     birthPlace: updatedAdmin.birthPlace,

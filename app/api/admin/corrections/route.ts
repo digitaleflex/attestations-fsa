@@ -51,7 +51,7 @@ export async function PATCH(req: Request) {
         if (fullCorrection.field === "fullName") updateData.name = fullCorrection.newValue;
         if (fullCorrection.field === "birthDate") updateData.birthDate = new Date(fullCorrection.newValue);
         if (fullCorrection.field === "birthPlace") updateData.birthPlace = fullCorrection.newValue;
-        
+
         await prisma.user.update({
           where: { id: fullCorrection.userId },
           data: updateData

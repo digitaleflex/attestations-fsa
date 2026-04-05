@@ -25,7 +25,7 @@ export async function GET() {
     // Initialiser les mois
     const labels: string[] = [];
     const monthlyData: Record<string, { registrations: number, attestations: number, validations: number }> = {};
-    
+
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const label = d.toLocaleDateString('fr-FR', { month: 'short' });

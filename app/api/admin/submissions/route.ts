@@ -45,8 +45,8 @@ export async function GET() {
 
   } catch (error: unknown) {
     console.error('Erreur soumissions admin:', error);
-    return NextResponse.json({ 
-      error: 'Erreur lors de la récupération des soumissions' 
+    return NextResponse.json({
+      error: 'Erreur lors de la récupération des soumissions'
     }, { status: 500 });
   }
 }

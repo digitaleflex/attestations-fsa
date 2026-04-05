@@ -19,7 +19,7 @@ export async function GET(request: Request) {
       take: limit,
       orderBy: { timestamp: "desc" },
       include: {
-        // userId is optional, we might need a way to link it manually if needed 
+        // userId is optional, we might need a way to link it manually if needed
         // or just rely on the details/userId field
       }
     };

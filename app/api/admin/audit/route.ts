@@ -9,7 +9,7 @@ import { createAuditLog } from "@/lib/audit";
 export async function POST(request: Request) {
   try {
     const adminUser = await getCurrentUser(request);
-    
+
     // Seul un admin peut logger des actions via cet endpoint (sécurité)
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -27,10 +27,10 @@ export async function POST(request: Request) {
       action,
       resource,
       resourceId,
-      newValue: { 
+      newValue: {
         ...details,
         adminId: adminUser?.id,
-        adminName: adminUser?.name 
+        adminName: adminUser?.name
       },
       ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });

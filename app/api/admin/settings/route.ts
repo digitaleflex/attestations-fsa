@@ -66,9 +66,9 @@ export async function PATCH(request: NextRequest) {
         action: 'SETTINGS_UPDATED',
         resource: 'SYSTEM_SETTINGS',
         resourceId: id,
-        newValue: { 
+        newValue: {
           changes: data,
-          adminName: adminUser.name 
+          adminName: adminUser.name
         },
         ipAddress: request.headers.get("x-forwarded-for") || "unknown"
       });
