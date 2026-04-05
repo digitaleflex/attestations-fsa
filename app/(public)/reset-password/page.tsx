@@ -1,21 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, Eye, EyeOff, CheckCircle, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, Eye, EyeOff, CheckCircle, ShieldCheck, Mail, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Suspense } from "react";
-import { resetPassword } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,18 +26,49 @@ function ResetPasswordForm() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Better Auth puts the token in the URL after redirection
-  const token = searchParams.get("token");
-
+  // Gérer l'email provenant de la page forgot-password
   useEffect(() => {
-    if (!token) {
-      setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
+    const emailParam = searchParams.get("email");
+    if (emailParam) {
+      setEmail(emailParam);
+      setStep("otp");
     }
-  }, [token]);
+  }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendOTP = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!token) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const { error: authError } = await authClient.emailOtp.requestPasswordReset({
+        email,
+      });
+
+      if (authError) {
+        setError(authError.message || "Échec de l'envoi du code");
+        toast.error(authError.message || "Échec de l'envoi du code");
+      } else {
+        setStep("otp");
+        toast.success("Code envoyé !", {
+          description: "Vérifiez votre boîte de réception.",
+        });
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      toast.error(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (otp.length !== 6) {
+      setError("Le code doit contenir 6 chiffres");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Les mots de passe ne correspondent pas");
@@ -51,9 +84,10 @@ function ResetPasswordForm() {
     setError("");
 
     try {
-      const { error: authError } = await resetPassword({
-        newPassword: password,
-        token,
+      const { error: authError } = await authClient.emailOtp.resetPassword({
+        email,
+        otp,
+        password,
       });
 
       if (authError) {
@@ -68,16 +102,14 @@ function ResetPasswordForm() {
           router.push("/auth");
         }, 2000);
       }
-    } catch (err: any) {
-      setError(err.message || "Erreur inconnue");
-      toast.error(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      toast.error(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
   };
 
-  const passwordsMatch = password === confirmPassword && password.length > 0;
-  
   const getPasswordStrength = () => {
     if (password.length === 0) return { label: "À saisir", color: "bg-gray-200" };
     if (password.length < 8) return { label: "Trop court", color: "bg-red-500" };
@@ -86,6 +118,7 @@ function ResetPasswordForm() {
   };
 
   const strength = getPasswordStrength();
+  const passwordsMatch = password === confirmPassword && password.length >= 8;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
@@ -94,17 +127,25 @@ function ResetPasswordForm() {
           <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg transform hover:scale-105 transition-transform">
             {success ? (
               <CheckCircle className="w-10 h-10 text-white" />
+            ) : step === "otp" ? (
+              <KeyRound className="w-10 h-10 text-white" />
             ) : (
               <ShieldCheck className="w-10 h-10 text-white" />
             )}
           </div>
           <h1 className="text-3xl font-bold text-slate-800 text-center">
-            {success ? "Mot de passe modifié !" : "Nouveau mot de passe"}
+            {success
+              ? "Mot de passe modifié !"
+              : step === "otp"
+              ? "Vérification OTP"
+              : "Réinitialisation du mot de passe"}
           </h1>
-          <p className="text-slate-500 text-sm mt-2 text-center">
+          <p className="text-slate-500 text-sm mt-2 text-center px-4">
             {success
               ? "Redirection vers l'espace candidat..."
-              : "Choisissez un nouveau mot de passe hautement sécurisé"}
+              : step === "otp"
+              ? "Entrez le code à 6 chiffres reçu par email"
+              : "Entrez votre email pour recevoir un code de vérification"}
           </p>
         </div>
 
@@ -126,10 +167,71 @@ function ResetPasswordForm() {
               <Button className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700">Se connecter</Button>
             </Link>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+        ) : step === "email" ? (
+          <form onSubmit={handleSendOTP} className="space-y-6">
             <div>
-              <Label htmlFor="password" title="password" className="text-sm font-medium text-gray-700 ml-1">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700 ml-1">
+                Adresse email
+              </Label>
+              <div className="relative mt-1.5">
+                <Mail className="absolute left-4 top-3 w-5 h-5 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="votre@email.com"
+                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md hover:shadow-lg transition-all rounded-xl"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin w-5 h-5 mr-2" />
+                  Envoi du code...
+                </>
+              ) : (
+                "Envoyer le code de vérification"
+              )}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleResetPassword} className="space-y-5">
+            {/* OTP Input */}
+            <div>
+              <Label htmlFor="otp" className="text-sm font-medium text-gray-700 ml-1">
+                Code de vérification
+              </Label>
+              <div className="relative mt-1.5">
+                <KeyRound className="absolute left-4 top-3 w-5 h-5 text-gray-400" />
+                <Input
+                  id="otp"
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  required
+                  placeholder="123456"
+                  maxLength={6}
+                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 text-center text-2xl font-mono tracking-widest"
+                  autoComplete="one-time-code"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5 ml-1">
+                Code à 6 chiffres reçu par email • Expire dans 10 min
+              </p>
+            </div>
+
+            {/* New Password */}
+            <div>
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700 ml-1">
                 Nouveau mot de passe
               </Label>
               <div className="relative mt-1.5">
@@ -149,14 +251,10 @@ function ResetPasswordForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-3 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              
+
               {/* Strength Indicator */}
               <div className="mt-3 flex items-center justify-between px-1">
                 <div className="flex gap-1.5 flex-1 max-w-[60%]">
@@ -164,10 +262,11 @@ function ResetPasswordForm() {
                     <div
                       key={i}
                       className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                        password.length >= 8 && i === 1 ? strength.color :
-                        password.length >= 10 && i <= 2 ? strength.color :
-                        password.length >= 12 && i <= 3 ? strength.color :
-                        "bg-gray-100"
+                        (password.length >= 8 && i === 1) ||
+                        (password.length >= 10 && i <= 2) ||
+                        (password.length >= 12 && i <= 3)
+                          ? strength.color
+                          : "bg-gray-100"
                       }`}
                     />
                   ))}
@@ -178,12 +277,9 @@ function ResetPasswordForm() {
               </div>
             </div>
 
+            {/* Confirm Password */}
             <div>
-              <Label
-                htmlFor="confirmPassword"
-                title="confirmPassword"
-                className="text-sm font-medium text-gray-700 ml-1"
-              >
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 ml-1">
                 Confirmer le mot de passe
               </Label>
               <div className="relative mt-1.5">
@@ -199,8 +295,8 @@ function ResetPasswordForm() {
                     confirmPassword && passwordsMatch
                       ? "border-emerald-500 ring-2 ring-emerald-500/10"
                       : confirmPassword
-                        ? "border-red-300"
-                        : ""
+                      ? "border-red-300"
+                      : ""
                   }`}
                   autoComplete="new-password"
                 />
@@ -209,19 +305,11 @@ function ResetPasswordForm() {
                   onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute right-4 top-3 text-gray-400 hover:text-gray-600"
                 >
-                  {showConfirm ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {confirmPassword && (
-                <p
-                  className={`text-[11px] mt-1.5 ml-1 font-medium ${
-                    passwordsMatch ? "text-emerald-600" : "text-red-500"
-                  }`}
-                >
+                <p className={`text-[11px] mt-1.5 ml-1 font-medium ${passwordsMatch ? "text-emerald-600" : "text-red-500"}`}>
                   {passwordsMatch ? "✓ Les mots de passe correspondent" : "✗ Les mots de passe ne correspondent pas"}
                 </p>
               )}
@@ -230,7 +318,7 @@ function ResetPasswordForm() {
             <Button
               type="submit"
               className="w-full h-12 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md hover:shadow-lg transition-all rounded-xl disabled:opacity-50"
-              disabled={loading || !token || !passwordsMatch}
+              disabled={loading || !passwordsMatch}
             >
               {loading ? (
                 <>
@@ -241,16 +329,26 @@ function ResetPasswordForm() {
                 "Réinitialiser le mot de passe"
               )}
             </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 rounded-xl"
+              onClick={() => setStep("email")}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Renvoyer le code
+            </Button>
           </form>
         )}
 
         {!success && (
           <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-3">
-             <Link
+            <Link
               href="/forgot-password"
               className="text-xs text-gray-400 hover:text-emerald-600 transition-colors"
             >
-              Lien expiré ? Renvoyer un email
+              Code expiré ? Recommencer
             </Link>
             <Link
               href="/auth"
@@ -266,13 +364,13 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
-    return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
-                <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
-            </div>
-        }>
-            <ResetPasswordForm />
-        </Suspense>
-    );
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
+        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
+  );
 }

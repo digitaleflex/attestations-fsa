@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import Link from "next/link";
 import { forgetPassword } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,17 +27,17 @@ export default function ForgotPasswordPage() {
     try {
       const { error: authError } = await forgetPassword({
         email,
-        redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (authError) {
         setError(authError.message || "Échec de l'envoi");
         toast.error(authError.message || "Échec de l'envoi");
       } else {
-        setSent(true);
-        toast.success("Email envoyé !", {
-          description: "Vérifiez votre boîte de réception.",
+        toast.success("Code envoyé !", {
+          description: "Redirection vers la saisie du code...",
         });
+        // Rediriger vers la page de réinitialisation avec l'email pré-rempli
+        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
@@ -62,7 +64,7 @@ export default function ForgotPasswordPage() {
           <p className="text-slate-500 text-sm mt-2 text-center px-4">
             {sent
               ? "Consultez votre boîte de réception pour réinitialiser votre accès"
-              : "Entrez votre email pour recevoir un lien de réinitialisation sécurisé"}
+              : "Entrez votre email pour recevoir un code de vérification sécurisé"}
           </p>
         </div>
 
@@ -77,12 +79,12 @@ export default function ForgotPasswordPage() {
           <div className="space-y-4 text-center">
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
               <p className="text-sm text-emerald-700">
-                Un lien de réinitialisation a été envoyé à{" "}
+                Un code de vérification à 6 chiffres a été envoyé à{" "}
                 <strong className="block mt-1 font-bold text-emerald-800">{email}</strong>
               </p>
               <p className="text-xs text-emerald-600/80 mt-3 flex items-center justify-center gap-1">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                Le lien expire dans 1 heure. 
+                Le code expire dans 10 minutes.
               </p>
             </div>
             <Button
@@ -134,7 +136,7 @@ export default function ForgotPasswordPage() {
                   Envoi sécurisé...
                 </>
               ) : (
-                "Envoyer le lien de réinitialisation"
+                "Envoyer le code de vérification"
               )}
             </Button>
           </form>

@@ -32,6 +32,7 @@ if (!process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRET) {
 }
 
 import { admin } from "better-auth/plugins"
+import { emailOTP } from "better-auth/plugins"
 
 /**
  * Instance d'authentification Better Auth
@@ -78,20 +79,32 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,
-        sendResetPassword: async ({ user, url }) => {
-            const { emailService } = await import('@/lib/email');
-            await emailService.sendPasswordReset(
-                user.email,
-                user.name || user.email,
-                url
-            );
-        },
     },
     plugins: [
         nextCookies(),
         admin({
             adminUserIds: ["eflexcloud@gmail.com", "admin@fermestandre.com"]
-        })
+        }),
+        emailOTP({
+            otpLength: 6,
+            expiresIn: 60 * 10, // 10 minutes
+            allowedAttempts: 5,
+            resendStrategy: "rotate",
+            async sendVerificationOTP({ email, otp, type }) {
+                if (type === "forget-password") {
+                    // Log OTP to in-memory store for admin viewing
+                    const { logOTP } = await import('@/lib/otp-store');
+                    logOTP(email, otp, type);
+                    
+                    const { emailService } = await import('@/lib/email');
+                    await emailService.sendPasswordResetOTP(
+                        email,
+                        email.split('@')[0], // Nom par défaut (sera remplacé si on trouve le user)
+                        otp
+                    );
+                }
+            },
+        }),
     ],
     advanced: {
         cookiePrefix: 'better-auth',

@@ -1,21 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Loader2, Lock, Eye, EyeOff, CheckCircle, KeyRound, Mail } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Suspense } from "react";
 import { authClient } from "@/lib/auth-client";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,18 +26,49 @@ function ResetPasswordForm() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Better Auth met le token dans l'URL après la redirection
-  const token = searchParams.get("token");
-
+  // Gérer l'email provenant de la page admin forgot-password
   useEffect(() => {
-    if (!token) {
-      setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
+    const emailParam = searchParams.get("email");
+    if (emailParam) {
+      setEmail(emailParam);
+      setStep("otp");
     }
-  }, [token]);
+  }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendOTP = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!token) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const { error: authError } = await authClient.emailOtp.requestPasswordReset({
+        email,
+      });
+
+      if (authError) {
+        setError(authError.message || "Échec de l'envoi du code");
+        toast.error(authError.message || "Échec de l'envoi du code");
+      } else {
+        setStep("otp");
+        toast.success("Code envoyé !", {
+          description: "Vérifiez votre boîte de réception.",
+        });
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      toast.error(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (otp.length !== 6) {
+      setError("Le code doit contenir 6 chiffres");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Les mots de passe ne correspondent pas");
@@ -51,9 +84,10 @@ function ResetPasswordForm() {
     setError("");
 
     try {
-      const { error: authError } = await authClient.resetPassword({
-        newPassword: password,
-        token,
+      const { error: authError } = await authClient.emailOtp.resetPassword({
+        email,
+        otp,
+        password,
       });
 
       if (authError) {
@@ -77,7 +111,7 @@ function ResetPasswordForm() {
     }
   };
 
-  const passwordsMatch = password === confirmPassword && password.length > 0;
+  const passwordsMatch = password === confirmPassword && password.length >= 8;
   const passwordStrength =
     password.length >= 8
       ? password.length >= 12
@@ -98,6 +132,8 @@ function ResetPasswordForm() {
           <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             {success ? (
               <CheckCircle className="w-10 h-10 text-white" />
+            ) : step === "otp" ? (
+              <KeyRound className="w-10 h-10 text-white" />
             ) : (
               <Lock className="w-10 h-10 text-white" />
             )}
@@ -105,12 +141,16 @@ function ResetPasswordForm() {
           <h1 className="text-3xl font-bold text-slate-800">
             {success
               ? "Mot de passe modifié !"
-              : "Nouveau mot de passe"}
+              : step === "otp"
+              ? "Vérification OTP"
+              : "Réinitialisation du mot de passe"}
           </h1>
           <p className="text-slate-500 text-sm mt-2">
             {success
               ? "Redirection en cours..."
-              : "Choisissez un mot de passe sécurisé"}
+              : step === "otp"
+              ? "Entrez le code à 6 chiffres reçu par email"
+              : "Entrez votre email pour recevoir un code de vérification"}
           </p>
         </div>
 
@@ -132,8 +172,69 @@ function ResetPasswordForm() {
               <Button className="w-full">Se connecter</Button>
             </Link>
           </div>
+        ) : step === "email" ? (
+          <form onSubmit={handleSendOTP} className="space-y-5">
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Adresse email
+              </Label>
+              <div className="relative mt-1.5">
+                <Mail className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="admin@fsa.bj"
+                  className="pl-10 h-11"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md hover:shadow-lg transition-all"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin w-5 h-5 mr-2" />
+                  Envoi du code...
+                </>
+              ) : (
+                "Envoyer le code de vérification"
+              )}
+            </Button>
+          </form>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleResetPassword} className="space-y-5">
+            {/* OTP Input */}
+            <div>
+              <Label htmlFor="otp" className="text-sm font-medium text-gray-700">
+                Code de vérification
+              </Label>
+              <div className="relative mt-1.5">
+                <KeyRound className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                <Input
+                  id="otp"
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  required
+                  placeholder="123456"
+                  maxLength={6}
+                  className="pl-10 h-11 text-center text-2xl font-mono tracking-widest"
+                  autoComplete="one-time-code"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                Code à 6 chiffres reçu par email • Expire dans 10 min
+              </p>
+            </div>
+
+            {/* New Password */}
             <div>
               <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                 Nouveau mot de passe
@@ -155,11 +256,7 @@ function ResetPasswordForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {password && (
@@ -175,8 +272,8 @@ function ResetPasswordForm() {
                             ? password.length >= 12
                               ? "bg-emerald-500"
                               : password.length >= 8
-                                ? "bg-amber-500"
-                                : "bg-red-500"
+                              ? "bg-amber-500"
+                              : "bg-red-500"
                             : "bg-gray-200"
                         }`}
                       />
@@ -189,11 +286,9 @@ function ResetPasswordForm() {
               )}
             </div>
 
+            {/* Confirm Password */}
             <div>
-              <Label
-                htmlFor="confirmPassword"
-                className="text-sm font-medium text-gray-700"
-              >
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
                 Confirmer le mot de passe
               </Label>
               <div className="relative mt-1.5">
@@ -209,8 +304,8 @@ function ResetPasswordForm() {
                     confirmPassword && passwordsMatch
                       ? "border-emerald-500 focus-visible:ring-emerald-500"
                       : confirmPassword
-                        ? "border-red-300"
-                        : ""
+                      ? "border-red-300"
+                      : ""
                   }`}
                   autoComplete="new-password"
                 />
@@ -219,19 +314,11 @@ function ResetPasswordForm() {
                   onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                 >
-                  {showConfirm ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {confirmPassword && (
-                <p
-                  className={`text-xs mt-1 ml-1 ${
-                    passwordsMatch ? "text-emerald-600" : "text-red-500"
-                  }`}
-                >
+                <p className={`text-xs mt-1 ml-1 ${passwordsMatch ? "text-emerald-600" : "text-red-500"}`}>
                   {passwordsMatch ? "✓ Les mots de passe correspondent" : "✗ Les mots de passe ne correspondent pas"}
                 </p>
               )}
@@ -240,7 +327,7 @@ function ResetPasswordForm() {
             <Button
               type="submit"
               className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-md hover:shadow-lg transition-all disabled:opacity-50"
-              disabled={loading || !token || !passwordsMatch}
+              disabled={loading || !passwordsMatch}
             >
               {loading ? (
                 <>
@@ -250,6 +337,16 @@ function ResetPasswordForm() {
               ) : (
                 "Réinitialiser le mot de passe"
               )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11"
+              onClick={() => setStep("email")}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Renvoyer le code
             </Button>
           </form>
         )}
@@ -270,13 +367,13 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
-    return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 p-4">
-                <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
-            </div>
-        }>
-            <ResetPasswordForm />
-        </Suspense>
-    );
+  return (
+    <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 p-4">
+            <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
+        </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
+  );
 }

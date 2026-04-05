@@ -232,7 +232,9 @@ export const emailService = {
   },
 
   /**
-   * Envoi d'un email de réinitialisation de mot de passe
+   * ⚠️ DEPRECATED - Ancien système par lien de réinitialisation
+   * Remplacé par sendPasswordResetOTP() (code OTP à 6 chiffres)
+   * Gardé pour compatibilité uniquement, ne plus utiliser.
    */
   async sendPasswordReset(to: string, fullName: string, resetLink: string) {
     try {
@@ -274,6 +276,173 @@ export const emailService = {
       return { success: true };
     } catch (error) {
       console.error("[EMAIL_ERROR] Password Reset:", error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Envoi d'un code OTP pour réinitialisation de mot de passe
+   */
+  async sendPasswordResetOTP(to: string, fullName: string, otp: string) {
+    try {
+      const resend = getResend();
+      const year = new Date().getFullYear();
+      const resetUrl = typeof process !== "undefined"
+        ? (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://verifier.fermestandre.com") + "/reset-password"
+        : "https://verifier.fermestandre.com/reset-password";
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject: `🔐 Votre code de vérification : ${otp}`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f0f4f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            
+            <!-- Wrapper -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  
+                  <!-- Card -->
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.08);">
+                    
+                    <!-- Header with gradient -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
+                        <div style="margin-bottom: 16px;">
+                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                        </div>
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
+                          🔐 Réinitialisation du mot de passe
+                        </h1>
+                        <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">
+                          Ferme Agro-Piscicole Cité St André
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 32px;">
+                        <p style="margin: 0 0 24px 0; font-size: 16px; color: #475569; line-height: 1.6;">
+                          Bonjour <strong style="color: #0f172a;">${fullName}</strong>,
+                        </p>
+                        <p style="margin: 0 0 32px 0; font-size: 15px; color: #64748b; line-height: 1.7;">
+                          Nous avons reçu une demande de réinitialisation de votre mot de passe. Utilisez le code ci-dessous pour finaliser l'opération :
+                        </p>
+
+                        <!-- OTP Box -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 32px 0;">
+                          <tr>
+                            <td style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 16px; padding: 32px; text-align: center; border: 2px solid #6ee7b7;">
+                              <p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 600; color: #065f46; text-transform: uppercase; letter-spacing: 2px;">
+                                Votre code de vérification
+                              </p>
+                              <p style="margin: 0; font-size: 56px; font-weight: 900; color: #059669; letter-spacing: 12px; font-family: 'Courier New', Courier, monospace; text-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);">
+                                ${otp}
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Timer Warning -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+                          <tr>
+                            <td style="background-color: #fef3c7; border-radius: 12px; padding: 16px 20px; border-left: 4px solid #f59e0b;">
+                              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                  <td style="font-size: 20px; padding-right: 12px;">⏱️</td>
+                                  <td>
+                                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #92400e;">
+                                      Temps limité : 10 minutes
+                                    </p>
+                                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #a16207;">
+                                      Ce code expirera automatiquement après ce délai pour votre sécurité.
+                                    </p>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Security Notice -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+                          <tr>
+                            <td style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0;">
+                              <p style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #334155;">
+                                🛡️ Conseils de sécurité :
+                              </p>
+                              <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #64748b; line-height: 1.8;">
+                                <li>Ne partagez <strong style="color: #1e293b;">jamais</strong> ce code avec quiconque</li>
+                                <li>Notre équipe ne vous demandera <strong style="color: #1e293b;">jamais</strong> ce code par téléphone ou email</li>
+                                <li>Si vous n'avez pas fait cette demande, <strong style="color: #1e293b;">ignorez simplement cet email</strong></li>
+                              </ul>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- CTA Button -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0 0 0;">
+                          <tr>
+                            <td style="text-align: center;">
+                              <a href="${resetUrl}" target="_blank" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; border-radius: 12px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                Accéder à la page de réinitialisation →
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <p style="margin: 24px 0 0 0; font-size: 14px; color: #94a3b8; text-align: center;">
+                          Cordialement,<br>
+                          <strong style="color: #64748b;">L'équipe Ferme St André</strong>
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Divider -->
+                    <tr>
+                      <td style="padding: 0 32px;">
+                        <div style="height: 1px; background-color: #e2e8f0;"></div>
+                      </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 24px 32px; text-align: center;">
+                        <p style="margin: 0 0 8px 0; font-size: 12px; color: #94a3b8;">
+                          Cet email a été envoyé à <strong style="color: #64748b;">${to}</strong>
+                        </p>
+                        <p style="margin: 0; font-size: 11px; color: #cbd5e1;">
+                          © ${year} Ferme Agro-Piscicole Cité St André • Abomey-Calavi, Bénin
+                        </p>
+                        <p style="margin: 12px 0 0 0; font-size: 10px; color: #e2e8f0;">
+                          Ceci est un message automatique, merci de ne pas y répondre directement.
+                        </p>
+                      </td>
+                    </tr>
+
+                  </table>
+                  <!-- End Card -->
+
+                </td>
+              </tr>
+            </table>
+            <!-- End Wrapper -->
+
+          </body>
+          </html>
+        `
+      });
+      console.log(`[EMAIL_SERVICE] ✅ OTP code sent to ${to}: ${otp}`);
+      return { success: true };
+    } catch (error) {
+      console.error("[EMAIL_ERROR] Password Reset OTP:", error);
       return { success: false, error };
     }
   }

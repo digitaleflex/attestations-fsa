@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import Link from "next/link";
 import { forgetPassword } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,17 +27,17 @@ export default function ForgotPasswordPage() {
     try {
       const { error: authError } = await forgetPassword({
         email,
-        redirectTo: `${window.location.origin}/admin/reset-password`,
       });
 
       if (authError) {
         setError(authError.message || "Échec de l'envoi");
         toast.error(authError.message || "Échec de l'envoi");
       } else {
-        setSent(true);
-        toast.success("Email envoyé !", {
-          description: "Vérifiez votre boîte de réception.",
+        toast.success("Code envoyé !", {
+          description: "Redirection vers la saisie du code...",
         });
+        // Rediriger vers la page de réinitialisation avec l'email pré-rempli
+        router.push(`/admin/reset-password?email=${encodeURIComponent(email)}`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
@@ -57,12 +59,12 @@ export default function ForgotPasswordPage() {
             )}
           </div>
           <h1 className="text-3xl font-bold text-slate-800">
-            {sent ? "Email envoyé !" : "Mot de passe oublié ?"}
+            {sent ? "Code envoyé !" : "Mot de passe oublié ?"}
           </h1>
           <p className="text-slate-500 text-sm mt-2">
             {sent
-              ? "Consultez votre boîte de réception"
-              : "Entrez votre email pour recevoir un lien de réinitialisation"}
+              ? "Consultez votre boîte de réception pour le code OTP"
+              : "Entrez votre email pour recevoir un code de vérification à 6 chiffres"}
           </p>
         </div>
 
@@ -77,12 +79,11 @@ export default function ForgotPasswordPage() {
           <div className="space-y-4 text-center">
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
               <p className="text-sm text-emerald-700">
-                Un lien de réinitialisation a été envoyé à{" "}
+                Un code de vérification à 6 chiffres a été envoyé à{" "}
                 <strong>{email}</strong>
               </p>
               <p className="text-xs text-emerald-600 mt-2">
-                Le lien expire dans 1 heure. Vérifiez vos spams si vous ne le
-                voyez pas.
+                Le code expire dans 10 minutes. Utilisez-le pour réinitialiser votre mot de passe.
               </p>
             </div>
             <Button
@@ -134,7 +135,7 @@ export default function ForgotPasswordPage() {
                   Envoi en cours...
                 </>
               ) : (
-                "Envoyer le lien de réinitialisation"
+                "Envoyer le code de vérification"
               )}
             </Button>
           </form>

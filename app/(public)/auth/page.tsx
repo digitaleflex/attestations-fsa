@@ -281,10 +281,12 @@ export default function AuthPage() {
           password: form.password,
         });
 
-        if (authError) throw authError;
+        console.log("[AUTH DEBUG] signIn response:", { data, authError, authErrorType: typeof authError, authErrorKeys: authError ? Object.keys(authError) : "null" });
+
+        if (authError && Object.keys(authError).length > 0) throw authError;
 
         toast.success("Connexion réussie !");
-        
+
         setIsRedirecting(true); // Déclenchement Vortex
         // Redirection intelligente
         if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
@@ -305,10 +307,12 @@ export default function AuthPage() {
           callbackURL: "/exams",
         } as any);
 
-        if (authError) throw authError;
+        console.log("[AUTH DEBUG] signUp response:", { data, authError, authErrorType: typeof authError, authErrorKeys: authError ? Object.keys(authError) : "null" });
+
+        if (authError && Object.keys(authError).length > 0) throw authError;
 
         toast.success("Compte créé avec succès !");
-        
+
         setIsRedirecting(true); // Déclenchement Vortex
         // Si l'utilisateur est un admin (cas exceptionnel), rediriger vers admin
         if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
@@ -319,7 +323,8 @@ export default function AuthPage() {
       }
     } catch (err: any) {
       console.error("Erreur lors de l'authentification:", err);
-      const errorMessage = translateAuthError(err.message || "Une erreur inattendue est survenue");
+      console.error("[AUTH DEBUG] Full error:", JSON.stringify(err, null, 2));
+      const errorMessage = translateAuthError(err?.message || err?.code || "Une erreur inattendue est survenue");
       setError(errorMessage);
       toast.error(errorMessage);
       
