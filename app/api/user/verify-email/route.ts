@@ -39,11 +39,11 @@ export async function GET(request: Request) {
     const userId = verification.identifier.split(':')[1]
 
     // Vérifier que l'utilisateur existe
-    const user = await prisma.user.findUnique({ 
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, emailVerified: true }
     })
-    
+
     if (!user) {
       return NextResponse.redirect(
         new URL('/verification-error?reason=user-not-found', request.url)
@@ -60,15 +60,15 @@ export async function GET(request: Request) {
     // Marquer l'email comme vérifié
     await prisma.user.update({
       where: { id: userId },
-      data: { 
+      data: {
         emailVerified: new Date(),
         updatedAt: new Date()
       }
     })
 
     // Supprimer le token (usage unique)
-    await prisma.verification.delete({ 
-      where: { id: verification.id } 
+    await prisma.verification.delete({
+      where: { id: verification.id }
     })
 
     // Logger l'événement

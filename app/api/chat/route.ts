@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   try {
     const user = await getCurrentUser(req);
     const isAdmin = await isAdminAuthenticated();
-    
+
     const { searchParams } = new URL(req.url);
     const targetUserId = searchParams.get("userId");
     const unreadOnly = searchParams.get("unread") === "true";
@@ -30,11 +30,11 @@ export async function GET(req: Request) {
 
     // @ts-ignore - Accès dynamique au cas où le client n'a pas encore fini de se synchroniser
     const chatModel = (prisma as any).chatMessage;
-    
+
     if (!chatModel) {
-        return NextResponse.json({ 
-            error: "Erreur d'initialisation", 
-            details: "Le module chatMessage n'est pas encore actif. Réessayez dans un instant." 
+        return NextResponse.json({
+            error: "Erreur d'initialisation",
+            details: "Le module chatMessage n'est pas encore actif. Réessayez dans un instant."
         }, { status: 503 });
     }
 
@@ -45,14 +45,14 @@ export async function GET(req: Request) {
     });
 
     if (!unreadOnly && messages.length > 0) {
-        const lastMessages = messages.filter((m: any) => 
+        const lastMessages = messages.filter((m: any) =>
             (isAdmin && m.senderRole === "user") || (!isAdmin && m.senderRole === "admin")
         );
-        
+
         if (lastMessages.length > 0) {
             try {
                 await chatModel.updateMany({
-                    where: { 
+                    where: {
                         id: { in: lastMessages.map((m: any) => m.id) },
                         isRead: false
                     },
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
 
     // @ts-ignore
     const chatModel = (prisma as any).chatMessage;
-    
+
     if (!chatModel) {
         return NextResponse.json({ error: "Module chat indisponible" }, { status: 503 });
     }
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
     try {
       if (process.env.PUSHER_APP_ID) {
         await pusherServer.trigger(`chat-${finalUserId}`, "message", message);
-        
+
         // Alerte globale pour les admins s'il s'agit d'un message d'un USER
         if (senderRole === "user") {
             await pusherServer.trigger("admin-events", "message", {

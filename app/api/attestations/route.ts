@@ -19,12 +19,12 @@ const AttestationSchema = z.object({
   instructor: z.string().min(1, 'Le formateur est requis.'),
   issuingCompany: z.string().min(1, 'La société émettrice est requise.'),
   type: z.enum(['FORMATION', 'STAGE', 'CERTIFICATION'], { required_error: 'Le type est requis.' }),
-  
+
   // Champs spécifiques pour STAGE
   stageHours: z.number().min(1).max(2000).optional(),
   stageScore: z.number().min(0).max(100).optional(),
   stageObservations: z.string().max(1000).optional(),
-  
+
   // Champs spécifiques pour CERTIFICATION
   certificationMention: z.enum(['PASSABLE', 'ASSEZ_BIEN', 'BIEN', 'TRES_BIEN', 'EXCELLENCE']).optional(),
   certificationScore: z.number().min(0).max(100).optional(),
@@ -113,11 +113,11 @@ export async function POST(request: Request) {
     const now = new Date()
     const year = now.getFullYear()
     const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`
-    
+
     // Compter les attestations du mois pour la séquence
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-    
+
     const count = await prisma.attestation.count({
       where: {
         issuedAt: {
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
         }
       }
     })
-    
+
     const seq = String(count + 1).padStart(5, '0')
     const hash = nanoid()
     const code = `FSA-${year}-${month}-${seq}-${hash}`
@@ -178,4 +178,4 @@ export async function POST(request: Request) {
       debug: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
   }
-} 
+}

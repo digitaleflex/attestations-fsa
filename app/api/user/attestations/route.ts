@@ -25,9 +25,9 @@ export async function GET(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
-    
+
     const userId = user.id;
-    
+
     // Validation avec Zod (Sécurité Totale)
     const url = new URL(request.url);
     const params = QuerySchema.safeParse({
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     }
 
     const { status: statusParam, type: typeParam, limit } = params.data;
-    
+
     // Mapping des Enums
     const status = (statusParam && statusParam !== 'all') ? (statusParam as AttestationStatus) : undefined;
     const type = (typeParam && typeParam !== 'all') ? (typeParam as AttestationType) : undefined;
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
       orderBy: { issuedAt: 'desc' },
       ...(limit ? { take: limit } : {})
     });
-    
+
     // Calcul des statistiques (en mémoire) - Type Safe
     const stats: AttestationStats = {
       total: attestations.length,
@@ -73,16 +73,16 @@ export async function GET(request: Request) {
       pending: attestations.filter(a => a.status === 'PENDING').length,
       rejected: attestations.filter(a => a.status === 'REJECTED').length,
     };
-    
+
     return NextResponse.json({
       attestations,
       stats
     });
-    
+
   } catch (error: unknown) {
     console.error('Erreur attestations user:', error);
-    return NextResponse.json({ 
-      error: 'Erreur lors de la récupération des attestations' 
+    return NextResponse.json({
+      error: 'Erreur lors de la récupération des attestations'
     }, { status: 500 });
   }
 }

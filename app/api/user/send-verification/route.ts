@@ -25,16 +25,16 @@ export async function POST(request: Request) {
       throw new ApiErrorImpl('UNAUTHORIZED', 'Non autorisé - Authentification requise')
     }
 
-    const user = await prisma.user.findUnique({ 
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { 
-        id: true, 
-        email: true, 
+      select: {
+        id: true,
+        email: true,
         name: true,
         emailVerified: true
       }
     })
-    
+
     if (!user) {
       throw new ApiErrorImpl('NOT_FOUND', 'Utilisateur non trouvé')
     }
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
     // Générer le lien de vérification
     const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/user/verify-email?token=${token}`
-    
+
     // Envoyer l'email via le service centralisé
     await emailService.sendVerificationEmail(
       user.email!,
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       verifyLink
     )
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Email de vérification envoyé avec succès',
       success: true
     })

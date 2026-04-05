@@ -22,7 +22,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
     const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
     const search = url.searchParams.get('search') || '';
-    
+
     // ✅ FIX: Use Prisma type instead of `any`
     const where: Prisma.FormationWhereInput = {};
     if (search) {

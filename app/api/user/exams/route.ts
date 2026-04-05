@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     if (!userAuth) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
-    
+
     const userId = userAuth.id;
 
     const { searchParams } = new URL(request.url);
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     if (!params.success) {
         return NextResponse.json({ error: 'Paramètres invalides', details: params.error.format() }, { status: 400 });
     }
-    
+
     // Requêtes PARALLÈLES (Gain de temps massif)
     const [user, availableExams, submissions] = await Promise.all([
       prisma.user.findUnique({
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         select: { examId: true }
       }),
       prisma.exam.findMany({
-        where: { 
+        where: {
             status: 'PUBLISHED',
             // On pourrait ajouter des filtres ici basés sur params.data
         },
@@ -79,14 +79,14 @@ export async function GET(request: Request) {
         }
       })
     ]);
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
     }
-    
+
     // Formater les données pour le Frontend
     const submittedExamIds = new Set(submissions.map(s => s.examId));
-    
+
     // 1. Ajouter les examens complétés
     const completedExams = submissions.map(sub => {
       const exam = sub.exam;
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
         submissionId: sub.id,
         examName: exam.title || exam.name,
         examDescription: exam.description,
-        status: sub.status === 'GRADED' ? 'COMPLETED' : 'IN_PROGRESS', 
+        status: sub.status === 'GRADED' ? 'COMPLETED' : 'IN_PROGRESS',
         score: sub.totalScore,
         maxScore: exam.totalPoints || 100,
         passingScore: exam.passingScore || 65,
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
       }));
 
     const examsResult = [...completedExams, ...availableResult];
-    
+
     // Statistiques pour le header des candidats
     const stats = {
       total: examsResult.length,
@@ -135,12 +135,12 @@ export async function GET(request: Request) {
       available: examsResult.filter((e) => e.status === 'AVAILABLE').length,
       passed: examsResult.filter((e) => e.status === 'COMPLETED' && e.score >= (e.maxScore * (e.passingScore / 100))).length,
     };
-    
+
     return NextResponse.json({
       exams: examsResult,
       stats
     });
-    
+
   } catch (error: unknown) {
     console.error('Erreur examens user:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

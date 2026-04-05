@@ -20,15 +20,15 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
-    
+
     // Validation stricte du paramètre code
     const CodeSchema = z.string().min(5, 'Code requis (minimum 5 caractères)').max(50)
     const parse = CodeSchema.safeParse(code)
-    
+
     if (!parse.success) {
-      return NextResponse.json({ 
-        error: 'Le code est requis et doit contenir au moins 5 caractères.', 
-        details: parse.error.errors 
+      return NextResponse.json({
+        error: 'Le code est requis et doit contenir au moins 5 caractères.',
+        details: parse.error.errors
       }, { status: 400 })
     }
 
@@ -81,13 +81,13 @@ export async function GET(request: Request) {
 
     if (!attestation) {
       // Message générique pour ne pas révéler si le code existe
-      return NextResponse.json({ 
-        error: "Aucun certificat n'a été trouvé avec ce code. Veuillez vérifier la saisie." 
+      return NextResponse.json({
+        error: "Aucun certificat n'a été trouvé avec ce code. Veuillez vérifier la saisie."
       }, { status: 404 })
     }
 
     return NextResponse.json({ attestation })
-    
+
   } catch (error: unknown) {
     console.error('Erreur vérification attestation:', error);
     return handleApiError(error instanceof Error ? error : new Error(String(error)), {

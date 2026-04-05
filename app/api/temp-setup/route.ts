@@ -48,7 +48,7 @@ export async function GET() {
             where: { id: result.user.id },
             data: { emailVerified: new Date() }
         });
-        
+
         results.push({ email: admin.email, id: result.user.id });
     }
 

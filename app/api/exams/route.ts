@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parse = ExamSchema.safeParse(body);
-    
+
     if (!parse.success) {
       return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
     }

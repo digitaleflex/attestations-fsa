@@ -109,13 +109,13 @@ export async function GET(req: NextRequest) {
 
     if (id) {
       const report = await prisma.report.findUnique({ where: { id } })
-      
+
       if (!report) {
-        return NextResponse.json({ 
-          message: "Signalement introuvable" 
+        return NextResponse.json({
+          message: "Signalement introuvable"
         }, { status: 404 })
       }
-      
+
       return NextResponse.json(report)
     }
 
@@ -124,15 +124,15 @@ export async function GET(req: NextRequest) {
       const count = await prisma.report.count()
       return NextResponse.json({ count })
     }
-    
+
     // Retourner la liste complète (admin uniquement normalement)
-    const reports = await prisma.report.findMany({ 
+    const reports = await prisma.report.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100  // Limiter à 100 résultats
     })
-    
+
     return NextResponse.json(reports)
-    
+
   } catch (e: unknown) {
     console.error('Erreur récupération signalements:', e)
     return handleApiError(e instanceof Error ? e : new Error(String(e)), {

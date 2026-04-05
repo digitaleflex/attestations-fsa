@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     const sanitizedEmail = sanitizeInput(email).toLowerCase();
     const sanitizedName = sanitizeInput(name);
 
-    // Vérifier si l'utilisateur existe déjà
+    // Vérifier si l'utilisateur existe déj�
     const existingUser = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
     if (existingUser) {
       return NextResponse.json(

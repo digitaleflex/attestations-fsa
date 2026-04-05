@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const user = await getCurrentUser(req);
     // On autorise les messages même non connectés (depuis le site public),
     // mais si l'utilisateur est connecté on l'identifie.
-    
+
     const body = await req.json();
     const { subject, message, email } = body;
 
@@ -25,10 +25,10 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Votre message a été envoyé à l'assistance. Une réponse vous sera apportée très prochainement.",
-      id: report.id 
+      id: report.id
     });
   } catch {
     console.error("[SUPPORT_POST_ERROR]");
