@@ -157,7 +157,7 @@ model Settings {
   instructorTitle    String   @default("Responsable des Formations")
   location           String   @default("Abomey-Calavi")
   signatureUrl       String?
-  supportEmail       String   @default("contact@eurinhash.com")
+  supportEmail       String   @default("contact@fermestandre.com")
 }
 
 model Report {

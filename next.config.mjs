@@ -23,6 +23,9 @@ const nextConfig = {
       // Suppression de la réécriture redondante
     ];
   },
+  experimental: {
+    useCache: true,
+  }
 };
 
 export default nextConfig;
