@@ -209,7 +209,7 @@ export default function AdminFormationsPage() {
               <Card key={f.id} className="bg-white shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
                 {/* En-tête coloré */}
                 <div className="h-2 bg-gradient-to-r from-emerald-500 to-blue-600" />
-                
+
                 <div className="p-5">
                   {/* Badge catégorie */}
                   {f.category && (
@@ -289,12 +289,12 @@ export default function AdminFormationsPage() {
               Supprimer cette formation ?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-              Vous allez supprimer cette formation du catalogue. 
+              Vous allez supprimer cette formation du catalogue.
               <span className="block mt-2 font-bold text-rose-600 italic">Attention : Cela ne supprimera pas les attestations déjà délivrées liées à cette formation.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel 
+            <AlertDialogCancel
               disabled={isDeleting}
               className="border-slate-200 text-slate-600 hover:bg-slate-50"
             >

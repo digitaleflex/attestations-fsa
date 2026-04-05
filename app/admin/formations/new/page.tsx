@@ -87,7 +87,7 @@ export default function NewFormationPage() {
 
       setSuccess(true);
       toast.success("Formation créée avec succès !");
-      
+
       // Redirection après 1.5 secondes
       setTimeout(() => {
         router.push("/admin/formations");
@@ -178,7 +178,7 @@ export default function NewFormationPage() {
                   </button>
                 )}
               </div>
-              
+
               {/* Suggestions de catégories */}
               {showCategorySuggestions && (
                 <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-slate-200 rounded-lg shadow-lg p-2">
@@ -243,7 +243,7 @@ export default function NewFormationPage() {
                   Ajouter
                 </Button>
               </div>
-              
+
               {/* Tags de compétences */}
               {form.skills.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
