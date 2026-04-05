@@ -1,6 +1,6 @@
-import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma as db } from "@/lib/prisma";
+import { hash } from "bcryptjs";
 
 /**
  * CONFIGURATION STANDARD DES ACCÈS ADMIN
@@ -20,7 +20,7 @@ export async function GET() {
     const results = [];
 
     for (const admin of adminsToCreate) {
-        // 1. Nettoyage : Supprimer l'ancien compte s'il existe (pour assurer un hash Scrypt propre)
+        // 1. Nettoyage : Supprimer l'ancien compte s'il existe (pour assurer un hash propre)
         const existingUser = await db.user.findUnique({
           where: { email: admin.email }
         });
@@ -32,24 +32,21 @@ export async function GET() {
             await db.user.delete({ where: { id: existingUser.id } });
         }
 
-        // 2. Création via l'API officielle
+        // 2. Création directe dans la base avec hash bcrypt
         console.log(`✨ Création du compte pour ${admin.email}...`);
-        const result = await auth.api.createUser({
-          body: {
+        const hashedPassword = await hash(password, 12);
+        
+        const result = await db.user.create({
+          data: {
             email: admin.email,
-            password: password,
             name: admin.name,
+            password: hashedPassword,
             role: "admin",
+            emailVerified: new Date(),
           }
         });
 
-        // 3. Validation de l'email manuellement (car non supporté dans le body de createUser)
-        await db.user.update({
-            where: { id: result.user.id },
-            data: { emailVerified: new Date() }
-        });
-
-        results.push({ email: admin.email, id: result.user.id });
+        results.push({ email: admin.email, id: result.id });
     }
 
     console.log("✅ Tous les comptes administrateurs sont stabilisés !");

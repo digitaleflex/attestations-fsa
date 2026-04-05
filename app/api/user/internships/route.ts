@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 // Schéma de validation pour une candidature
 const InternshipApplicationSchema = z.object({
@@ -58,6 +59,14 @@ export async function POST(request: Request) {
     }
 
     const userId = userSession.id;
+
+    // Rate limiting - 3 candidatures par heure par utilisateur
+    const rateLimit = await applyRateLimit(request, 'internship');
+    if (!rateLimit.allowed && rateLimit.response) {
+      const ip = request.headers.get('x-forwarded-for') || 'unknown';
+      console.warn(`[SECURITY] Rate limit exceeded for internship application from user ${userId}, IP: ${ip}`);
+      return rateLimit.response;
+    }
 
     const body = await request.json();
     const parse = InternshipApplicationSchema.safeParse(body);

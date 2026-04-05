@@ -131,24 +131,34 @@ export function SignupForm() {
     setLoading(true);
     setError(null);
 
+    // Sanitize name input
+    const sanitizedName = name.trim().replace(/[<>{}()]/g, "");
+    if (sanitizedName.length < 2) {
+      setError("Le nom doit contenir au moins 2 caractères");
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await authClient.signUp.email({
         email,
         password,
-        name,
+        name: sanitizedName,
         callbackURL: "/admin/dashboard",
       });
 
       if (error) {
-        setError(error.message || "Erreur lors de l'inscription");
-        toast.error("Erreur d'inscription", { description: error.message });
+        const errorMsg = error.message || "Email ou mot de passe invalide";
+        setError(errorMsg);
+        toast.error("Erreur d'inscription", { description: errorMsg });
       } else {
         toast.success("Bienvenue à la FSA !", { description: "Votre compte a été créé avec succès." });
         router.push("/admin/dashboard");
       }
     } catch (err) {
-      setError("Une erreur inattendue est survenue");
-      toast.error("Erreur système", { description: "Une erreur est survenue lors de l'inscription." });
+      const errorMsg = err instanceof Error ? err.message : "Une erreur inattendue est survenue";
+      setError(errorMsg);
+      toast.error("Erreur système", { description: "Impossible de créer le compte." });
     } finally {
       setLoading(false);
     }

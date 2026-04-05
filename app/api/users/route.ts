@@ -11,10 +11,10 @@ import { applyRateLimit } from "@/lib/rate-limit";
 import { sanitizeInput } from "@/lib/sanitization";
 
 const CreateUserSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caracteres"),
+  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   email: z.string().email("Email invalide"),
-  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caracteres"),
-  role: z.enum(["admin", "user"]).optional(),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  role: z.enum(["admin", "user", "ADMIN", "USER"]).optional(),
 });
 
 // GET - Liste des utilisateurs (Admin uniquement)
@@ -23,7 +23,7 @@ export async function GET() {
     // Authentification admin requise
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
-        { error: "Non autorise - Authentification admin requise" },
+        { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }
       );
     }
@@ -47,7 +47,7 @@ export async function GET() {
     });
     return NextResponse.json(users);
   } catch (error: unknown) {
-    console.error('Erreur lors de la recuperation des utilisateurs:', error);
+    console.error('Erreur lors de la récupération des utilisateurs:', error);
     return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: '/api/users',
       operation: 'list_users',
@@ -55,18 +55,18 @@ export async function GET() {
   }
 }
 
-// POST - Creer un utilisateur (Admin uniquement + rate limiting)
+// POST - Créer un utilisateur (Admin uniquement + rate limiting)
 export async function POST(request: Request) {
   try {
     // Authentification admin requise
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
-        { error: "Non autorise - Authentification admin requise" },
+        { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }
       );
     }
 
-    // Rate limiting pour eviter la creation massive de comptes
+    // Rate limiting pour éviter la création massive de comptes
     const rateLimit = await applyRateLimit(request, 'register');
     if (!rateLimit.allowed && rateLimit.response) {
       const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
     if (!parse.success) {
       return NextResponse.json(
-        { error: "Entree invalide", details: parse.error.errors },
+        { error: "Entrée invalide", details: parse.error.errors },
         { status: 400 }
       );
     }
@@ -89,12 +89,13 @@ export async function POST(request: Request) {
     // SANITIZATION - Clean email input before DB storage
     const sanitizedEmail = sanitizeInput(email).toLowerCase();
     const sanitizedName = sanitizeInput(name);
+    const normalizedRole = role?.toUpperCase() === "ADMIN" ? "admin" : (role || "user");
 
-    // Verifier si l'utilisateur existe deja
+    // Vérifier si l'utilisateur existe déjà
     const existingUser = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
     if (existingUser) {
       return NextResponse.json(
-        { error: "Un utilisateur avec cet email existe deja" },
+        { error: "Un utilisateur avec cet email existe déjà" },
         { status: 400 }
       );
     }
@@ -102,13 +103,13 @@ export async function POST(request: Request) {
     // Hacher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Creer l'utilisateur
+    // Créer l'utilisateur
     const user = await prisma.user.create({
       data: {
         name: sanitizedName,
         email: sanitizedEmail,
         password: hashedPassword,
-        role: role || "user",
+        role: normalizedRole,
         emailVerified: new Date(),
       },
       select: {
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { message: "Utilisateur cree avec succes", user },
+      { message: "Utilisateur créé avec succès", user },
       { status: 201 }
     );
   } catch (error: unknown) {

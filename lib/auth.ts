@@ -25,10 +25,12 @@ export type SessionData = {
 };
 
 // Vérification de la clé secrète
-if (!process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRET) {
-    if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ [AUTH WARN] BETTER_AUTH_SECRET or AUTH_SECRET is not defined in environment variables');
-    }
+const authSecret = process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET;
+if (!authSecret && process.env.NODE_ENV === 'production') {
+    throw new Error('BETTER_AUTH_SECRET or AUTH_SECRET must be set in production environment');
+}
+if (!authSecret && process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ [AUTH WARN] BETTER_AUTH_SECRET or AUTH_SECRET is not defined. Using dev-only fallback.');
 }
 
 import { admin } from "better-auth/plugins"
@@ -41,7 +43,7 @@ export const auth = betterAuth({
     database: prismaAdapter(rawPrisma, {
         provider: "postgresql",
     }),
-    secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "fallback-secret-for-dev-only",
+    secret: authSecret || "dev-fallback-secret-do-not-use-in-prod",
     baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : "http://localhost:3000"),
     trustedOrigins: [
         "https://fsa.eurinhash.com",
@@ -83,6 +85,30 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,
+        requireEmailVerification: false, // Set to true once email service is configured
+        sendResetPasswordEmail: true,
+    },
+    databaseHooks: {
+        user: {
+            create: {
+                before: async (user) => {
+                    // Set default role if not provided
+                    if (!user.role) {
+                        user.role = "user";
+                    }
+                    // Normalize role to lowercase
+                    if (user.role) {
+                        user.role = user.role.toLowerCase();
+                    }
+                    return Promise.resolve(user);
+                },
+                after: async (user) => {
+                    // Log user creation for audit purposes
+                    console.log(`[AUTH] User created: ${user.email} (role: ${user.role})`);
+                    return Promise.resolve();
+                },
+            },
+        },
     },
     plugins: [
         nextCookies(),
