@@ -103,7 +103,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
             <Calendar className="w-5 h-5 text-blue-600" />
             <h3 className="font-extrabold text-blue-800 uppercase tracking-tight text-sm">Programmation & Statut</h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-sm font-semibold text-blue-900">
@@ -293,7 +293,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">/20</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 shadow-sm">
                     <span className="text-xs font-bold text-emerald-500">Soit</span>
                     <span className="text-sm font-black text-emerald-700">{Math.round(formData.passingScore || 60)}%</span>

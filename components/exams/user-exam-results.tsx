@@ -5,14 +5,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  CheckCircle2, 
-  AlertCircle, 
-  Save, 
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Save,
   FileEdit,
   Sparkles,
-  RefreshCw 
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -80,14 +80,14 @@ export function UserExamResults({ userId }: { userId: string }) {
       });
 
       if (!res.ok) throw new Error("Erreur");
-      
+
       toast.success("Notes enregistrées !");
       setGradingId(null);
       // Refresh
-      const updated = submissions.map(s => s.id === id ? { 
-        ...s, 
-        scorePart1: gradingData.p1, 
-        scorePart2: gradingData.p2, 
+      const updated = submissions.map(s => s.id === id ? {
+        ...s,
+        scorePart1: gradingData.p1,
+        scorePart2: gradingData.p2,
         scorePart3: gradingData.p3,
         totalScore: gradingData.p1 + gradingData.p2 + gradingData.p3,
         status: "GRADED"
@@ -129,15 +129,15 @@ export function UserExamResults({ userId }: { userId: string }) {
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Partie 1 (QCM)</p>
                   {gradingId === s.id ? (
                     <div className="space-y-1">
-                      <Input 
-                        type="number" 
-                        value={gradingData.p1} 
+                      <Input
+                        type="number"
+                        value={gradingData.p1}
                         onChange={(e) => setGradingData({...gradingData, p1: parseFloat(e.target.value) || 0})}
                         className="h-7 text-center font-bold text-sm mt-1"
                       />
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="h-6 w-full text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
                         onClick={() => handleAutoGrade(s.id)}
                         disabled={isAutoGrading}
@@ -153,9 +153,9 @@ export function UserExamResults({ userId }: { userId: string }) {
                 <div className="p-2 bg-white rounded-lg border border-slate-100 text-center">
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Partie 2 (Ouverte)</p>
                   {gradingId === s.id ? (
-                    <Input 
-                      type="number" 
-                      value={gradingData.p2} 
+                    <Input
+                      type="number"
+                      value={gradingData.p2}
                       onChange={(e) => setGradingData({...gradingData, p2: parseFloat(e.target.value) || 0})}
                       className="h-7 text-center font-bold text-sm mt-1"
                     />
@@ -166,9 +166,9 @@ export function UserExamResults({ userId }: { userId: string }) {
                 <div className="p-2 bg-white rounded-lg border border-slate-100 text-center">
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Partie 3 (Cas)</p>
                   {gradingId === s.id ? (
-                    <Input 
-                      type="number" 
-                      value={gradingData.p3} 
+                    <Input
+                      type="number"
+                      value={gradingData.p3}
                       onChange={(e) => setGradingData({...gradingData, p3: parseFloat(e.target.value) || 0})}
                       className="h-7 text-center font-bold text-sm mt-1"
                     />

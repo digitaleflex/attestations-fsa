@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { 
-  Plus, 
-  Trash2, 
-  Clock, 
-  FileText, 
+import {
+  Plus,
+  Trash2,
+  Clock,
+  FileText,
   XCircle,
   Laptop2,
   HandMetal,
@@ -34,7 +34,7 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
       type,
       points: part.type === 'QCM' ? 2 : 10,
       options: type === 'SINGLE_CHOICE' ? [
-        { text: "", isCorrect: true }, 
+        { text: "", isCorrect: true },
         { text: "", isCorrect: false }
       ] : []
     }];
@@ -69,11 +69,11 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
   const updateOption = (qIndex: number, oIndex: number, updates: Partial<Option>) => {
     const question = part.questions[qIndex];
     let newOptions = [...(question.options || [])];
-    
+
     if (updates.isCorrect && question.type === 'SINGLE_CHOICE') {
       newOptions = newOptions.map(o => ({ ...o, isCorrect: false }));
     }
-    
+
     newOptions[oIndex] = { ...newOptions[oIndex], ...updates };
     updateQuestion(qIndex, { options: newOptions });
   };
@@ -106,7 +106,7 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
               <FileEdit className="w-5 h-5" />
               Configuration de l'Étude de Cas
             </Label>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <Card
                 className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group ${
@@ -195,8 +195,8 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-2">
                         <span className="text-slate-400">Type:</span>
-                        <select 
-                          value={q.type} 
+                        <select
+                          value={q.type}
                           onChange={(e: any) => updateQuestion(qIdx, { type: e.target.value })}
                           className="bg-slate-50 px-2 py-1 rounded border-none outline-none font-semibold text-slate-600"
                         >
@@ -207,9 +207,9 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-slate-400">Points:</span>
-                        <Input 
-                          type="number" 
-                          value={q.points} 
+                        <Input
+                          type="number"
+                          value={q.points}
                           onChange={(e) => updateQuestion(qIdx, { points: parseFloat(e.target.value) || 0 })}
                           className="w-14 h-6 text-center text-xs font-bold"
                         />
@@ -230,8 +230,8 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                   <div className="pl-12 space-y-2">
                     {q.options?.map((opt, oIdx) => (
                       <div key={oIdx} className="flex items-center gap-3">
-                        <Switch 
-                          checked={opt.isCorrect} 
+                        <Switch
+                          checked={opt.isCorrect}
                           onCheckedChange={(val) => updateOption(qIdx, oIdx, { isCorrect: val })}
                           className="data-[state=checked]:bg-emerald-500"
                         />
@@ -251,9 +251,9 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                         </Button>
                       </div>
                     ))}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => addOption(qIdx)}
                       className="text-slate-400 hover:text-primary gap-2 h-7 px-2"
                     >

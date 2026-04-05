@@ -4,10 +4,10 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Layout, 
-  ClipboardCheck, 
-  Save, 
+import {
+  Layout,
+  ClipboardCheck,
+  Save,
   Loader2,
   Laptop2,
   HandMetal
@@ -45,7 +45,7 @@ export function StepSummary({ formData, saving, onSave }: Props) {
             {formData.session && <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Session:</span> <span className="font-bold text-slate-800 uppercase italic">{formData.session}</span></div>}
             <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Durée Totale:</span> <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-none font-bold">{formatSeconds(formData.duration || 0)}</Badge></div>
             <div className="text-sm flex items-center gap-2">
-              <span className="text-slate-400">Seuil de Réussite:</span> 
+              <span className="text-slate-400">Seuil de Réussite:</span>
               <span className="font-bold text-emerald-600">{formData.passingScore || 60}%</span>
               <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-black border border-emerald-100">
                 ({((formData.passingScore || 60) * 20) / 100}/20)

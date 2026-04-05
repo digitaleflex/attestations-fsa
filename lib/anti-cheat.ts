@@ -23,7 +23,7 @@ export interface DetectionFlag {
   score?: number;
 }
 
-export type DetectionType = 
+export type DetectionType =
   | 'IDENTICAL_ANSWERS'
   | 'SUSPICIOUS_TIMING'
   | 'ANSWER_PATTERN_MATCH'
@@ -99,8 +99,8 @@ export async function analyzeAnswerPattern(
     isSuspicious: flags.length > 0,
     flags,
     similarityScore: flags.find(f => f.type === 'ANSWER_PATTERN_MATCH')?.score,
-    confidence: flags.some(f => f.severity === 'CRITICAL') ? 'HIGH' 
-      : flags.some(f => f.severity === 'HIGH') ? 'MEDIUM' 
+    confidence: flags.some(f => f.severity === 'CRITICAL') ? 'HIGH'
+      : flags.some(f => f.severity === 'HIGH') ? 'MEDIUM'
       : 'LOW',
   };
 }
@@ -126,7 +126,7 @@ function checkIdenticalAnswers(
 
     // Check if all answers match
     const allMatch = currentKeys.every(key => currentAnswers[key] === otherAnswers[key]);
-    
+
     if (allMatch) {
       matches.push({ userId: session.userId, score: 1.0 });
     }

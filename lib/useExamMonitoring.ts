@@ -53,18 +53,18 @@ export function useExamMonitoring({
 
       const newState: MonitoringState = {
         events: newEvents,
-        tabSwitches: event.type === 'VISIBILITY_CHANGE' && event.details === 'hidden' 
-          ? prev.tabSwitches + 1 
+        tabSwitches: event.type === 'VISIBILITY_CHANGE' && event.details === 'hidden'
+          ? prev.tabSwitches + 1
           : prev.tabSwitches,
         blurCount: event.type === 'BLUR' ? prev.blurCount + 1 : prev.blurCount,
         totalSuspiciousEvents: isSuspicious ? prev.totalSuspiciousEvents + 1 : prev.totalSuspiciousEvents,
-        isCurrentlyVisible: event.type === 'VISIBILITY_CHANGE' 
+        isCurrentlyVisible: event.type === 'VISIBILITY_CHANGE'
           ? event.details !== 'hidden'
           : prev.isCurrentlyVisible,
-        isCurrentlyFocused: event.type === 'FOCUS' 
-          ? true 
-          : event.type === 'BLUR' 
-            ? false 
+        isCurrentlyFocused: event.type === 'FOCUS'
+          ? true
+          : event.type === 'BLUR'
+            ? false
             : prev.isCurrentlyFocused,
       };
 
