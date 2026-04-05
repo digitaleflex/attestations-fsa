@@ -34,8 +34,8 @@ export default function Home() {
       {/* --- HERO SECTION --- */}
       <section className="relative w-full min-h-[75vh] flex flex-col items-center justify-center text-center overflow-hidden pt-20 md:pt-24 px-4 pb-12">
         {/* Parallax Background */}
-        <div 
-          className="absolute inset-0 z-0 bg-[url('/images/hero-bg.png')] bg-cover bg-center bg-fixed opacity-[0.08] pointer-events-none transition-transform duration-700" 
+        <div
+          className="absolute inset-0 z-0 bg-[url('/images/hero-bg.png')] bg-cover bg-center bg-fixed opacity-[0.08] pointer-events-none transition-transform duration-700"
           aria-hidden="true"
         />
         {/* Subtle Gradient Overlays for Readability */}

@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Briefcase, 
-  Send, 
-  Loader2, 
-  CheckCircle2, 
-  MapPin, 
-  GraduationCap, 
-  Mail, 
+import {
+  Briefcase,
+  Send,
+  Loader2,
+  CheckCircle2,
+  MapPin,
+  GraduationCap,
+  Mail,
   Phone,
-  FileText 
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -46,7 +46,7 @@ export default function InternshipApplicationPage() {
       });
 
       if (!res.ok) throw new Error("Erreur");
-      
+
       toast.success("Votre demande a été envoyée !");
       setSubmitted(true);
     } catch {
@@ -126,13 +126,13 @@ export default function InternshipApplicationPage() {
               <div className="space-y-3">
                 <Label htmlFor="fullName" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Nom complet</Label>
                 <div className="relative">
-                  <Input 
-                    id="fullName" 
+                  <Input
+                    id="fullName"
                     placeholder="Jean Dupont"
                     value={formData.fullName}
                     onChange={(e) => setFormData({...formData, fullName: e.target.value})}
                     required
-                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner" 
+                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
                   />
                   <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><FileText className="w-5 h-5" /></div>
                 </div>
@@ -140,14 +140,14 @@ export default function InternshipApplicationPage() {
               <div className="space-y-3">
                 <Label htmlFor="email" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Email</Label>
                 <div className="relative">
-                  <Input 
-                    id="email" 
+                  <Input
+                    id="email"
                     type="email"
                     placeholder="jean.dupont@email.com"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                     required
-                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner" 
+                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
                   />
                   <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><Mail className="w-5 h-5" /></div>
                 </div>
@@ -155,13 +155,13 @@ export default function InternshipApplicationPage() {
               <div className="space-y-3">
                 <Label htmlFor="phone" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Téléphone</Label>
                 <div className="relative">
-                  <Input 
-                    id="phone" 
+                  <Input
+                    id="phone"
                     placeholder="+229 ..."
                     value={formData.phone}
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     required
-                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner" 
+                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
                   />
                   <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><Phone className="w-5 h-5" /></div>
                 </div>
@@ -169,7 +169,7 @@ export default function InternshipApplicationPage() {
               <div className="space-y-3">
                 <Label htmlFor="position" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Poste souhaité</Label>
                 <div className="relative">
-                  <select 
+                  <select
                     id="position"
                     value={formData.position}
                     onChange={(e) => setFormData({...formData, position: e.target.value})}
@@ -190,51 +190,51 @@ export default function InternshipApplicationPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <div className="space-y-3">
                   <Label htmlFor="university" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Université / Établissement</Label>
-                  <Input 
-                    id="university" 
+                  <Input
+                    id="university"
                     placeholder="Nom de votre école"
                     value={formData.university}
                     onChange={(e) => setFormData({...formData, university: e.target.value})}
-                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner" 
+                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
                   />
                </div>
                <div className="space-y-3">
                   <Label htmlFor="level" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Niveau d'études</Label>
-                  <Input 
-                    id="level" 
+                  <Input
+                    id="level"
                     placeholder="Ex: Master 1"
                     value={formData.level}
                     onChange={(e) => setFormData({...formData, level: e.target.value})}
-                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner" 
+                    className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
                   />
                </div>
             </div>
 
             <div className="space-y-3">
                <Label htmlFor="cvUrl" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Lien CV (Google Drive/Dropbox)</Label>
-               <Input 
-                 id="cvUrl" 
+               <Input
+                 id="cvUrl"
                  placeholder="Lien vers votre CV document PDF"
                  value={formData.cvUrl}
                  onChange={(e) => setFormData({...formData, cvUrl: e.target.value})}
-                 className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner" 
+                 className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
                />
             </div>
 
             <div className="space-y-3">
                <Label htmlFor="message" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Pourquoi choisir la Ferme St André ?</Label>
-               <Textarea 
-                 id="message" 
+               <Textarea
+                 id="message"
                  placeholder="Dites-nous en plus sur vos motivations..."
                  value={formData.message}
                  onChange={(e) => setFormData({...formData, message: e.target.value})}
-                 className="min-h-[120px] p-6 bg-slate-50 border-none rounded-3xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner outline-none resize-none" 
+                 className="min-h-[120px] p-6 bg-slate-50 border-none rounded-3xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner outline-none resize-none"
                />
             </div>
 
             <div className="flex justify-end pt-4">
-               <Button 
-                type="submit" 
+               <Button
+                type="submit"
                 disabled={loading}
                 className="h-16 px-12 bg-emerald-600 hover:bg-emerald-700 rounded-3xl font-black text-lg gap-4 shadow-2xl shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95 group"
                >

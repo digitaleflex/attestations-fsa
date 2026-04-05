@@ -43,7 +43,7 @@ export default function CGUPage() {
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
             <p><strong>Raison sociale :</strong> Ferme Agro-piscicole Saint André</p>
             <p><strong>Siège :</strong> Cotonou, Bénin</p>
-            <p><strong>Téléphone :</strong> +229 01 07 60 93</p>
+            <p><strong>Téléphone :</strong> +229 01 91 07 60 93</p>
           </div>
         </section>
 
@@ -177,7 +177,7 @@ export default function CGUPage() {
 
           <h3 className="font-bold text-slate-800 mt-4 mb-2">9.2 De l'Utilisateur</h3>
           <p>
-            L'Utilisateur est responsable de l'usage qu'il fait de la Plateforme et s'engage à
+            L'Utilisateur est responsable de l'usage qu'il fait de la Plateforme et s'engage �
             respecter les présentes CGU ainsi que la législation en vigueur.
           </p>
         </section>
@@ -236,7 +236,7 @@ export default function CGUPage() {
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
             <p><strong>Ferme Agro-piscicole Saint André</strong></p>
             <p>Cotonou, Bénin</p>
-            <p>Téléphone : +229 01 07 60 93</p>
+            <p>Téléphone : +229 01 91 07 60 93</p>
           </div>
         </section>
       </div>

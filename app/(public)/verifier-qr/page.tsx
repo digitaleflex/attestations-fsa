@@ -19,4 +19,4 @@ export default function VerifierQrPage() {
       <a href="/" className="mt-8 text-blue-700 hover:underline">Retour à l'accueil</a>
     </div>
   );
-} 
+}

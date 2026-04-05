@@ -30,7 +30,7 @@ export default function MentionsLegalesPage() {
             <p><strong>Raison sociale :</strong> Ferme Agro-piscicole Saint André</p>
             <p><strong>Forme juridique :</strong> <em>[à préciser]</em></p>
             <p><strong>Siège social :</strong> Cotonou, Bénin</p>
-            <p><strong>Téléphone :</strong> +229 01 07 60 93</p>
+            <p><strong>Téléphone :</strong> +229 01 91 07 60 93</p>
             <p><strong>Directeur de publication :</strong> <em>[à préciser]</em></p>
           </div>
         </section>

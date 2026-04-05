@@ -48,7 +48,7 @@ export default function ConfidentialitePage() {
             Pour toute question relative à vos données, vous pouvez nous contacter :
           </p>
           <ul className="mt-2 space-y-1 ml-6 list-disc">
-            <li>Téléphone : <strong>+229 01 07 60 93</strong></li>
+            <li>Téléphone : <strong>+229 01 91 07 60 93</strong></li>
             <li>Adresse : <strong>Cotonou, Bénin</strong></li>
           </ul>
         </section>
@@ -171,7 +171,7 @@ export default function ConfidentialitePage() {
             <li><strong>Droit à la limitation</strong> : demander la limitation du traitement de vos données</li>
           </ul>
           <p className="mt-2">
-            Pour exercer vos droits, contactez-nous à <strong>+229 01 07 60 93</strong> ou par courrier à
+            Pour exercer vos droits, contactez-nous à <strong>+229 01 91 07 60 93</strong> ou par courrier �
             <strong> Cotonou, Bénin</strong>.
           </p>
         </section>
@@ -225,7 +225,7 @@ export default function ConfidentialitePage() {
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
             <p><strong>Ferme Agro-piscicole Saint André</strong></p>
             <p>Cotonou, Bénin</p>
-            <p>Téléphone : +229 01 07 60 93</p>
+            <p>Téléphone : +229 01 91 07 60 93</p>
           </div>
         </section>
       </div>

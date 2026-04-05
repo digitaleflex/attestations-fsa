@@ -15,7 +15,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen flex flex-col items-center justify-between bg-gradient-to-br from-gray-50 to-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
       {/* Navigation Client */}
       <PublicHeader />
-      
+
       {/* Contenu Principal */}
       <main className="flex-1 w-full flex flex-col items-center justify-center pt-4 md:pt-8 bg-grid-slate-100 bg-[size:40px_40px] relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,theme(colors.white),transparent)] opacity-70" />
@@ -106,7 +106,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                     <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:scale-110">
                       <Phone className="w-3.5 h-3.5" />
                     </div>
-                    <span>+229 01 07 60 93</span>
+                    <span>+229 01 91 07 60 93</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-600 font-medium group cursor-pointer hover:text-emerald-600 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:scale-110">
@@ -136,4 +136,4 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       </footer>
     </div>
   );
-} 
+}

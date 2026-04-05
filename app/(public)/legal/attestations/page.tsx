@@ -195,7 +195,7 @@ export default function AttestationsPage() {
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
             <p><strong>Ferme Agro-piscicole Saint André</strong></p>
             <p>Cotonou, Bénin</p>
-            <p>Téléphone : +229 01 07 60 93</p>
+            <p>Téléphone : +229 01 91 07 60 93</p>
           </div>
         </section>
 

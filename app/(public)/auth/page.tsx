@@ -183,23 +183,23 @@ export default function AuthPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    
+
     // Formatage automatique de la date (JJ/MM/AAAA)
     if (name === "birthDate") {
       let formatted = value.replace(/\D/g, ""); // Garde seulement les chiffres
       if (formatted.length > 8) formatted = formatted.slice(0, 8);
-      
+
       // Ajoute les slashes automatiquement
       if (formatted.length >= 5) {
         formatted = `${formatted.slice(0, 2)}/${formatted.slice(2, 4)}/${formatted.slice(4)}`;
       } else if (formatted.length >= 3) {
         formatted = `${formatted.slice(0, 2)}/${formatted.slice(2)}`;
       }
-      
+
       setForm((prev) => ({ ...prev, birthDate: formatted }));
       return;
     }
-    
+
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
@@ -327,7 +327,7 @@ export default function AuthPage() {
       const errorMessage = translateAuthError(err?.message || err?.code || "Une erreur inattendue est survenue");
       setError(errorMessage);
       toast.error(errorMessage);
-      
+
       // Gestion visuelle des étapes si erreur email
       if (errorMessage.toLowerCase().includes("email")) {
         setWizardStep(1);

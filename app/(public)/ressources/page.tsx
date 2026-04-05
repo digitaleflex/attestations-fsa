@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
-  BookOpen, 
-  Video, 
-  FileText, 
-  Download, 
-  Search, 
+import {
+  BookOpen,
+  Video,
+  FileText,
+  Download,
+  Search,
   ArrowRight,
   Sparkles,
   Library,
@@ -54,7 +54,7 @@ export default function RessourcesPage() {
     fetchRessources();
   }, []);
 
-  const filtered = resources.filter(r => 
+  const filtered = resources.filter(r =>
     r.title.toLowerCase().includes(search.toLowerCase()) ||
     r.category?.toLowerCase().includes(search.toLowerCase()) ||
     r.description?.toLowerCase().includes(search.toLowerCase())
@@ -68,14 +68,14 @@ export default function RessourcesPage() {
           <div className="absolute top-10 left-10 w-64 h-64 bg-emerald-500 rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
-        
+
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex flex-col items-center text-center space-y-6">
             <div className="flex items-center gap-2 text-emerald-600">
                <Library className="w-5 h-5" />
                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Espace Apprentissage</span>
             </div>
-            
+
             <div className="space-y-3">
               <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight">
                 Bibliothèque <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600 italic">Digitale</span> FSA
@@ -88,8 +88,8 @@ export default function RessourcesPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-lg mt-4">
               <div className="relative w-full group">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                 <Input 
-                   placeholder="Rechercher un cours, un manuel..." 
+                 <Input
+                   placeholder="Rechercher un cours, un manuel..."
                    className="pl-12 h-14 rounded-2xl bg-white border-slate-200 shadow-xl shadow-slate-100/50 w-full"
                    value={search}
                    onChange={e => setSearch(e.target.value)}
@@ -185,7 +185,7 @@ function ResourcePublicCard({ resource }: { resource: Resource }) {
       <div className={`aspect-video w-full flex items-center justify-center relative overflow-hidden bg-slate-50`}>
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
         <Icon className="w-16 h-16 text-slate-200 transition-all duration-700 group-hover:scale-125 group-hover:rotate-6" />
-        
+
         <div className="absolute bottom-6 left-6 z-20 opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
           <Badge className="bg-white/90 backdrop-blur-md text-slate-900 border-none px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
              {resource.type}

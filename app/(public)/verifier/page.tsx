@@ -42,7 +42,7 @@ function VerifierContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "N/A";
     try {
@@ -110,7 +110,8 @@ function VerifierContent() {
       const timeout = setTimeout(() => setShowConfetti(false), 3000);
       return () => clearTimeout(timeout);
     }
-  }, [showConfetti]);  return (
+  }, [showConfetti]);
+  return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 relative overflow-hidden p-4">
       {/* Elements Décoratifs Arrière-plan */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px]" />
@@ -118,7 +119,7 @@ function VerifierContent() {
 
       <div className="w-full max-w-2xl mx-auto z-20">
         <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] p-10 flex flex-col items-center animate-in fade-in zoom-in duration-700">
-          
+
           {/* Zone En-tête */}
           <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-blue-600 p-0.5 mb-8 shadow-xl shadow-emerald-500/10 group hover:rotate-6 transition-transform duration-500">
             <div className="w-full h-full bg-white rounded-[1.4rem] flex items-center justify-center">
@@ -144,7 +145,7 @@ function VerifierContent() {
                 disabled={loading}
               />
             </div>
-            
+
             <button
               type="submit"
               className="w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-lg shadow-xl shadow-slate-200 hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3"
@@ -165,7 +166,7 @@ function VerifierContent() {
           {result && (
             <div className="w-full animate-in slide-in-from-top-4 fade-in duration-500">
                <div className={`relative overflow-hidden rounded-3xl border ${result.status === 'VALIDATED' ? 'border-emerald-500/20 bg-emerald-50/50' : result.status === 'PENDING' ? 'border-amber-500/20 bg-amber-50/50' : 'border-rose-500/20 bg-rose-50/50'} p-8`}>
-                  
+
                   {/* Status Badge Group */}
                   <div className="flex items-center gap-5 mb-8">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${result.status === 'VALIDATED' ? 'bg-emerald-500 text-white' : result.status === 'PENDING' ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'}`}>
@@ -191,7 +192,7 @@ function VerifierContent() {
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Formation</span>
                         <span className="text-slate-900 font-bold block leading-tight">{result.formation?.name || "Certificat FSA"}</span>
                       </div>
-                      
+
                       {/* Période de Formation */}
                       <div className="sm:col-span-2 bg-slate-50/50 rounded-2xl p-5 border border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex-1">
@@ -212,7 +213,7 @@ function VerifierContent() {
                        <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Document Certifié</p>
                        <div className="bg-white rounded-xl overflow-hidden shadow-2xl relative border border-slate-100">
                           <div className="scale-[0.38] origin-top mb-[-460px] opacity-95">
-                              <OfficialDocument 
+                              <OfficialDocument
                                   data={{
                                       id: "verification-preview",
                                       fullName: result.fullName,
