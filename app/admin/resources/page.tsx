@@ -1,10 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { 
-  Library, 
-  BookOpen, 
-  Video, 
-  FileText, 
+import {
+  Library,
+  BookOpen,
+  Video,
+  FileText,
   Link as LinkIcon,
   Search,
   Trash2,
@@ -19,19 +19,19 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -151,7 +151,7 @@ export default function AdminResourcesPage() {
     }
   };
 
-  const filtered = resources.filter(r => 
+  const filtered = resources.filter(r =>
     r.title.toLowerCase().includes(search.toLowerCase()) ||
     r.category?.toLowerCase().includes(search.toLowerCase())
   );
@@ -173,8 +173,8 @@ export default function AdminResourcesPage() {
         <div className="flex items-center gap-3">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-            <Input 
-              placeholder="Rechercher un support..." 
+            <Input
+              placeholder="Rechercher un support..."
               className="pl-10 w-[280px] bg-white border-slate-200 shadow-sm rounded-xl h-12 focus:ring-primary/20 transition-all"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -197,14 +197,14 @@ export default function AdminResourcesPage() {
                 </DialogTitle>
                 <p className="text-slate-400 mt-2 font-medium">Ajoutez un lien vers un manuel, une vidéo ou une fiche.</p>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="col-span-2 space-y-2">
                     <Label className="font-bold text-slate-700">Titre du document</Label>
-                    <Input 
-                      required 
-                      placeholder="Indiquez un titre clair..." 
+                    <Input
+                      required
+                      placeholder="Indiquez un titre clair..."
                       className="rounded-xl h-12"
                       value={formData.title}
                       onChange={e => setFormData({ ...formData, title: e.target.value })}
@@ -228,8 +228,8 @@ export default function AdminResourcesPage() {
 
                   <div className="space-y-2">
                     <Label className="font-bold text-slate-700">Thématique</Label>
-                    <Input 
-                      placeholder="ex: Pisciculture" 
+                    <Input
+                      placeholder="ex: Pisciculture"
                       className="rounded-xl h-12"
                       value={formData.category}
                       onChange={e => setFormData({ ...formData, category: e.target.value })}
@@ -240,9 +240,9 @@ export default function AdminResourcesPage() {
                     <Label className="font-bold text-slate-700">Lien du document (OneDrive, GDrive, YT...)</Label>
                     <div className="relative">
                       <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input 
-                        required 
-                        placeholder="https://..." 
+                      <Input
+                        required
+                        placeholder="https://..."
                         className="pl-10 rounded-xl h-12"
                         type="url"
                         value={formData.url}
@@ -253,8 +253,8 @@ export default function AdminResourcesPage() {
 
                   <div className="col-span-2 space-y-2">
                     <Label className="font-bold text-slate-700">Présentation rapide</Label>
-                    <Textarea 
-                      placeholder="Décrivez brièvement le contenu..." 
+                    <Textarea
+                      placeholder="Décrivez brièvement le contenu..."
                       className="rounded-xl min-h-[100px] resize-none"
                       value={formData.description}
                       onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -299,7 +299,7 @@ export default function AdminResourcesPage() {
                 </>
             )}
           </TabsContent>
-          
+
           {["BOOK", "VIDEO", "REVISION_FILE"].map(type => (
             <TabsContent key={type} value={type} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 outline-none">
               {filtered.filter(r => r.type === type).map(res => (
@@ -313,26 +313,26 @@ export default function AdminResourcesPage() {
   );
 }
 
-function ResourceCard({ 
-    resource, 
-    onDelete, 
-    onToggle 
-}: { 
-    resource: Resource, 
+function ResourceCard({
+    resource,
+    onDelete,
+    onToggle
+}: {
+    resource: Resource,
     onDelete: (id: string) => void,
     onToggle: (id: string, status: boolean) => void
 }) {
   const Icon = resource.type === 'BOOK' ? BookOpen : resource.type === 'VIDEO' ? Video : FileText;
-  const cardColor = resource.type === 'BOOK' ? 'from-blue-500 to-indigo-600' : 
-                    resource.type === 'VIDEO' ? 'from-rose-500 to-red-600' : 
+  const cardColor = resource.type === 'BOOK' ? 'from-blue-500 to-indigo-600' :
+                    resource.type === 'VIDEO' ? 'from-rose-500 to-red-600' :
                     'from-emerald-500 to-teal-600';
-  
+
   return (
     <Card className="group overflow-hidden border-none shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col bg-white rounded-[2.5rem] ring-1 ring-slate-100">
       <div className={`aspect-[16/9] bg-gradient-to-br ${cardColor} flex items-center justify-center relative overflow-hidden`}>
         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
         <Icon className="w-16 h-16 text-white/40 group-hover:scale-125 group-hover:rotate-6 transition-transform duration-700" />
-        
+
         {!resource.isPublished && (
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] flex items-center justify-center z-10">
              <div className="flex flex-col items-center gap-2">
@@ -362,16 +362,16 @@ function ResourceCard({
 
         <div className="pt-6 mt-auto border-t border-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <Button 
+             <Button
                 onClick={() => onToggle(resource.id, resource.isPublished)}
-                variant="ghost" 
-                size="sm" 
+                variant="ghost"
+                size="sm"
                 className={`rounded-xl font-bold text-[10px] uppercase gap-2 transition-all ${resource.isPublished ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 hover:bg-slate-100'}`}
              >
                {resource.isPublished ? <><Eye className="w-3.5 h-3.5" /> En ligne</> : <><EyeOff className="w-3.5 h-3.5" /> Masqué</>}
              </Button>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>

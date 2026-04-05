@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  Briefcase, 
-  Mail, 
-  Phone, 
-  GraduationCap, 
+import {
+  Loader2,
+  Briefcase,
+  Mail,
+  Phone,
+  GraduationCap,
   Calendar,
   CheckCircle,
   XCircle,
@@ -21,12 +21,12 @@ import {
   Plus
 } from "lucide-react";
 import { toast } from "sonner";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 
 type Request = {
@@ -129,7 +129,7 @@ export default function AdminInternshipsPage() {
     }
   };
 
-  const filtered = Array.isArray(requests) 
+  const filtered = Array.isArray(requests)
     ? (filter === 'ALL' ? requests : requests.filter(r => r.status === filter))
     : [];
 
@@ -144,10 +144,10 @@ export default function AdminInternshipsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
             {['ALL', 'PENDING', 'REVIEWING', 'ACCEPTED', 'REJECTED'].map((s) => (
-                <Button 
-                  key={s} 
-                  variant={filter === s ? "default" : "outline"} 
-                  size="sm" 
+                <Button
+                  key={s}
+                  variant={filter === s ? "default" : "outline"}
+                  size="sm"
                   onClick={() => setFilter(s)}
                   className="h-9"
                 >
@@ -195,10 +195,10 @@ export default function AdminInternshipsPage() {
                       <XCircle className="w-4 h-4" />
                     </Button>
                     {r.status === 'ACCEPTED' && (
-                        <Button 
-                         variant="ghost" 
-                         size="icon" 
-                         className="text-amber-500 hover:bg-amber-50" 
+                        <Button
+                         variant="ghost"
+                         size="icon"
+                         className="text-amber-500 hover:bg-amber-50"
                          onClick={() => setAttestModal(r)}
                          title="Délivrer attestation"
                         >
@@ -227,7 +227,7 @@ export default function AdminInternshipsPage() {
                      </div>
                   </div>
               </div>
-              
+
               <div className="p-8 space-y-8 bg-white">
                  <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-4">
@@ -303,8 +303,8 @@ export default function AdminInternshipsPage() {
                   <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase">Début du stage</label>
-                          <input 
-                            type="date" 
+                          <input
+                            type="date"
                             className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50"
                             value={attestForm.startDate}
                             onChange={(e) => setAttestForm({...attestForm, startDate: e.target.value})}
@@ -312,8 +312,8 @@ export default function AdminInternshipsPage() {
                       </div>
                       <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase">Fin du stage</label>
-                          <input 
-                            type="date" 
+                          <input
+                            type="date"
                             className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50"
                             value={attestForm.endDate}
                             onChange={(e) => setAttestForm({...attestForm, endDate: e.target.value})}
@@ -323,8 +323,8 @@ export default function AdminInternshipsPage() {
 
                   <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase">Lieu</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Abomey-Calavi"
                         className="w-full p-2 border border-slate-200 rounded-lg text-sm"
                         value={attestForm.location}
@@ -334,8 +334,8 @@ export default function AdminInternshipsPage() {
 
                   <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase">Formateur / Responsable</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Nom du responsable"
                         className="w-full p-2 border border-slate-200 rounded-lg text-sm"
                         value={attestForm.instructor}
@@ -345,7 +345,7 @@ export default function AdminInternshipsPage() {
 
                   <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase">Observations</label>
-                      <textarea 
+                      <textarea
                         className="w-full p-2 border border-slate-200 rounded-lg text-sm min-h-[80px]"
                         value={attestForm.observations}
                         onChange={(e) => setAttestForm({...attestForm, observations: e.target.value})}
@@ -355,8 +355,8 @@ export default function AdminInternshipsPage() {
 
               <div className="flex gap-2 mt-6">
                   <Button variant="outline" className="flex-1" onClick={() => setAttestModal(null)}>Annuler</Button>
-                  <Button 
-                    className="flex-1 bg-amber-600 hover:bg-amber-700 gap-2 text-white" 
+                  <Button
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 gap-2 text-white"
                     onClick={generateAttestation}
                     disabled={isGenerating}
                   >

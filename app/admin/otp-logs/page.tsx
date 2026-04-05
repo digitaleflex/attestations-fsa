@@ -110,7 +110,7 @@ export default function OTPLogsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export default function OTPLogsPage() {
               >
                 <div className="p-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    
+
                     {/* Left: Email + Type */}
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                       <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">

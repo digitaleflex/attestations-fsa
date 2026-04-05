@@ -4,9 +4,9 @@ import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
-  FileText, 
+import {
+  User,
+  FileText,
   AlertCircle,
   RefreshCw,
   Loader2
@@ -60,7 +60,7 @@ export default function AdminCorrectionsPage() {
         body: JSON.stringify({ id, status }),
       });
       if (!res.ok) throw new Error("Erreur");
-      
+
       toast.success(status === "APPROVED" ? "Demande approuvée !" : "Demande rejetée");
       fetchCorrections();
     } catch {
@@ -86,8 +86,8 @@ export default function AdminCorrectionsPage() {
       {/* Filtres */}
       <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 max-w-fit">
         {["PENDING", "APPROVED", "REJECTED", "ALL"].map(s => (
-          <Button 
-            key={s} 
+          <Button
+            key={s}
             size="sm"
             variant={filter === s ? "default" : "ghost"}
             onClick={() => setFilter(s)}

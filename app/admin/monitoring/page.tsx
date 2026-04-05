@@ -93,13 +93,13 @@ export default function MonitoringDashboard() {
     );
   }
 
-  const filteredSecurity = data?.securityLogs.filter(log => 
+  const filteredSecurity = data?.securityLogs.filter(log =>
     log.eventType.toLowerCase().includes(search.toLowerCase()) ||
     log.action?.toLowerCase().includes(search.toLowerCase()) ||
     log.ipAddress?.includes(search)
   ) || [];
 
-  const filteredAudit = data?.auditLogs.filter(log => 
+  const filteredAudit = data?.auditLogs.filter(log =>
     log.user.name.toLowerCase().includes(search.toLowerCase()) ||
     log.action.toLowerCase().includes(search.toLowerCase()) ||
     log.resource.toLowerCase().includes(search.toLowerCase())
@@ -125,16 +125,16 @@ export default function MonitoringDashboard() {
         <div className="flex items-center gap-3">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-            <Input 
-              placeholder="Rechercher IP, Action, Utilisateur..." 
+            <Input
+              placeholder="Rechercher IP, Action, Utilisateur..."
               className="pl-10 w-[300px] bg-white border-slate-200 shadow-sm focus:ring-primary/20 h-11 rounded-xl"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button 
-            onClick={fetchLogs} 
-            variant="outline" 
+          <Button
+            onClick={fetchLogs}
+            variant="outline"
             className="h-11 w-11 rounded-xl bg-white hover:bg-slate-50"
           >
             <RefreshCcw className="w-5 h-5" />
@@ -204,13 +204,13 @@ export default function MonitoringDashboard() {
         <Tabs defaultValue="security" className="space-y-6" onValueChange={setActiveTab}>
           <div className="flex items-center justify-between bg-white/50 p-1.5 rounded-2xl border border-slate-200/60 backdrop-blur-sm">
             <TabsList className="bg-transparent gap-2 h-auto">
-              <TabsTrigger 
-                value="security" 
+              <TabsTrigger
+                value="security"
                 className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary h-11 px-6 font-bold flex gap-2"
               >
                 <Shield className="w-4 h-4" /> Journaux de Sécurité
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="audit"
                 className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary h-11 px-6 font-bold flex gap-2"
               >
@@ -291,7 +291,7 @@ function SecurityLogItem({ log }: { log: SecurityLog }) {
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isHigh ? 'bg-rose-100 text-rose-600' : isWarning ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
           <Fingerprint className="w-5 h-5" />
         </div>
-        
+
         <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
           <div className="space-y-1">
             <h4 className="font-bold text-slate-800 flex items-center gap-2">
@@ -338,7 +338,7 @@ function AuditLogItem({ log }: { log: AuditLog }) {
         <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
           <Database className="w-5 h-5" />
         </div>
-        
+
         <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
           <div className="space-y-1">
             <h4 className="font-bold text-slate-800">{log.user.name}</h4>

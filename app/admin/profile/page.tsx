@@ -150,7 +150,7 @@ export default function AdminProfilePage() {
         <Card className="overflow-hidden">
           {/* En-tête coloré */}
           <div className="h-32 bg-gradient-to-r from-emerald-500 to-blue-600" />
-          
+
           {/* Avatar et infos */}
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-end -mt-12 gap-4">

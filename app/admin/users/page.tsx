@@ -34,11 +34,11 @@ import { Loader2, Plus, Edit, Trash2, UserPlus, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { UserExamResults } from "@/components/exams/user-exam-results";
 import { UserAuditLogs } from "@/components/admin/user-audit-logs";
-import { 
-  ShieldAlert, 
-  Unlock, 
-  KeyRound, 
-  History, 
+import {
+  ShieldAlert,
+  Unlock,
+  KeyRound,
+  History,
   Ban,
   Activity,
   CheckCircle2,
@@ -124,10 +124,10 @@ export default function AdminUsersPage() {
       });
     } else {
       setEditingUser(null);
-      setForm({ 
-        name: "", 
-        email: "", 
-        password: "", 
+      setForm({
+        name: "",
+        email: "",
+        password: "",
         role: "user",
         birthDate: "",
         birthPlace: "",
@@ -153,17 +153,17 @@ export default function AdminUsersPage() {
       const url = editingUser ? `/api/users/${editingUser.id}` : "/api/users";
       const method = editingUser ? "PATCH" : "POST";
 
-      const body: any = { 
+      const body: any = {
         name: form.name,
         email: form.email,
         role: form.role,
       };
-      
+
       // Ajouter le mot de passe seulement si c'est un nouvel utilisateur ou si un nouveau est saisi
       if (!editingUser || form.password) {
         body.password = form.password;
       }
-      
+
       // Ajouter les informations personnelles
       if (form.birthDate) body.birthDate = new Date(form.birthDate);
       if (form.birthPlace) body.birthPlace = form.birthPlace;
@@ -312,10 +312,10 @@ export default function AdminUsersPage() {
                   <option value="admin">Administrateur</option>
                 </select>
               </div>
-              
+
               <div className="border-t pt-4 mt-4">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Informations personnelles</h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="birthDate">Date de naissance</Label>
@@ -338,7 +338,7 @@ export default function AdminUsersPage() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                   <div>
                     <Label htmlFor="phone">Téléphone</Label>
@@ -363,7 +363,7 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Annuler
@@ -517,14 +517,14 @@ export default function AdminUsersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                    {viewingUser.status === 'ACTIVE' ? (
-                     <Button 
+                     <Button
                        onClick={() => handleUpdateStatus(viewingUser.id, 'BLOCKED')}
                        className="bg-rose-600 hover:bg-rose-700 text-white font-bold h-10 px-4 rounded-xl text-xs gap-2"
                      >
                        <Ban className="w-4 h-4" /> Bloquer
                      </Button>
                    ) : (
-                     <Button 
+                     <Button
                        onClick={() => handleUpdateStatus(viewingUser.id, 'ACTIVE')}
                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 px-4 rounded-xl text-xs gap-2"
                      >
@@ -535,23 +535,23 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
-                 <Button 
+                 <Button
                    variant="outline"
                    onClick={() => handleResetPassword(viewingUser.id)}
                    className="bg-white/5 border-white/10 text-white hover:bg-white/10 h-12 rounded-2xl font-bold text-xs gap-2"
                  >
                    <KeyRound className="w-4 h-4 text-blue-400" /> Forcer Reset Password
                  </Button>
-                 <Button 
+                 <Button
                    variant="outline"
                    onClick={() => setViewTab(viewTab === 'INFO' ? 'AUDIT' : 'INFO')}
                    className={`h-12 rounded-2xl font-bold text-xs gap-2 transition-all ${
-                     viewTab === 'AUDIT' 
-                       ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/20' 
+                     viewTab === 'AUDIT'
+                       ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/20'
                        : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                    }`}
                  >
-                   <Activity className={`w-4 h-4 ${viewTab === 'AUDIT' ? 'text-white' : 'text-amber-400'}`} /> 
+                   <Activity className={`w-4 h-4 ${viewTab === 'AUDIT' ? 'text-white' : 'text-amber-400'}`} />
                    {viewTab === 'AUDIT' ? "Voir Profil Complet" : "Historique d'Audit"}
                  </Button>
               </div>
@@ -568,7 +568,7 @@ export default function AdminUsersPage() {
                       <p className="text-base font-bold text-white leading-tight">{viewingUser.email || "-"}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Date de naissance</p>
@@ -581,7 +581,7 @@ export default function AdminUsersPage() {
                       <p className="text-base font-bold text-white leading-tight">{viewingUser.birthPlace || "-"}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Téléphone</p>
@@ -600,12 +600,12 @@ export default function AdminUsersPage() {
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Adresse postale</p>
                     <p className="text-base font-bold text-white leading-tight">{viewingUser.address || "-"}</p>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-8 pt-6 border-t border-white/5">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email vérifié</p>
@@ -630,7 +630,7 @@ export default function AdminUsersPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6">
                     <UserExamResults userId={viewingUser.id} />
                   </div>
@@ -657,12 +657,12 @@ export default function AdminUsersPage() {
               Supprimer l'utilisateur ?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-              Cette action supprimera définitivement le compte de l'utilisateur. 
+              Cette action supprimera définitivement le compte de l'utilisateur.
               <span className="block mt-2 font-bold text-rose-600 underline">Ses données d'examen et son historique seront perdus.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel 
+            <AlertDialogCancel
               disabled={isDeleting}
               className="border-slate-200 text-slate-600 hover:bg-slate-50"
             >

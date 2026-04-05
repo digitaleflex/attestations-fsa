@@ -38,18 +38,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  LineElement, 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
   BarElement,
   ArcElement,
-  Title, 
-  Tooltip, 
-  Legend, 
-  Filler 
+  Title,
+  Tooltip,
+  Legend,
+  Filler
 } from 'chart.js';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 
@@ -213,7 +213,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="p-8 space-y-10 bg-slate-50 min-h-screen animate-in fade-in duration-700">
-      
+
       {/* Header Premium */}
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
         <div>
@@ -293,7 +293,7 @@ export default function AdminDashboardPage() {
 
       {/* Analytics Row */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        
+
         {/* Dynamic Activity Chart */}
         <Card className="xl:col-span-2 p-8 border-none shadow-premium bg-white flex flex-col">
             <div className="flex items-center justify-between mb-8">
@@ -345,7 +345,7 @@ export default function AdminDashboardPage() {
 
       {/* Targets & Recent Records Row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-         
+
          {/* Performance Bar Chart */}
          <Card className="p-8 border-none shadow-premium bg-white">
              <div className="flex items-center justify-between mb-8">

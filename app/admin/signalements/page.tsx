@@ -391,12 +391,12 @@ export default function AdminSignalementsPage() {
               Supprimer le signalement ?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-              Êtes-vous sûr de vouloir supprimer ce signalement ? 
+              Êtes-vous sûr de vouloir supprimer ce signalement ?
               <span className="block mt-2 font-bold text-rose-600 underline underline-offset-4">Cette action est définitive et irréversible.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel 
+            <AlertDialogCancel
               disabled={deleteLoading}
               className="border-slate-200 text-slate-600 hover:bg-slate-50"
             >

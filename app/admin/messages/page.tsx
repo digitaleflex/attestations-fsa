@@ -3,11 +3,11 @@ import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Send, 
-  User, 
-  Search, 
-  CheckCheck, 
+import {
+  Send,
+  User,
+  Search,
+  CheckCheck,
   Loader2,
   Inbox,
   MessageCircle,
@@ -66,7 +66,7 @@ export default function AdminMessagesPage() {
 
   const fetchConversations = async () => {
     try {
-      const res = await fetch("/api/users"); 
+      const res = await fetch("/api/users");
       const users = await res.json();
       setConversations(users.filter((u: UserProfile) => u.role === "user"));
     } catch {
@@ -111,8 +111,8 @@ export default function AdminMessagesPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-            content: optimisticMsg.content, 
+        body: JSON.stringify({
+            content: optimisticMsg.content,
             userId: selectedUser.id,
             attachments: []
         }),
@@ -145,8 +145,8 @@ export default function AdminMessagesPage() {
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-            <Input 
-                placeholder="Rechercher un candidat..." 
+            <Input
+                placeholder="Rechercher un candidat..."
                 className="pl-10 h-10 border-slate-100 bg-slate-50 text-xs rounded-xl"
             />
           </div>
@@ -240,15 +240,15 @@ export default function AdminMessagesPage() {
 
             <div className="bg-white border-t p-6 pb-8 shrink-0">
                <form onSubmit={handleSendMessage} className="flex items-center gap-4 max-w-4xl mx-auto">
-                  <Input 
+                  <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Écrivez un message direct au candidat..."
                     className="flex-1 h-14 rounded-2xl border-slate-100 bg-slate-50 px-6 text-sm focus:ring-blue-100"
                     disabled={isSending}
                   />
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isSending || !newMessage.trim()}
                     className="h-14 w-14 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all flex justify-center items-center"
                   >

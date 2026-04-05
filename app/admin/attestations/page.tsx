@@ -474,12 +474,12 @@ export default function AdminAttestationsPage() {
               Confirmer la suppression
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-              Cette action est <span className="font-bold text-slate-900">irréversible</span>. 
+              Cette action est <span className="font-bold text-slate-900">irréversible</span>.
               L&apos;attestation sera définitivement supprimée du système et ne pourra plus être vérifiée par QR Code.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 gap-3">
-            <AlertDialogCancel 
+            <AlertDialogCancel
               disabled={isDeleting}
               className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
             >

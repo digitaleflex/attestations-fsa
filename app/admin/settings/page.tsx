@@ -5,15 +5,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  Settings as SettingsIcon, 
-  Save, 
-  Building2, 
-  UserCircle, 
-  Target, 
-  Mail, 
-  PenLine, 
+import {
+  Loader2,
+  Settings as SettingsIcon,
+  Save,
+  Building2,
+  UserCircle,
+  Target,
+  Mail,
+  PenLine,
   Image as ImageIcon,
   Eye,
   CheckCircle2,
@@ -121,7 +121,7 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-700 pb-32">
-      
+
       {/* Header Premium */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-4">
         <div className="flex items-center gap-5">
@@ -131,15 +131,15 @@ export default function SettingsPage() {
           <div className="space-y-1">
             <h1 className="text-4xl font-black text-slate-900 tracking-tight">Configuration Générale</h1>
             <p className="text-slate-500 font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" /> 
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 Gérez l'identité visuelle et les objectifs de performance.
             </p>
           </div>
         </div>
-        
+
         <div className="flex gap-4">
-             <Button 
-                onClick={() => setShowPreview(!showPreview)} 
+             <Button
+                onClick={() => setShowPreview(!showPreview)}
                 variant="outline"
                 className={cn(
                     "h-14 px-8 rounded-2xl font-bold gap-3 transition-all border-slate-200 shadow-sm",
@@ -149,9 +149,9 @@ export default function SettingsPage() {
                 <Eye className="w-5 h-5" />
                 Démonstration Rendu
              </Button>
-             <Button 
-                onClick={() => setShowConfirm(true)} 
-                disabled={isSaving} 
+             <Button
+                onClick={() => setShowConfirm(true)}
+                disabled={isSaving}
                 className="bg-slate-900 hover:bg-slate-800 text-white gap-3 h-14 px-10 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all"
             >
                 {isSaving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5 text-emerald-400" />}
@@ -173,9 +173,9 @@ export default function SettingsPage() {
                             <span className="text-[10px] font-bold">TEMPS RÉEL</span>
                         </div>
                     </div>
-                    
+
                     <div className="scale-[0.55] lg:scale-[0.65] origin-top mb-[-320px] lg:mb-[-280px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden border-8 border-white/5">
-                        <CertificateTemplate 
+                        <CertificateTemplate
                             settings={{
                                 ...settings,
                                 institutionName: formData.institutionName || settings?.institutionName || "",
@@ -201,11 +201,11 @@ export default function SettingsPage() {
       )}
 
       <form className="grid gap-10 lg:grid-cols-2" onSubmit={handleSave}>
-        
+
         {/* Section 1 : Identité & Contact */}
         <Card className="p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50 group-hover:scale-110 transition-transform duration-700" />
-            
+
             <div className="flex items-center gap-4 relative z-10 pb-6 border-b border-slate-50">
                <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-100">
                   <Building2 className="w-6 h-6 text-white" />
@@ -222,7 +222,7 @@ export default function SettingsPage() {
                         Dénomination de l'établissement
                         <HelpCircle className="w-3 h-3 text-slate-300" />
                     </label>
-                    <Input 
+                    <Input
                       name="institutionName"
                       value={formData.institutionName || ""}
                       onChange={handleChange}
@@ -235,7 +235,7 @@ export default function SettingsPage() {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Support</label>
                         <div className="relative">
                             <Mail className="absolute left-4 top-4.5 w-5 h-5 text-slate-300" />
-                            <Input 
+                            <Input
                               name="supportEmail"
                               type="email"
                               value={formData.supportEmail || ""}
@@ -247,7 +247,7 @@ export default function SettingsPage() {
                     <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logo (Ratio 1:1 suggéré)</label>
                         <div className="flex gap-4">
-                            <Input 
+                            <Input
                             name="institutionLogo"
                             value={formData.institutionLogo || ""}
                             onChange={handleChange}
@@ -268,7 +268,7 @@ export default function SettingsPage() {
         {/* Section 2 : Autorité de Signature */}
         <Card className="p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
             <div className="absolute bottom-0 right-0 w-40 h-40 bg-emerald-50 rounded-full -mr-20 -mb-20 opacity-40 group-hover:scale-110 transition-transform duration-1000" />
-            
+
             <div className="flex items-center gap-4 relative z-10 pb-6 border-b border-slate-50">
                <div className="p-3 bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-100">
                   <UserCircle className="w-6 h-6 text-white" />
@@ -282,7 +282,7 @@ export default function SettingsPage() {
             <div className="space-y-6 relative z-10">
                 <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nom du Responsable</label>
-                    <Input 
+                    <Input
                       name="instructorName"
                       value={formData.instructorName || ""}
                       onChange={handleChange}
@@ -292,7 +292,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Titre Officiel</label>
-                    <Input 
+                    <Input
                       name="instructorTitle"
                       value={formData.instructorTitle || ""}
                       onChange={handleChange}
@@ -305,7 +305,7 @@ export default function SettingsPage() {
                         Signature (PNG Transparent)
                         <PenLine className="w-3.5 h-3.5 text-emerald-600" />
                     </label>
-                    <Input 
+                    <Input
                         name="signatureUrl"
                         value={formData.signatureUrl || ""}
                         onChange={handleChange}
@@ -325,7 +325,7 @@ export default function SettingsPage() {
         <Card className="p-12 border-none shadow-2xl bg-slate-900 rounded-[3rem] lg:col-span-2 space-y-12 relative overflow-hidden group">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.1),transparent)] pointer-events-none" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.1),transparent)] pointer-events-none" />
-            
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                 <div className="flex items-center gap-6">
                     <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-2xl shadow-amber-500/10 rotate-3 group-hover:rotate-0 transition-transform duration-500">
@@ -343,7 +343,7 @@ export default function SettingsPage() {
                 <div className="space-y-6 group/kpi">
                     <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] block ml-4">Inscriptions</label>
                     <div className="relative">
-                        <Input 
+                        <Input
                             name="targetInscriptions"
                             type="number"
                             value={formData.targetInscriptions || 0}
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                 <div className="space-y-6 group/kpi">
                     <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] block ml-4">Attestations</label>
                     <div className="relative">
-                        <Input 
+                        <Input
                             name="targetAttestations"
                             type="number"
                             value={formData.targetAttestations || 0}
@@ -371,7 +371,7 @@ export default function SettingsPage() {
                 <div className="space-y-6 group/kpi">
                     <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] block ml-4">Validations</label>
                     <div className="relative">
-                        <Input 
+                        <Input
                             name="targetValidations"
                             type="number"
                             value={formData.targetValidations || 0}
@@ -382,7 +382,7 @@ export default function SettingsPage() {
                     </div>
                 </div>
             </div>
-            
+
             <div className="pt-8 border-t border-white/5 flex items-center gap-3 text-white/20 relative z-10 px-4">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span className="text-[11px] font-medium leading-relaxed italic">Ces valeurs servent de référentiel pour calculer les taux de réussite et de conversion affichés sur le Nexus Admin de la FSA.</span>
@@ -402,7 +402,7 @@ export default function SettingsPage() {
              </AlertDialogTitle>
              <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mt-2">DÉPLOIEMENT_CONFIG_v4</p>
           </div>
-          
+
           <div className="p-12 space-y-8">
             <AlertDialogDescription className="text-slate-500 font-medium text-lg text-center leading-relaxed">
                 Appliquer ces paramètres modifiera irrémédiablement l'identité visuelle de <span className="text-slate-900 font-bold">tous les futurs documents</span>.

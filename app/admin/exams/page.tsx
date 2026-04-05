@@ -7,12 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  ClipboardCheck, 
+import {
+  Loader2,
+  Plus,
+  Edit,
+  Trash2,
+  ClipboardCheck,
   Calendar,
   Clock,
   MoreVertical,
@@ -134,18 +134,18 @@ export default function AdminExamsPage() {
             />
           </div>
           <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-            <Button 
-                variant={view === 'grid' ? 'default' : 'ghost'} 
-                size="sm" 
+            <Button
+                variant={view === 'grid' ? 'default' : 'ghost'}
+                size="sm"
                 onClick={() => setView('grid')}
                 className={`rounded-lg h-9 px-3 ${view === 'grid' ? 'bg-blue-600 shadow-blue-100' : 'text-slate-400'}`}
             >
                 <LayoutGrid className="w-4 h-4 mr-2" />
                 Grille
             </Button>
-            <Button 
-                variant={view === 'list' ? 'default' : 'ghost'} 
-                size="sm" 
+            <Button
+                variant={view === 'list' ? 'default' : 'ghost'}
+                size="sm"
                 onClick={() => setView('list')}
                 className={`rounded-lg h-9 px-3 ${view === 'list' ? 'bg-blue-600 shadow-blue-100' : 'text-slate-400'}`}
             >
@@ -182,12 +182,12 @@ export default function AdminExamsPage() {
           {filteredExams.map((exam) => {
             const config = statusConfig[exam.status as keyof typeof statusConfig];
             const StatusIcon = config.icon;
-            
+
             return (
               <Card key={exam.id} className="group relative bg-white border border-slate-100 hover:border-blue-200 rounded-[28px] overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-blue-100 hover:-translate-y-1">
                 {/* Header Decoration */}
                 <div className={`h-1.5 w-full ${config.dot === 'bg-emerald-500' ? 'bg-emerald-500' : config.dot === 'bg-blue-500' ? 'bg-blue-500' : 'bg-slate-300'}`} />
-                
+
                 <div className="p-8 flex flex-col h-full">
                     <div className="flex items-start justify-between mb-6">
                         <div className={`p-4 rounded-2xl ${config.color} border shadow-sm`}>
@@ -202,7 +202,7 @@ export default function AdminExamsPage() {
                             <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl bg-white border-slate-100 shadow-2xl">
                                 <DropdownMenuItem asChild className="rounded-xl focus:bg-slate-50 transition-colors">
                                     <Link href={`/admin/exams/${exam.id}/edit`} className="flex items-center gap-3 font-bold text-slate-700 py-2.5">
-                                        <Edit className="w-4 h-4 text-slate-400" /> 
+                                        <Edit className="w-4 h-4 text-slate-400" />
                                         Éditer l&apos;organisation
                                     </Link>
                                 </DropdownMenuItem>
@@ -213,7 +213,7 @@ export default function AdminExamsPage() {
                                     </Link>
                                 </DropdownMenuItem>
                                 <div className="h-px bg-slate-100 my-2" />
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                     onClick={() => setDeleteId(exam.id)}
                                     className="rounded-xl focus:bg-rose-50 text-rose-600 focus:text-rose-700 font-bold py-2.5 flex items-center gap-3"
                                 >
@@ -350,7 +350,7 @@ export default function AdminExamsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-4">
-            <AlertDialogCancel 
+            <AlertDialogCancel
               disabled={isDeleting}
               className="rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold px-8 h-12"
             >
