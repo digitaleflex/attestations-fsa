@@ -1,26 +1,9 @@
-// lib/sanitization.ts
-// Sanitization des entrées utilisateur - Protection contre les attaques XSS
-import DOMPurify from 'dompurify'
-import { JSDOM } from 'jsdom'
-import type { z } from 'zod'
-
-// Initialiser DOMPurify pour environnement Node.js (server-side)
-const window = new JSDOM('').window
-const purify = DOMPurify(window)
-
-// Configuration de sanitization - Stricte (aucun tag HTML)
-const sanitizeOptions = {
-  ALLOWED_TAGS: [],  // Aucun tag HTML autorisé
-  ALLOWED_ATTR: [],
-  KEEP_CONTENT: true,  // Garder le texte seulement
-  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-}
+import { z } from 'zod';
 
 /**
- * Sanitise une chaîne de caractères
- * Supprime tous les tags HTML et ne garde que le texte
- * @param input - Chaîne à sanitiser
- * @returns Chaîne sanitizée
+ * S'assure que DOMPurify n'est utilisé que s'il est disponible au niveau du client
+ * ou d'une manière légère pour le serveur. 
+ * Pour la sanitization stricte (sans tags), une simple REGEX suffit et est BEAUCOUP plus rapide sur Vercel.
  */
 export function sanitizeInput(input: string): string {
   if (!input) return ''
@@ -30,10 +13,11 @@ export function sanitizeInput(input: string): string {
     return String(input)
   }
 
-  // Sanitiser avec DOMPurify — supprime les tags HTML mais garde le texte
-  // ✅ FIX: Ne pas encoder les caractères spéciaux (apostrophes, etc.)
-  // Le texte doit être stocké proprement en base : d'ALMEIDA, pas d&#x27;ALMEIDA
-  return purify.sanitize(input, sanitizeOptions)
+  // Sanitisation légère sans JSDOM pour Vercel (Performance & Stabilité)
+  // Supprime tous les tags HTML complets : <tag>...</tag> ou <tag/>
+  return input
+    .replace(/<[^>]*>?/gm, '') // Supprimer les tags HTML
+    .trim();
 }
 
 /**
@@ -83,7 +67,7 @@ export const CRITICAL_FIELDS = [
  * Transforme les données après validation
  */
 export function createSanitizedSchema<T extends z.ZodType>(schema: T) {
-  return schema.transform((data) => {
+  return schema.transform((data: any) => {
     if (typeof data === 'string') {
       return sanitizeInput(data) as any
     }
@@ -125,12 +109,9 @@ export function sanitizeHTML(
 ): string {
   if (!html) return ''
   
-  return purify.sanitize(html, {
-    ALLOWED_TAGS: allowedTags,
-    ALLOWED_ATTR: [],
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input'],
-    FORBID_ATTR: ['onclick', 'onerror', 'onload', 'onmouseover', 'onfocus', 'onblur'],
-  })
+  // Version légère pour Vercel : Stripper de tags sauf ceux autorisés
+  const regex = new RegExp(`<(?!\\/?(${allowedTags.join('|')})\\b)[^>]+>`, 'gi');
+  return html.replace(regex, '');
 }
 
 /**

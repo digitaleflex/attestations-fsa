@@ -42,6 +42,20 @@ function VerifierContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "N/A";
+    try {
+      return new Date(dateStr).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   const searchParams = useSearchParams();
   const codeParam = searchParams ? searchParams.get("code") : null;
 
@@ -169,13 +183,26 @@ function VerifierContent() {
 
                   {/* Grille d'Info */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                      <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Candidat</span>
-                        <span className="text-slate-900 font-bold">{result.fullName}</span>
+                      <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Candidat</span>
+                        <span className="text-slate-900 font-bold block leading-tight">{result.fullName}</span>
                       </div>
-                      <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Formation</span>
-                        <span className="text-slate-900 font-bold truncate block">{result.formation?.name || "Certificat FSA"}</span>
+                      <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Formation</span>
+                        <span className="text-slate-900 font-bold block leading-tight">{result.formation?.name || "Certificat FSA"}</span>
+                      </div>
+                      
+                      {/* Période de Formation */}
+                      <div className="sm:col-span-2 bg-slate-50/50 rounded-2xl p-5 border border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1 underline decoration-emerald-500/30">Début de formation</span>
+                          <span className="text-slate-900 font-bold">{formatDate(result.startDate)}</span>
+                        </div>
+                        <div className="hidden sm:block w-px h-8 bg-slate-200" />
+                        <div className="flex-1 sm:text-right">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1 underline decoration-rose-500/30">Fin Prévue</span>
+                          <span className="text-slate-900 font-bold">{formatDate(result.endDate)}</span>
+                        </div>
                       </div>
                   </div>
 
