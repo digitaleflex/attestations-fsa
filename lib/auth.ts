@@ -92,14 +92,15 @@ export const auth = betterAuth({
             create: {
                 before: async (user) => {
                     // Set default role if not provided
-                    if (!user.role) {
-                        user.role = "user";
+                    const userRecord = user as Record<string, unknown>;
+                    if (!userRecord.role) {
+                        userRecord.role = "user";
                     }
                     // Normalize role to lowercase
-                    if (user.role) {
-                        user.role = user.role.toLowerCase();
+                    if (typeof userRecord.role === "string") {
+                        userRecord.role = userRecord.role.toLowerCase();
                     }
-                    return Promise.resolve({ data: user });
+                    return Promise.resolve({ data: userRecord });
                 },
                 after: async (user) => {
                     // Log user creation for audit purposes
