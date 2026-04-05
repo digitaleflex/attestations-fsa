@@ -292,7 +292,7 @@ export default function AuthPage() {
         if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
           router.push("/admin/dashboard");
         } else {
-          router.push("/exams");
+          router.push("/dashboard");
         }
       } else {
         // Inscription Better Auth
@@ -318,7 +318,7 @@ export default function AuthPage() {
         if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
             router.push("/admin/dashboard");
         } else {
-            router.push("/exams");
+            router.push("/dashboard");
         }
       }
     } catch (err: any) {

@@ -1,19 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
 import { z } from 'zod';
-
-// Helper pour vérifier l'authentification user
-async function isAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-  
-  if (!session || !session.value) return null;
-  if (role?.value !== 'USER') return null;
-  
-  return session.value;
-}
+import { getCurrentUser } from '@/lib/auth';
 
 // Schéma de validation pour une candidature
 const InternshipApplicationSchema = z.object({
@@ -25,19 +13,20 @@ const InternshipApplicationSchema = z.object({
 });
 
 // GET /api/user/internships - Récupérer les candidatures de l'utilisateur
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
+    const userSession = await getCurrentUser(request);
+    if (!userSession) {
       return NextResponse.json({ error: 'Non autorisé - Connexion requise' }, { status: 401 });
     }
-    
+
+    const userId = userSession.id;
     // Récupérer les candidatures liées à cet utilisateur
     const applications = await prisma.internshipRequest.findMany({
       where: { userId: userId },
       orderBy: { createdAt: 'desc' }
     });
-    
+
     // Statistiques
     const stats = {
       total: applications.length,
@@ -46,16 +35,16 @@ export async function GET() {
       accepted: applications.filter((a) => a.status === 'ACCEPTED').length,
       rejected: applications.filter((a) => a.status === 'REJECTED').length,
     };
-    
+
     return NextResponse.json({
       applications,
       stats
     });
-    
+
   } catch (error: unknown) {
     console.error('Erreur stages user:', error);
-    return NextResponse.json({ 
-      error: 'Erreur lors de la récupération des candidatures' 
+    return NextResponse.json({
+      error: 'Erreur lors de la récupération des candidatures'
     }, { status: 500 });
   }
 }
@@ -63,21 +52,23 @@ export async function GET() {
 // POST /api/user/internships - Postuler à un stage
 export async function POST(request: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
+    const userSession = await getCurrentUser(request);
+    if (!userSession) {
       return NextResponse.json({ error: 'Non autorisé - Connexion requise' }, { status: 401 });
     }
-    
+
+    const userId = userSession.id;
+
     const body = await request.json();
     const parse = InternshipApplicationSchema.safeParse(body);
-    
+
     if (!parse.success) {
-      return NextResponse.json({ 
-        message: 'Données invalides', 
-        details: parse.error.errors 
+      return NextResponse.json({
+        message: 'Données invalides',
+        details: parse.error.errors
       }, { status: 400 });
     }
-    
+
     const { university, level, position, cvUrl, message } = parse.data;
 
     // Récupérer les infos de l'utilisateur pour pré-remplir la demande
@@ -89,7 +80,7 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
     }
-    
+
     // Créer la candidature
     const application = await prisma.internshipRequest.create({
       data: {
@@ -105,16 +96,16 @@ export async function POST(request: Request) {
         status: 'PENDING',
       }
     });
-    
+
     return NextResponse.json({
       message: 'Candidature soumise avec succès',
       application
     }, { status: 201 });
-    
+
   } catch (error: unknown) {
     console.error('Erreur candidature stage:', error);
-    return NextResponse.json({ 
-      error: 'Erreur lors de la soumission de la candidature' 
+    return NextResponse.json({
+      error: 'Erreur lors de la soumission de la candidature'
     }, { status: 500 });
   }
 }

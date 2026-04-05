@@ -1,28 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { pusherServer } from '@/lib/pusher';
-import { z } from 'zod';
-import { isAdminAuthenticated } from '@/lib/auth';
-
-// Helper pour vérifier l'authentification user
-async function isAuthenticatedUser() {
-  const cookieStore = await import('next/headers').then(m => m.cookies());
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-
-  if (!session || !session.value) return null;
-  if (role?.value !== 'USER') return null;
-
-  return session.value;
-}
+import { getCurrentUser, isAdminAuthenticated } from '@/lib/auth';
 
 // GET /api/user/notifications - Récupérer les notifications de l'utilisateur
 export async function GET(request: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
+    const userSession = await getCurrentUser(request);
+    if (!userSession) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const userId = userSession.id;
 
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get('limit') || '50');
@@ -54,10 +43,12 @@ export async function GET(request: Request) {
 // PATCH /api/user/notifications - Marquer comme lu(es)
 export async function PATCH(request: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
+    const userSession = await getCurrentUser(request);
+    if (!userSession) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const userId = userSession.id;
 
     const body = await request.json();
     const { notificationId, markAllRead } = body;

@@ -10,18 +10,19 @@ import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, 
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useState } from "react";
+import { ShieldCheck, ShieldAlert, Loader2 as LoaderIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynImport from "next/dynamic";
 import CertificateTemplate from "@/components/CertificateTemplate";
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
-  Legend 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
@@ -35,6 +36,7 @@ export default function UserDashboardPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [claimCode, setClaimCode] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   // Fetch settings for branding
   const { data: settings } = useQuery({
@@ -73,6 +75,29 @@ export default function UserDashboardPage() {
       toast.error(error.message);
     } finally {
       setIsClaiming(false);
+    }
+  };
+
+  const handleSendVerification = async () => {
+    setIsSendingVerification(true);
+    try {
+      const response = await fetch("/api/user/send-verification", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || "Échec de l'envoi");
+      }
+
+      toast.success("Succès !", {
+        description: "Un email de vérification vous a été envoyé.",
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Impossible d'envoyer l'email");
+    } finally {
+      setIsSendingVerification(false);
     }
   };
 
@@ -117,7 +142,7 @@ export default function UserDashboardPage() {
 
   const handleDownload = async (att: any) => {
     const fileName = `${att.code.slice(-5)}_${att.fullName.replace(/\s+/g, '_')}.pdf`;
-    
+
     toast.promise(
       (async () => {
         const html2pdf = (await import("html2pdf.js")).default;
@@ -172,7 +197,7 @@ export default function UserDashboardPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        
+
         {/* Welcome Premium */}
         <Card className="p-8 bg-gradient-to-br from-slate-900 to-blue-900 text-white shadow-2xl relative overflow-hidden group border-none">
           <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-1000" />
@@ -210,12 +235,12 @@ export default function UserDashboardPage() {
                     </h3>
                  </div>
                  <p className="text-slate-500 text-sm leading-relaxed max-w-2xl">
-                   {hasPendingCorrection 
+                   {hasPendingCorrection
                      ? "Une demande de modification est actuellement entre les mains de nos administrateurs. Vos documents seront mis à jour dès validation."
                      : "Avant que nous n'émettions vos documents officiels, assurez-vous que votre nom, date et lieu de naissance sont corrects. Ces informations apparaîtront telles quelles sur vos diplômes."
                    }
                  </p>
-                 
+
                  <div className="flex flex-wrap gap-4 py-2">
                     <div className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
                         <span className="block text-slate-400 font-bold uppercase text-[9px] mb-1">Nom complet</span>
@@ -228,6 +253,23 @@ export default function UserDashboardPage() {
                     <div className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
                         <span className="block text-slate-400 font-bold uppercase text-[9px] mb-1">Lieu de naissance</span>
                         <span className="font-bold text-slate-800">{user?.birthPlace || "Non défini"}</span>
+                    </div>
+                    <div className={`px-4 py-2 rounded-xl border text-xs transition-all ${
+                        user?.emailVerified
+                            ? "bg-emerald-50 border-emerald-100"
+                            : "bg-amber-50 border-amber-100 animate-pulse"
+                    }`}>
+                        <span className="block text-slate-400 font-bold uppercase text-[9px] mb-1">Email vérifié</span>
+                        <div className="flex items-center gap-1.5">
+                            {user?.emailVerified ? (
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                                <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                            )}
+                            <span className={`font-black ${user?.emailVerified ? "text-emerald-700" : "text-amber-700"}`}>
+                                {user?.emailVerified ? "CONFIRMÉ" : "À VÉRIFIER"}
+                            </span>
+                        </div>
                     </div>
                  </div>
 
@@ -249,6 +291,20 @@ export default function UserDashboardPage() {
                               Signaler une erreur
                           </Button>
                         </Link>
+                        {!user?.emailVerified && (
+                          <Button
+                            onClick={handleSendVerification}
+                            disabled={isSendingVerification}
+                            className="h-11 px-6 rounded-xl font-black bg-slate-900 text-white border-none shadow-xl hover:bg-black transition-all gap-2"
+                          >
+                            {isSendingVerification ? (
+                              <LoaderIcon className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4" />
+                            )}
+                            {isSendingVerification ? "Envoi..." : "Vérifier mon email"}
+                          </Button>
+                        )}
                      </>
                    )}
                  </div>
@@ -269,8 +325,8 @@ export default function UserDashboardPage() {
                      Liez votre historique de formation en entrant les 5 derniers caractères de votre code secret.
                    </p>
                    <div className="flex gap-2">
-                      <Input 
-                        placeholder="Ex: 3f8b6..." 
+                      <Input
+                        placeholder="Ex: 3f8b6..."
                         className="bg-white border-emerald-200 h-12 rounded-xl font-mono focus-visible:ring-emerald-500"
                         value={claimCode}
                         onChange={(e) => setClaimCode(e.target.value)}
@@ -289,10 +345,10 @@ export default function UserDashboardPage() {
 
         {/* Main Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+
             {/* Left Analytic & Records */}
             <div className="lg:col-span-2 space-y-8">
-                
+
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                    {[
@@ -341,9 +397,9 @@ export default function UserDashboardPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
                                         onClick={() => handleDownload(att)}
                                         disabled={att.status !== 'VALIDATED'}
                                         className="rounded-full bg-white shadow-sm hover:scale-110 active:scale-95 transition-all text-emerald-600"
@@ -360,7 +416,7 @@ export default function UserDashboardPage() {
 
             {/* Right Side Info */}
             <div className="space-y-8">
-                
+
                 {/* Progression Mini-Chart */}
                 <Card className="p-8 border-none shadow-premium bg-white">
                     <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
@@ -368,14 +424,14 @@ export default function UserDashboardPage() {
                         Mon Avancement
                     </h3>
                     <div className="h-48 flex items-center justify-center">
-                        <Bar 
-                            data={chartData} 
-                            options={{ 
-                                responsive: true, 
+                        <Bar
+                            data={chartData}
+                            options={{
+                                responsive: true,
                                 maintainAspectRatio: false,
                                 plugins: { legend: { display: false } },
                                 scales: { x: { grid: { display: false } }, y: { display: false } }
-                            }} 
+                            }}
                         />
                     </div>
                     <div className="mt-6 flex justify-center">
@@ -416,7 +472,7 @@ export default function UserDashboardPage() {
         {/* Hidden Templates for PDF Generation */}
         <div className="hidden" aria-hidden="true">
             {attestationsData?.attestations?.filter((a: any) => a.status === "VALIDATED").map((att: any) => (
-                <CertificateTemplate 
+                <CertificateTemplate
                     key={att.id}
                     id={`cert-template-dash-${att.id}`}
                     settings={settings}

@@ -1,24 +1,18 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
-
-// Helper pour vérifier l'authentification user
-async function isAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  if (!session || !session.value) return null;
-  return session.value;
-}
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
+    const userSession = await getCurrentUser(request);
+    if (!userSession) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
+
+    const userId = userSession.id;
 
     const { id } = await params;
 

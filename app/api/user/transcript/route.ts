@@ -1,25 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
+import { getCurrentUser } from '@/lib/auth';
 
-// Helper pour vérifier l'authentification user
-async function isAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
-  const role = cookieStore.get('user_role');
-
-  if (!session || !session.value) return null;
-  if (role?.value !== 'USER') return null;
-
-  return session.value;
-}
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const userId = await isAuthenticatedUser();
-    if (!userId) {
+    const userSession = await getCurrentUser(request);
+    if (!userSession) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const userId = userSession.id;
 
     // Récupérer le profil utilisateur
     const user = await prisma.user.findUnique({
