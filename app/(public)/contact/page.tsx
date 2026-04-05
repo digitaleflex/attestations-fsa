@@ -88,8 +88,8 @@ export default function ContactPage() {
                              <Mail className="w-5 h-5" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Email</p>
-                            <p className="text-lg font-bold text-slate-800 tracking-tight">contact@net.eurinhash.com</p>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Email Officiel</p>
+                            <p className="text-lg font-bold text-slate-800 tracking-tight">contact@fermestandre.com</p>
                         </div>
                     </div>
 
@@ -154,25 +154,25 @@ export default function ContactPage() {
                   <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Nom Complet</label>
+                            <label className="text-[10px] font-black uppercase text-slate-600 tracking-[0.25em] ml-2 drop-shadow-sm">Nom Complet</label>
                             <div className="relative">
                                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 <Input 
                                     required
                                     placeholder="Koffi Sènou" 
-                                    className="h-14 pl-10 pr-4 bg-slate-50/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/20 font-bold text-slate-800 text-sm md:text-base"
+                                    className="h-14 pl-10 pr-4 bg-white/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/30 focus:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.15)] focus:bg-white transition-all duration-300 font-bold text-slate-800 text-sm md:text-base"
                                 />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Votre Email</label>
+                            <label className="text-[10px] font-black uppercase text-slate-600 tracking-[0.25em] ml-2 drop-shadow-sm">Votre Email</label>
                             <div className="relative">
                                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 <Input 
                                     required
                                     type="email"
                                     placeholder="koffi.senou@gmail.com" 
-                                    className="h-14 pl-10 pr-4 bg-slate-50/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/20 font-bold text-slate-800 text-sm md:text-base"
+                                    className="h-14 pl-10 pr-4 bg-white/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/30 focus:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.15)] focus:bg-white transition-all duration-300 font-bold text-slate-800 text-sm md:text-base"
                                 />
                             </div>
                         </div>
@@ -180,23 +180,23 @@ export default function ContactPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Téléphone</label>
+                            <label className="text-[10px] font-black uppercase text-slate-600 tracking-[0.25em] ml-2 drop-shadow-sm">Téléphone</label>
                             <div className="relative">
                                 <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 <Input 
                                     required
                                     placeholder="+229 __ __ __ __" 
-                                    className="h-14 pl-10 pr-4 bg-slate-50/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/20 font-bold text-slate-800 text-sm md:text-base"
+                                    className="h-14 pl-10 pr-4 bg-white/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/30 focus:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.15)] focus:bg-white transition-all duration-300 font-bold text-slate-800 text-sm md:text-base"
                                 />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Objet du RDV</label>
+                            <label className="text-[10px] font-black uppercase text-slate-600 tracking-[0.25em] ml-2 drop-shadow-sm">Objet du RDV</label>
                             <div className="relative">
                                 <MessageSquare className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
                                 <select 
                                     required
-                                    className="w-full h-14 pl-10 pr-10 bg-slate-50/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/20 font-bold text-slate-800 appearance-none text-xs md:text-sm"
+                                    className="w-full h-14 pl-10 pr-10 bg-white/50 border-slate-100/50 rounded-2xl focus:ring-emerald-500/30 focus:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.15)] focus:bg-white transition-all duration-300 font-bold text-slate-800 appearance-none text-xs md:text-sm"
                                 >
                                     <option value="mesure">Programme sur-mesure</option>
                                     <option value="info">Informations générales</option>
@@ -213,11 +213,11 @@ export default function ContactPage() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Votre Message</label>
+                        <label className="text-[10px] font-black uppercase text-slate-600 tracking-[0.25em] ml-2 drop-shadow-sm">Votre Message</label>
                         <Textarea 
                             required
                             placeholder="Décrivez-nous votre projet ou vos attentes..."
-                            className="min-h-[150px] p-6 bg-slate-50/50 border-slate-100/50 rounded-[2rem] focus:ring-emerald-500/20 font-bold text-slate-800 resize-none"
+                            className="min-h-[150px] p-6 bg-white/50 border-slate-100/50 rounded-[2rem] focus:ring-emerald-500/30 focus:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.15)] focus:bg-white transition-all duration-300 font-bold text-slate-800 resize-none"
                         />
                     </div>
 

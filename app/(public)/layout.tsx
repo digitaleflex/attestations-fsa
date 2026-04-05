@@ -87,6 +87,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 <ul className="space-y-3">
                   {[
                     { label: 'Centre d\'aide (FAQ)', href: '/faq' },
+                    { label: 'Ressources PDF & Vidéos', href: '/ressources' },
                     { label: 'Vérifier Certificat', href: '/verifier' },
                     { label: 'Signaler un Problème', href: '/signalement' }
                   ].map((item) => (

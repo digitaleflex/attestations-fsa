@@ -11,6 +11,7 @@ import {
   Award
 } from "lucide-react";
 
+import { getPublicStats } from "@/lib/data-public";
 import { StatsDisplay } from '@/components/stats-display';
 import { Card } from "@/components/ui/card";
 import { HowItWorks } from '@/components/how-it-works';
@@ -22,7 +23,9 @@ import { UpcomingExams } from '@/components/upcoming-exams';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export default function Home() {
+export default async function Home() {
+  const stats = await getPublicStats();
+
   const heroMessages = [
     "Inscrivez-vous et passez vos examens en toute simplicité.",
     "Vérifiez instantanément l'authenticité d'une attestation.",
@@ -124,7 +127,7 @@ export default function Home() {
 
       {/* --- STATS SECTION - Social Proof --- */}
       <section className="w-full px-4">
-        <StatsDisplay />
+        <StatsDisplay initialData={stats} />
       </section>
 
       {/* --- HOW IT WORKS --- */}

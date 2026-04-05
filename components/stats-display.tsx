@@ -17,10 +17,11 @@ async function fetchStats(): Promise<StatsData> {
     return res.json();
 }
 
-export function StatsDisplay() {
+export function StatsDisplay({ initialData }: { initialData?: StatsData }) {
     const { data, isLoading, error, isFetching } = useQuery({
         queryKey: ['attestation-stats'],
         queryFn: fetchStats,
+        initialData: initialData,
         refetchInterval: 1800000, // Sync every 30 minutes
         staleTime: 900000, // Data stays fresh for 15 minutes
     });
