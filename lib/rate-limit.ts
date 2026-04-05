@@ -106,6 +106,14 @@ export const rateLimits = {
     analytics: true,
     prefix: "ratelimit:internship",
   }) : null,
+
+  // Contact form
+  contact: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "1 h"),  // 5 messages / heure
+    analytics: true,
+    prefix: "ratelimit:contact",
+  }) : null,
 }
 
 // ✅ FIX: Accept Request instead of NextRequest

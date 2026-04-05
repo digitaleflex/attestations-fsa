@@ -1,6 +1,6 @@
 // app/api/users/route.ts
 // Gestion des utilisateurs (CRUD admin uniquement)
-// ✅ FIX: Ajout de l'authentification admin sur toutes les routes
+// FIX: Ajout de l'authentification admin sur toutes les routes
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -11,19 +11,19 @@ import { applyRateLimit } from "@/lib/rate-limit";
 import { sanitizeInput } from "@/lib/sanitization";
 
 const CreateUserSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  name: z.string().min(2, "Le nom doit contenir au moins 2 caracteres"),
   email: z.string().email("Email invalide"),
-  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caracteres"),
   role: z.enum(["admin", "user"]).optional(),
 });
 
-// GET - Liste des utilisateurs (✅ Admin uniquement)
+// GET - Liste des utilisateurs (Admin uniquement)
 export async function GET() {
   try {
-    // ✅ Authentification admin requise
+    // Authentification admin requise
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
-        { error: "Non autorisé - Authentification admin requise" },
+        { error: "Non autorise - Authentification admin requise" },
         { status: 401 }
       );
     }
@@ -47,7 +47,7 @@ export async function GET() {
     });
     return NextResponse.json(users);
   } catch (error: unknown) {
-    console.error('Erreur lors de la récupération des utilisateurs:', error);
+    console.error('Erreur lors de la recuperation des utilisateurs:', error);
     return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: '/api/users',
       operation: 'list_users',
@@ -55,18 +55,18 @@ export async function GET() {
   }
 }
 
-// POST - Créer un utilisateur (✅ Admin uniquement + rate limiting)
+// POST - Creer un utilisateur (Admin uniquement + rate limiting)
 export async function POST(request: Request) {
   try {
-    // ✅ Authentification admin requise
+    // Authentification admin requise
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json(
-        { error: "Non autorisé - Authentification admin requise" },
+        { error: "Non autorise - Authentification admin requise" },
         { status: 401 }
       );
     }
 
-    // ✅ Rate limiting pour éviter la création massive de comptes
+    // Rate limiting pour eviter la creation massive de comptes
     const rateLimit = await applyRateLimit(request, 'register');
     if (!rateLimit.allowed && rateLimit.response) {
       const ip = request.headers.get('x-forwarded-for') || 'unknown';
@@ -79,22 +79,22 @@ export async function POST(request: Request) {
 
     if (!parse.success) {
       return NextResponse.json(
-        { error: "Entrée invalide", details: parse.error.errors },
+        { error: "Entree invalide", details: parse.error.errors },
         { status: 400 }
       );
     }
 
     const { name, email, password, role } = parse.data;
 
-    // ✅ SANITIZATION - Clean email input before DB storage
+    // SANITIZATION - Clean email input before DB storage
     const sanitizedEmail = sanitizeInput(email).toLowerCase();
     const sanitizedName = sanitizeInput(name);
 
-    // Vérifier si l'utilisateur existe déj�
+    // Verifier si l'utilisateur existe deja
     const existingUser = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
     if (existingUser) {
       return NextResponse.json(
-        { error: "Un utilisateur avec cet email existe déjà" },
+        { error: "Un utilisateur avec cet email existe deja" },
         { status: 400 }
       );
     }
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     // Hacher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Créer l'utilisateur
+    // Creer l'utilisateur
     const user = await prisma.user.create({
       data: {
         name: sanitizedName,
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { message: "Utilisateur créé avec succès", user },
+      { message: "Utilisateur cree avec succes", user },
       { status: 201 }
     );
   } catch (error: unknown) {

@@ -33,6 +33,7 @@ import {
   Library,
   List,
   Key,
+  Mail,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -41,7 +42,8 @@ import NotificationCenter from "@/components/admin/NotificationCenter";
 
 const menuItems = [
   { href: "/admin/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/admin/messages", label: "Messagerie", icon: Inbox },
+  { href: "/admin/messages", label: "Messagerie Interne", icon: Inbox },
+  { href: "/admin/contacts", label: "Messages & RDV", icon: Mail },
   { href: "/admin/stats", label: "Statistiques", icon: BarChart3 },
   { href: "/admin/attestations", label: "Attestations", icon: FileText },
   { href: "/admin/formations", label: "Formations", icon: GraduationCap },
