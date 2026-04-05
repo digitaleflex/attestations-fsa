@@ -61,10 +61,11 @@ function VerifierContent() {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "N/A";
     try {
-      return new Date(dateStr).toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
       });
     } catch {
       return dateStr;
@@ -93,8 +94,8 @@ function VerifierContent() {
       }
       const { attestation }: { attestation: Attestation } = await res.json();
       setResult(attestation);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Une erreur est survenue");
+    } catch (e: any) {
+      setError(e.message || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
@@ -110,7 +111,7 @@ function VerifierContent() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#fcfdfe] relative overflow-hidden p-4 md:p-10 pt-24 md:pt-36 selection:bg-emerald-100 selection:text-emerald-900 w-full font-sans">
       
-      {/* 🔮 ULTRA-PREMIUM AMBIENT BACKGROUND */}
+      {/* Background Decor */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-emerald-400/5 rounded-full blur-[160px] animate-pulse" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-blue-500/5 rounded-full blur-[140px]" />
@@ -118,20 +119,17 @@ function VerifierContent() {
 
       <div className="w-full max-w-4xl mx-auto z-10 space-y-12 mb-20 relative">
         
-        {/* ✨ CAPTIVATING HEADER */}
+        {/* Header */}
         <motion.div 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="flex flex-col items-center text-center space-y-8"
         >
-            <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white border border-slate-100 shadow-2xl shadow-slate-200/50 text-emerald-600 transition-all cursor-default"
-            >
-                <ShieldCheck className="w-5 h-5 fill-emerald-500 shrink-0" />
+            <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white border border-slate-100 shadow-2xl shadow-slate-200/50 text-emerald-600">
+                <ShieldCheck className="w-5 h-5 fill-emerald-500" />
                 <span className="text-[11px] font-black uppercase tracking-[0.25em]">Protocol de Vérification FSA</span>
-            </motion.div>
+            </div>
             
             <div className="space-y-4">
                 <h1 className="text-5xl md:text-8xl font-black text-slate-900 leading-[0.85] tracking-tight">
@@ -146,7 +144,7 @@ function VerifierContent() {
             </div>
         </motion.div>
 
-        {/* 🔍 SEARCH MODULE */}
+        {/* Search */}
         <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -185,39 +183,30 @@ function VerifierContent() {
                 </form>
             </div>
 
-            {/* 📋 SIMPLE FORMAT INDICATOR WITH NEW COLORS */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-8 flex flex-col items-center justify-center gap-6"
-            >
+            <div className="mt-8 flex flex-col items-center justify-center gap-6">
               <div className="flex items-center gap-3 text-slate-400 text-[10px] md:text-xs font-black uppercase tracking-[0.3em]">
                 <Fingerprint className="w-5 h-5 text-emerald-500" />
                 <span>Format Officiel</span>
               </div>
               
               <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 bg-slate-50/50 p-4 md:p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group/format">
-                {/* Segment: FSA */}
-                <span className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-emerald-700 text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm group-hover/format:border-emerald-200 transition-colors">FSA</span>
+                <span className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-emerald-700 text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm">FSA</span>
                 <span className="text-slate-300 font-bold">-</span>
-                {/* Segment: YEAR & MONTH */}
-                <span className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-slate-400 text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm group-hover/format:border-emerald-200 transition-colors">2026 - 04</span>
+                <span className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-slate-400 text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm">2026 - 04</span>
                 <span className="text-slate-300 font-bold">-</span>
-                {/* Segment: SEQ */}
-                <span className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-indigo-600 text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm group-hover/format:border-emerald-200 transition-colors">00001</span>
+                <span className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-indigo-600 text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm">00001</span>
                 <span className="text-slate-300 font-bold">-</span>
-                {/* Segment: HASH */}
-                <span className="px-4 py-2 bg-slate-950 rounded-xl text-white text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm group-hover/format:bg-emerald-600 transition-all">A3F7C</span>
+                <span className="px-4 py-2 bg-slate-950 rounded-xl text-white text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm">A3F7C</span>
               </div>
 
               <div className="flex items-center gap-2 text-slate-400 text-[9px] font-bold uppercase tracking-widest">
                 <Info className="w-3 h-3 text-emerald-500" />
                 <span>Indiquez le code complet ou seulement le hash (ex: A3F7C)</span>
               </div>
-            </motion.div>
+            </div>
         </motion.div>
 
-        {/* 📊 RESULTS AREA */}
+        {/* Results */}
         <AnimatePresence mode="wait">
           {result && (
               <motion.div 
@@ -227,7 +216,6 @@ function VerifierContent() {
                   transition={{ duration: 0.6, ease: "circOut" }}
                   className="w-full space-y-12"
               >
-                  {/* Summary Bento Card */}
                   <div className="relative bg-white border border-slate-100 rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.06)] overflow-hidden">
                       <div className="p-8 md:p-14 flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-12 border-b border-slate-50">
                           <div className={`w-28 h-28 md:w-36 md:h-36 rounded-[2.8rem] flex items-center justify-center shrink-0 border border-slate-50 shadow-2xl relative ${result.status === 'VALIDATED' ? 'text-emerald-500 bg-emerald-50/30' : 'text-rose-500 bg-rose-50/30'}`}>
@@ -265,7 +253,6 @@ function VerifierContent() {
                       </div>
                   </div>
 
-                  {/* 🎨 HOLOGRAPHIC PREVIEW */}
                   {result.status === "VALIDATED" && (
                     <motion.div 
                       initial={{ opacity: 0, y: 30 }}
@@ -345,18 +332,13 @@ function VerifierContent() {
           )}
         </AnimatePresence>
 
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="text-center space-y-8 pt-12 md:pt-20"
-        >
+        <div className="text-center space-y-8 pt-12 md:pt-20">
           <div className="h-px w-20 bg-slate-200 mx-auto" />
           <div className="flex flex-col items-center gap-2">
             <p className="text-slate-400 text-[11px] font-black uppercase tracking-[0.2em]">Système de Protection Interne FSA</p>
             <p className="text-slate-300 text-[10px] font-bold uppercase tracking-[0.1em]">Données chiffrées & certifiées</p>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

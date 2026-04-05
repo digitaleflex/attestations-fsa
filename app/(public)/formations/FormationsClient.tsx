@@ -102,40 +102,40 @@ export default function FormationsClient({ initialFormations }: FormationsClient
               >
                 <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-[2rem] opacity-20 group-hover:opacity-40 blur-xl transition duration-500" />
                 
-                <div className="relative flex flex-col md:flex-row items-stretch md:items-center bg-white/80 backdrop-blur-[50px] rounded-[2rem] border border-white shadow-2xl shadow-slate-200/50 p-2 overflow-hidden">
+                <div className="relative flex flex-col items-stretch bg-white/80 backdrop-blur-[50px] rounded-[2.5rem] border border-white shadow-2xl shadow-slate-200/50 p-2 overflow-hidden md:flex-row md:items-center md:rounded-[3rem]">
                   
-                  {/* Category Selector Side */}
-                  <div className="relative min-w-[160px] flex items-center border-b md:border-b-0 md:border-r border-slate-100 px-4 py-2 md:py-0">
-                    <Layers className="w-4 h-4 text-emerald-500 mr-3 shrink-0" />
+                  {/* Category Selector Side - MOBILE OPTIMIZED */}
+                  <div className="relative flex items-center border-b border-slate-100 px-6 py-4 md:border-b-0 md:border-r md:px-8 md:py-0 md:min-w-[200px]">
+                    <Layers className="w-5 h-5 text-emerald-500 mr-3 shrink-0" />
                     <select 
                       value={activeCategory}
                       onChange={(e) => setActiveCategory(e.target.value)}
-                      className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black uppercase tracking-wider text-slate-700 cursor-pointer w-full appearance-none pr-6"
+                      className="bg-transparent border-none focus:ring-0 text-[11px] md:text-sm font-black uppercase tracking-widest text-slate-700 cursor-pointer w-full appearance-none pr-8 py-2 md:py-0"
                     >
                       {categories.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
-                    <div className="absolute right-4 pointer-events-none text-slate-400">
-                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <div className="absolute right-6 pointer-events-none text-slate-400">
+                        <svg width="12" height="8" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     </div>
                   </div>
 
                   {/* Search Input Side */}
-                  <div className="relative flex-1 flex items-center">
+                  <div className="relative flex-1 flex items-center min-h-[64px] md:min-h-[80px]">
                     <Search className="absolute left-6 w-5 h-5 text-slate-300 md:group-focus-within:text-emerald-500 transition-all duration-300" />
                     <Input 
                       ref={searchInputRef}
-                      placeholder="Rechercher une expertise ou un mot-clé..." 
-                      className="h-14 md:h-16 pl-14 pr-4 border-none bg-transparent rounded-none focus:ring-0 text-slate-700 font-bold placeholder:text-slate-200 placeholder:font-medium md:text-lg w-full"
+                      placeholder={activeCategory === "Toutes" ? "Rechercher une expertise..." : `Dans ${activeCategory}...`}
+                      className="h-full pl-14 pr-4 border-none bg-transparent rounded-none focus:ring-0 text-slate-800 font-bold placeholder:text-slate-200 placeholder:font-medium text-sm md:text-lg w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     
                     {/* Visual indicators */}
-                    <div className="hidden lg:flex items-center gap-2 pr-6 text-slate-200 pointer-events-none">
+                    <div className="hidden lg:flex items-center gap-2 pr-8 text-slate-200 pointer-events-none">
                       <kbd className="px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-black uppercase shadow-sm">Ctrl</kbd>
                       <kbd className="px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-black uppercase shadow-sm">K</kbd>
                     </div>
