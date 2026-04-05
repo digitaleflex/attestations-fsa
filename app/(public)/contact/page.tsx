@@ -23,18 +23,40 @@ import Link from "next/link";
 export default function ContactPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "mesure",
+    message: "",
+  });
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setLoading(false);
-    setSubmitted(true);
-    toast.success("Message envoyé avec succès !");
-  }
+    try {
+      const response = await fetch('/api/public/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubmitted(true);
+        setFormData({ name: "", email: "", phone: "", subject: "mesure", message: "" });
+        toast.success("Message envoyé avec succès !");
+      } else {
+        toast.error(data.error || "Une erreur est survenue");
+      }
+    } catch (error) {
+      toast.error("Erreur de connexion au serveur");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#fafbfc] selection:bg-emerald-100 selection:text-emerald-900 pb-24 overflow-x-hidden pt-24 md:pt-36">
@@ -158,6 +180,9 @@ export default function ContactPage() {
                             <div className="relative">
                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 <Input 
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     required
                                     placeholder="Koffi Sènou" 
                                     className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
@@ -169,6 +194,9 @@ export default function ContactPage() {
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 <Input 
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
                                     required
                                     type="email"
                                     placeholder="koffi@email.com" 
@@ -184,6 +212,9 @@ export default function ContactPage() {
                             <div className="relative">
                                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 <Input 
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
                                     required
                                     placeholder="+229 01..." 
                                     className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
@@ -195,6 +226,9 @@ export default function ContactPage() {
                             <div className="relative">
                                 <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
                                 <select 
+                                    name="subject"
+                                    value={formData.subject}
+                                    onChange={(e) => setFormData({...formData, subject: e.target.value})}
                                     required
                                     className="w-full h-12 md:h-14 pl-11 pr-10 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 appearance-none text-xs md:text-sm"
                                 >
@@ -214,6 +248,9 @@ export default function ContactPage() {
                     <div className="space-y-1.5">
                         <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] ml-2">Message</label>
                         <Textarea 
+                            name="message"
+                            value={formData.message}
+                            onChange={(e) => setFormData({...formData, message: e.target.value})}
                             required
                             placeholder="Décrivez votre projet..."
                             className="min-h-[120px] md:min-h-[150px] p-5 md:p-6 bg-white/60 border-slate-100/50 rounded-2xl md:rounded-[2rem] focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 resize-none text-sm"
@@ -221,6 +258,7 @@ export default function ContactPage() {
                     </div>
 
                     <Button 
+                        type="submit"
                         disabled={loading}
                         className="w-full h-14 md:h-20 rounded-2xl md:rounded-[2rem] bg-slate-900 hover:bg-emerald-600 text-white font-black uppercase tracking-[0.2em] text-[10px] md:text-sm shadow-2xl shadow-emerald-500/10 transition-all duration-500 group/btn active:scale-[0.98]"
                     >
