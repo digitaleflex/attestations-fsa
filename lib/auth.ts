@@ -86,7 +86,6 @@ export const auth = betterAuth({
         enabled: true,
         minPasswordLength: 8,
         requireEmailVerification: false, // Set to true once email service is configured
-        sendResetPasswordEmail: true,
     },
     databaseHooks: {
         user: {
@@ -100,7 +99,7 @@ export const auth = betterAuth({
                     if (user.role) {
                         user.role = user.role.toLowerCase();
                     }
-                    return Promise.resolve(user);
+                    return Promise.resolve({ data: user });
                 },
                 after: async (user) => {
                     // Log user creation for audit purposes
