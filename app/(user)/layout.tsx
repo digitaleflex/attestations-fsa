@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
   FileText,
@@ -25,7 +26,7 @@ import {
   GraduationCap
 } from "lucide-react";
 import ChatBubble from "@/components/ChatBubble";
-import NotificationBell from "@/components/NotificationBell";
+import { authClient, signOut } from "@/lib/auth-client";
 import { getCurrentUser } from "@/lib/auth";
 
 export default function UserLayout({
@@ -55,9 +56,18 @@ export default function UserLayout({
   });
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    toast.success("Déconnecté avec succès");
-    router.push("/");
+    try {
+        // 1. Better Auth Sign Out
+        await signOut();
+        // 2. Legacy API Logout
+        await fetch("/api/auth/logout", { method: "POST" });
+        
+        toast.success("Déconnecté avec succès");
+        router.push("/");
+    } catch (err) {
+        console.error("User logout error:", err);
+        router.push("/");
+    }
   };
 
   const menuItems = [

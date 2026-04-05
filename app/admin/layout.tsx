@@ -1,5 +1,8 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+
 import {
   SidebarProvider,
   Sidebar,
@@ -37,7 +40,8 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
 import NotificationCenter from "@/components/admin/NotificationCenter";
 
 const menuItems = [
@@ -98,6 +102,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   // Ne pas afficher la sidebar pour la page de login
   const isLoginPage =
@@ -126,7 +131,7 @@ export default function AdminLayout({
   // Rediriger si pas admin (sauf page de login)
   if (!isLoginPage && !isLoading && !admin) {
     if (typeof window !== "undefined") {
-      window.location.href = "/admin/login";
+      router.push("/admin/login");
     }
     return null;
   }
@@ -136,8 +141,18 @@ export default function AdminLayout({
   }
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/admin/login";
+    try {
+        // 1. Sign out from Better Auth
+        await authClient.signOut();
+        // 2. Clear legacy session via API
+        await fetch("/api/auth/logout", { method: "POST" });
+        // 3. Clean redirect
+        router.push("/admin/login");
+    } catch (error) {
+        console.error("Logout error:", error);
+        // Fallback redirection
+        window.location.href = "/admin/login";
+    }
   };
 
   return (

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Next.js 16: Turbopack par défaut, on ajoute une config vide pour silencer le warning
+  // Next.js 16: Turbopack par défaut
   turbopack: {},
   reactStrictMode: true,
   images: {
@@ -23,9 +23,7 @@ const nextConfig = {
       // Suppression de la réécriture redondante
     ];
   },
-  experimental: {
-    useCache: true,
-  }
+  experimental: {}
 };
 
 export default nextConfig;
