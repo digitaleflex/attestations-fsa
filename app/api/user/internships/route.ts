@@ -25,7 +25,7 @@ const InternshipApplicationSchema = z.object({
 });
 
 // GET /api/user/internships - Récupérer les candidatures de l'utilisateur
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const userId = await isAuthenticatedUser();
     if (!userId) {
@@ -41,10 +41,10 @@ export async function GET(request: Request) {
     // Statistiques
     const stats = {
       total: applications.length,
-      pending: applications.filter((a: any) => a.status === 'PENDING').length,
-      inReview: applications.filter((a: any) => a.status === 'REVIEWING').length,
-      accepted: applications.filter((a: any) => a.status === 'ACCEPTED').length,
-      rejected: applications.filter((a: any) => a.status === 'REJECTED').length,
+      pending: applications.filter((a) => a.status === 'PENDING').length,
+      inReview: applications.filter((a) => a.status === 'REVIEWING').length,
+      accepted: applications.filter((a) => a.status === 'ACCEPTED').length,
+      rejected: applications.filter((a) => a.status === 'REJECTED').length,
     };
     
     return NextResponse.json({
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       stats
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur stages user:', error);
     return NextResponse.json({ 
       error: 'Erreur lors de la récupération des candidatures' 
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
       application
     }, { status: 201 });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur candidature stage:', error);
     return NextResponse.json({ 
       error: 'Erreur lors de la soumission de la candidature' 

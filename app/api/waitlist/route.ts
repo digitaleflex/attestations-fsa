@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
     // ✅ SAVE TO DATABASE BEFORE SENDING EMAILS
     // This ensures we never lose a signup even if email fails
-    let existingWaitlist = await prisma.waitlist.findUnique({
+    const existingWaitlist = await prisma.waitlist.findUnique({
       where: { email },
     });
 
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const confirmRes = await emailService.sendWaitlistConfirmation(email);
 
     // 2. Notifier l'admin
-    const adminRes = await emailService.notifyAdminWaitlist(email);
+    await emailService.notifyAdminWaitlist(email);
 
     if (!confirmRes.success) {
       // Email failed but entry is saved - we can retry later

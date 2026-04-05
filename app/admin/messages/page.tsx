@@ -1,7 +1,5 @@
 "use client";
-
-import { useEffect, useState, useRef } from "react";
-import { Card } from "@/components/ui/card";
+import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,42 +10,49 @@ import {
   CheckCheck, 
   Loader2,
   Inbox,
-  Filter,
   MessageCircle,
-  MoreVertical,
-  ImageIcon,
-  Image as ImgIcon
+  MoreVertical
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { getPusherClient } from "@/lib/pusher";
 import { nanoid } from "nanoid";
 
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+}
+
+interface Message {
+    id: string;
+    content: string;
+    senderRole: string;
+    senderId: string;
+    createdAt: string;
+    attachments?: string[];
+    isRead?: boolean;
+}
+
 export default function AdminMessagesPage() {
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<UserProfile[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [convLoading, setConvLoading] = useState(true);
-  const [msgLoading, setMsgLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Polling des conversations
   useEffect(() => {
     fetchConversations();
     const interval = setInterval(fetchConversations, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // Polling des messages de l'utilisateur sélectionné
   useEffect(() => {
     if (selectedUser) {
       fetchMessages(selectedUser.id);
-      
-      const pusher = getPusherClient();
-      // On garde un polling de sécurité robuste
       const interval = setInterval(() => fetchMessages(selectedUser.id), 3000);
       return () => clearInterval(interval);
     }
@@ -61,13 +66,12 @@ export default function AdminMessagesPage() {
 
   const fetchConversations = async () => {
     try {
-      // Nous utilisons l'API d'administration pour lister les utilisateurs
       const res = await fetch("/api/users"); 
       const users = await res.json();
-      
-      // On filtre les candidats (role user)
-      setConversations(users.filter((u: any) => u.role === "user")); 
-    } catch (err) {} finally {
+      setConversations(users.filter((u: UserProfile) => u.role === "user"));
+    } catch {
+      // Error handled by state
+    } finally {
       setConvLoading(false);
     }
   };
@@ -79,7 +83,9 @@ export default function AdminMessagesPage() {
         const data = await res.json();
         setMessages(data);
       }
-    } catch (err) {}
+    } catch {
+      // Error handled by state
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -88,13 +94,14 @@ export default function AdminMessagesPage() {
 
     setIsSending(true);
     const tempId = nanoid();
-    const optimisticMsg = {
+    const optimisticMsg: Message = {
         id: tempId,
         content: newMessage,
         senderRole: "admin",
         senderId: "ADMIN_SYSTEM",
         createdAt: new Date().toISOString(),
-        attachments: []
+        attachments: [],
+        isRead: false
     };
 
     setMessages(prev => [...prev, optimisticMsg]);
@@ -118,7 +125,7 @@ export default function AdminMessagesPage() {
         const errorData = await res.json();
         toast.error(errorData.error || errorData.details || "Échec de l'envoi");
       }
-    } catch (err) {
+    } catch {
       setMessages(prev => prev.filter(m => m.id !== tempId));
       toast.error("Erreur de connexion");
     } finally {
@@ -128,7 +135,6 @@ export default function AdminMessagesPage() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex overflow-hidden">
-      {/* Sidebar de conversations */}
       <div className="w-80 md:w-96 border-r bg-white flex flex-col shrink-0">
         <div className="p-6 border-b">
           <div className="flex items-center justify-between mb-4">
@@ -161,7 +167,7 @@ export default function AdminMessagesPage() {
                     selectedUser?.id === user.id ? 'bg-blue-50/50' : ''
                 }`}
               >
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-bold border border-white shadow-sm ring-2 ring-transparent group-hover:ring-blue-100 transition-all">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-bold border border-white shadow-sm ring-2 ring-transparent transition-all">
                   {user.name?.charAt(0) || <User className="w-5 h-5" />}
                 </div>
                 <div className="flex-1 text-left min-w-0">
@@ -179,11 +185,9 @@ export default function AdminMessagesPage() {
         </div>
       </div>
 
-      {/* Zone de discussion */}
       <div className="flex-1 bg-slate-50 flex flex-col relative overflow-hidden">
         {selectedUser ? (
           <>
-            {/* Header */}
             <div className="bg-white border-b h-20 flex items-center justify-between px-8 shadow-sm z-10 shrink-0">
                <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
@@ -204,38 +208,36 @@ export default function AdminMessagesPage() {
                </div>
             </div>
 
-            {/* Messages Area */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6">
                {messages.map((m) => {
                  const isMe = m.senderRole === "admin";
                  return (
-                   <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                      <div className={`max-w-[70%] group`}>
-                         <div className={`p-4 rounded-3xl relative shadow-sm ${
-                           isMe ? 'bg-slate-900 text-white rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border border-slate-100'
-                         }`}>
-                           {m.attachments && Array.isArray(m.attachments) && m.attachments.length > 0 && (
-                             <div className="mb-3 rounded-2xl overflow-hidden border border-slate-100 bg-slate-50">
-                               {m.attachments.map((url: string, idx: number) => (
-                                 <img key={idx} src={url} alt="Attachment" className="max-w-full h-auto object-cover hover:scale-[1.02] transition-transform" />
-                               ))}
-                             </div>
-                           )}
-                           <p className="text-sm leading-relaxed font-medium">{m.content}</p>
-                         </div>
-                         <div className={`flex items-center gap-2 mt-2 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                            <p className="text-[9px] font-black text-slate-400 uppercase">
-                                {format(new Date(m.createdAt), 'HH:mm', { locale: fr })}
-                            </p>
-                            {isMe && <CheckCheck className={`w-3 h-3 ${m.isRead ? 'text-blue-500' : 'text-slate-300'}`} />}
-                         </div>
-                      </div>
-                   </div>
+                    <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                       <div className="max-w-[70%] group">
+                          <div className={`p-4 rounded-3xl relative shadow-sm ${
+                            isMe ? 'bg-slate-900 text-white rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border border-slate-100'
+                          }`}>
+                            {m.attachments && Array.isArray(m.attachments) && m.attachments.length > 0 && (
+                              <div className="mb-3 rounded-2xl overflow-hidden border border-slate-100 bg-slate-50">
+                                {m.attachments.map((url: string, idx: number) => (
+                                  <img key={idx} src={url} alt="Attachment" className="max-w-full h-auto object-cover hover:scale-[1.02] transition-transform" />
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-sm leading-relaxed font-medium">{m.content}</p>
+                          </div>
+                          <div className={`flex items-center gap-2 mt-2 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                             <p className="text-[9px] font-black text-slate-400 uppercase">
+                                 {format(new Date(m.createdAt), 'HH:mm', { locale: fr })}
+                             </p>
+                             {isMe && <CheckCheck className={`w-3 h-3 ${m.isRead ? 'text-blue-500' : 'text-slate-300'}`} />}
+                          </div>
+                       </div>
+                    </div>
                  );
                })}
             </div>
 
-            {/* Input Area */}
             <div className="bg-white border-t p-6 pb-8 shrink-0">
                <form onSubmit={handleSendMessage} className="flex items-center gap-4 max-w-4xl mx-auto">
                   <Input 
@@ -260,7 +262,7 @@ export default function AdminMessagesPage() {
             <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 ring-8 ring-blue-50/50">
                 <MessageCircle className="w-10 h-10 text-blue-400" />
             </div>
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Messagerie d'Assistance</h3>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Messagerie d&apos;Assistance</h3>
             <p className="text-slate-500 font-medium max-w-sm mt-2">
                 Sélectionnez un candidat dans la colonne de gauche pour démarrer une discussion instantanée.
             </p>

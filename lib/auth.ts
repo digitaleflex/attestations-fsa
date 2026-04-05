@@ -78,6 +78,14 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,
+        sendResetPassword: async ({ user, url }) => {
+            const { emailService } = await import('@/lib/email');
+            await emailService.sendPasswordReset(
+                user.email,
+                user.name || user.email,
+                url
+            );
+        },
     },
     plugins: [
         nextCookies(),

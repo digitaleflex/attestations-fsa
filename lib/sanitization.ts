@@ -67,12 +67,12 @@ export const CRITICAL_FIELDS = [
  * Transforme les données après validation
  */
 export function createSanitizedSchema<T extends z.ZodType>(schema: T) {
-  return schema.transform((data: any) => {
+  return schema.transform((data: unknown) => {
     if (typeof data === 'string') {
-      return sanitizeInput(data) as any
+      return sanitizeInput(data)
     }
     if (typeof data === 'object' && data !== null) {
-      return sanitizeObject(data as Record<string, any>)
+      return sanitizeObject(data as Record<string, unknown>)
     }
     return data
   })
@@ -84,14 +84,14 @@ export function createSanitizedSchema<T extends z.ZodType>(schema: T) {
  * @param field - Nom du champ à sanitiser
  * @returns Objet avec le champ sanitizé
  */
-export function sanitizeField<T extends Record<string, any>>(
+export function sanitizeField<T extends Record<string, unknown>>(
   data: T,
   field: keyof T
 ): T {
   if (typeof data[field] === 'string') {
     return {
       ...data,
-      [field]: sanitizeInput(data[field] as string) as any,
+      [field]: sanitizeInput(data[field] as string),
     }
   }
   return data
@@ -190,7 +190,7 @@ export function sanitizeFilename(filename: string): string {
   
   // Supprimer les caractères spéciaux et les chemins
   return filename
-    .replace(/[^\w.\-]/g, '_')
+    .replace(/[^\w.-]/g, '_')
     .replace(/\.{2,}/g, '_')  // .. → _
     .replace(/^\.+/, '')  // Supprimer les points au début
     .substring(0, 255)  // Limiter la longueur

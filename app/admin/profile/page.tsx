@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { DateInput } from "@/components/ui/date-input";
-import { Loader2, User, Mail, Phone, MapPin, Calendar, Lock, CheckCircle, Edit2, Save, X, Shield, AtSign } from "lucide-react";
+import { Loader2, User, Mail, Phone, MapPin, Calendar, Lock, CheckCircle, Edit2, Save, X, Shield } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -77,7 +77,7 @@ export default function AdminProfilePage() {
     }
 
     try {
-      const updateData: any = {
+      const updateData: Record<string, string> = {
         name: form.name,
         email: form.email,
         birthDate: form.birthDate,
@@ -107,9 +107,10 @@ export default function AdminProfilePage() {
       toast.success("Profil mis à jour !");
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
-    } catch (err: any) {
-      setError(err.message || "Erreur inconnue");
-      toast.error(err.message || "Erreur lors de la mise à jour");
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || "Erreur inconnue");
+      toast.error(error.message || "Erreur lors de la mise à jour");
     } finally {
       setLoading(false);
     }

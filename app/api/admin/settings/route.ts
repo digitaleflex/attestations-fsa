@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { createAuditLog } from '@/lib/audit';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });

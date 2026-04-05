@@ -63,7 +63,7 @@ export async function GET() {
     }
     
     return NextResponse.json(user);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur profil user:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
@@ -121,7 +121,7 @@ export async function PATCH(request: Request) {
     }
     
     // Préparation des données à mettre à jour
-    const updateData: any = {};
+    const updateData: import('@prisma/client').Prisma.UserUpdateInput = {};
     
     if (name) updateData.name = name;
     if (email) updateData.email = email;
@@ -175,7 +175,7 @@ export async function PATCH(request: Request) {
       user: updatedUser
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur mise à jour profil:', error);
     return NextResponse.json({ 
       error: 'Erreur lors de la mise à jour du profil' 

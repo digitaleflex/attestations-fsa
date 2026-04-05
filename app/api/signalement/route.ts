@@ -133,9 +133,9 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json(reports)
     
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Erreur récupération signalements:', e)
-    return handleApiError(e, {
+    return handleApiError(e instanceof Error ? e : new Error(String(e)), {
       route: '/api/signalement',
       operation: 'get_reports',
     })
@@ -164,8 +164,8 @@ export async function DELETE(req: NextRequest) {
     console.log(`[REPORT] Signalement supprimé via query param: ${id}`)
     return NextResponse.json({ success: true, message: "Signalement supprimé" })
 
-  } catch (error: any) {
-    return handleApiError(error, {
+  } catch (error: unknown) {
+    return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: '/api/signalement',
       operation: 'delete_report_query',
     })

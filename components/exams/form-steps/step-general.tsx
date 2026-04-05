@@ -5,8 +5,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ExamFormData } from "../types";
-import { useEffect, useState } from "react";
-import { Calendar, Clock, FileText, BookOpen, Info, Target, Shuffle, Eye } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Calendar, FileText, BookOpen, Info, Target, Shuffle, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 type Props = {
@@ -25,7 +25,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
       .then((data) => {
         if (Array.isArray(data)) {
           setFormations(
-            data.map((f: any) => ({ id: f.id || f.name, name: f.name })),
+            data.map((f: { id?: string; name: string }) => ({ id: f.id || f.name, name: f.name })),
           );
         }
       })
@@ -36,22 +36,6 @@ export function StepGeneral({ formData, updateFormData }: Props) {
     updateFormData({ status: value as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SCHEDULED" });
   };
 
-  // Convert datetime-local format to display-friendly format
-  const formatScheduledDate = (isoDate: string) => {
-    if (!isoDate) return "";
-    try {
-      const date = new Date(isoDate);
-      return date.toLocaleString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return isoDate;
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -67,7 +51,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
         <div className="space-y-2">
           <Label htmlFor="title" className="text-sm font-semibold">
             <FileText className="w-4 h-4 inline mr-2" />
-            Titre de l'Examen *
+            Titre de l&apos;Examen *
           </Label>
           <Input
             id="title"
@@ -87,7 +71,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
             id="formationId"
             className="w-full h-11 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 outline-none bg-white"
             value={formData.formationId || ""}
-            onChange={(e: any) =>
+            onChange={(e) =>
               updateFormData({ formationId: e.target.value })
             }
           >
@@ -123,7 +107,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-sm font-semibold text-blue-900">
-                Date de l'Examen (JJ/MM/AAAA)
+                Date de l&apos;Examen (JJ/MM/AAAA)
               </Label>
               <DateInput
                 value={formData.scheduledAt?.split("T")[0] || ""}
@@ -161,7 +145,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   id="status"
                   className="w-full h-11 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                   value={formData.status}
-                  onChange={(e: any) => handleStatusChange(e.target.value)}
+                  onChange={(e) => handleStatusChange(e.target.value)}
                 >
                   <option value="DRAFT">📝 Brouillon</option>
                   <option value="SCHEDULED">📅 Programmé</option>
@@ -177,13 +161,13 @@ export function StepGeneral({ formData, updateFormData }: Props) {
         <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-5">
           <div className="flex items-center gap-2 mb-1">
             <Info className="w-5 h-5 text-slate-600" />
-            <h3 className="font-extrabold text-slate-800 uppercase tracking-tight text-sm">Détails de l'épreuve</h3>
+            <h3 className="font-extrabold text-slate-800 uppercase tracking-tight text-sm">Détails de l&apos;épreuve</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-sm font-semibold text-slate-700">
-                Session de l'Examen
+                Session de l&apos;Examen
               </Label>
               <div className="flex gap-2">
                 <select
@@ -281,7 +265,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
         <div className="p-6 bg-emerald-50/30 border border-emerald-100 rounded-2xl space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-black text-emerald-800 uppercase tracking-tight text-sm">Paramètres de l'Épreuve</h3>
+            <h3 className="font-black text-emerald-800 uppercase tracking-tight text-sm">Paramètres de l&apos;Épreuve</h3>
           </div>
 
           <div className="space-y-6">

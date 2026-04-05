@@ -7,7 +7,7 @@ type CreateNotificationInput = {
   title: string;
   message: string;
   link?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 };
 
 /**
@@ -22,10 +22,10 @@ export async function createNotification(input: CreateNotificationInput) {
         title: input.title,
         message: input.message,
         link: input.link || undefined,
-        metadata: (input.metadata as any) || undefined,
+        metadata: input.metadata || undefined,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[NOTIFICATION ERROR]', error);
     return null;
   }

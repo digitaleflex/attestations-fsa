@@ -138,7 +138,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                     </div>
                     
                     <div className="p-6 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
-                        <p className="text-[10px] uppercase font-black mb-1.5 tracking-widest" style={{ color: "#64748b" }}>Période d'évaluation</p>
+                        <p className="text-[10px] uppercase font-black mb-1.5 tracking-widest" style={{ color: "#64748b" }}>Période d&apos;évaluation</p>
                         <p className="font-bold text-lg" style={{ color: "#0f172a" }}>
                             {formatDate(data.startDate)} — {formatDate(data.endDate)}
                         </p>

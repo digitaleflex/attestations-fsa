@@ -446,7 +446,7 @@ export default function AuthPage() {
                 />
                 <span className="text-sm text-gray-600">Se souvenir de moi</span>
               </label>
-              <Link href="/admin/login" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              <Link href="/forgot-password" title="password reset" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                 Mot de passe oublié ?
               </Link>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      const { data, error: authError } = await authClient.signIn.email({
+      const { error: authError } = await authClient.signIn.email({
         email: form.email,
         password: form.password,
         callbackURL: "/admin/dashboard",
@@ -53,9 +53,10 @@ export default function AdminLoginPage() {
       if (authError) {
         setError(translateAuthError(authError.message || "Échec de la connexion"));
       }
-    } catch (err: any) {
-      setError(err.message || "Erreur inconnue");
-      toast.error(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || "Erreur inconnue");
+      toast.error(error.message || "Erreur inconnue");
     } finally {
       setLoading(false);
     }
@@ -124,6 +125,11 @@ export default function AdminLoginPage() {
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
+            </div>
+            <div className="flex justify-end mt-2">
+              <Link href="/admin/forgot-password" className="text-xs text-amber-600 hover:text-amber-700 font-medium">
+                Mot de passe oublié ?
+              </Link>
             </div>
           </div>
 

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
@@ -54,8 +52,8 @@ export async function GET(request: Request) {
     const search = url.searchParams.get('search') || '';
 
     // Filtre dynamique
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {};
+    // Filtre dynamique
+    const where: Record<string, unknown> = {};
     if (status) where.status = status;
     if (search) {
       where.OR = [
@@ -72,8 +70,8 @@ export async function GET(request: Request) {
     }
 
     const attestations = await prisma.attestation.findMany({
-      where,
-      orderBy: { issuedAt: order },
+      where: where as import('@prisma/client').Prisma.AttestationWhereInput,
+      orderBy: { issuedAt: (order === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc' },
       include: { formation: { select: { name: true } } },
       ...(limit ? { take: limit } : {}),
       skip: offset,
@@ -136,7 +134,7 @@ export async function POST(request: Request) {
     console.log('[POST /api/attestations] Creating record with code:', code);
 
     // Préparation des données
-    const attestationData: any = {
+    const attestationData: Record<string, unknown> = {
       code,
       fullName,
       gender,
@@ -166,7 +164,7 @@ export async function POST(request: Request) {
 
     // Création de l'attestation
     await prisma.attestation.create({
-      data: attestationData
+      data: attestationData as import('@prisma/client').Prisma.AttestationCreateInput
     })
     console.log('[POST /api/attestations] Success');
     return NextResponse.json({ message: 'Attestation créée', code }, { status: 201 })

@@ -1,25 +1,18 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { 
-  Plus, 
   Library, 
   BookOpen, 
   Video, 
   FileText, 
   Link as LinkIcon,
   Search,
-  MoreVertical,
   Trash2,
   ExternalLink,
-  Tag,
   Eye,
   EyeOff,
-  RefreshCcw,
   PlusCircle,
   FileUp,
-  Image as ImageIcon,
-  Loader2,
   AlertCircle
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -29,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Dialog, 
   DialogContent, 
-  DialogHeader, 
   DialogTitle, 
   DialogTrigger,
   DialogFooter
@@ -57,11 +49,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+type ResourceType = "BOOK" | "VIDEO" | "REVISION_FILE" | "OTHER";
+
 type Resource = {
   id: string;
   title: string;
   description?: string;
-  type: "BOOK" | "VIDEO" | "REVISION_FILE" | "OTHER";
+  type: ResourceType;
   url: string;
   thumbnail?: string;
   category?: string;
@@ -77,7 +71,7 @@ export default function AdminResourcesPage() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    type: "BOOK" as any,
+    type: "BOOK" as ResourceType,
     url: "",
     thumbnail: "",
     category: "",
@@ -90,8 +84,9 @@ export default function AdminResourcesPage() {
       if (!res.ok) throw new Error("Erreur lors de la récupération");
       const data = await res.json();
       setResources(data);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -122,8 +117,9 @@ export default function AdminResourcesPage() {
         isPublished: true
       });
       fetchResources();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error.message);
     }
   };
 
@@ -133,8 +129,9 @@ export default function AdminResourcesPage() {
       if (!res.ok) throw new Error("Erreur lors de la suppression");
       toast.success("🗑️ Ressource supprimée");
       setResources(resources.filter(r => r.id !== id));
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error.message);
     }
   };
 
@@ -148,8 +145,9 @@ export default function AdminResourcesPage() {
       if (!res.ok) throw new Error("Erreur lors de la mise à jour");
       toast.success(!currentStatus ? "👁️ Ressource publiée" : "🕵️ Ressource masquée");
       setResources(resources.map(r => r.id === id ? { ...r, isPublished: !currentStatus } : r));
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error.message);
     }
   };
 
@@ -160,7 +158,6 @@ export default function AdminResourcesPage() {
 
   return (
     <div className="p-6 space-y-8 bg-slate-50/50 min-h-screen pb-24">
-      {/* Header Premium */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 max-w-7xl mx-auto">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-primary">
@@ -216,7 +213,7 @@ export default function AdminResourcesPage() {
 
                   <div className="space-y-2">
                     <Label className="font-bold text-slate-700">Catégorie</Label>
-                    <Select value={formData.type} onValueChange={v => setFormData({ ...formData, type: v })}>
+                    <Select value={formData.type} onValueChange={(v: ResourceType) => setFormData({ ...formData, type: v })}>
                       <SelectTrigger className="rounded-xl h-12">
                         <SelectValue />
                       </SelectTrigger>
@@ -277,7 +274,6 @@ export default function AdminResourcesPage() {
         </div>
       </div>
 
-      {/* Tabs Layout */}
       <div className="max-w-7xl mx-auto">
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList className="bg-white/70 p-1.5 rounded-2xl border border-slate-200/60 backdrop-blur-md h-auto flex flex-wrap md:inline-flex shadow-sm">
@@ -333,12 +329,10 @@ function ResourceCard({
   
   return (
     <Card className="group overflow-hidden border-none shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col bg-white rounded-[2.5rem] ring-1 ring-slate-100">
-      {/* Visual Area */}
       <div className={`aspect-[16/9] bg-gradient-to-br ${cardColor} flex items-center justify-center relative overflow-hidden`}>
         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
         <Icon className="w-16 h-16 text-white/40 group-hover:scale-125 group-hover:rotate-6 transition-transform duration-700" />
         
-        {/* Status Overlay */}
         {!resource.isPublished && (
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] flex items-center justify-center z-10">
              <div className="flex flex-col items-center gap-2">
@@ -431,7 +425,7 @@ function EmptyState() {
         <Library className="w-12 h-12 text-slate-200" />
       </div>
       <h3 className="text-2xl font-black text-slate-800">Votre bibliothèque est vide</h3>
-      <p className="text-slate-500 font-medium mt-2 max-w-sm text-center">Inscrivez cette plateforme dans l'excellence en ajoutant vos premiers supports de cours.</p>
+      <p className="text-slate-500 font-medium mt-2 max-w-sm text-center">Inscrivez cette plateforme dans l&apos;excellence en ajoutant vos premiers supports de cours.</p>
     </div>
   );
 }

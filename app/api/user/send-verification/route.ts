@@ -80,9 +80,9 @@ export async function POST(request: Request) {
       success: true
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Send verification error:', error)
-    return handleApiError(error, {
+    return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: '/api/user/send-verification',
       operation: 'send_verification',
     })

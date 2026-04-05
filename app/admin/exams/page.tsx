@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,8 @@ import {
   History as HistoryIcon,
   TrendingUp,
   FileText,
-  ChevronRight
+  ChevronRight,
+  LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -79,7 +80,7 @@ export default function AdminExamsPage() {
       const data = await res.json();
       setExams(Array.isArray(data) ? data : []);
       setLoading(false);
-    } catch (err) {
+    } catch {
       setLoading(false);
     }
   };
@@ -92,15 +93,16 @@ export default function AdminExamsPage() {
       if (!res.ok) throw new Error("Erreur lors de la suppression");
       setExams((prev) => prev.filter((e) => e.id !== deleteId));
       toast.success("Examen supprimé !");
-    } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error.message || "Erreur inconnue");
     } finally {
       setIsDeleting(false);
       setDeleteId(null);
     }
   };
 
-  const statusConfig: Record<Exam['status'], { label: string; color: string; icon: any; dot: string }> = {
+  const statusConfig: Record<Exam['status'], { label: string; color: string; icon: LucideIcon; dot: string }> = {
     DRAFT: { label: "Brouillon", color: "text-slate-500 bg-slate-50 border-slate-100", icon: Edit, dot: "bg-slate-300" },
     PUBLISHED: { label: "En ligne", color: "text-emerald-700 bg-emerald-50 border-emerald-100", icon: CheckCircle2, dot: "bg-emerald-500" },
     SCHEDULED: { label: "Programmé", color: "text-blue-700 bg-blue-50 border-blue-100", icon: Calendar, dot: "bg-blue-500" },
@@ -172,7 +174,7 @@ export default function AdminExamsPage() {
               <FileText className="w-8 h-8 text-slate-300" />
           </div>
           <p className="text-slate-800 font-black text-lg">{search ? "Aucun résultat trouvé" : "Aucun examen disponible"}</p>
-          <p className="text-slate-400 text-sm mt-1">Commencez par créer votre première épreuve d'évaluation.</p>
+          <p className="text-slate-400 text-sm mt-1">Commencez par créer votre première épreuve d&apos;évaluation.</p>
         </div>
       ) : (
         view === 'grid' ? (
@@ -201,7 +203,7 @@ export default function AdminExamsPage() {
                                 <DropdownMenuItem asChild className="rounded-xl focus:bg-slate-50 transition-colors">
                                     <Link href={`/admin/exams/${exam.id}/edit`} className="flex items-center gap-3 font-bold text-slate-700 py-2.5">
                                         <Edit className="w-4 h-4 text-slate-400" /> 
-                                        Éditer l'organisation
+                                        Éditer l&apos;organisation
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild className="rounded-xl focus:bg-slate-50 transition-colors">

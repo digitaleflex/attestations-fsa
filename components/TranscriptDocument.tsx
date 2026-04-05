@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Award, FileText, ClipboardList, CheckCircle, BadgeCheck, ShieldCheck } from "lucide-react";
+import { ClipboardList, BadgeCheck, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TranscriptDocumentProps {
@@ -83,7 +83,7 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
                     <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">{data.fullName}</h2>
                 </div>
                 <div className="md:text-right">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Session d'Examen</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Session d&apos;Examen</p>
                     <p className="text-xl font-bold text-slate-800">{data.sessionName}</p>
                 </div>
             </div>
@@ -145,7 +145,7 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
                         <span className="font-black text-sm uppercase tracking-tight">Authentifié par la Direction Technique</span>
                     </div>
                     <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-[10px] text-emerald-700 font-bold max-w-xs leading-relaxed italic">
-                        "Nous certifions que l'étudiant a validé avec succès l'ensemble des modules d'évaluation correspondant à la formation {data.formationName}."
+                        &quot;Nous certifions que l&apos;étudiant a validé avec succès l&apos;ensemble des modules d&apos;évaluation correspondant à la formation {data.formationName}.&quot;
                     </div>
                 </div>
                 

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Award, CheckCircle, ShieldCheck, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 interface CertificateTemplateProps {
@@ -173,7 +172,7 @@ const CertificateTemplate = ({ data, settings, id = "certificate-content" }: Cer
         {/* Code et QR Code Discret en bas */}
         <div className="absolute bottom-4 w-full flex justify-center items-center gap-10">
            <p className="text-xs font-mono tracking-widest uppercase" style={{ color: "#64748b" }}>
-             code de l'attestation : {data.code}
+             code de l&apos;attestation : {data.code}
            </p>
            <div className="p-1 bg-white border opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all" style={{ borderColor: "#f1f5f9" }}>
               <QRCodeSVG value={verificationUrl} size={35} />

@@ -13,7 +13,6 @@ import {
   BookOpen,
   Save,
   ShieldCheck,
-  RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -22,25 +21,24 @@ import { StepGeneral } from "./form-steps/step-general";
 import { StepPartBuilder } from "./form-steps/step-part-builder";
 import { StepSummary } from "./form-steps/step-summary";
 
-export function ExamForm({ initialData }: { initialData?: any }) {
+export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> & { id?: string } }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [formData, setFormData] = useState<ExamFormData>(
-    initialData || {
-      title: "",
-      description: "",
-      status: "DRAFT",
-      scheduledAt: "",
-      session: "",
-      duration: 3600,
-      passingScore: 60,
-      randomizeQuestions: false,
-      showResults: false,
-      parts: DEFAULT_PARTS,
-    },
-  );
+  const [formData, setFormData] = useState<ExamFormData>({
+    title: initialData?.title || "",
+    description: initialData?.description || "",
+    status: initialData?.status || "DRAFT",
+    scheduledAt: initialData?.scheduledAt || "",
+    session: initialData?.session || "",
+    duration: initialData?.duration ?? 3600,
+    passingScore: initialData?.passingScore ?? 60,
+    randomizeQuestions: initialData?.randomizeQuestions ?? false,
+    showResults: initialData?.showResults ?? false,
+    parts: initialData?.parts || DEFAULT_PARTS,
+    formationId: initialData?.formationId || "",
+  });
 
   const steps = [
     { label: "Informations", icon: Layout },
@@ -158,8 +156,8 @@ export function ExamForm({ initialData }: { initialData?: any }) {
 
       toast.success(initialData ? "Examen modifié !" : "Examen créé !");
       router.push("/admin/exams");
-    } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setSaving(false);
     }

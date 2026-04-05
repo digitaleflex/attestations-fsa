@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
-// Helper local supprimé au profit de getCurrentUser unifié.
-
 export async function GET(request: Request) {
   try {
     const userAuth = await getCurrentUser(request);
@@ -49,7 +47,7 @@ export async function GET(request: Request) {
     const attestationsCount = validAttestations.length;
     
     const examsCompleted = examSubmissions.length;
-    const examsPassed = examSubmissions.filter((sub: any) => {
+    const examsPassed = examSubmissions.filter((sub) => {
       const maxPoints = sub.exam?.totalPoints || 100;
       const scorePercent = maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
       const passingScore = sub.exam?.passingScore || 60;
@@ -58,7 +56,7 @@ export async function GET(request: Request) {
 
     const averageScore = examsCompleted > 0
       ? Math.round(
-          examSubmissions.reduce((sum: number, sub: any) => {
+          examSubmissions.reduce((sum, sub) => {
             const maxPoints = sub.exam?.totalPoints || 100;
             return sum + (maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0);
           }, 0) / examsCompleted
@@ -66,7 +64,7 @@ export async function GET(request: Request) {
       : 0;
     
     const internshipsApplied = internshipApplications.length;
-    const internshipsAccepted = internshipApplications.filter((i: any) => i.status === 'ACCEPTED').length;
+    const internshipsAccepted = internshipApplications.filter((i) => i.status === 'ACCEPTED').length;
     
     // Activité récente et progression mensuelle
     const now = new Date();
@@ -75,7 +73,7 @@ export async function GET(request: Request) {
     
     const recentActivity = {
       attestationsLast7Days: validAttestations.filter(a => a.issuedAt && new Date(a.issuedAt) >= sevenDaysAgo).length,
-      examsLast7Days: examSubmissions.filter((e: any) => e.submittedAt && new Date(e.submittedAt) >= sevenDaysAgo).length,
+      examsLast7Days: examSubmissions.filter((e) => e.submittedAt && new Date(e.submittedAt) >= sevenDaysAgo).length,
     };
     
     // Progression par mois (6 derniers mois) calculée en une seule boucle
@@ -120,8 +118,8 @@ export async function GET(request: Request) {
       badges,
     });
     
-  } catch (error: any) {
-    console.error('Erreur statistiques user:', error);
+  } catch (err: unknown) {
+    console.error('Erreur statistiques user:', err);
     return NextResponse.json({ error: 'Erreur lors de la récupération des statistiques' }, { status: 500 });
   }
 }

@@ -1,25 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
   User, 
   FileText, 
   AlertCircle,
-  Search,
-  Filter,
   RefreshCw,
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 
+interface Correction {
+  id: string;
+  status: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  reason?: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  attestation?: {
+    code: string;
+  };
+}
+
 export default function AdminCorrectionsPage() {
-  const [corrections, setCorrections] = useState<any[]>([]);
+  const [corrections, setCorrections] = useState<Correction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("PENDING");
 
@@ -34,7 +45,7 @@ export default function AdminCorrectionsPage() {
       if (!res.ok) throw new Error("Erreur");
       const data = await res.json();
       setCorrections(data);
-    } catch (err) {
+    } catch {
       toast.error("Erreur de chargement");
     } finally {
       setLoading(false);
@@ -52,7 +63,7 @@ export default function AdminCorrectionsPage() {
       
       toast.success(status === "APPROVED" ? "Demande approuvée !" : "Demande rejetée");
       fetchCorrections();
-    } catch (err) {
+    } catch {
       toast.error("Erreur de mise à jour");
     }
   };
@@ -64,7 +75,7 @@ export default function AdminCorrectionsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Demandes de Correction</h1>
-          <p className="text-slate-500 font-medium">Gérez les demandes de modification d'identité des candidats.</p>
+          <p className="text-slate-500 font-medium">Gérez les demandes de modification d&apos;identité des candidats.</p>
         </div>
         <Button onClick={fetchCorrections} variant="outline" className="h-11 rounded-xl font-bold border-slate-200">
            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -132,7 +143,7 @@ export default function AdminCorrectionsPage() {
 
                {c.reason && (
                  <div className="p-4 rounded-2xl bg-slate-50 mb-6 text-xs text-slate-600 italic">
-                    " {c.reason} "
+                    &quot; {c.reason} &quot;
                  </div>
                )}
 

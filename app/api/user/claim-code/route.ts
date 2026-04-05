@@ -103,9 +103,9 @@ export async function POST(req: Request) {
         birthPlace: attestation.birthPlace,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[CLAIM_CODE_ERROR]", error);
-    return handleApiError(error, {
+    return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: "/api/user/claim-code",
       operation: "claim_attestation",
     });

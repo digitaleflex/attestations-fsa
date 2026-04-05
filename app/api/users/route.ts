@@ -18,7 +18,7 @@ const CreateUserSchema = z.object({
 });
 
 // GET - Liste des utilisateurs (✅ Admin uniquement)
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // ✅ Authentification admin requise
     if (!(await isAdminAuthenticated())) {
@@ -46,9 +46,9 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(users);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
-    return handleApiError(error, {
+    return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: '/api/users',
       operation: 'list_users',
     });
@@ -124,8 +124,8 @@ export async function POST(request: Request) {
       { message: "Utilisateur créé avec succès", user },
       { status: 201 }
     );
-  } catch (error: any) {
-    return handleApiError(error, {
+  } catch (error: unknown) {
+    return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: '/api/users',
       operation: 'create_user',
     });

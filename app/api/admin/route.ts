@@ -71,7 +71,7 @@ export async function PATCH(request: Request) {
 
   if (!currentUser) return NextResponse.json({ message: 'Admin introuvable' }, { status: 404 });
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
 
   if (name) updateData.name = name;
 

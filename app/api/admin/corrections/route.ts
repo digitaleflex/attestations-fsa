@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/auth";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json(corrections);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
@@ -47,7 +47,7 @@ export async function PATCH(req: Request) {
       });
 
       if (fullCorrection) {
-        const updateData: any = {};
+        const updateData: Record<string, unknown> = {};
         if (fullCorrection.field === "fullName") updateData.name = fullCorrection.newValue;
         if (fullCorrection.field === "birthDate") updateData.birthDate = new Date(fullCorrection.newValue);
         if (fullCorrection.field === "birthPlace") updateData.birthPlace = fullCorrection.newValue;
@@ -60,7 +60,7 @@ export async function PATCH(req: Request) {
     }
 
     return NextResponse.json({ success: true, data: correction });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
   }
 }

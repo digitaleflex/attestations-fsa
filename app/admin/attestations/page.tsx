@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Loader2, Plus, Download, Eye, Edit, Trash2, Copy, Check, Search, Filter, X,
   FileText, GraduationCap, Award, Calendar, User
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
 import {
   AlertDialog,
@@ -96,7 +94,7 @@ export default function AdminAttestationsPage() {
       await apiFetch(`/api/attestations/${deleteId}`, { method: "DELETE" });
       setAttestations((prev) => prev.filter((a) => a.id !== deleteId));
       toast.success("Attestation supprimée !");
-    } catch (err: any) {
+    } catch {
       // Error handled by apiFetch
     } finally {
       setIsDeleting(false);
@@ -477,7 +475,7 @@ export default function AdminAttestationsPage() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
               Cette action est <span className="font-bold text-slate-900">irréversible</span>. 
-              L'attestation sera définitivement supprimée du système et ne pourra plus être vérifiée par QR Code.
+              L&apos;attestation sera définitivement supprimée du système et ne pourra plus être vérifiée par QR Code.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 gap-3">

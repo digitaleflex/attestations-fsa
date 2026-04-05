@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectTrigger,
@@ -25,7 +26,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
@@ -71,9 +71,8 @@ export default function NewAttestationPage() {
   const [success, setSuccess] = useState(false);
   const [formations, setFormations] = useState<string[]>([]);
   const [completion, setCompletion] = useState(0);
-  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<any>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const isInitialMount = useRef(true);
 
   // 1. Charger le brouillon depuis localStorage au montage
@@ -84,7 +83,6 @@ export default function NewAttestationPage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         setForm((prev) => ({ ...prev, ...parsed }));
-        setIsDraftLoaded(true);
         toast.info("📝 Brouillon restauré automatiquement");
       }
     } catch {
@@ -210,16 +208,12 @@ export default function NewAttestationPage() {
         delete submitData.certificationMention;
 
       // S'assurer que les nombres vides sont supprimés pour ne pas envoyer "" à un champ Number
-      const numericFields = [
-        "stageHours",
-        "stageScore",
-        "certificationHours",
-        "certificationScore",
-      ];
+      const numericFields = ["passingScore", "totalPoints", "durationMinutes"];
       numericFields.forEach((field) => {
+        const val = submitData[field as keyof NewAttestationForm];
         if (
-          submitData[field as keyof NewAttestationForm] === ("" as any) ||
-          submitData[field as keyof NewAttestationForm] === undefined
+          val === ( "" as unknown as number ) ||
+          val === undefined
         ) {
           delete submitData[field as keyof NewAttestationForm];
         }
@@ -236,17 +230,18 @@ export default function NewAttestationPage() {
         localStorage.removeItem(STORAGE_KEY);
       }
       handleReset();
-    } catch (err: any) {
-      setError(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "Erreur inconnue");
 
       // Si on a des détails d'erreur (ex: Zod), on les affiche par champ
       if (
-        err instanceof ApiError &&
-        err.details &&
-        Array.isArray(err.details)
+        apiErr instanceof ApiError &&
+        apiErr.details &&
+        Array.isArray(apiErr.details)
       ) {
-        const errors: any = {};
-        err.details.forEach((detail: any) => {
+        const errors: Record<string, string> = {};
+        apiErr.details.forEach((detail: { path?: string[]; message: string }) => {
           if (detail.path && detail.path.length > 0) {
             const fieldName = detail.path[0];
             errors[fieldName] = detail.message;
@@ -269,21 +264,6 @@ export default function NewAttestationPage() {
     }
     toast.info("Formulaire réinitialisé");
   };
-
-  const handleRestoreDraft = useCallback(() => {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setForm((prev) => ({ ...prev, ...parsed }));
-        setIsDraftLoaded(true);
-        toast.info("📝 Brouillon restauré");
-      }
-    } catch {
-      toast.error("Erreur lors de la restauration du brouillon");
-    }
-  }, []);
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
@@ -491,7 +471,7 @@ export default function NewAttestationPage() {
                 htmlFor="type"
                 className={cn(fieldErrors.type && "text-red-500")}
               >
-                📑 Type d'attestation
+                📑 Type d&apos;attestation
               </Label>
               <Select
                 value={form.type}
@@ -887,7 +867,7 @@ export default function NewAttestationPage() {
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Créer l'attestation
+                  Créer l&apos;attestation
                 </>
               )}
             </Button>

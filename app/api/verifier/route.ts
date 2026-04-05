@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url)
-    let code = searchParams.get('code')
+    const code = searchParams.get('code')
     
     // Validation stricte du paramètre code
     const CodeSchema = z.string().min(5, 'Code requis (minimum 5 caractères)').max(50)
@@ -88,11 +88,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ attestation })
     
-  } catch (error: any) {
-    console.error('Erreur vérification attestation:', error)
-    return handleApiError(error, {
+  } catch (error: unknown) {
+    console.error('Erreur vérification attestation:', error);
+    return handleApiError(error instanceof Error ? error : new Error(String(error)), {
       route: '/api/verifier',
       operation: 'verify_attestation',
-    })
+    });
   }
 }

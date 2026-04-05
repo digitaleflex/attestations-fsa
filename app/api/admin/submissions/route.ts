@@ -32,10 +32,10 @@ export async function GET() {
     // Statistiques
     const stats = {
       total: submissions.length,
-      pendingReview: submissions.filter((s: any) => s.status === 'PENDING_REVIEW').length,
-      inProgress: submissions.filter((s: any) => s.status === 'IN_PROGRESS').length,
-      completed: submissions.filter((s: any) => s.status === 'COMPLETED').length,
-      passed: submissions.filter((s: any) => s.status === 'COMPLETED' && s.score >= 60).length,
+      pendingReview: submissions.filter((s) => s.status === 'PENDING_REVIEW').length,
+      inProgress: submissions.filter((s) => s.status === 'IN_PROGRESS').length,
+      completed: submissions.filter((s) => s.status === 'COMPLETED').length,
+      passed: submissions.filter((s) => s.status === 'COMPLETED' && (s.score || 0) >= 60).length,
     };
 
     return NextResponse.json({
@@ -43,7 +43,7 @@ export async function GET() {
       stats
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur soumissions admin:', error);
     return NextResponse.json({ 
       error: 'Erreur lors de la récupération des soumissions' 

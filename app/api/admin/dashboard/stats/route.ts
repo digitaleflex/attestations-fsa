@@ -1,8 +1,8 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated } from '@/lib/auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const typeCounts = await prisma.attestation.groupBy({
         by: ['type'],
         _count: { id: true }
-    }) as any[];
+    }) as Array<{ type: string; _count: { id: number } }>;
 
     // 3. Récupérer les objectifs (Settings)
     const settings = await prisma.settings.findFirst();

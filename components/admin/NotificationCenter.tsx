@@ -1,13 +1,9 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Bell, 
-  MessageSquare, 
-  UserPlus, 
   AlertTriangle, 
   FileCheck,
-  X,
   Check,
   Info,
   MessageSquare as ChatIcon
@@ -15,61 +11,76 @@ import {
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
-  DropdownMenuItem, 
   DropdownMenuLabel, 
-  DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getPusherClient } from "@/lib/pusher";
 import { toast } from "sonner";
 
+interface BaseNotification {
+  id: string;
+  createdAt: string;
+  status: string;
+}
+
+interface ReportNotification extends BaseNotification {
+  motif: string;
+}
+
+interface CorrectionNotification extends BaseNotification {
+  field: string;
+  user: { name: string | null };
+}
+
+interface ChatNotification extends BaseNotification {
+  content: string;
+}
+
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // On récupère les différentes alertes (Signalements, Corrections)
-  const { data: reports = [] } = useQuery({
+  const { data: reports = [] } = useQuery<ReportNotification[]>({
     queryKey: ["admin-notifications-reports"],
     queryFn: async () => {
       const res = await fetch("/api/signalement");
       const data = await res.json();
-      return Array.isArray(data) ? data.filter((r: any) => r.status === "NOUVEAU") : [];
+      return Array.isArray(data) ? data.filter((r) => r.status === "NOUVEAU") : [];
     },
-    refetchInterval: 30000, // Toutes les 30 secondes pour le "temps réel"
+    refetchInterval: 30000,
   });
 
-  const { data: corrections = [] } = useQuery({
+  const { data: corrections = [] } = useQuery<CorrectionNotification[]>({
     queryKey: ["admin-notifications-corrections"],
     queryFn: async () => {
       const res = await fetch("/api/admin/corrections");
       const data = await res.json();
-      return Array.isArray(data) ? data.filter((c: any) => c.status === "PENDING") : [];
+      return Array.isArray(data) ? data.filter((c) => c.status === "PENDING") : [];
     },
     refetchInterval: 45000,
   });
   
-  const { data: messages = [] } = useQuery({
+  const { data: messages = [] } = useQuery<ChatNotification[]>({
     queryKey: ["admin-notifications-messages"],
     queryFn: async () => {
       const res = await fetch("/api/chat?unread=true");
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
-    refetchInterval: 60000, // Polling de secours très long (Pusher prioritaire)
+    refetchInterval: 60000,
   });
 
-  // Écouteur Pusher pour events admin
   useEffect(() => {
     const pusher = getPusherClient();
     const channel = pusher.subscribe("admin-events");
 
-    const refresh = (type: string, data: any) => {
+    const refresh = (type: string, data: { content?: string; motif?: string; userName?: string }) => {
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-reports"] });
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-corrections"] });
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-messages"] });
@@ -79,15 +90,17 @@ export default function NotificationCenter() {
         });
     };
 
-    channel.bind("message", (data: any) => refresh("message", data));
-    channel.bind("report", (data: any) => refresh("report", data));
-    channel.bind("correction", (data: any) => refresh("correction", data));
+    channel.bind("message", (data: { content?: string }) => refresh("message", data));
+    channel.bind("report", (data: { motif?: string }) => refresh("report", data));
+    channel.bind("correction", (data: { userName?: string }) => refresh("correction", data));
 
-    return () => pusher.unsubscribe("admin-events");
-  }, []);
+    return () => {
+      pusher.unsubscribe("admin-events");
+    };
+  }, [queryClient]);
 
   const allNotifications = [
-    ...reports.map((r: any) => ({
+    ...reports.map((r) => ({
         id: r.id,
         type: "REPORT",
         title: "Nouveau Signalement",
@@ -97,7 +110,7 @@ export default function NotificationCenter() {
         icon: AlertTriangle,
         iconClass: "text-amber-500 bg-amber-50"
     })),
-    ...corrections.map((c: any) => ({
+    ...corrections.map((c) => ({
         id: c.id,
         type: "CORRECTION",
         title: "Demande de Correction",
@@ -107,7 +120,7 @@ export default function NotificationCenter() {
         icon: FileCheck,
         iconClass: "text-blue-500 bg-blue-50"
     })),
-    ...messages.map((m: any) => ({
+    ...messages.map((m) => ({
         id: m.id,
         type: "MESSAGE",
         title: "Nouveau Message",
@@ -135,7 +148,7 @@ export default function NotificationCenter() {
       </DropdownMenuTrigger>
       
       <DropdownMenuContent className="w-80 md:w-96 bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden" align="end">
-        <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <DropdownMenuLabel className="p-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-amber-400" />
             <h3 className="font-bold text-sm tracking-tight">Centre de Notifications</h3>
@@ -145,7 +158,7 @@ export default function NotificationCenter() {
               {unreadCount} nouvelles
             </Badge>
           )}
-        </div>
+        </DropdownMenuLabel>
 
         <div className="max-h-[400px] overflow-y-auto scrollbar-hide py-2">
             {allNotifications.length === 0 ? (
@@ -157,7 +170,7 @@ export default function NotificationCenter() {
                     <p className="text-xs text-slate-400 mt-1">Aucune nouvelle alerte pour le moment.</p>
                 </div>
             ) : (
-                allNotifications.map((notif, idx) => (
+                allNotifications.map((notif) => (
                     <Link key={`${notif.type}-${notif.id}`} href={notif.link} onClick={() => setIsOpen(false)}>
                         <div className="px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-none flex items-start gap-3 group">
                             <div className={`p-2 rounded-xl shrink-0 transition-transform group-hover:scale-110 ${notif.iconClass}`}>
@@ -193,7 +206,7 @@ export default function NotificationCenter() {
   );
 }
 
-function ClockIcon(props: any) {
+function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

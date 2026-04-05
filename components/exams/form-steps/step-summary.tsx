@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,7 +89,7 @@ export function StepSummary({ formData, saving, onSave }: Props) {
       <div className="pt-4 flex justify-center">
         <Button onClick={onSave} disabled={saving} size="lg" className="h-14 px-12 gap-3 text-lg font-bold shadow-xl hover:shadow-primary/20 transition-all">
           {saving ? <Loader2 className="animate-spin w-5 h-5" /> : <Save className="w-5 h-5" />}
-          Enregistrer l'examen
+          Enregistrer l&apos;examen
         </Button>
       </div>
     </div>

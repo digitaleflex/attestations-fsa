@@ -106,7 +106,7 @@ export async function POST(request: Request) {
     }
 
     const totalPoints = parts.reduce(
-      (sum: number, p: any) => sum + (p.enabled ? p.points : 0),
+      (sum, p) => sum + (p.enabled ? p.points : 0),
       0,
     );
 
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
     }
 
     // ✅ Step 1: Create Exam (Core Information)
-    const enabledParts = parts.filter((p: any) => p.enabled);
+    const enabledParts = parts.filter((p) => p.enabled);
     const newExam = await prisma.exam.create({
       data: {
         name,
@@ -133,24 +133,24 @@ export async function POST(request: Request) {
         totalPoints,
         randomizeQuestions,
         showResults,
-        status: status as any,
+        status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SCHEDULED",
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         // Legacy fields for backward compatibility
-        part1Enabled: enabledParts.some((p: any) => p.type === "QCM"),
-        part2Enabled: enabledParts.some((p: any) => p.type === "OPEN"),
-        part3Enabled: enabledParts.some((p: any) => p.type === "CASE_STUDY"),
+        part1Enabled: enabledParts.some((p) => p.type === "QCM"),
+        part2Enabled: enabledParts.some((p) => p.type === "OPEN"),
+        part3Enabled: enabledParts.some((p) => p.type === "CASE_STUDY"),
         part1Questions:
-          enabledParts.find((p: any) => p.type === "QCM")?.questions?.length ||
+          enabledParts.find((p) => p.type === "QCM")?.questions?.length ||
           0,
         part2Questions:
-          enabledParts.find((p: any) => p.type === "OPEN")?.questions?.length ||
+          enabledParts.find((p) => p.type === "OPEN")?.questions?.length ||
           0,
         part1Points:
-          enabledParts.find((p: any) => p.type === "QCM")?.points || 0,
+          enabledParts.find((p) => p.type === "QCM")?.points || 0,
         part2Points:
-          enabledParts.find((p: any) => p.type === "OPEN")?.points || 0,
+          enabledParts.find((p) => p.type === "OPEN")?.points || 0,
         part3Points:
-          enabledParts.find((p: any) => p.type === "CASE_STUDY")?.points || 0,
+          enabledParts.find((p) => p.type === "CASE_STUDY")?.points || 0,
       },
     });
 
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
           data: {
             examId: newExam.id,
             title: partData.title,
-            type: partData.type as any,
+            type: partData.type as "QCM" | "OPEN" | "CASE_STUDY",
             duration: partData.duration || 30,
             points: partData.points,
             order: partData.order ?? pIdx + 1,
@@ -211,12 +211,13 @@ export async function POST(request: Request) {
       },
       { status: 201 },
     );
-  } catch (error: any) {
+    } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
     console.error("Erreur lors de la création de l'examen:", error);
     return NextResponse.json(
       {
         error: "Erreur lors de la création de l'examen",
-        details: error.message,
+        details: message,
       },
       { status: 500 },
     );
