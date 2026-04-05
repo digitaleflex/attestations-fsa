@@ -19,8 +19,8 @@ export class ApiError extends Error {
  * Automatically shows a toast if an error occurs and 'notify' is true
  */
 export async function apiFetch<T = any>(
-  url: string, 
-  options: RequestInit = {}, 
+  url: string,
+  options: RequestInit = {},
   notify: boolean = true
 ): Promise<T> {
   // Extraire le token CSRF du cookie si présent (Pattern Double-Submit)
@@ -55,13 +55,13 @@ export async function apiFetch<T = any>(
         const errorMsg = data.message || data.error || `Erreur ${res.status}`;
         const errorDetails = data.details || null;
         const errorCode = data.code || null;
-        
+
         if (notify) {
             toast.error(errorMsg, {
               description: errorCode ? `Code: ${errorCode}` : undefined,
             });
         }
-        
+
         throw new ApiError(errorMsg, res.status, errorDetails, errorCode);
     }
 

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * S'assure que DOMPurify n'est utilisé que s'il est disponible au niveau du client
- * ou d'une manière légère pour le serveur. 
+ * ou d'une manière légère pour le serveur.
  * Pour la sanitization stricte (sans tags), une simple REGEX suffit et est BEAUCOUP plus rapide sur Vercel.
  */
 export function sanitizeInput(input: string): string {
@@ -108,7 +108,7 @@ export function sanitizeHTML(
   allowedTags: string[] = ['b', 'i', 'em', 'strong', 'u', 'br', 'p', 'ul', 'ol', 'li']
 ): string {
   if (!html) return ''
-  
+
   // Version légère pour Vercel : Stripper de tags sauf ceux autorisés
   const regex = new RegExp(`<(?!\\/?(${allowedTags.join('|')})\\b)[^>]+>`, 'gi');
   return html.replace(regex, '');
@@ -121,7 +121,7 @@ export function sanitizeHTML(
  */
 export function containsDangerousHTML(input: string): boolean {
   if (!input) return false
-  
+
   const dangerousPatterns = [
     /<script/i,
     /javascript:/i,
@@ -133,7 +133,7 @@ export function containsDangerousHTML(input: string): boolean {
     /vbscript:/i,
     /expression\s*\(/i,
   ]
-  
+
   return dangerousPatterns.some(pattern => pattern.test(input))
 }
 
@@ -150,7 +150,7 @@ export const HTMLEncode = {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#x27;')
   },
-  
+
   // Pour utilisation dans un attribut HTML
   forAttribute: (str: string): string => {
     return str
@@ -161,7 +161,7 @@ export const HTMLEncode = {
       .replace(/'/g, '&#x27;')
       .replace(/=/g, '&#x3D;')
   },
-  
+
   // Pour utilisation dans du JavaScript
   forJS: (str: string): string => {
     return str
@@ -173,7 +173,7 @@ export const HTMLEncode = {
       .replace(/</g, '\\x3C')
       .replace(/>/g, '\\x3E')
   },
-  
+
   // Pour utilisation dans une URL
   forURL: (str: string): string => {
     return encodeURIComponent(str)
@@ -187,7 +187,7 @@ export const HTMLEncode = {
  */
 export function sanitizeFilename(filename: string): string {
   if (!filename) return ''
-  
+
   // Supprimer les caractères spéciaux et les chemins
   return filename
     .replace(/[^\w.-]/g, '_')

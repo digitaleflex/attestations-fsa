@@ -42,7 +42,7 @@ export const auth = betterAuth({
         provider: "postgresql",
     }),
     secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "fallback-secret-for-dev-only",
-    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : "https://fsa.eurinhash.com"),
+    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : "http://localhost:3000"),
     trustedOrigins: [
         "https://fsa.eurinhash.com",
         "https://verifier.fermestandre.com",
@@ -95,7 +95,7 @@ export const auth = betterAuth({
                     // Log OTP to in-memory store for admin viewing
                     const { logOTP } = await import('@/lib/otp-store');
                     logOTP(email, otp, type);
-                    
+
                     const { emailService } = await import('@/lib/email');
                     await emailService.sendPasswordResetOTP(
                         email,

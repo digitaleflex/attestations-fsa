@@ -19,6 +19,7 @@ const getResend = () => {
 };
 
 const fromEmail = "Ferme St André <contact@net.eurinhash.com>";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://fsa.eurinhash.com";
 
 export const emailService = {
   /**
@@ -34,7 +35,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #10b981; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -66,7 +67,7 @@ export const emailService = {
       const resend = getResend();
       const statusText = isSuccess ? "FÉLICITATIONS ! Vous avez réussi." : "Résultats de votre examen.";
       const statusColor = isSuccess ? "#10b981" : "#475569";
-      
+
       await resend.emails.send({
         from: fromEmail,
         to,
@@ -74,12 +75,12 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid ${statusColor}; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
               <p>Votre examen "<strong>${examTitle}</strong>" a été corrigé par nos formateurs.</p>
-              
+
               <div style="margin: 32px 0; padding: 32px; text-align: center; background-color: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 14px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Note Finale</p>
                 <p style="margin: 8px 0; font-size: 48px; font-weight: 900; color: ${statusColor};">
@@ -91,14 +92,14 @@ export const emailService = {
               ${isSuccess ? `
                 <p>Votre attestation de réussite a été générée automatiquement. Vous pouvez la télécharger dès maintenant depuis votre tableau de bord.</p>
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="https://fsa.eurinhash.com/exams/results" style="display: inline-block; padding: 16px 32px; background-color: #10b981; color: white; text-decoration: none; font-weight: bold; border-radius: 12px; shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);">
+                  <a href="${APP_URL}/exams/results" style="display: inline-block; padding: 16px 32px; background-color: #10b981; color: white; text-decoration: none; font-weight: bold; border-radius: 12px; shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);">
                     Télécharger mon attestation
                   </a>
                 </div>
               ` : `
                 <p>Le seuil de réussite est fixé à <strong>12/20</strong>. Ne vous découragez pas, la persévérance est la clé du succès. Contactez votre formateur pour les modalités de rattrapage.</p>
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="https://fsa.eurinhash.com/exams" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
+                  <a href="${APP_URL}/exams" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
                     Retour au centre d'examens
                   </a>
                 </div>
@@ -130,23 +131,23 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #6366f1; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
               <p>Merci de vous être inscrit sur notre plateforme. Pour finaliser votre inscription et sécuriser votre compte, merci de vérifier votre adresse email.</p>
-              
+
               <div style="text-align: center; margin: 32px 0;">
                 <a href="${verifyLink}" style="display: inline-block; padding: 16px 32px; background-color: #6366f1; color: white; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);">
                   Vérifier mon email
                 </a>
               </div>
-              
+
               <p style="font-size: 14px; color: #64748b;">Ou copiez-collez ce lien dans votre navigateur :</p>
               <p style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 12px; color: #475569; word-break: break-all; text-align: center;">
                 ${verifyLink}
               </p>
-              
+
               <div style="margin-top: 32px; padding: 20px; background-color: #fef2f2; border-radius: 8px; border: 1px solid #fee2e2;">
                 <p style="margin: 0; font-size: 13px; color: #991b1b;">⏰ <strong>Attention :</strong> Ce lien est valable pendant <strong>24 heures</strong>.</p>
               </div>
@@ -177,7 +178,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Félicitations !</h2>
@@ -246,7 +247,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #f59e0b; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -287,9 +288,7 @@ export const emailService = {
     try {
       const resend = getResend();
       const year = new Date().getFullYear();
-      const resetUrl = typeof process !== "undefined"
-        ? (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://verifier.fermestandre.com") + "/reset-password"
-        : "https://verifier.fermestandre.com/reset-password";
+      const resetUrl = `${APP_URL}/reset-password`;
       await resend.emails.send({
         from: fromEmail,
         to,
@@ -302,20 +301,20 @@ export const emailService = {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
           <body style="margin: 0; padding: 0; background-color: #f0f4f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-            
+
             <!-- Wrapper -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 40px 20px;">
               <tr>
                 <td align="center">
-                  
+
                   <!-- Card -->
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.08);">
-                    
+
                     <!-- Header with gradient -->
                     <tr>
                       <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
                         <div style="margin-bottom: 16px;">
-                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                          <img src="${APP_URL}/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
                         </div>
                         <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
                           🔐 Réinitialisation du mot de passe

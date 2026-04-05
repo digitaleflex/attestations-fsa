@@ -97,7 +97,7 @@ export function UserAuditLogs({ userId }: { userId: string }) {
                 {log.resource}
               </div>
             </div>
-            
+
             {(log.oldValue || log.newValue) && (
                <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-4">
                   {log.oldValue && (

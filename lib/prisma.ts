@@ -22,7 +22,7 @@ const prismaClient = createPrismaClient(baseClient);
 
 // En développement, on remplace systématiquement le client global pour pick-up les changements de schéma
 if (process.env.NODE_ENV !== 'production') {
-  // Optionnel : ne le faire que si le client n'a pas les nouveaux modèles ? 
+  // Optionnel : ne le faire que si le client n'a pas les nouveaux modèles ?
   // Non, on force pour être sûr.
   global.prisma = prismaClient;
   global.rawPrisma = baseClient;

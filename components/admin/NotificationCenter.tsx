@@ -1,18 +1,18 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { 
-  Bell, 
-  AlertTriangle, 
+import {
+  Bell,
+  AlertTriangle,
   FileCheck,
   Check,
   Info,
   MessageSquare as ChatIcon
 } from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuLabel, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,7 @@ export default function NotificationCenter() {
     },
     refetchInterval: 45000,
   });
-  
+
   const { data: messages = [] } = useQuery<ChatNotification[]>({
     queryKey: ["admin-notifications-messages"],
     queryFn: async () => {
@@ -84,7 +84,7 @@ export default function NotificationCenter() {
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-reports"] });
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-corrections"] });
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-messages"] });
-        
+
         toast.info(type === "message" ? "Nouveau Message" : type === "report" ? "Nouveau Signalement" : "Demande de Correction", {
             description: data.content || data.motif || data.userName || "Action requise",
         });
@@ -146,7 +146,7 @@ export default function NotificationCenter() {
           )}
         </button>
       </DropdownMenuTrigger>
-      
+
       <DropdownMenuContent className="w-80 md:w-96 bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden" align="end">
         <DropdownMenuLabel className="p-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">

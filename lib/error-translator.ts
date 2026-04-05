@@ -14,12 +14,12 @@ export function translateAuthError(message: string): string {
     if (msg.includes("rate limit exceeded")) return "Trop de tentatives. Veuillez patienter un moment.";
     if (msg.includes("failed to fetch") || msg.includes("network error")) return "Erreur réseau. Vérifiez votre connexion.";
     if (msg.includes("crsf") || msg.includes("invalid original")) return "Erreur de sécurité de session. Veuillez recharger la page.";
-    
+
     // Zod & Validation
     if (msg.includes("is required")) return "Ce champ est obligatoire.";
     if (msg.includes("invalid email")) return "Veuillez entrer une adresse email valide.";
     if (msg.includes("too short")) return "Le contenu est trop court.";
-    
+
     // Fallback
     return message || "Une erreur est survenue lors de l'opération.";
 }

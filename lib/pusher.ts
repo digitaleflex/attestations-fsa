@@ -15,16 +15,16 @@ export const getPusherClient = () => {
     //     const Pusher = require('pusher-js');
     //     ...
     // } catch (e) {}
-    
+
     return {
         subscribe: (channel: string) => {
             console.log(`[REAL-TIME MOCK] Subscribed to ${channel}`);
-            return { 
+            return {
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 bind: (event: string, _: unknown) => {
                     console.log(`[REAL-TIME MOCK] Bound to ${event}`);
-                }, 
-                unbind: () => {} 
+                },
+                unbind: () => {}
             };
         },
         unsubscribe: (channel: string) => {
