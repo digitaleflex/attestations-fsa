@@ -23,7 +23,9 @@ async function main() {
   }
 
   console.log("🧪 Testing email service...");
-  console.log(`🔑 RESEND_API_KEY: ${process.env.RESEND_API_KEY?.substring(0, 8)}***`);
+  console.log(
+    `🔑 RESEND_API_KEY: ${process.env.RESEND_API_KEY?.substring(0, 8)}***`,
+  );
   console.log(`📧 To: ${TEST_EMAIL}`);
   console.log(`👤 Name: ${TEST_NAME}`);
   console.log(`🔢 OTP: ${TEST_OTP}`);
@@ -32,7 +34,7 @@ async function main() {
   const result = await emailService.sendPasswordResetOTP(
     TEST_EMAIL,
     TEST_NAME,
-    TEST_OTP
+    TEST_OTP,
   );
 
   // Also log to otp-store
@@ -40,7 +42,9 @@ async function main() {
     try {
       const { logOTP } = await import("./lib/otp-store");
       logOTP(TEST_EMAIL, TEST_OTP, "forget-password");
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 
   if (result.success) {

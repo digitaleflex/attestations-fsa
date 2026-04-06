@@ -11,12 +11,18 @@ export const metadata = {
   description: "Gestion des attestations de formation",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#16a34a" />
-        <script dangerouslySetInnerHTML={{ __html: `
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
           // Force unregister all service workers to clear old cache issues
           if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -26,13 +32,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               }
             });
           }
-        `}} />
+        `,
+          }}
+        />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <TopLoader />
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

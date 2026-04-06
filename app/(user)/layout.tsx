@@ -30,6 +30,7 @@ import ChatBubble from "@/components/ChatBubble";
 import { authClient, signOut } from "@/lib/auth-client";
 import { getCurrentUser } from "@/lib/auth";
 import NotificationBell from "@/components/NotificationBell";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 
 export default function UserLayout({
   children,
@@ -196,6 +197,9 @@ export default function UserLayout({
             </div>
           </div>
         </header>
+
+        {/* Banner pour email non vérifié */}
+        <EmailVerificationBanner user={user} />
 
         {/* Page Content area */}
         <main className="flex-1 overflow-y-auto bg-slate-50/50 p-6 lg:p-10 relative scrollbar-hide pb-24 lg:pb-10">

@@ -9,6 +9,7 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser(request);
     if (!user) {
+      console.warn("[AFTER_SIGNUP] Unauthorized: User not found in session. Cookie present:", request.headers.get("cookie") ? "yes" : "no");
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 

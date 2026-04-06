@@ -122,27 +122,43 @@ export async function PATCH(request: Request) {
     if (birthPlace) updateData.birthPlace = birthPlace;
     if (gender) updateData.gender = gender;
 
-    // Gestion du changement de mot de passe
+    // Gestion du changement de mot de passe (Compatibilité Hybride)
     if (oldPassword && newPassword) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { password: true }
-      });
+      const { auth } = await import('@/lib/auth');
+      
+      try {
+        // 1. Essai de changement via Better Auth (Gère la table Account)
+        await auth.api.changePassword({
+          headers: request.headers,
+          body: {
+            currentPassword: oldPassword,
+            newPassword: newPassword,
+            revokeOtherSessions: true,
+          }
+        });
+        console.log(`[PROFILE] Password updated via Better Auth for user ${userId}`);
+      } catch (authError: any) {
+        // 2. Si échec, vérification si c'est un utilisateur legacy (table User uniquement)
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { password: true }
+        });
 
-      if (!user?.password) {
-        return NextResponse.json({
-          message: 'Mot de passe actuel non défini'
-        }, { status: 400 });
+        if (user?.password) {
+          const valid = await bcrypt.compare(oldPassword, user.password);
+          if (!valid) {
+            return NextResponse.json({ message: 'Ancien mot de passe incorrect' }, { status: 401 });
+          }
+          // Mise à jour de la table User pour le mode legacy
+          updateData.password = await bcrypt.hash(newPassword, 12);
+          console.log(`[PROFILE] Password updated via Legacy check for user ${userId}`);
+        } else {
+          // Si pas de password dans User et échec Better Auth
+          return NextResponse.json({ 
+            message: authError.message || 'Échec de la modification du mot de passe' 
+          }, { status: 400 });
+        }
       }
-
-      const valid = await bcrypt.compare(oldPassword, user.password);
-      if (!valid) {
-        return NextResponse.json({
-          message: 'Ancien mot de passe incorrect'
-        }, { status: 401 });
-      }
-
-      updateData.password = await bcrypt.hash(newPassword, 12);
     }
 
     // Mise à jour

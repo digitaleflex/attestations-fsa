@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { Loader2, LogIn, UserPlus, Eye, EyeOff, Check, X, Mail, Phone, Calendar, MapPin, User, Shield, Lock, GraduationCap } from "lucide-react";
+import { Loader2, LogIn, UserPlus, Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
@@ -21,7 +21,7 @@ const LoginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
-const RegisterStep1Schema = z.object({
+const RegisterSchema = z.object({
   email: z.string().email("Adresse email invalide"),
   password: z.string()
     .min(8, "Le mot de passe doit contenir au moins 8 caractères")
@@ -35,126 +35,6 @@ const RegisterStep1Schema = z.object({
   path: ["confirmPassword"],
 });
 
-const RegisterStep2Schema = z.object({
-  name: z.string()
-    .min(2, "Le nom doit contenir au moins 2 caractères")
-    .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, "Le nom ne doit contenir que des lettres, espaces, tirets et apostrophes"),
-  birthDate: z.string()
-    .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Format JJ/MM/AAAA requis")
-    .refine((val) => {
-      const [day, month, year] = val.split('/').map(Number);
-      const date = new Date(year, month - 1, day);
-      const now = new Date();
-      const age = now.getFullYear() - date.getFullYear();
-      const monthDiff = now.getMonth() - date.getMonth();
-      const dayDiff = now.getDate() - date.getDate();
-      const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-      return actualAge >= 16 && actualAge <= 120;
-    }, "Vous devez avoir entre 16 et 120 ans"),
-  birthPlace: z.string()
-    .min(2, "Le lieu de naissance est requis")
-    .regex(/^[a-zA-ZÀ-ÿ\s,-]+$/, "Le lieu ne doit contenir que des lettres, espaces, virgules et tirets"),
-});
-
-const RegisterStep3Schema = z.object({
-  phone: z.string()
-    .min(8, "Numéro de téléphone invalide")
-    .regex(/^[+]?[0-9\s.-]{8,15}$/, "Numéro de téléphone invalide (8-15 chiffres)"),
-  address: z.string().optional(),
-});
-
-// === Indicateur de force du mot de passe ===
-function PasswordStrengthIndicator({ password }: { password: string }) {
-  const checks = [
-    { label: "8 caractères minimum", valid: password.length >= 8 },
-    { label: "1 majuscule", valid: /[A-Z]/.test(password) },
-    { label: "1 minuscule", valid: /[a-z]/.test(password) },
-    { label: "1 chiffre", valid: /[0-9]/.test(password) },
-    { label: "1 caractère spécial", valid: /[^A-Za-z0-9]/.test(password) },
-  ];
-
-  const validCount = checks.filter((c) => c.valid).length;
-  const strength = validCount / checks.length;
-
-  const getStrengthColor = () => {
-    if (strength <= 0.4) return "bg-red-500";
-    if (strength <= 0.6) return "bg-yellow-500";
-    if (strength <= 0.8) return "bg-blue-500";
-    return "bg-emerald-500";
-  };
-
-  const getStrengthLabel = () => {
-    if (strength <= 0.4) return "Faible";
-    if (strength <= 0.6) return "Moyen";
-    if (strength <= 0.8) return "Bon";
-    return "Excellent";
-  };
-
-  return (
-    <div className="space-y-2 mt-2">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-500">Force du mot de passe</span>
-        <span className={`font-medium ${strength <= 0.4 ? 'text-red-500' : strength <= 0.6 ? 'text-yellow-500' : strength <= 0.8 ? 'text-blue-500' : 'text-emerald-500'}`}>
-          {getStrengthLabel()}
-        </span>
-      </div>
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${getStrengthColor()} transition-all duration-300`}
-          style={{ width: `${strength * 100}%` }}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-1 mt-2">
-        {checks.map((check, idx) => (
-          <div key={idx} className={`flex items-center gap-1 text-xs ${check.valid ? 'text-emerald-600' : 'text-gray-400'}`}>
-            {check.valid ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
-            <span>{check.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// === Wizard Step Indicator ===
-function StepIndicator({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) {
-  const steps = [
-    { icon: Mail, label: "Compte" },
-    { icon: User, label: "Infos" },
-    { icon: Phone, label: "Contact" },
-    { icon: Shield, label: "Validation" },
-  ];
-
-  return (
-    <div className="flex items-center justify-between mb-6">
-      {steps.map((step, idx) => {
-        const StepIcon = step.icon;
-        const isCompleted = idx + 1 < currentStep;
-        const isCurrent = idx + 1 === currentStep;
-
-        return (
-          <div key={idx} className="flex flex-col items-center flex-1">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                isCompleted
-                  ? "bg-emerald-500 text-white"
-                  : isCurrent
-                  ? "bg-emerald-100 text-emerald-600 ring-2 ring-emerald-500"
-                  : "bg-gray-100 text-gray-400"
-              }`}
-            >
-              {isCompleted ? <Check className="w-5 h-5" /> : <StepIcon className="w-4 h-4" />}
-            </div>
-            <span className={`text-xs mt-1 ${isCurrent ? 'text-emerald-600 font-medium' : 'text-gray-400'}`}>
-              {step.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // === Page Principale ===
 function AuthContent() {
   const router = useRouter();
@@ -163,127 +43,26 @@ function AuthContent() {
   const [loading, setLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState("");
-  const [formationSelected, setFormationSelected] = useState<{id: string, name: string} | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
 
-  // Wizard state
-  const [wizardStep, setWizardStep] = useState(1);
-  const totalSteps = 4;
-
-  // Load saved form from localStorage (auto-save survival)
-  const loadSavedForm = () => {
-    try {
-      const saved = localStorage.getItem("fsa-registration-form");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          email: parsed.email || "",
-          password: parsed.password || "",
-          confirmPassword: parsed.confirmPassword || "",
-          name: parsed.name || "",
-          birthDate: parsed.birthDate || "",
-          birthPlace: parsed.birthPlace || "",
-          phone: parsed.phone || "",
-          address: parsed.address || "",
-          formationId: parsed.formationId || "",
-          rememberMe: parsed.rememberMe || false,
-          wizardStep: parsed.wizardStep || 1,
-        };
-      }
-    } catch (e) {
-      console.warn("[AUTH] Failed to load saved form:", e);
-    }
-    return null;
-  };
-
-  const savedForm = loadSavedForm();
-
   const [form, setForm] = useState({
-    email: savedForm?.email || "",
-    password: savedForm?.password || "",
-    confirmPassword: savedForm?.confirmPassword || "",
-    name: savedForm?.name || "",
-    birthDate: savedForm?.birthDate || "",
-    birthPlace: savedForm?.birthPlace || "",
-    phone: savedForm?.phone || "",
-    address: savedForm?.address || "",
-    formationId: savedForm?.formationId || "",
-    rememberMe: savedForm?.rememberMe || false,
+    email: "",
+    password: "",
+    confirmPassword: "",
+    rememberMe: false,
   });
 
-  // Auto-save form to localStorage on every change
+  // Handle URL params for login/register mode
   useEffect(() => {
-    try {
-      localStorage.setItem("fsa-registration-form", JSON.stringify({
-        ...form,
-        wizardStep,
-      }));
-    } catch (e) {
-      console.warn("[AUTH] Failed to save form:", e);
-    }
-  }, [form, wizardStep]);
-
-  // Clear saved form after successful submission
-  const clearSavedForm = () => {
-    try {
-      localStorage.removeItem("fsa-registration-form");
-    } catch (e) {
-      console.warn("[AUTH] Failed to clear saved form:", e);
-    }
-  };
-
-  // If user was on a specific step before refresh, restore it
-  useEffect(() => {
-    if (savedForm?.wizardStep) {
-      setWizardStep(savedForm.wizardStep);
-    }
-  }, []); // Only run once on mount
-
-  // Handle formationId from URL
-  useEffect(() => {
-    const fid = searchParams.get("formationId");
     const regMode = searchParams.get("register");
-    
-    if (fid) {
-      setForm(prev => ({ ...prev, formationId: fid }));
-      if (regMode === "true") {
-        setIsLogin(false);
-        setWizardStep(1);
-      }
-      
-      // Optionnel: Fetch formation name
-      fetch(`/api/public/formations`)
-        .then(res => res.json())
-        .then(data => {
-          const found = data.find((f: any) => f.id === fid);
-          if (found) setFormationSelected({ id: found.id, name: found.name });
-        })
-        .catch(err => console.error("Error fetching formation details:", err));
-    } else if (regMode === "true") {
-        setIsLogin(false);
+    if (regMode === "true") {
+      setIsLogin(false);
     }
   }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-
-    // Formatage automatique de la date (JJ/MM/AAAA)
-    if (name === "birthDate") {
-      let formatted = value.replace(/\D/g, ""); // Garde seulement les chiffres
-      if (formatted.length > 8) formatted = formatted.slice(0, 8);
-
-      // Ajoute les slashes automatiquement
-      if (formatted.length >= 5) {
-        formatted = `${formatted.slice(0, 2)}/${formatted.slice(2, 4)}/${formatted.slice(4)}`;
-      } else if (formatted.length >= 3) {
-        formatted = `${formatted.slice(0, 2)}/${formatted.slice(2)}`;
-      }
-
-      setForm((prev) => ({ ...prev, birthDate: formatted }));
-      return;
-    }
-
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
@@ -294,212 +73,38 @@ function AuthContent() {
     }
   };
 
-  const validateStep = (step: number): boolean => {
-    setFieldErrors({});
-    let schema;
-    if (step === 1) schema = RegisterStep1Schema;
-    else if (step === 2) schema = RegisterStep2Schema;
-    else if (step === 3) schema = RegisterStep3Schema;
-
-    if (!schema) return true;
-
-    const parse = schema.safeParse(form);
-    if (!parse.success) {
-      const errors: Record<string, string> = {};
-      parse.error.errors.forEach((err) => {
-        if (err.path[0]) {
-          errors[err.path[0] as string] = err.message;
-        }
-      });
-      setFieldErrors(errors);
-      return false;
-    }
-    return true;
-  };
-
-  const handleNextStep = () => {
-    if (validateStep(wizardStep)) {
-      // Clear field errors when moving to next step
-      setFieldErrors({});
-      setWizardStep((prev) => Math.min(prev + 1, totalSteps));
-    }
-  };
-
-  const handlePrevStep = () => {
-    // Clear field errors when going back
-    setFieldErrors({});
-    setWizardStep((prev) => Math.max(prev - 1, 1));
-  };
-
-  // Track if submission is in progress (prevent double clicks)
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Prevent double submission
-    if (isSubmitting || loading) return;
-    
     setLoading(true);
-    setIsSubmitting(true);
     setError("");
     setFieldErrors({});
 
-    // === REGISTRATION: Validate ALL steps before submission ===
     if (!isLogin) {
-      const errors: Record<string, string> = {};
-      let hasErrors = false;
-      let firstErrorStep = 4; // Default to last step
-
-      // Validate Step 1 (Account)
-      const step1Result = RegisterStep1Schema.safeParse({
-        email: form.email,
-        password: form.password,
-        confirmPassword: form.confirmPassword,
-      });
-      if (!step1Result.success) {
-        hasErrors = true;
-        firstErrorStep = 1;
-        step1Result.error.errors.forEach((err) => {
+      // === REGISTRATION ===
+      const parse = RegisterSchema.safeParse(form);
+      if (!parse.success) {
+        const errors: Record<string, string> = {};
+        parse.error.errors.forEach((err) => {
           if (err.path[0]) errors[err.path[0] as string] = err.message;
         });
-      }
-
-      // Validate Step 2 (Personal Info)
-      const step2Result = RegisterStep2Schema.safeParse({
-        name: form.name,
-        birthDate: form.birthDate,
-        birthPlace: form.birthPlace,
-      });
-      if (!step2Result.success) {
-        hasErrors = true;
-        if (firstErrorStep > 2) firstErrorStep = 2;
-        step2Result.error.errors.forEach((err) => {
-          if (err.path[0]) errors[err.path[0] as string] = err.message;
-        });
-      }
-
-      // Validate Step 3 (Contact)
-      const step3Result = RegisterStep3Schema.safeParse({
-        phone: form.phone,
-        address: form.address,
-      });
-      if (!step3Result.success) {
-        hasErrors = true;
-        if (firstErrorStep > 3) firstErrorStep = 3;
-        step3Result.error.errors.forEach((err) => {
-          if (err.path[0]) errors[err.path[0] as string] = err.message;
-        });
-      }
-
-      if (hasErrors) {
-        setWizardStep(firstErrorStep);
         setFieldErrors(errors);
-        setError("Veuillez corriger les erreurs dans le formulaire");
-        toast.error("Certains champs contiennent des erreurs");
         setLoading(false);
-        setIsSubmitting(false);
         return;
       }
-
-      // === Validate birth date format before conversion ===
-      const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-      const dateMatch = form.birthDate.match(dateRegex);
-      if (!dateMatch) {
-        setWizardStep(2);
-        setFieldErrors({ birthDate: "Format de date invalide" });
-        setError("Format de date de naissance invalide");
-        toast.error("Erreur de format de date");
-        setLoading(false);
-        setIsSubmitting(false);
-        return;
-      }
-
-      const [, day, month, year] = dateMatch;
-      const dayNum = parseInt(day, 10);
-      const monthNum = parseInt(month, 10);
-      const yearNum = parseInt(year, 10);
-
-      // Check valid date ranges
-      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12 || yearNum < 1900 || yearNum > new Date().getFullYear()) {
-        setWizardStep(2);
-        setFieldErrors({ birthDate: "Date de naissance invalide" });
-        setError("Date de naissance invalide");
-        toast.error("Date invalide");
-        setLoading(false);
-        setIsSubmitting(false);
-        return;
-      }
-
-      const birthDate = new Date(yearNum, monthNum - 1, dayNum);
-      
-      // Verify the date is valid (e.g., Feb 30 would be invalid)
-      if (birthDate.getDate() !== dayNum || birthDate.getMonth() !== monthNum - 1 || birthDate.getFullYear() !== yearNum) {
-        setWizardStep(2);
-        setFieldErrors({ birthDate: "Cette date n'existe pas" });
-        setError("Date de naissance invalide");
-        toast.error("Date invalide");
-        setLoading(false);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // === Sanitize inputs before sending ===
-      const sanitizeName = (name: string) => {
-        return name
-          .trim()
-          .replace(/[<>{}()]/g, "") // Remove potentially dangerous chars
-          .replace(/\s+/g, " "); // Normalize whitespace
-      };
 
       try {
-        // === REGISTRATION ===
-        // Only send basic fields to Better Auth (email, password, name)
-        // All additional fields are updated after creation via /api/user/after-signup
-        const signUpData = {
+        const { data, error: authError } = await authClient.signUp.email({
           email: form.email.trim().toLowerCase(),
           password: form.password,
-          name: sanitizeName(form.name),
-        };
-
-        const { data, error: authError } = await authClient.signUp.email(signUpData);
-
-        console.log("[AUTH DEBUG] signUp response:", { data, authError });
+          name: form.email.split("@")[0], // Default name from email
+        });
 
         if (authError && Object.keys(authError).length > 0) throw authError;
 
-        // Update additional fields (phone, birthPlace, address, birthDate, formationId) after sign-up
-        if (data?.user?.id) {
-          try {
-            await fetch("/api/user/after-signup", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                phone: form.phone.trim() || undefined,
-                birthPlace: form.birthPlace.trim() || undefined,
-                address: form.address?.trim() || undefined,
-                birthDate: birthDate?.toISOString(),
-                formationId: form.formationId || undefined,
-              }),
-            });
-          } catch (updateError) {
-            console.warn("[AUTH] Failed to update additional fields after sign-up:", updateError);
-            // Don't fail the whole registration for this
-          }
-        }
-
-        // Clear saved form after successful registration
-        clearSavedForm();
-
         toast.success("Compte créé avec succès ! Bienvenue sur FSA.");
-
         setIsRedirecting(true);
-        // Redirect to dashboard (page exists and is accessible)
-        if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
-            router.push("/admin/dashboard");
-        } else {
-            router.push("/dashboard");
-        }
+        router.push("/dashboard");
+
       } catch (err: unknown) {
         console.error("Erreur lors de l'inscription:", err);
         const errorMessage = err instanceof Error 
@@ -507,34 +112,31 @@ function AuthContent() {
           : "Une erreur inattendue est survenue";
         setError(errorMessage);
         toast.error(errorMessage);
-
-        // Navigate to the relevant step based on error
-        const msg = errorMessage.toLowerCase();
-        if (msg.includes("email")) {
-          setWizardStep(1);
-        } else if (msg.includes("mot de passe") || msg.includes("password")) {
-          setWizardStep(1);
-        } else if (msg.includes("nom") || msg.includes("name")) {
-          setWizardStep(2);
-        }
       } finally {
         setLoading(false);
-        setIsSubmitting(false);
       }
     } else {
       // === LOGIN ===
+      const parse = LoginSchema.safeParse(form);
+      if (!parse.success) {
+        const errors: Record<string, string> = {};
+        parse.error.errors.forEach((err) => {
+          if (err.path[0]) errors[err.path[0] as string] = err.message;
+        });
+        setFieldErrors(errors);
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data, error: authError } = await authClient.signIn.email({
           email: form.email.trim().toLowerCase(),
           password: form.password,
         });
 
-        console.log("[AUTH DEBUG] signIn response:", { data, authError });
-
         if (authError && Object.keys(authError).length > 0) throw authError;
 
         toast.success("Connexion réussie !");
-
         setIsRedirecting(true);
         if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
           router.push("/admin/dashboard");
@@ -550,114 +152,130 @@ function AuthContent() {
         toast.error(errorMessage);
       } finally {
         setLoading(false);
-        setIsSubmitting(false);
       }
     }
   };
 
-  // === Formulaire de Connexion ===
-  if (isLogin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-2 sm:p-4">
-        <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg lg:max-w-xl px-6 py-10 sm:px-12 sm:py-14 border border-gray-100 animate-in zoom-in-95 duration-500">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-              <LogIn className="w-8 h-8 text-white" />
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-2 sm:p-4">
+      <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg px-6 py-10 sm:px-12 sm:py-14 border border-gray-100 animate-in zoom-in-95 duration-500">
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            {isLogin ? <LogIn className="w-8 h-8 text-white" /> : <UserPlus className="w-8 h-8 text-white" />}
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">{isLogin ? "Bon retour !" : "Créer un compte"}</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            {isLogin ? "Connectez-vous à votre espace" : "Rejoignez la plateforme FSA"}
+          </p>
+        </div>
+
+        {/* Toggle Button */}
+        <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(true);
+              setFieldErrors({});
+              setError("");
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
+              isLogin ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <LogIn className="w-4 h-4" />
+            Connexion
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(false);
+              setFieldErrors({});
+              setError("");
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
+              !isLogin ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <UserPlus className="w-4 h-4" />
+            Inscription
+          </button>
+        </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
+            <div className="relative mt-1.5">
+              <Mail className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                placeholder="votre@email.com"
+                className={`pl-10 h-11 ${fieldErrors.email ? "border-red-500" : ""}`}
+                autoComplete="email"
+              />
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">Bon retour !</h1>
-            <p className="text-slate-500 text-sm mt-1">Connectez-vous à votre espace</p>
+            {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
           </div>
 
-          {/* Toggle Button */}
-          <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(true);
-                setFieldErrors({});
-                setError("");
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
-                isLogin
-                  ? "bg-white text-emerald-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <LogIn className="w-4 h-4" />
-              Connexion
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(false);
-                setFieldErrors({});
-                setError("");
-                setWizardStep(1);
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
-                !isLogin
-                  ? "bg-white text-emerald-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <UserPlus className="w-4 h-4" />
-              Inscription
-            </button>
+          <div>
+            <Label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe</Label>
+            <div className="relative mt-1.5">
+              <Lock className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+                className={`pl-10 pr-10 h-11 ${fieldErrors.password ? "border-red-500" : ""}`}
+                autoComplete={isLogin ? "current-password" : "new-password"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {fieldErrors.password && <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>}
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertTitle>Erreur</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {!isLogin && (
             <div>
-              <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
-              <div className="relative mt-1.5">
-                <Mail className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                  placeholder="votre@email.com"
-                  className={`pl-10 h-11 ${fieldErrors.email ? "border-red-500 focus:ring-red-500" : ""}`}
-                  autoComplete="email"
-                />
-              </div>
-              {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirmer le mot de passe</Label>
               <div className="relative mt-1.5">
                 <Lock className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
                 <Input
-                  id="password"
-                  name="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
                   type={showPassword ? "text" : "password"}
-                  value={form.password}
+                  value={form.confirmPassword}
                   onChange={handleChange}
                   required
                   placeholder="••••••••"
-                  className={`pl-10 pr-10 h-11 ${fieldErrors.password ? "border-red-500 focus:ring-red-500" : ""}`}
-                  autoComplete="current-password"
+                  className={`pl-10 h-11 ${fieldErrors.confirmPassword ? "border-red-500" : ""}`}
+                  autoComplete="new-password"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
               </div>
-              {fieldErrors.password && <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>}
+              {fieldErrors.confirmPassword && <p className="text-red-500 text-xs mt-1">{fieldErrors.confirmPassword}</p>}
             </div>
+          )}
 
+          {isLogin && (
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -673,452 +291,60 @@ function AuthContent() {
                 Mot de passe oublié ?
               </Link>
             </div>
+          )}
 
-            <Button
-              type="submit"
-              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md hover:shadow-lg transition-all"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin w-5 h-5 mr-2" />
-                  Connexion...
-                </>
-              ) : (
-                "Se connecter"
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
-              Pas encore de compte ?{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(false);
-                  setFieldErrors({});
-                  setError("");
-                  setWizardStep(1);
-                }}
-                className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline"
-              >
-                Créer un compte
-              </button>
-            </p>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <Link href="/" className="flex items-center justify-center text-sm text-gray-500 hover:text-gray-700">
-              ← Retour à l&apos;accueil
-            </Link>
-          </div>
-        </Card>
-
-        {/* Vortex Redirection Overlay - Candidat (Azure/Emerald) */}
-        {isRedirecting && (
-          <div className="vortex-overlay" style={{ "--vortex-color-1": "#10b981", "--vortex-color-2": "#2563eb" } as any}>
-            <div className="vortex-halo">
-              <div className="vortex-ring" />
-              <div className="vortex-ring-inner" />
-              <div className="vortex-core">
-                 <span className="text-2xl">🎓</span>
-              </div>
-            </div>
-            <p className="text-emerald-900 font-bold text-xl animate-pulse">Accès en cours...</p>
-            <p className="text-emerald-700 text-sm mt-2">Vérification de sécurité et redirection</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // === Formulaire d'Inscription (Wizard) ===
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-2 sm:p-4 py-8">
-      <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl lg:max-w-3xl px-6 py-10 sm:px-12 sm:py-14 border border-gray-100 animate-in zoom-in-95 duration-500">
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <UserPlus className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800">Créer un compte</h1>
-          <p className="text-slate-500 text-sm mt-1">Rejoignez la plateforme FSA</p>
-        </div>
-
-        {/* Toggle Button */}
-        <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(true);
-              setFieldErrors({});
-              setError("");
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
-              isLogin
-                ? "bg-white text-emerald-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
+          <Button
+            type="submit"
+            className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md transition-all"
+            disabled={loading}
           >
-            <LogIn className="w-4 h-4" />
-            Connexion
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(false);
-              setFieldErrors({});
-              setError("");
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
-              !isLogin
-                ? "bg-white text-emerald-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            Inscription
-          </button>
-        </div>
-
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTitle>Erreur</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Step Indicator */}
-        <StepIndicator currentStep={wizardStep} totalSteps={totalSteps} />
-
-        {formationSelected && !isLogin && (
-          <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
-             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                   <GraduationCap className="w-5 h-5" />
-                </div>
-                <div>
-                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Formation choisie</p>
-                   <p className="text-sm font-bold text-slate-800">{formationSelected.name}</p>
-                </div>
-             </div>
-             <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-[10px] font-bold text-slate-400 hover:text-red-500"
-                onClick={() => {
-                    setFormationSelected(null);
-                    setForm(prev => ({ ...prev, formationId: "" }));
-                }}
-             >
-                Changer
-             </Button>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Étape 1: Compte */}
-          {wizardStep === 1 && (
-            <>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      placeholder="koffi.amadou@example.com"
-                      className={`pl-10 h-11 ${fieldErrors.email ? "border-red-500" : ""}`}
-                      autoComplete="email"
-                    />
-                  </div>
-                  {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
-                </div>
-
-                <div>
-                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe</Label>
-                  <div className="relative mt-1.5">
-                    <Lock className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      value={form.password}
-                      onChange={handleChange}
-                      required
-                      placeholder="••••••••"
-                      className={`pl-10 pr-10 h-11 ${fieldErrors.password ? "border-red-500" : ""}`}
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  <PasswordStrengthIndicator password={form.password} />
-                  {fieldErrors.password && <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>}
-                </div>
-
-                <div>
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirmer le mot de passe</Label>
-                  <div className="relative mt-1.5">
-                    <Shield className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={form.confirmPassword}
-                      onChange={handleChange}
-                      required
-                      placeholder="••••••••"
-                      className={`pl-10 h-11 ${fieldErrors.confirmPassword ? "border-red-500" : ""}`}
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  {fieldErrors.confirmPassword && <p className="text-red-500 text-xs mt-1">{fieldErrors.confirmPassword}</p>}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Étape 2: Informations personnelles */}
-          {wizardStep === 2 && (
-            <>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">Nom complet</Label>
-                  <div className="relative mt-1.5">
-                    <User className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                      placeholder="Ex: Koffi Amadou"
-                      className={`pl-10 h-11 ${fieldErrors.name ? "border-red-500" : ""}`}
-                      autoComplete="name"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1.5 ml-1">Tel qu&apos;il apparaît sur l&apos;acte de naissance</p>
-                  {fieldErrors.name && <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="birthDate" className="text-sm font-medium text-gray-700">Date de naissance</Label>
-                    <div className="relative mt-1.5">
-                      <Calendar className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                      <Input
-                        id="birthDate"
-                        name="birthDate"
-                        type="text"
-                        inputMode="numeric"
-                        value={form.birthDate}
-                        onChange={handleChange}
-                        required
-                        placeholder="JJ/MM/AAAA"
-                        maxLength={10}
-                        className={`pl-10 h-11 ${fieldErrors.birthDate ? "border-red-500" : ""}`}
-                      />
-                    </div>
-                    {fieldErrors.birthDate && <p className="text-red-500 text-xs mt-1">{fieldErrors.birthDate}</p>}
-                  </div>
-                  <div>
-                    <Label htmlFor="birthPlace" className="text-sm font-medium text-gray-700">Lieu de naissance</Label>
-                    <div className="relative mt-1.5">
-                      <MapPin className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                      <Input
-                        id="birthPlace"
-                        name="birthPlace"
-                        type="text"
-                        value={form.birthPlace}
-                        onChange={handleChange}
-                        required
-                        placeholder="Ex: Porto-Novo, Bénin"
-                        className={`pl-10 h-11 ${fieldErrors.birthPlace ? "border-red-500" : ""}`}
-                      />
-                    </div>
-                    {fieldErrors.birthPlace && <p className="text-red-500 text-xs mt-1">{fieldErrors.birthPlace}</p>}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Étape 3: Contact */}
-          {wizardStep === 3 && (
-            <>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Téléphone</Label>
-                  <div className="relative mt-1.5">
-                    <Phone className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={form.phone}
-                      onChange={handleChange}
-                      required
-                      placeholder="Ex: +229 95 12 34 56"
-                      className={`pl-10 h-11 ${fieldErrors.phone ? "border-red-500" : ""}`}
-                      autoComplete="tel"
-                    />
-                  </div>
-                  {fieldErrors.phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>}
-                </div>
-
-                <div>
-                  <Label htmlFor="address" className="text-sm font-medium text-gray-700">Adresse postale (optionnel)</Label>
-                  <div className="relative mt-1.5">
-                    <MapPin className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="address"
-                      name="address"
-                      type="text"
-                      value={form.address}
-                      onChange={handleChange}
-                      placeholder="Ex: Quartier Akpakpa, Rue 45, Cotonou"
-                      className="pl-10 h-11"
-                      autoComplete="street-address"
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Étape 4: Validation */}
-          {wizardStep === 4 && (
-            <div className="space-y-4">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                <h3 className="font-semibold text-emerald-800 mb-3 flex items-center gap-2">
-                  <Check className="w-5 h-5" />
-                  Vérifiez vos informations
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Email</span>
-                    <span className="font-medium text-gray-800">{form.email}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Nom</span>
-                    <span className="font-medium text-gray-800">{form.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Date de naissance</span>
-                    <span className="font-medium text-gray-800">{form.birthDate || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Lieu de naissance</span>
-                    <span className="font-medium text-gray-800">{form.birthPlace || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Téléphone</span>
-                    <span className="font-medium text-gray-800">{form.phone || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Adresse</span>
-                    <span className="font-medium text-gray-800">{form.address || '-'}</span>
-                  </div>
-                  {formationSelected && (
-                    <div className="flex justify-between pt-2 border-t border-emerald-100 mt-2">
-                        <span className="text-emerald-700 font-bold italic">Formation</span>
-                        <span className="font-black text-emerald-800">{formationSelected.name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  required
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 mt-0.5"
-                />
-                <span className="text-sm text-gray-600">
-                  J&apos;accepte les{" "}
-                  <Link href="/legal/cgu" className="text-emerald-600 hover:underline font-medium">
-                    conditions d&apos;utilisation
-                  </Link>{" "}
-                  et la{" "}
-                  <Link href="/legal/confidentialite" className="text-emerald-600 hover:underline font-medium">
-                    politique de confidentialité
-                  </Link>
-                </span>
-              </label>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex gap-3 pt-4">
-            {wizardStep > 1 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevStep}
-                className="flex-1 h-11 font-semibold border-gray-300 hover:bg-gray-50"
-              >
-                Retour
-              </Button>
-            )}
-            {wizardStep < totalSteps ? (
-              <Button
-                type="button"
-                onClick={handleNextStep}
-                className="flex-1 h-11 font-semibold bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all"
-              >
-                Continuer
-              </Button>
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin w-5 h-5 mr-2" />
+                {isLogin ? "Connexion..." : "Création..."}
+              </>
             ) : (
-              <Button
-                type="submit"
-                className="flex-1 h-11 font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="animate-spin w-5 h-5 mr-2" />
-                    Création du compte...
-                  </>
-                ) : (
-                  "Créer mon compte"
-                )}
-              </Button>
+              isLogin ? "Se connecter" : "Créer mon compte"
             )}
-          </div>
+          </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <Link href="/" className="flex items-center justify-center text-sm text-gray-500 hover:text-gray-700">
+        <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-4">
+          <p className="text-sm text-gray-500">
+            {isLogin ? "Pas encore de compte ?" : "Déjà un compte ?"}
+            <button
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-emerald-600 hover:underline font-medium ml-1"
+            >
+              {isLogin ? "Créer un compte" : "Se connecter"}
+            </button>
+          </p>
+          <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
             ← Retour à l&apos;accueil
           </Link>
         </div>
       </Card>
+
+      {/* Vortex Redirection Overlay */}
+      {isRedirecting && (
+        <div className="vortex-overlay" style={{ "--vortex-color-1": "#10b981", "--vortex-color-2": "#2563eb" } as any}>
+          <div className="vortex-halo">
+            <div className="vortex-ring" />
+            <div className="vortex-ring-inner" />
+            <div className="vortex-core">
+              <span className="text-2xl">{isLogin ? "🎓" : "✨"}</span>
+            </div>
+          </div>
+          <p className="text-emerald-900 font-bold text-xl animate-pulse">Accès en cours...</p>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-        <div className="text-center">
-          <Loader2 className="animate-spin w-8 h-8 text-blue-600 mx-auto mb-4" />
-          <p className="text-slate-500 font-medium">Chargement...</p>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50">Chargement...</div>}>
       <AuthContent />
     </Suspense>
   );

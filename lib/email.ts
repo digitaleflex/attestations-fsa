@@ -1,21 +1,23 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 // Initialisation paresseuse pour éviter les erreurs lors du build (si la clé API est absente)
 let resendInstance: Resend | null = null;
 
 const getResend = () => {
-    if (!resendInstance) {
-        const apiKey = process.env.RESEND_API_KEY;
-        if (!apiKey) {
-            console.warn("[EMAIL_SERVICE] RESEND_API_KEY is missing. Email sending will fail.");
-            // Pendant le build, on peut retourner une instance bidon pour éviter les crashs
-            // Mais en production, il faut la clé.
-            resendInstance = new Resend("disabled_key");
-        } else {
-            resendInstance = new Resend(apiKey);
-        }
+  if (!resendInstance) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.warn(
+        "[EMAIL_SERVICE] RESEND_API_KEY is missing. Email sending will fail.",
+      );
+      // Pendant le build, on peut retourner une instance bidon pour éviter les crashs
+      // Mais en production, il faut la clé.
+      resendInstance = new Resend("disabled_key");
+    } else {
+      resendInstance = new Resend(apiKey);
     }
-    return resendInstance;
+  }
+  return resendInstance;
 };
 
 const fromEmail = "Ferme St André <contact@net.eurinhash.com>";
@@ -50,7 +52,7 @@ export const emailService = {
               &copy; ${new Date().getFullYear()} Ferme Agro-Piscicole Cité St André. Abomey-Calavi, Bénin.
             </div>
           </div>
-        `
+        `,
       });
       return { success: true };
     } catch (error) {
@@ -62,16 +64,26 @@ export const emailService = {
   /**
    * Envoi des résultats d'examen au candidat
    */
-  async sendExamResults(to: string, fullName: string, examTitle: string, score: number, isSuccess: boolean) {
+  async sendExamResults(
+    to: string,
+    fullName: string,
+    examTitle: string,
+    score: number,
+    isSuccess: boolean,
+  ) {
     try {
       const resend = getResend();
-      const statusText = isSuccess ? "FÉLICITATIONS ! Vous avez réussi." : "Résultats de votre examen.";
+      const statusText = isSuccess
+        ? "FÉLICITATIONS ! Vous avez réussi."
+        : "Résultats de votre examen.";
       const statusColor = isSuccess ? "#10b981" : "#475569";
 
       await resend.emails.send({
         from: fromEmail,
         to,
-        subject: isSuccess ? "Félicitations ! Votre attestation est prête" : "Résultats de votre examen - Ferme St André",
+        subject: isSuccess
+          ? "Félicitations ! Votre attestation est prête"
+          : "Résultats de votre examen - Ferme St André",
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid ${statusColor}; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
@@ -89,27 +101,31 @@ export const emailService = {
                 <p style="margin: 0; font-weight: bold; color: ${statusColor};">${statusText}</p>
               </div>
 
-              ${isSuccess ? `
+              ${
+                isSuccess
+                  ? `
                 <p>Votre attestation de réussite a été générée automatiquement. Vous pouvez la télécharger dès maintenant depuis votre tableau de bord.</p>
                 <div style="text-align: center; margin-top: 32px;">
                   <a href="${APP_URL}/exams/results" style="display: inline-block; padding: 16px 32px; background-color: #10b981; color: white; text-decoration: none; font-weight: bold; border-radius: 12px; shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);">
                     Télécharger mon attestation
                   </a>
                 </div>
-              ` : `
+              `
+                  : `
                 <p>Le seuil de réussite est fixé à <strong>12/20</strong>. Ne vous découragez pas, la persévérance est la clé du succès. Contactez votre formateur pour les modalités de rattrapage.</p>
                 <div style="text-align: center; margin-top: 32px;">
                   <a href="${APP_URL}/exams" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
                     Retour au centre d'examens
                   </a>
                 </div>
-              `}
+              `
+              }
             </div>
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
               &copy; ${new Date().getFullYear()} Ferme Agro-Piscicole Cité St André. Abomey-Calavi, Bénin.
             </div>
           </div>
-        `
+        `,
       });
       return { success: true };
     } catch (error) {
@@ -121,7 +137,11 @@ export const emailService = {
   /**
    * Envoi d'un email de vérification d'adresse email
    */
-  async sendVerificationEmail(to: string, fullName: string, verifyLink: string) {
+  async sendVerificationEmail(
+    to: string,
+    fullName: string,
+    verifyLink: string,
+  ) {
     try {
       const resend = getResend();
       await resend.emails.send({
@@ -156,7 +176,7 @@ export const emailService = {
               &copy; ${new Date().getFullYear()} Ferme Agro-Piscicole Cité St André. Abomey-Calavi, Bénin.
             </div>
           </div>
-        `
+        `,
       });
       return { success: true };
     } catch (error) {
@@ -195,7 +215,7 @@ export const emailService = {
               &copy; ${new Date().getFullYear()} Ferme Agro-Piscicole Cité St André.
             </div>
           </div>
-        `
+        `,
       });
       return { success: true };
     } catch (error) {
@@ -223,7 +243,7 @@ export const emailService = {
             </div>
             <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">Envoyé automatiquement par le système FSA.</p>
           </div>
-        `
+        `,
       });
       return { success: true };
     } catch (error) {
@@ -272,7 +292,7 @@ export const emailService = {
               &copy; ${new Date().getFullYear()} Ferme Agro-Piscicole Cité St André. Abomey-Calavi, Bénin.
             </div>
           </div>
-        `
+        `,
       });
       return { success: true };
     } catch (error) {
@@ -436,7 +456,7 @@ export const emailService = {
 
           </body>
           </html>
-        `
+        `,
       });
       console.log(`[EMAIL_SERVICE] ✅ OTP code sent to ${to}: ${otp}`);
       return { success: true };
@@ -444,5 +464,141 @@ export const emailService = {
       console.error("[EMAIL_ERROR] Password Reset OTP:", error);
       return { success: false, error };
     }
-  }
+  },
+
+  /**
+   * Envoi d'un code OTP pour vérification d'email lors de l'inscription
+   */
+  async sendVerificationOTP(to: string, fullName: string, otp: string) {
+    try {
+      const resend = getResend();
+      const year = new Date().getFullYear();
+      const verifyUrl = `${APP_URL}/auth?verify=true`;
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject: `✅ Vérifiez votre email - Code OTP`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f0f4f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+
+            <!-- Wrapper -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+
+                  <!-- Card -->
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.08);">
+
+                    <!-- Header with gradient -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
+                        <div style="margin-bottom: 16px;">
+                          <img src="${APP_URL}/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                        </div>
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
+                          ✅ Vérification d'email
+                        </h1>
+                        <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">
+                          Ferme Agro-Piscicole Cité St André
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 32px;">
+                        <p style="margin: 0 0 24px 0; font-size: 16px; color: #475569; line-height: 1.6;">
+                          Bonjour <strong style="color: #0f172a;">${fullName}</strong>,
+                        </p>
+                        <p style="margin: 0 0 32px 0; font-size: 15px; color: #64748b; line-height: 1.7;">
+                          Merci de vous être inscrit ! Veuillez vérifier votre adresse email en utilisant le code ci-dessous :
+                        </p>
+
+                        <!-- OTP Box -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 32px 0;">
+                          <tr>
+                            <td style="background-color: #f0fdf4; border-radius: 16px; padding: 24px; border: 2px solid #bbf7d0; text-align: center;">
+                              <p style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #166534; letter-spacing: 0.5px; text-transform: uppercase;">
+                                Votre code de vérification
+                              </p>
+                              <p style="margin: 0; font-size: 36px; font-weight: 800; color: #15803d; letter-spacing: 8px;">
+                                ${otp}
+                              </p>
+                              <p style="margin: 16px 0 0 0; font-size: 12px; color: #86efac;">
+                                ⏱️ Ce code expire dans 10 minutes
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Security Tips -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 32px 0;">
+                          <tr>
+                            <td style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0;">
+                              <p style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #334155;">
+                                🛡️ Conseils de sécurité :
+                              </p>
+                              <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #64748b; line-height: 1.8;">
+                                <li>Ne partagez <strong style="color: #1e293b;">jamais</strong> ce code avec quiconque</li>
+                                <li>Notre équipe ne vous demandera <strong style="color: #1e293b;">jamais</strong> ce code par téléphone ou email</li>
+                                <li>Si vous n'avez pas demandé ce code, <strong style="color: #1e293b;">ignorez simplement cet email</strong></li>
+                              </ul>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <p style="margin: 24px 0 0 0; font-size: 14px; color: #94a3b8; text-align: center;">
+                          Cordialement,<br>
+                          <strong style="color: #64748b;">L'équipe Ferme St André</strong>
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Divider -->
+                    <tr>
+                      <td style="padding: 0 32px;">
+                        <div style="height: 1px; background-color: #e2e8f0;"></div>
+                      </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 24px 32px; text-align: center;">
+                        <p style="margin: 0 0 8px 0; font-size: 12px; color: #94a3b8;">
+                          Cet email a été envoyé à <strong style="color: #64748b;">${to}</strong>
+                        </p>
+                        <p style="margin: 0; font-size: 11px; color: #cbd5e1;">
+                          © ${year} Ferme Agro-Piscicole Cité St André • Abomey-Calavi, Bénin
+                        </p>
+                        <p style="margin: 12px 0 0 0; font-size: 10px; color: #e2e8f0;">
+                          Ceci est un message automatique, merci de ne pas y répondre directement.
+                        </p>
+                      </td>
+                    </tr>
+
+                  </table>
+                  <!-- End Card -->
+
+                </td>
+              </tr>
+            </table>
+            <!-- End Wrapper -->
+
+          </body>
+          </html>
+        `,
+      });
+      console.log(`[EMAIL_SERVICE] ✅ Verification OTP sent to ${to}: ${otp}`);
+      return { success: true };
+    } catch (error) {
+      console.error("[EMAIL_ERROR] Verification OTP:", error);
+      return { success: false, error };
+    }
+  },
 };

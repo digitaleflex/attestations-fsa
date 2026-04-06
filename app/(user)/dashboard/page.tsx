@@ -312,36 +312,60 @@ export default function UserDashboardPage() {
           </div>
         </Card>
 
-        {/* Claim Section */}
-        {(!user?.attestations || user.attestations.length === 0) && (
-          <Card className="p-8 border-none shadow-premium bg-emerald-50 relative overflow-hidden">
+        {/* Dossier Linking Section (Refined) */}
+        <Card className={`p-8 border-none shadow-premium relative overflow-hidden transition-all duration-500 ${
+            attestationsData?.attestations?.length > 0 ? "bg-emerald-50/50" : "bg-emerald-50"
+        }`}>
             <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
                 <div className="flex-1 space-y-4">
-                   <h3 className="text-xl font-black text-emerald-900 flex items-center gap-2 tracking-tight">
-                       <LinkIcon className="w-5 h-5" />
-                       Récupérer mon dossier FSA
-                   </h3>
-                   <p className="text-emerald-700/80 text-sm font-medium">
-                     Liez votre historique de formation en entrant les 5 derniers caractères de votre code secret.
-                   </p>
-                   <div className="flex gap-2">
-                      <Input
-                        placeholder="Ex: 3f8b6..."
-                        className="bg-white border-emerald-200 h-12 rounded-xl font-mono focus-visible:ring-emerald-500"
-                        value={claimCode}
-                        onChange={(e) => setClaimCode(e.target.value)}
-                      />
-                      <Button onClick={handleClaimCode} className="h-12 bg-emerald-700 hover:bg-emerald-800 rounded-xl px-6 font-bold" disabled={isClaiming}>
-                          {isClaiming ? "Vérification..." : "Lier"}
-                      </Button>
-                   </div>
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${
+                            attestationsData?.attestations?.length > 0 ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-600"
+                        }`}>
+                            {attestationsData?.attestations?.length > 0 ? <CheckCircle className="w-5 h-5" /> : <LinkIcon className="w-5 h-5" />}
+                        </div>
+                        <h3 className={`text-xl font-black tracking-tight ${
+                            attestationsData?.attestations?.length > 0 ? "text-emerald-800" : "text-emerald-900"
+                        }`}>
+                            {attestationsData?.attestations?.length > 0 ? "Félicitations ! Votre dossier est lié." : "Récupérer mon dossier FSA"}
+                        </h3>
+                    </div>
+
+                    {attestationsData?.attestations?.length > 0 ? (
+                        <div className="space-y-3">
+                            <p className="text-emerald-700/80 text-sm font-medium">
+                                Vos informations officielles ont été synchronisées avec succès. Vous pouvez maintenant télécharger vos documents ci-dessous.
+                            </p>
+                            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-100/50 w-fit px-3 py-1.5 rounded-full">
+                                <ShieldCheck className="w-4 h-4" /> COMPTE CERTIFIÉ
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <p className="text-emerald-700/80 text-sm font-medium">
+                                Saisissez les 5 derniers caractères de la séquence de votre code d&apos;attestation pour lier votre dossier.
+                            </p>
+                            <div className="flex gap-2 max-w-md">
+                                <Input
+                                    placeholder="Ex: AB123"
+                                    className="bg-white border-emerald-200 h-12 rounded-xl font-mono focus-visible:ring-emerald-500 text-lg uppercase"
+                                    value={claimCode}
+                                    onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
+                                    maxLength={30}
+                                />
+                                <Button onClick={handleClaimCode} className="h-12 bg-emerald-700 hover:bg-emerald-800 rounded-xl px-8 font-black shadow-lg shadow-emerald-700/20" disabled={isClaiming}>
+                                    {isClaiming ? <LoaderIcon className="w-5 h-5 animate-spin" /> : "LIER"}
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </div>
-                <div className="hidden lg:block w-32 h-32 opacity-20">
-                    <Award className="w-full h-full text-emerald-900" />
+
+                <div className={`hidden lg:block w-32 h-32 transition-transform duration-700 ${attestationsData?.attestations?.length > 0 ? "scale-110 rotate-12" : "opacity-20"}`}>
+                    <Award className={`w-full h-full ${attestationsData?.attestations?.length > 0 ? "text-emerald-500" : "text-emerald-900"}`} />
                 </div>
             </div>
-          </Card>
-        )}
+        </Card>
 
         {/* Main Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
