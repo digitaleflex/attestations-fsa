@@ -16,8 +16,12 @@ export async function POST(
   }
 
   try {
-    const { action } = await request.json();
+    const { action, reason } = await request.json();
     
+    if (!reason || reason.trim().length < 5) {
+        return NextResponse.json({ error: 'Un motif de minimum 5 caractères est obligatoire.' }, { status: 400 });
+    }
+
     // Récupérer l'attestation actuelle avec les infos utilisateur
     const attestation = await prisma.attestation.findUnique({
       where: { id },
@@ -49,11 +53,11 @@ export async function POST(
         });
 
         await createAuditLog({
-          userId,
+          userId: adminUser?.id || "",
           action: 'ATTESTATION_REVOKED',
           resource: 'ATTESTATION',
           resourceId: id,
-          newValue: { adminId: adminUser?.id, reason: 'Administrative Revocation' },
+          newValue: { adminId: adminUser?.id, reason },
           ipAddress: request.headers.get("x-forwarded-for") || "unknown"
         });
       }
@@ -83,19 +87,19 @@ export async function POST(
       if (userId) {
         await createNotification({
           userId,
-          type: 'EXAM_RESET',
+          type: 'GENERAL',
           title: 'Examen à repasser 🔄',
-          message: `Votre évaluation pour "${attestation.formation?.name}" a été réinitialisée. Vous devez repasser l'examen.`,
+          message: `Votre évaluation pour "${attestation.formation?.name}" a été réinitialisée. Vous devez repasser l'examen. Motif : ${reason}`,
           link: '/exam'
         });
 
         await createAuditLog({
-          userId,
+          userId: adminUser?.id || "",
           action: 'USER_RETROGRADED',
           resource: 'USER',
           resourceId: userId,
           oldValue: { attestationCode: attestation.code },
-          newValue: { adminId: adminUser?.id, action: 'RESET_EXAM_STATUS' },
+          newValue: { adminId: adminUser?.id, action: 'RESET_EXAM_STATUS', reason },
           ipAddress: request.headers.get("x-forwarded-for") || "unknown"
         });
       }

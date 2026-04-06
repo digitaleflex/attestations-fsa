@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
   Loader2, 
@@ -127,13 +128,33 @@ export default function AttestationDetailsPage() {
       .catch(() => setLoading(false));
   }, [id]);
 
+  const [actionReason, setActionReason] = useState("");
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+  const fetchAuditLogs = async () => {
+    try {
+      const logs = await apiFetch(`/api/admin/attestations/${id}/audit`, {}, false);
+      setAuditLogs(logs);
+    } catch (e) {
+      console.error("Erreur lors du chargement des logs d'audit");
+    }
+  };
+
+  useEffect(() => {
+    if (id) fetchAuditLogs();
+  }, [id]);
+
   const handleAdminAction = async (action: "REVOKE" | "RETROGRADE") => {
+    if (!actionReason || actionReason.trim().length < 5) {
+      return toast.error("Veuillez saisir un motif d'au moins 5 caractères.");
+    }
+
     setActionLoading(true);
     try {
       const res = await fetch(`/api/admin/attestations/${id}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, reason: actionReason }),
       });
       
       if (!res.ok) {
@@ -149,6 +170,8 @@ export default function AttestationDetailsPage() {
 
       const updated = await res.json();
       setData(updated.attestation);
+      setActionReason(""); // Reset motif
+      fetchAuditLogs(); // Rafraîchir l'historique
       toast.success(action === 'REVOKE' ? "🚫 Attestation révoquée !" : "Action effectuée");
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'action");
@@ -552,12 +575,25 @@ export default function AttestationDetailsPage() {
                                </AlertDialogTitle>
                                <AlertDialogDescription className="text-slate-600 mt-2 text-base">
                                  Cela marquera ce certificat comme <span className="font-bold underline">REJETÉ</span>. 
-                                 Le candidat ne pourra plus l'utiliser officiellement, mais il gardera sa note d'examen actuelle.
+                                 Le candidat ne pourra plus l'utiliser officiellement.<br/><br/>
+                                 <strong className="text-slate-900">Motif de la révocation obligatoire :</strong>
                                </AlertDialogDescription>
                              </AlertDialogHeader>
-                             <AlertDialogFooter className="mt-8 gap-3">
+                             <div className="py-4">
+                                <Input 
+                                    placeholder="Ex: Erreur de saisie noms, Inaptitude détectée..." 
+                                    value={actionReason}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActionReason(e.target.value)}
+                                    className="border-amber-100 focus-visible:ring-amber-500"
+                                />
+                             </div>
+                             <AlertDialogFooter className="mt-4 gap-3">
                                <AlertDialogCancel className="border-slate-200">Annuler</AlertDialogCancel>
-                               <AlertDialogAction onClick={() => handleAdminAction('REVOKE')} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-200">
+                               <AlertDialogAction 
+                                 onClick={() => handleAdminAction('REVOKE')} 
+                                 disabled={actionReason.length < 5}
+                                 className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-200"
+                               >
                                  Confirmer la Révocation
                                </AlertDialogAction>
                              </AlertDialogFooter>
@@ -584,14 +620,27 @@ export default function AttestationDetailsPage() {
                            </AlertDialogTitle>
                            <AlertDialogDescription className="text-slate-600 mt-2 text-base leading-relaxed">
                              ⚠️ <span className="font-bold text-slate-900">Action Irréversible !!</span><br/><br/>
-                             1. L'attestation <strong>{data.code}</strong> sera <span className="text-rose-600 font-bold">supprimée définitivement</span>.<br/>
-                             2. Les scores d'examen actuels du candidat seront <span className="text-rose-600 font-bold">effacés</span>.<br/>
-                             3. Le candidat devra <span className="text-indigo-600 font-bold">repasser intégralement son examen</span> sur son dashboard.
+                             1. L'attestation sera <span className="text-rose-600 font-bold">supprimée définitivement</span>.<br/>
+                             2. Les scores actuels seront <span className="text-rose-600 font-bold">effacés</span>.<br/>
+                             3. Le candidat devra <span className="text-indigo-600 font-bold">repasser intégralement son examen</span>.<br/><br/>
+                             <strong className="text-slate-900">Motif de la rétrogradation :</strong>
                            </AlertDialogDescription>
                          </AlertDialogHeader>
-                         <AlertDialogFooter className="mt-8 gap-3">
+                         <div className="py-4">
+                            <Input 
+                                placeholder="Ex: Tricherie prouvée, Incohérence des notes..." 
+                                value={actionReason}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActionReason(e.target.value)}
+                                className="border-indigo-100 focus-visible:ring-indigo-500"
+                            />
+                         </div>
+                         <AlertDialogFooter className="mt-4 gap-3">
                            <AlertDialogCancel className="border-slate-200">Abandonner</AlertDialogCancel>
-                           <AlertDialogAction onClick={() => handleAdminAction('RETROGRADE')} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200">
+                           <AlertDialogAction 
+                             onClick={() => handleAdminAction('RETROGRADE')} 
+                             disabled={actionReason.length < 5}
+                             className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200"
+                           >
                              Rétrograder Maintenant
                            </AlertDialogAction>
                          </AlertDialogFooter>
@@ -600,6 +649,30 @@ export default function AttestationDetailsPage() {
                 </div>
 
                 <div className="h-px bg-slate-100 my-4" />
+                {auditLogs.length > 0 && (
+                  <Card className="p-5 bg-slate-50 border-none shadow-inner">
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                       <ClipboardList className="w-3 h-3" /> Fil d'activité officiel
+                    </h4>
+                    <div className="space-y-4">
+                      {auditLogs.map((log) => (
+                        <div key={log.id} className="relative pl-4 border-l-2 border-slate-200 py-1">
+                          <p className="text-xs font-bold text-slate-700">
+                             {log.action === 'ATTESTATION_REVOKED' ? '🚫 RÉVOCATION' : 
+                              log.action === 'USER_RETROGRADED' ? '🔄 RÉTROGRADATION' : 
+                              log.action === 'ATTESTATION_VALIDATED' ? '✅ VALIDATION' : '📝 ACTION'}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            par {log.user?.name || log.user?.email} • <DateLocale date={log.timestamp} options={{ hour: '2-digit', minute: '2-digit' }} />
+                          </p>
+                          {log.newValue?.reason && (
+                            <p className="text-[11px] mt-1 italic text-indigo-600 font-medium">" {log.newValue.reason} "</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
                 {data.status === "PENDING" && (
                   <>
                     <Button
