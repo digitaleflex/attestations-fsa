@@ -171,18 +171,74 @@ function AuthContent() {
   const [wizardStep, setWizardStep] = useState(1);
   const totalSteps = 4;
 
+  // Load saved form from localStorage (auto-save survival)
+  const loadSavedForm = () => {
+    try {
+      const saved = localStorage.getItem("fsa-registration-form");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          email: parsed.email || "",
+          password: parsed.password || "",
+          confirmPassword: parsed.confirmPassword || "",
+          name: parsed.name || "",
+          birthDate: parsed.birthDate || "",
+          birthPlace: parsed.birthPlace || "",
+          phone: parsed.phone || "",
+          address: parsed.address || "",
+          formationId: parsed.formationId || "",
+          rememberMe: parsed.rememberMe || false,
+          wizardStep: parsed.wizardStep || 1,
+        };
+      }
+    } catch (e) {
+      console.warn("[AUTH] Failed to load saved form:", e);
+    }
+    return null;
+  };
+
+  const savedForm = loadSavedForm();
+
   const [form, setForm] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-    name: "",
-    birthDate: "",
-    birthPlace: "",
-    phone: "",
-    address: "",
-    formationId: "",
-    rememberMe: false,
+    email: savedForm?.email || "",
+    password: savedForm?.password || "",
+    confirmPassword: savedForm?.confirmPassword || "",
+    name: savedForm?.name || "",
+    birthDate: savedForm?.birthDate || "",
+    birthPlace: savedForm?.birthPlace || "",
+    phone: savedForm?.phone || "",
+    address: savedForm?.address || "",
+    formationId: savedForm?.formationId || "",
+    rememberMe: savedForm?.rememberMe || false,
   });
+
+  // Auto-save form to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem("fsa-registration-form", JSON.stringify({
+        ...form,
+        wizardStep,
+      }));
+    } catch (e) {
+      console.warn("[AUTH] Failed to save form:", e);
+    }
+  }, [form, wizardStep]);
+
+  // Clear saved form after successful submission
+  const clearSavedForm = () => {
+    try {
+      localStorage.removeItem("fsa-registration-form");
+    } catch (e) {
+      console.warn("[AUTH] Failed to clear saved form:", e);
+    }
+  };
+
+  // If user was on a specific step before refresh, restore it
+  useEffect(() => {
+    if (savedForm?.wizardStep) {
+      setWizardStep(savedForm.wizardStep);
+    }
+  }, []); // Only run once on mount
 
   // Handle formationId from URL
   useEffect(() => {
@@ -398,7 +454,8 @@ function AuthContent() {
 
       try {
         // === REGISTRATION ===
-        // Remove confirmPassword from data sent to Better Auth
+        // Only send fields that Better Auth supports during sign-up
+        // birthDate and formationId are set after creation via /api/user/after-signup
         const signUpData = {
           email: form.email.trim().toLowerCase(),
           password: form.password,
@@ -406,8 +463,6 @@ function AuthContent() {
           phone: form.phone.trim() || undefined,
           birthPlace: form.birthPlace.trim() || undefined,
           address: form.address?.trim() || undefined,
-          birthDate: birthDate, // Send as Date object (Prisma DateTime)
-          formationId: form.formationId || undefined,
         };
 
         const { data, error: authError } = await authClient.signUp.email(signUpData as any);
@@ -415,6 +470,26 @@ function AuthContent() {
         console.log("[AUTH DEBUG] signUp response:", { data, authError });
 
         if (authError && Object.keys(authError).length > 0) throw authError;
+
+        // Update additional fields (birthDate, formationId) after sign-up
+        if (data?.user?.id) {
+          try {
+            await fetch("/api/user/after-signup", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                birthDate: birthDate?.toISOString(),
+                formationId: form.formationId || undefined,
+              }),
+            });
+          } catch (updateError) {
+            console.warn("[AUTH] Failed to update additional fields after sign-up:", updateError);
+            // Don't fail the whole registration for this
+          }
+        }
+
+        // Clear saved form after successful registration
+        clearSavedForm();
 
         toast.success("Compte créé avec succès ! Bienvenue sur FSA.");
 

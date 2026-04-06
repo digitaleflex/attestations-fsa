@@ -60,10 +60,6 @@ export const auth = betterAuth({
                 type: "string",
                 required: false,
             },
-            birthDate: {
-                type: "date",
-                required: false,
-            },
             birthPlace: {
                 type: "string",
                 required: false,
@@ -71,11 +67,10 @@ export const auth = betterAuth({
             address: {
                 type: "string",
                 required: false,
-            },
-            formationId: {
-                type: "string",
-                required: false,
             }
+            // birthDate and formationId removed from additionalFields
+            // They will be set after user creation via server-side update
+            // because Better Auth doesn't properly serialize Date objects during sign-up
         }
     },
     emailAndPassword: {
