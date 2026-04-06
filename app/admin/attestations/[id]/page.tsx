@@ -127,6 +127,36 @@ export default function AttestationDetailsPage() {
       .catch(() => setLoading(false));
   }, [id]);
 
+  const handleAdminAction = async (action: "REVOKE" | "RETROGRADE") => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/attestations/${id}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Une erreur est survenue");
+      }
+
+      if (action === 'RETROGRADE') {
+        toast.success("✅ Candidat rétrogradé. L'examen a été réinitialisé.");
+        router.push("/admin/attestations"); // Rediriger car l'attestation n'existe plus
+        return;
+      }
+
+      const updated = await res.json();
+      setData(updated.attestation);
+      toast.success(action === 'REVOKE' ? "🚫 Attestation révoquée !" : "Action effectuée");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de l'action");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleStatus = async (status: "VALIDATED" | "REJECTED") => {
     setActionLoading(true);
     try {
@@ -501,6 +531,74 @@ export default function AttestationDetailsPage() {
                       Transmettre le Relevé
                     </Button>
                 )}
+                <div className="h-px bg-slate-100 my-4" />
+                <div className="flex flex-col gap-3">
+                    {data.status !== "REJECTED" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className="w-full gap-2 border-amber-300 text-amber-600 hover:bg-amber-50"
+                              disabled={actionLoading}
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Révoquer l'attestation
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-white border-2 border-amber-100 shadow-2xl">
+                             <AlertDialogHeader>
+                               <AlertDialogTitle className="flex items-center gap-2 text-amber-600 font-bold text-xl">
+                                 ⚠️ Annuler cette attestation ?
+                               </AlertDialogTitle>
+                               <AlertDialogDescription className="text-slate-600 mt-2 text-base">
+                                 Cela marquera ce certificat comme <span className="font-bold underline">REJETÉ</span>. 
+                                 Le candidat ne pourra plus l'utiliser officiellement, mais il gardera sa note d'examen actuelle.
+                               </AlertDialogDescription>
+                             </AlertDialogHeader>
+                             <AlertDialogFooter className="mt-8 gap-3">
+                               <AlertDialogCancel className="border-slate-200">Annuler</AlertDialogCancel>
+                               <AlertDialogAction onClick={() => handleAdminAction('REVOKE')} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-200">
+                                 Confirmer la Révocation
+                               </AlertDialogAction>
+                             </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                          disabled={actionLoading}
+                        >
+                          <ArrowLeft className="w-4 h-4 rotate-90" />
+                          Rétrograder le Candidat
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white border-2 border-indigo-100 shadow-2xl">
+                         <AlertDialogHeader>
+                           <AlertDialogTitle className="flex items-center gap-3 text-indigo-600 font-bold text-xl">
+                             <ArrowLeft className="w-6 h-6 rotate-90" />
+                             Rétrograder et Repasser l'examen ?
+                           </AlertDialogTitle>
+                           <AlertDialogDescription className="text-slate-600 mt-2 text-base leading-relaxed">
+                             ⚠️ <span className="font-bold text-slate-900">Action Irréversible !!</span><br/><br/>
+                             1. L'attestation <strong>{data.code}</strong> sera <span className="text-rose-600 font-bold">supprimée définitivement</span>.<br/>
+                             2. Les scores d'examen actuels du candidat seront <span className="text-rose-600 font-bold">effacés</span>.<br/>
+                             3. Le candidat devra <span className="text-indigo-600 font-bold">repasser intégralement son examen</span> sur son dashboard.
+                           </AlertDialogDescription>
+                         </AlertDialogHeader>
+                         <AlertDialogFooter className="mt-8 gap-3">
+                           <AlertDialogCancel className="border-slate-200">Abandonner</AlertDialogCancel>
+                           <AlertDialogAction onClick={() => handleAdminAction('RETROGRADE')} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200">
+                             Rétrograder Maintenant
+                           </AlertDialogAction>
+                         </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+
                 <div className="h-px bg-slate-100 my-4" />
                 {data.status === "PENDING" && (
                   <>

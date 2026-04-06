@@ -421,15 +421,30 @@ export default function UserDashboardPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleDownload(att)}
-                                        disabled={att.status !== 'VALIDATED'}
-                                        className="rounded-full bg-white shadow-sm hover:scale-110 active:scale-95 transition-all text-emerald-600"
-                                    >
-                                        <Download className="w-5 h-5" />
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        {att.status === 'VALIDATED' && (att.type === 'FORMATION' ? att.certificationScore > 0 : att.stageScore > 0) ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleDownload(att)}
+                                                className="rounded-full bg-white shadow-sm hover:scale-110 active:scale-95 transition-all text-emerald-600"
+                                            >
+                                                <Download className="w-5 h-5" />
+                                            </Button>
+                                        ) : (
+                                            <div className="flex flex-col items-end gap-1">
+                                                <Badge variant="outline" className={`text-[9px] flex items-center gap-1 ${
+                                                    att.status === 'VALIDATED' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-rose-50 text-rose-600 border-rose-100'
+                                                }`}>
+                                                    <ShieldAlert className="w-2.5 h-2.5" /> 
+                                                    {att.status === 'VALIDATED' ? 'EN ATTENTE DE NOTE' : 'BLOQUÉ'}
+                                                </Badge>
+                                                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest text-right">
+                                                    {att.status === 'VALIDATED' ? 'Calcul du Score...' : 'Examen Requis'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         )}

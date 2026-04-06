@@ -253,6 +253,15 @@ const CertificateTemplate = ({
             </span>
           </p>
 
+          {data.score !== undefined && data.score > 0 && (
+            <p className="text-2xl font-bold italic" style={{ color: "#b91c1c" }}>
+              avec une note de {data.score}/100 
+              {data.type === "FORMATION" && (
+                 <span> ({data.score >= 18 ? "Mention Excellence" : data.score >= 16 ? "Mention Très Bien" : data.score >= 14 ? "Mention Bien" : "Mention Passable"})</span>
+              )}
+            </p>
+          )}
+
           <p className="text-2xl" style={{ color: "#1e293b" }}>
             du <span className="font-bold underline">{startDate}</span> au{" "}
             <span className="font-bold underline">{endDate}</span>
