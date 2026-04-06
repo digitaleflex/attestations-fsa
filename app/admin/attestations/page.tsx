@@ -103,28 +103,8 @@ export default function AdminAttestationsPage() {
   };
 
   const handleExport = () => {
-    const csv = [
-      ["Code", "Nom complet", "Formation", "Type", "Statut", "Date émission"].join(","),
-      ...attestations.map((a) =>
-        [
-          a.code,
-          `"${a.fullName}"`,
-          `"${a.formation?.name || "-"}"`,
-          a.type,
-          a.status,
-          a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-",
-        ].join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `attestations-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Export CSV téléchargé !");
+    window.open("/api/admin/attestations/export", "_blank");
+    toast.success("Préparation de l'exportation complète...");
   };
 
   const getTypeIcon = (type: string) => {
@@ -171,9 +151,9 @@ export default function AdminAttestationsPage() {
             <p className="text-slate-500 mt-1">Gérez toutes les attestations délivrées</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleExport} variant="outline" className="gap-2">
+            <Button onClick={handleExport} variant="outline" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50">
               <Download className="w-4 h-4" />
-              Exporter
+              Exporter Excel
             </Button>
             <Link href="/admin/attestations/new">
               <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700">

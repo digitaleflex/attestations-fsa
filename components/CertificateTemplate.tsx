@@ -1,3 +1,4 @@
+/* trunk-ignore-all(prettier) */
 "use client";
 
 import React from "react";
@@ -16,6 +17,7 @@ interface CertificateTemplateProps {
     hours?: number;
     type: string;
     gender?: string;
+    status: string;
   };
   settings?: {
     institutionName: string;
@@ -51,7 +53,6 @@ const CertificateTemplate = ({
 
   const verificationUrl = process.env.NEXT_PUBLIC_APP_URL
     ? `${process.env.NEXT_PUBLIC_APP_URL}/verifier?code=${data.code}`
-    /* trunk-ignore(git-diff-check/error) */
     : typeof window !== "undefined"
       ? `${window.location.origin}/verifier?code=${data.code}`
       : "";
@@ -79,6 +80,16 @@ const CertificateTemplate = ({
         className="w-full h-full p-12 relative flex flex-col items-center border-[1px]"
         style={{ borderColor: "#e2e8f0" }}
       >
+        {/* 🛡️ SECURITY OVERLAY: REJECTED WATERMARK */}
+        {data.status === "REJECTED" && (
+            <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden">
+                <div className="rotate-[-25deg] border-[12px] border-rose-600/30 px-12 py-6 rounded-3xl flex flex-col items-center gap-2 backdrop-blur-[2px] scale-150">
+                    <span className="text-6xl md:text-8xl font-black text-rose-600/30 uppercase tracking-[0.2em]">RÉVOQUÉ</span>
+                    <span className="text-xl md:text-2xl font-bold text-rose-600/30 uppercase tracking-[0.5em]">CERTIFICAT ANNULÉ - FSA</span>
+                </div>
+            </div>
+        )}
+
         {/* Bordures Florales Rouges (Coins) */}
         <div className="absolute top-4 left-4 w-40 h-40 opacity-90">
           <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>

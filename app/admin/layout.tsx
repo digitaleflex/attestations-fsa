@@ -45,6 +45,7 @@ import NotificationCenter from "@/components/admin/NotificationCenter";
 
 const menuItems = [
   { href: "/admin/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+  { href: "/admin/notifications", label: "Communication", icon: Mail },
   { href: "/admin/messages", label: "Messagerie Interne", icon: Inbox },
   { href: "/admin/contacts", label: "Messages & RDV", icon: Mail },
   { href: "/admin/stats", label: "Statistiques", icon: BarChart3 },

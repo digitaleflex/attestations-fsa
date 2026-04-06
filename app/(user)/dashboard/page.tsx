@@ -6,11 +6,11 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy } from "lucide-react";
+import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useState } from "react";
-import { ShieldCheck, ShieldAlert, Loader2 as LoaderIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynImport from "next/dynamic";
@@ -132,6 +132,25 @@ export default function UserDashboardPage() {
     }
   });
 
+  const { data: notificationsData, refetch: refetchNotifications } = useQuery({
+    queryKey: ["user-notifications"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/notifications?limit=3");
+      return res.json();
+    }
+  });
+
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch("/api/user/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId: id })
+      });
+      refetchNotifications();
+    } catch {}
+  };
+
   const { data: statsData } = useQuery({
     queryKey: ["user-statistics"],
     queryFn: async () => {
@@ -141,11 +160,16 @@ export default function UserDashboardPage() {
   });
 
   const handleDownload = async (att: any) => {
+    if (att.status === "REJECTED") {
+      toast.error("Cette attestation a été révoquée par l'administration.");
+      return;
+    }
+    
     const fileName = `${att.code.slice(-5)}_${att.fullName.replace(/\s+/g, '_')}.pdf`;
 
     toast.promise(
       (async () => {
-        const html2pdf = (await import("html2pdf.js")).default;
+        const h2p = (await import("html2pdf.js")).default;
         const element = document.getElementById(`cert-template-dash-${att.id}`);
         if (!element) throw new Error("Template non trouvé");
 
@@ -157,7 +181,7 @@ export default function UserDashboardPage() {
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
-        await html2pdf().set(opt).from(element).save();
+        await h2p().set(opt).from(element).save();
       })(),
       {
         loading: 'Génération de votre diplôme officiel...',
@@ -191,7 +215,11 @@ export default function UserDashboardPage() {
     }]
   };
 
-  if (userLoading) return <div className="min-h-screen flex items-center justify-center grayscale"><Loader2 className="animate-spin text-slate-300" /></div>;
+  if (userLoading) return (
+    <div className="min-h-screen flex items-center justify-center grayscale">
+        <LoaderIcon className="animate-spin text-slate-300 w-8 h-8" />
+    </div>
+  );
 
   const hasPendingCorrection = user?.correctionRequests?.length > 0;
 
@@ -209,11 +237,57 @@ export default function UserDashboardPage() {
                 Votre parcours continue. Retrouvez vos succès et vos prochaines étapes ici.
               </p>
             </div>
-            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-               <Trophy className="w-10 h-10 text-amber-400" />
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                <Trophy className="w-10 h-10 text-amber-400" />
+              </div>
             </div>
           </div>
         </Card>
+
+        {/* 📢 Nouvelles de la Direction */}
+        {notificationsData?.notifications?.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-rose-500" /> Annonces de la Direction
+              </h3>
+              {notificationsData?.unreadCount > 0 && (
+                <Badge className="bg-rose-500 text-white border-none animate-pulse">
+                  {notificationsData?.unreadCount} nouvelle(s)
+                </Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {notificationsData.notifications.map((notif: any) => (
+                <Card key={notif.id} className={cn(
+                  "p-5 border-none shadow-premium relative overflow-hidden transition-all",
+                  notif.isRead ? "bg-white/60 opacity-80" : "bg-white border-l-4 border-l-rose-500"
+                )}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="font-bold text-slate-800 text-sm">{notif.title}</p>
+                      <p className="text-xs text-slate-500 leading-relaxed">{notif.message}</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase mt-2">
+                        Posté le {new Date(notif.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {!notif.isRead && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => markAsRead(notif.id)}
+                        className="text-[10px] h-7 px-2 bg-slate-50 hover:bg-slate-100"
+                      >
+                        Lu
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Profile Verification Module */}
         <Card className={`p-8 border-none shadow-premium relative overflow-hidden transition-all duration-500 ${
@@ -408,44 +482,96 @@ export default function UserDashboardPage() {
                                 <p className="text-slate-400 font-bold">Aucune attestation disponible pour le moment.</p>
                              </div>
                         ) : (
-                            attestationsData.attestations.map((att: any) => (
-                                <div key={att.id} className="p-5 bg-slate-50 rounded-2xl flex items-center justify-between group hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center font-black text-blue-600">
-                                            {att.type.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-slate-800 text-sm">{att.fullName}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                                {att.formation?.name || "Stage"} • {new Date(att.issuedAt).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {att.status === 'VALIDATED' && (att.type === 'FORMATION' ? att.certificationScore > 0 : att.stageScore > 0) ? (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleDownload(att)}
-                                                className="rounded-full bg-white shadow-sm hover:scale-110 active:scale-95 transition-all text-emerald-600"
-                                            >
-                                                <Download className="w-5 h-5" />
-                                            </Button>
-                                        ) : (
-                                            <div className="flex flex-col items-end gap-1">
-                                                <Badge variant="outline" className={`text-[9px] flex items-center gap-1 ${
-                                                    att.status === 'VALIDATED' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-rose-50 text-rose-600 border-rose-100'
-                                                }`}>
-                                                    <ShieldAlert className="w-2.5 h-2.5" /> 
-                                                    {att.status === 'VALIDATED' ? 'EN ATTENTE DE NOTE' : 'BLOQUÉ'}
-                                                </Badge>
-                                                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest text-right">
-                                                    {att.status === 'VALIDATED' ? 'Calcul du Score...' : 'Examen Requis'}
-                                                </span>
+                                attestationsData.attestations.map((att: any) => (
+                                <div key={att.id} className="p-5 bg-slate-50 rounded-2xl group hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center font-black text-blue-600">
+                                                {att.type.charAt(0)}
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-sm">{att.fullName}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                                    {att.formation?.name || "Stage"} • {new Date(att.issuedAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                         <div className="flex items-center gap-2">
+                                             {att.status === 'VALIDATED' && (att.type === 'FORMATION' ? att.certificationScore > 0 : (att.certificationScore > 0 && att.stageScore > 0)) ? (
+                                                 <Button
+                                                     variant="ghost"
+                                                     size="icon"
+                                                     onClick={() => handleDownload(att)}
+                                                     className="rounded-full bg-white shadow-sm hover:scale-110 active:scale-95 transition-all text-emerald-600"
+                                                 >
+                                                     <Download className="w-5 h-5" />
+                                                 </Button>
+                                             ) : (
+                                                 <div className="flex flex-col items-end gap-1">
+                                                     <Badge variant="outline" className={`text-[9px] flex items-center gap-1 ${
+                                                         att.status === 'REJECTED' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-100'
+                                                     }`}>
+                                                         <ShieldAlert className="w-2.5 h-2.5" /> 
+                                                         {att.status === 'REJECTED' ? 'ATTESTATION RÉVOQUÉE' : 'SCORES EN ATTENTE'}
+                                                     </Badge>
+                                                     <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest text-right">
+                                                         {att.status === 'REJECTED' ? 'Action administrative requise' : 'Validation en cours...'}
+                                                     </span>
+                                                 </div>
+                                             )}
+                                         </div>
+                                     </div>
+ 
+                                     {/* Barre de Progression Théorie + Stage */}
+                                     {att.status !== "REJECTED" && (
+                                     <div className="mt-4 pt-4 border-t border-slate-200/50 flex flex-col gap-3">
+                                         <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                             <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" /> État du Parcours FSA</span>
+                                             <div className="flex items-center gap-2">
+                                                 <span className={att.certificationScore >= 60 ? "text-blue-500" : "text-slate-300"}>Théorie {att.certificationScore >= 60 ? "✓" : "○"}</span>
+                                                 <span className="text-slate-200">|</span>
+                                                 <span className={att.stageScore >= 60 ? "text-emerald-500" : "text-slate-300"}>Pratique {att.stageScore >= 60 ? "✓" : "○"}</span>
+                                             </div>
+                                         </div>
+                                         <div className="grid grid-cols-2 gap-3">
+                                             <div className={cn(
+                                                "p-2.5 rounded-xl border flex items-center justify-between transition-all",
+                                                att.certificationScore >= 60 ? "bg-blue-50 border-blue-100" : "bg-white border-slate-100 opacity-60"
+                                             )}>
+                                                 <span className="text-[9px] font-bold text-slate-500 uppercase">Théorie</span>
+                                                 <span className="text-sm font-black text-blue-700">{att.certificationScore || 0}/100</span>
+                                             </div>
+                                             
+                                             {att.certificationScore >= 60 ? (
+                                                 att.stageScore > 0 ? (
+                                                    <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 flex items-center justify-between">
+                                                        <span className="text-[9px] font-bold text-emerald-600 uppercase">Stage</span>
+                                                        <span className="text-sm font-black text-emerald-700">{att.stageScore}/100</span>
+                                                    </div>
+                                                 ) : (
+                                                    <Link href="/internship" className="bg-gradient-to-r from-emerald-600 to-teal-600 p-2.5 rounded-xl text-white flex items-center justify-center gap-2 hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg active:scale-95 shadow-emerald-100">
+                                                        <span className="text-[9px] font-black uppercase">Postuler au Stage</span>
+                                                        <ArrowRight className="w-3 h-3" />
+                                                    </Link>
+                                                 )
+                                             ) : (
+                                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-center opacity-40">
+                                                     <span className="text-[9px] font-bold text-slate-400 italic">Stage (Bloqué)</span>
+                                                </div>
+                                             )}
+                                         </div>
+                                     </div>
+                                     )}
+
+                                     {att.status === "REJECTED" && (
+                                         <div className="mt-4 p-4 rounded-xl bg-rose-50 border border-rose-100 flex items-center gap-3">
+                                             <ShieldAlert className="w-5 h-5 text-rose-500" />
+                                             <p className="text-[11px] text-rose-600 font-medium leading-tight">
+                                                 Cette attestation a été invalidée. Pour toute contestation, merci de contacter le bureau de la Ferme St André.
+                                             </p>
+                                         </div>
+                                     )}
+                                 </div>
                             ))
                         )}
                     </div>
@@ -525,7 +651,8 @@ export default function UserDashboardPage() {
                         score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
                         hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
                         type: att.type,
-                        gender: att.gender
+                        gender: att.gender,
+                        status: att.status
                     }}
                 />
             ))}

@@ -428,6 +428,17 @@ export default function EditAttestationPage() {
                       className="mt-1.5 h-11"
                     />
                   </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="stageObservations" className="text-sm font-semibold text-slate-700">📝 Observations du stage</Label>
+                    <Input
+                      id="stageObservations"
+                      name="stageObservations"
+                      value={form?.stageObservations || ""}
+                      onChange={handleChange}
+                      placeholder="Commentaires sur les performances..."
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -460,6 +471,17 @@ export default function EditAttestationPage() {
                       max="100"
                       value={form?.certificationScore || ""}
                       onChange={(e) => handleNumberChange("certificationScore", e.target.value)}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="certificationObservations" className="text-sm font-semibold text-slate-700">📝 Observations de certification</Label>
+                    <Input
+                      id="certificationObservations"
+                      name="certificationObservations"
+                      value={form?.certificationObservations || ""}
+                      onChange={handleChange}
+                      placeholder="Commentaires sur le parcours..."
                       className="mt-1.5 h-11"
                     />
                   </div>

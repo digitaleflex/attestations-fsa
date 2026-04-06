@@ -120,7 +120,20 @@ export default function OfficialDocument({ data, id = "official-document-content
               invisible={false}
             />
 
-                <div className="relative z-10 flex flex-col items-center w-full space-y-8 md:space-y-10">
+            {/* 🛡️ SECURITY OVERLAY: REJECTED WATERMARK */}
+            {data.status === "REJECTED" && (
+                <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden">
+                    <div className="rotate-[-25deg] border-[12px] border-rose-600/30 px-12 py-6 rounded-3xl flex flex-col items-center gap-2 backdrop-blur-[2px] scale-150">
+                        <span className="text-6xl md:text-7xl font-black text-rose-600/50 uppercase tracking-[0.2em]">RÉVOQUÉ</span>
+                        <span className="text-xl md:text-2xl font-bold text-rose-600/40 uppercase tracking-[0.5em]">DOCUMENT INVALIDÉ</span>
+                    </div>
+                </div>
+            )}
+
+            <div className={cn(
+                "relative z-10 flex flex-col items-center w-full space-y-8 md:space-y-10",
+                data.status === "REJECTED" && "opacity-60 grayscale-[0.5]"
+            )}>
                     <div className="space-y-2 text-center">
                         <p className="text-[10px] uppercase tracking-[0.4em] font-black" style={{ color: "#2563eb" }}>Document Officiel</p>
                         <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-none" style={{ color: "#1e293b" }}>
@@ -157,20 +170,41 @@ export default function OfficialDocument({ data, id = "official-document-content
                         </p>
                     </div>
 
+                    {/* Évaluations */}
                     <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
-                        <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Évaluation finale</p>
-                        <p className="font-black text-2xl md:text-3xl" style={{ color: "#059669" }}>
-                            {data.score} / 100
-                        </p>
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Évaluation Théorique (Examen)</p>
+                                <p className="font-black text-2xl md:text-3xl" style={{ color: "#2563eb" }}>
+                                    {data.score || 0} / 100
+                                </p>
+                            </div>
+                            
+                            {(data as any).stageScore > 0 && (
+                                <div>
+                                    <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Évaluation Pratique (Stage)</p>
+                                    <p className="font-black text-2xl md:text-3xl" style={{ color: "#10b981" }}>
+                                        {(data as any).stageScore} / 100
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
-                        <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Décision du jury</p>
-                        <div className="flex items-center gap-3">
-                            <span className="font-black text-2xl md:text-3xl" style={{ color: currentStatus.color }}>
-                                {currentStatus.label}
-                            </span>
-                            {data.status === "VALIDATED" && <BadgeCheck className="w-6 h-6 md:w-7 md:h-7" style={{ color: "#059669" }} />}
+                        <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Décision Finale du Jury</p>
+                        <div className="flex flex-col gap-2">
+                             <div className="flex items-center gap-3">
+                                <span className="font-black text-2xl md:text-3xl uppercase" style={{ color: currentStatus.color }}>
+                                    {currentStatus.label}
+                                </span>
+                                {data.status === "VALIDATED" && <BadgeCheck className="w-6 h-6 md:w-7 md:h-7" style={{ color: "#059669" }} />}
+                             </div>
+                             {(data as any).stageScore > 0 && (
+                                <span className="text-[9px] font-bold text-emerald-600 px-2 py-0.5 bg-emerald-50 rounded-full w-fit">
+                                    ✓ PARCOURS COMPLET TERMINÉ
+                                </span>
+                             )}
                         </div>
                     </div>
                 </div>

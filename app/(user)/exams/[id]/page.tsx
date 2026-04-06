@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { 
   Clock, AlertCircle, CheckCircle, ChevronRight, ChevronLeft, 
   BookOpen, FileText, PenTool, Eye, Save
@@ -44,6 +45,7 @@ export default function ExamSessionPage() {
   const [answers, setAnswers] = useState<any>({});
   const [timeRemaining, setTimeRemaining] = useState(3600); // 60 minutes par défaut
   const [showInstructions, setShowInstructions] = useState(true);
+  const [agreedToRules, setAgreedToRules] = useState(false);
   const [showPart3Subject, setShowPart3Subject] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
@@ -314,36 +316,65 @@ export default function ExamSessionPage() {
 
               <Alert className="bg-red-50 border-red-200">
                 <Eye className="w-5 h-5 text-red-600" />
-                <AlertTitle className="text-red-800">🔍 Surveillance active pendant l'examen</AlertTitle>
+                <AlertTitle className="text-red-800 font-bold uppercase tracking-wider">🔒 CHARTE D&apos;INTÉGRITÉ ACADÉMIQUE - ANTI-TRICHE</AlertTitle>
                 <AlertDescription className="text-red-700">
-                  <p className="mt-2 font-semibold">Ce système surveille automatiquement :</p>
-                  <ul className="list-disc list-inside space-y-1 mt-2">
-                    <li>Les changements d'onglet ou de fenêtre</li>
-                    <li>Les pertes de focus (clic hors navigateur)</li>
-                    <li>L'ouverture de plusieurs onglets pour le même examen</li>
-                  </ul>
-                  <p className="mt-3 text-sm">
-                    ⚠️ <strong>Tout incident est enregistré</strong> et sera vérifié par l'administrateur.
-                    Plus de 3 changements d'onglet entraîneront un signalement automatique.
-                  </p>
+                  <div className="space-y-4 mt-3">
+                    <p className="font-bold underline decoration-red-300 text-sm">Règles fondamentales et précautions obligatoires :</p>
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6 list-none mt-2">
+                        <li className="flex items-center gap-2 text-xs">
+                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">1</span>
+                            <span><strong>Interdiction de changer d&apos;onglet</strong></span>
+                        </li>
+                        <li className="flex items-center gap-2 text-xs">
+                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">2</span>
+                            <span><strong>Interdiction du copier-coller</strong></span>
+                        </li>
+                        <li className="flex items-center gap-2 text-xs">
+                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">3</span>
+                            <span><strong>Usage des smartphones interdit</strong></span>
+                        </li>
+                        <li className="flex items-center gap-2 text-xs">
+                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">4</span>
+                            <span><strong>Appui externe interdit</strong> (ChatGPT...)</span>
+                        </li>
+                    </ul>
+                    
+                    <div className="p-3 bg-white/50 rounded-xl border border-red-200/50 text-[10px] italic leading-relaxed">
+                        ⚠️ <strong>SANCTION :</strong> Tout événement suspect est enregistré nominativement. Au-delà de 3 changements d&apos;onglet, l&apos;examen sera signalé et pourra être annulé.
+                    </div>
+                  </div>
                 </AlertDescription>
               </Alert>
             </div>
 
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-col items-center justify-center gap-6 py-8 border-t border-slate-100">
+               <label className="flex items-start gap-3 cursor-pointer group max-w-lg px-4">
+                    <input 
+                        type="checkbox" 
+                        checked={agreedToRules}
+                        onChange={(e) => setAgreedToRules(e.target.checked)}
+                        className="mt-1 w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500 transition-all cursor-pointer"
+                    />
+                    <span className="text-sm font-bold text-slate-700 group-hover:text-red-700 transition-colors">
+                        Je déclare avoir lu les règles et je m&apos;engage sur l&apos;honneur à respecter la charte d&apos;intégrité de la FSA.
+                    </span>
+               </label>
+
               <Button
                 onClick={handleStart}
                 size="lg"
-                className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 px-8"
+                disabled={!agreedToRules}
+                className={cn(
+                    "gap-3 px-12 h-14 text-lg font-black rounded-2xl transition-all duration-300 tracking-tighter",
+                    agreedToRules 
+                        ? "bg-gradient-to-r from-red-600 to-rose-600 hover:scale-105 active:scale-95 shadow-xl shadow-red-200 text-white" 
+                        : "bg-slate-200 text-slate-400 grayscale cursor-not-allowed"
+                )}
               >
-                <CheckCircle className="w-5 h-5" />
-                Commencer l'examen
+                <CheckCircle className="w-6 h-6" />
+                DÉMARRER MON EXAMEN
               </Button>
             </div>
-
-            <p className="text-center text-xs text-slate-400 mt-6">
-              En commençant cet examen, vous acceptez de respecter les règles d'honnêteté académique.
-            </p>
           </Card>
         </div>
       </div>
