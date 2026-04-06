@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import * as React from "react";
+const { useEffect, useState } = React;
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2, Mail, Phone, Calendar, User, Search, Filter, Trash2, 
-  CheckCheck, MessageSquare, Clock, ArrowRight, ShieldCheck, MailQuestion
+  Loader2, Mail, Phone, Calendar, Search, Trash2, 
+  CheckCheck, MessageSquare, Clock, MailQuestion
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
@@ -41,7 +42,7 @@ export default function AdminContactsPage() {
       const url = filter === "all" ? "/api/admin/contacts" : `/api/admin/contacts?status=${filter}`;
       const data = await apiFetch(url);
       setContacts(data.contacts || []);
-    } catch (error) {
+    } catch {
       toast.error("Échec du chargement des messages");
     } finally {
       setLoading(false);
@@ -56,7 +57,7 @@ export default function AdminContactsPage() {
       });
       setContacts(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
       toast.success("Statut mis à jour");
-    } catch (error) {
+    } catch {
       toast.error("Erreur mise à jour");
     }
   };
@@ -67,7 +68,7 @@ export default function AdminContactsPage() {
       await apiFetch(`/api/admin/contacts?id=${id}`, { method: "DELETE" });
       setContacts(prev => prev.filter(c => c.id !== id));
       toast.success("Message supprimé");
-    } catch (error) {
+    } catch {
       toast.error("Erreur suppression");
     }
   };
@@ -258,7 +259,7 @@ export default function AdminContactsPage() {
   );
 }
 
-function RotateCcw(props: any) {
+function RotateCcw(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

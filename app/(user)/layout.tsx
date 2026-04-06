@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 export const dynamic = 'force-dynamic';
 
 import { useState } from "react";
@@ -7,7 +9,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
   FileText,
@@ -28,6 +29,7 @@ import {
 import ChatBubble from "@/components/ChatBubble";
 import { authClient, signOut } from "@/lib/auth-client";
 import { getCurrentUser } from "@/lib/auth";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function UserLayout({
   children,

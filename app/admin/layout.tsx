@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import {
   SidebarProvider,
   Sidebar,
@@ -108,7 +110,6 @@ export default function AdminLayout({
   const {
     data: admin,
     isLoading,
-    error,
   } = useQuery({
     queryKey: ["admin"],
     queryFn: async () => {
@@ -167,7 +168,7 @@ function AdminLayoutInner({
   onLogout,
 }: {
   children: React.ReactNode;
-  admin: any;
+  admin: { name?: string | null; email?: string | null } | null;
   onLogout: () => void;
 }) {
   const { state, isMobile } = useSidebar();
@@ -265,7 +266,7 @@ function SidebarHeaderContent() {
   );
 }
 
-function AdminInfo({ admin }: { admin: any }) {
+function AdminInfo({ admin }: { admin: { name?: string | null; email?: string | null } | null }) {
   const { state } = useSidebar();
   if (!admin || state !== "expanded") return null;
 
