@@ -324,17 +324,20 @@ function AuthContent() {
         }
       } else {
         // Inscription Better Auth
-        const { data, error: authError } = await authClient.signUp.email({
-          email: form.email,
+        // Nettoyage des chaînes vides pour éviter les erreurs de contrainte Prisma (FKey)
+        const signUpData = {
+          email: form.email.trim().toLowerCase(),
           password: form.password,
-          name: form.name,
-          phone: form.phone,
-          birthPlace: form.birthPlace,
-          address: form.address,
+          name: form.name.trim(),
+          phone: form.phone.trim() || undefined,
+          birthPlace: form.birthPlace.trim() || undefined,
+          address: form.address.trim() || undefined,
           birthDate: birthDate,
-          formationId: form.formationId,
+          formationId: form.formationId || undefined,
           callbackURL: "/exams",
-        } as any);
+        };
+
+        const { data, error: authError } = await authClient.signUp.email(signUpData as any);
 
         console.log("[AUTH DEBUG] signUp response:", { data, authError, authErrorType: typeof authError, authErrorKeys: authError ? Object.keys(authError) : "null" });
 
@@ -859,11 +862,11 @@ function AuthContent() {
                 />
                 <span className="text-sm text-gray-600">
                   J&apos;accepte les{" "}
-                  <Link href="/conditions" className="text-emerald-600 hover:underline font-medium">
+                  <Link href="/legal/cgu" className="text-emerald-600 hover:underline font-medium">
                     conditions d&apos;utilisation
                   </Link>{" "}
                   et la{" "}
-                  <Link href="/confidentialite" className="text-emerald-600 hover:underline font-medium">
+                  <Link href="/legal/confidentialite" className="text-emerald-600 hover:underline font-medium">
                     politique de confidentialité
                   </Link>
                 </span>
