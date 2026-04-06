@@ -539,14 +539,14 @@ export default function UserDashboardPage() {
                                                 att.certificationScore >= 60 ? "bg-blue-50 border-blue-100" : "bg-white border-slate-100 opacity-60"
                                              )}>
                                                  <span className="text-[9px] font-bold text-slate-500 uppercase">Théorie</span>
-                                                 <span className="text-sm font-black text-blue-700">{att.certificationScore || 0}/100</span>
+                                                 <span className="text-sm font-black text-blue-700">{( (att.certificationScore || 0) / 5 ).toFixed(2)}/20</span>
                                              </div>
                                              
                                              {att.certificationScore >= 60 ? (
                                                  att.stageScore > 0 ? (
                                                     <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 flex items-center justify-between">
                                                         <span className="text-[9px] font-bold text-emerald-600 uppercase">Stage</span>
-                                                        <span className="text-sm font-black text-emerald-700">{att.stageScore}/100</span>
+                                                        <span className="text-sm font-black text-emerald-700">{( (att.stageScore || 0) / 5 ).toFixed(2)}/20</span>
                                                     </div>
                                                  ) : (
                                                     <Link href="/internship" className="bg-gradient-to-r from-emerald-600 to-teal-600 p-2.5 rounded-xl text-white flex items-center justify-center gap-2 hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg active:scale-95 shadow-emerald-100">

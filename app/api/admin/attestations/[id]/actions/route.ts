@@ -67,13 +67,15 @@ export async function POST(
 
     if (action === 'RETROGRADE') {
       // 🔄 RÉTROGRADER : Supprimer l'attestation et réinitialiser l'état d'examen
-      
+
       // 1. Supprimer les sessions d'examen liées à cette formation pour cet utilisateur
       if (userId && attestation.formationId) {
         await prisma.examSession.deleteMany({
           where: {
             userId,
-            formationId: attestation.formationId
+            exam: {
+              formationId: attestation.formationId
+            }
           }
         });
       }
