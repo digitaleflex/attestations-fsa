@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use Webpack for production builds to avoid Turbopack prerendering bugs
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (!isServer && config.resolve) {
       config.resolve.fallback = {
