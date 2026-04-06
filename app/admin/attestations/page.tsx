@@ -127,15 +127,21 @@ export default function AdminAttestationsPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "VALIDATED": return "Validée";
-      case "REJECTED": return "Refusée";
+      case "REJECTED": return "Révoquée";
       default: return "En attente";
     }
   };
 
   const filteredAttestations = attestations.filter((a) => {
-    const matchSearch = a.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      a.code.toLowerCase().includes(search.toLowerCase()) ||
-      a.formation?.name.toLowerCase().includes(search.toLowerCase());
+    const searchLower = (search || "").toLowerCase();
+    const fullName = (a.fullName || "").toLowerCase();
+    const code = (a.code || "").toLowerCase();
+    const formationName = (a.formation?.name || "").toLowerCase();
+    
+    const matchSearch = fullName.includes(searchLower) ||
+      code.includes(searchLower) ||
+      formationName.includes(searchLower);
+      
     const matchStatus = !status || status === "all" || a.status === status;
     const matchType = !type || type === "all" || a.type === type;
     return matchSearch && matchStatus && matchType;
@@ -196,7 +202,7 @@ export default function AdminAttestationsPage() {
           <Card className="p-4 bg-white shadow-sm border-l-4 border-l-rose-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Refusées</p>
+                <p className="text-sm text-slate-500">Révoquées</p>
                 <p className="text-2xl font-bold text-rose-600">{stats.rejected}</p>
               </div>
               <X className="w-8 h-8 text-rose-500 opacity-50" />
@@ -232,7 +238,7 @@ export default function AdminAttestationsPage() {
                   <option value="">Tous les statuts</option>
                   <option value="PENDING">En attente</option>
                   <option value="VALIDATED">Validée</option>
-                  <option value="REJECTED">Refusée</option>
+                  <option value="REJECTED">Révoquée</option>
                 </select>
               </div>
               <div>

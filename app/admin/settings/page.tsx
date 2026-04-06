@@ -191,7 +191,9 @@ export default function SettingsPage() {
                                 issuedAt: new Date().toISOString(),
                                 startDate: new Date().toISOString(),
                                 endDate: new Date().toISOString(),
-                                type: "FORMATION"
+                                type: "FORMATION",
+                                gender: "M",
+                                status: "VALIDATED"
                             }}
                         />
                     </div>

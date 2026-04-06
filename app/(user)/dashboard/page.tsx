@@ -421,10 +421,10 @@ export default function UserDashboardPage() {
                             </p>
                             <div className="flex gap-2 max-w-md">
                                 <Input
-                                    placeholder="Ex: AB123"
-                                    className="bg-white border-emerald-200 h-12 rounded-xl font-mono focus-visible:ring-emerald-500 text-lg uppercase"
+                                    placeholder="Ex: 2ee8f"
+                                    className="bg-white border-emerald-200 h-12 rounded-xl font-mono focus-visible:ring-emerald-500 text-lg lowercase"
                                     value={claimCode}
-                                    onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
+                                    onChange={(e) => setClaimCode(e.target.value.toLowerCase())}
                                     maxLength={30}
                                 />
                                 <Button onClick={handleClaimCode} className="h-12 bg-emerald-700 hover:bg-emerald-800 rounded-xl px-8 font-black shadow-lg shadow-emerald-700/20" disabled={isClaiming}>

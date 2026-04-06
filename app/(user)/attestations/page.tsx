@@ -353,7 +353,8 @@ export default function UserAttestationsPage() {
               score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
               hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
               type: att.type,
-              gender: att.gender
+              gender: att.gender,
+              status: att.status
             }}
           />
         ))}

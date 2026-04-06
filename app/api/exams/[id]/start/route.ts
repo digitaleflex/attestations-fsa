@@ -33,6 +33,18 @@ export async function POST(
       return NextResponse.json({ error: 'Examen non disponible' }, { status: 404 });
     }
 
+    // 1.5 Vérifier si l'utilisateur est restreint à un examen spécifique
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { examId: true }
+    });
+
+    if (userRecord?.examId && userRecord.examId !== examId) {
+      return NextResponse.json({ 
+        error: 'Accès restreint : Vous n\'êtes pas autorisé à passer cet examen spécifique.' 
+      }, { status: 403 });
+    }
+
     // 2. Vérifier si une session existe déjà
     const existingSession = await prisma.examSession.findFirst({
       where: {

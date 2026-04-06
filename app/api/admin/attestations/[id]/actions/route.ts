@@ -80,9 +80,16 @@ export async function POST(
         });
       }
 
-      // 2. Supprimer l'attestation elle-même
-      await prisma.attestation.delete({
-        where: { id }
+      // 2. Remettre l'attestation en attente et réinitialiser les scores
+      await prisma.attestation.update({
+        where: { id },
+        data: { 
+          status: 'PENDING',
+          certificationScore: 0,
+          stageScore: 0,
+          certificationHours: 0,
+          stageHours: 0
+        }
       });
 
       // 3. Logger et notifier

@@ -163,8 +163,10 @@ export default function AttestationDetailsPage() {
       }
 
       if (action === 'RETROGRADE') {
-        toast.success("✅ Candidat rétrogradé. L'examen a été réinitialisé.");
-        router.push("/admin/attestations"); // Rediriger car l'attestation n'existe plus
+        toast.success("✅ Candidat rétrogradé. L'attestation est maintenant 'En attente' et l'examen réinitialisé.");
+        // Rafraîchir les données locales au lieu de rediriger
+        apiFetch(`/api/attestations/${id}`, {}, false).then(setData);
+        fetchAuditLogs();
         return;
       }
 
@@ -172,7 +174,7 @@ export default function AttestationDetailsPage() {
       setData(updated.attestation);
       setActionReason(""); // Reset motif
       fetchAuditLogs(); // Rafraîchir l'historique
-      toast.success(action === 'REVOKE' ? "🚫 Attestation révoquée !" : "Action effectuée");
+      toast.success(action === 'REVOKE' ? "🚫 Attestation révoquée !" : "🔄 Candidat rétrogradé !");
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'action");
     } finally {
@@ -360,7 +362,7 @@ export default function AttestationDetailsPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "VALIDATED": return "Validée";
-      case "REJECTED": return "Rejetée";
+      case "REJECTED": return "Révoquée";
       default: return "En attente";
     }
   };

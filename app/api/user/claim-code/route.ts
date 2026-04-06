@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     }
 
     const { codePart } = parse.data;
-    const sanitizedCode = sanitizeInput(codePart.trim());
+    const sanitizedCode = sanitizeInput(codePart.trim()).toLowerCase();
 
     // ✅ Recherche exacte d'abord, puis fallback sur suffixe (uniquement pour codes courts)
     let attestation;

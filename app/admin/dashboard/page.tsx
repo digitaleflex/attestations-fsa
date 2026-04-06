@@ -268,7 +268,7 @@ export default function AdminDashboardPage() {
       {/* Main Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { title: "Inscriptions", val: usersStats?.newThisMonth || 0, icon: UserPlus, color: "bg-blue-500", shadow: "shadow-blue-200" },
+          { title: "Inscriptions", val: usersStats?.total || 0, icon: UserPlus, color: "bg-blue-500", shadow: "shadow-blue-200" },
           { title: "Attestations", val: stats?.total || 0, icon: FileText, color: "bg-emerald-500", shadow: "shadow-emerald-200" },
           { title: "Validations", val: stats?.validated || 0, icon: CheckCircle, color: "bg-amber-500", shadow: "shadow-amber-200" },
           { title: "Signalements", val: newReports || 0, icon: AlertCircle, color: "bg-rose-500", shadow: "shadow-rose-200" },
