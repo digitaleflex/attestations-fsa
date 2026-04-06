@@ -55,23 +55,9 @@ export const auth = betterAuth({
         updateAge: 60 * 60 * 24 * 1,   // 1 jour
     },
     user: {
-        additionalFields: {
-            phone: {
-                type: "string",
-                required: false,
-            },
-            birthPlace: {
-                type: "string",
-                required: false,
-            },
-            address: {
-                type: "string",
-                required: false,
-            }
-            // birthDate and formationId removed from additionalFields
-            // They will be set after user creation via server-side update
-            // because Better Auth doesn't properly serialize Date objects during sign-up
-        }
+        // No additionalFields - Better Auth sign-up endpoint doesn't handle them properly
+        // All additional fields (phone, birthPlace, address, birthDate, formationId)
+        // are updated after sign-up via /api/user/after-signup
     },
     emailAndPassword: {
         enabled: true,

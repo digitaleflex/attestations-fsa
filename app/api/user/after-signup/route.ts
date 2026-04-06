@@ -1,6 +1,6 @@
 // app/api/user/after-signup/route.ts
-// Updates additional user fields (birthDate, formationId) after sign-up
-// These fields couldn't be sent during sign-up due to Better Auth serialization limits
+// Updates additional user fields (phone, birthPlace, address, birthDate, formationId) after sign-up
+// These fields couldn't be sent during sign-up because Better Auth's additionalFields don't work properly
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
@@ -13,12 +13,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { birthDate, formationId } = body;
+    const { phone, birthPlace, address, birthDate, formationId } = body;
 
     const updateData: Record<string, unknown> = {};
     
+    if (phone) updateData.phone = phone;
+    if (birthPlace) updateData.birthPlace = birthPlace;
+    if (address) updateData.address = address;
+    
     if (birthDate) {
-      // Validate date format
       const date = new Date(birthDate);
       if (isNaN(date.getTime())) {
         return NextResponse.json({ error: "Date invalide" }, { status: 400 });
@@ -27,7 +30,6 @@ export async function POST(request: Request) {
     }
     
     if (formationId) {
-      // Verify formation exists
       const formation = await prisma.formation.findUnique({ where: { id: formationId } });
       if (!formation) {
         return NextResponse.json({ error: "Formation non trouvée" }, { status: 404 });

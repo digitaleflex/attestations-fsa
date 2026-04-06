@@ -454,30 +454,30 @@ function AuthContent() {
 
       try {
         // === REGISTRATION ===
-        // Only send fields that Better Auth supports during sign-up
-        // birthDate and formationId are set after creation via /api/user/after-signup
+        // Only send basic fields to Better Auth (email, password, name)
+        // All additional fields are updated after creation via /api/user/after-signup
         const signUpData = {
           email: form.email.trim().toLowerCase(),
           password: form.password,
           name: sanitizeName(form.name),
-          phone: form.phone.trim() || undefined,
-          birthPlace: form.birthPlace.trim() || undefined,
-          address: form.address?.trim() || undefined,
         };
 
-        const { data, error: authError } = await authClient.signUp.email(signUpData as any);
+        const { data, error: authError } = await authClient.signUp.email(signUpData);
 
         console.log("[AUTH DEBUG] signUp response:", { data, authError });
 
         if (authError && Object.keys(authError).length > 0) throw authError;
 
-        // Update additional fields (birthDate, formationId) after sign-up
+        // Update additional fields (phone, birthPlace, address, birthDate, formationId) after sign-up
         if (data?.user?.id) {
           try {
             await fetch("/api/user/after-signup", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
+                phone: form.phone.trim() || undefined,
+                birthPlace: form.birthPlace.trim() || undefined,
+                address: form.address?.trim() || undefined,
                 birthDate: birthDate?.toISOString(),
                 formationId: form.formationId || undefined,
               }),
