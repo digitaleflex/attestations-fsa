@@ -263,109 +263,221 @@ function AuthContent() {
 
   const handleNextStep = () => {
     if (validateStep(wizardStep)) {
+      // Clear field errors when moving to next step
+      setFieldErrors({});
       setWizardStep((prev) => Math.min(prev + 1, totalSteps));
     }
   };
 
   const handlePrevStep = () => {
+    // Clear field errors when going back
+    setFieldErrors({});
     setWizardStep((prev) => Math.max(prev - 1, 1));
   };
 
+  // Track if submission is in progress (prevent double clicks)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting || loading) return;
+    
     setLoading(true);
+    setIsSubmitting(true);
     setError("");
     setFieldErrors({});
 
-    // Validation finale pour inscription
+    // === REGISTRATION: Validate ALL steps before submission ===
     if (!isLogin) {
-      const allData = RegisterStep1Schema.safeParse(form);
-      if (!allData.success) {
-        setWizardStep(1);
-        const errors: Record<string, string> = {};
-        allData.error.errors.forEach((err) => {
-          if (err.path[0]) {
-            errors[err.path[0] as string] = err.message;
-          }
+      const errors: Record<string, string> = {};
+      let hasErrors = false;
+      let firstErrorStep = 4; // Default to last step
+
+      // Validate Step 1 (Account)
+      const step1Result = RegisterStep1Schema.safeParse({
+        email: form.email,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+      });
+      if (!step1Result.success) {
+        hasErrors = true;
+        firstErrorStep = 1;
+        step1Result.error.errors.forEach((err) => {
+          if (err.path[0]) errors[err.path[0] as string] = err.message;
         });
+      }
+
+      // Validate Step 2 (Personal Info)
+      const step2Result = RegisterStep2Schema.safeParse({
+        name: form.name,
+        birthDate: form.birthDate,
+        birthPlace: form.birthPlace,
+      });
+      if (!step2Result.success) {
+        hasErrors = true;
+        if (firstErrorStep > 2) firstErrorStep = 2;
+        step2Result.error.errors.forEach((err) => {
+          if (err.path[0]) errors[err.path[0] as string] = err.message;
+        });
+      }
+
+      // Validate Step 3 (Contact)
+      const step3Result = RegisterStep3Schema.safeParse({
+        phone: form.phone,
+        address: form.address,
+      });
+      if (!step3Result.success) {
+        hasErrors = true;
+        if (firstErrorStep > 3) firstErrorStep = 3;
+        step3Result.error.errors.forEach((err) => {
+          if (err.path[0]) errors[err.path[0] as string] = err.message;
+        });
+      }
+
+      if (hasErrors) {
+        setWizardStep(firstErrorStep);
         setFieldErrors(errors);
-        setError("Veuillez corriger les erreurs ci-dessous");
+        setError("Veuillez corriger les erreurs dans le formulaire");
         toast.error("Certains champs contiennent des erreurs");
         setLoading(false);
+        setIsSubmitting(false);
         return;
       }
-    }
 
-    try {
-      const birthDate = form.birthDate ? (() => {
-        const [day, month, year] = form.birthDate.split('/').map(Number);
-        return new Date(year, month - 1, day);
-      })() : undefined;
+      // === Validate birth date format before conversion ===
+      const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+      const dateMatch = form.birthDate.match(dateRegex);
+      if (!dateMatch) {
+        setWizardStep(2);
+        setFieldErrors({ birthDate: "Format de date invalide" });
+        setError("Format de date de naissance invalide");
+        toast.error("Erreur de format de date");
+        setLoading(false);
+        setIsSubmitting(false);
+        return;
+      }
 
-      if (isLogin) {
-        // Authentification Better Auth
-        const { data, error: authError } = await authClient.signIn.email({
-          email: form.email,
-          password: form.password,
-        });
+      const [, day, month, year] = dateMatch;
+      const dayNum = parseInt(day, 10);
+      const monthNum = parseInt(month, 10);
+      const yearNum = parseInt(year, 10);
 
-        console.log("[AUTH DEBUG] signIn response:", { data, authError, authErrorType: typeof authError, authErrorKeys: authError ? Object.keys(authError) : "null" });
+      // Check valid date ranges
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12 || yearNum < 1900 || yearNum > new Date().getFullYear()) {
+        setWizardStep(2);
+        setFieldErrors({ birthDate: "Date de naissance invalide" });
+        setError("Date de naissance invalide");
+        toast.error("Date invalide");
+        setLoading(false);
+        setIsSubmitting(false);
+        return;
+      }
 
-        if (authError && Object.keys(authError).length > 0) throw authError;
+      const birthDate = new Date(yearNum, monthNum - 1, dayNum);
+      
+      // Verify the date is valid (e.g., Feb 30 would be invalid)
+      if (birthDate.getDate() !== dayNum || birthDate.getMonth() !== monthNum - 1 || birthDate.getFullYear() !== yearNum) {
+        setWizardStep(2);
+        setFieldErrors({ birthDate: "Cette date n'existe pas" });
+        setError("Date de naissance invalide");
+        toast.error("Date invalide");
+        setLoading(false);
+        setIsSubmitting(false);
+        return;
+      }
 
-        toast.success("Connexion réussie !");
+      // === Sanitize inputs before sending ===
+      const sanitizeName = (name: string) => {
+        return name
+          .trim()
+          .replace(/[<>{}()]/g, "") // Remove potentially dangerous chars
+          .replace(/\s+/g, " "); // Normalize whitespace
+      };
 
-        setIsRedirecting(true); // Déclenchement Vortex
-        // Redirection intelligente
-        if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
-          router.push("/admin/dashboard");
-        } else {
-          router.push("/dashboard");
-        }
-      } else {
-        // Inscription Better Auth
-        // Nettoyage des chaînes vides pour éviter les erreurs de contrainte Prisma (FKey)
+      try {
+        // === REGISTRATION ===
+        // Remove confirmPassword from data sent to Better Auth
         const signUpData = {
           email: form.email.trim().toLowerCase(),
           password: form.password,
-          name: form.name.trim(),
+          name: sanitizeName(form.name),
           phone: form.phone.trim() || undefined,
           birthPlace: form.birthPlace.trim() || undefined,
-          address: form.address.trim() || undefined,
+          address: form.address?.trim() || undefined,
           birthDate: birthDate,
           formationId: form.formationId || undefined,
-          callbackURL: "/exams",
+          // callbackURL removed - will redirect manually after success
         };
 
         const { data, error: authError } = await authClient.signUp.email(signUpData as any);
 
-        console.log("[AUTH DEBUG] signUp response:", { data, authError, authErrorType: typeof authError, authErrorKeys: authError ? Object.keys(authError) : "null" });
+        console.log("[AUTH DEBUG] signUp response:", { data, authError });
 
         if (authError && Object.keys(authError).length > 0) throw authError;
 
-        toast.success("Compte créé avec succès !");
+        toast.success("Compte créé avec succès ! Bienvenue sur FSA.");
 
-        setIsRedirecting(true); // Déclenchement Vortex
-        // Si l'utilisateur est un admin (cas exceptionnel), rediriger vers admin
+        setIsRedirecting(true);
+        // Redirect to dashboard (page exists and is accessible)
         if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
             router.push("/admin/dashboard");
         } else {
             router.push("/dashboard");
         }
-      }
-    } catch (err: any) {
-      console.error("Erreur lors de l'authentification:", err);
-      console.error("[AUTH DEBUG] Full error:", JSON.stringify(err, null, 2));
-      const errorMessage = translateAuthError(err?.message || err?.code || "Une erreur inattendue est survenue");
-      setError(errorMessage);
-      toast.error(errorMessage);
+      } catch (err: unknown) {
+        console.error("Erreur lors de l'inscription:", err);
+        const errorMessage = err instanceof Error 
+          ? translateAuthError(err.message) 
+          : "Une erreur inattendue est survenue";
+        setError(errorMessage);
+        toast.error(errorMessage);
 
-      // Gestion visuelle des étapes si erreur email
-      if (errorMessage.toLowerCase().includes("email")) {
-        setWizardStep(1);
+        // Navigate to the relevant step based on error
+        const msg = errorMessage.toLowerCase();
+        if (msg.includes("email")) {
+          setWizardStep(1);
+        } else if (msg.includes("mot de passe") || msg.includes("password")) {
+          setWizardStep(1);
+        } else if (msg.includes("nom") || msg.includes("name")) {
+          setWizardStep(2);
+        }
+      } finally {
+        setLoading(false);
+        setIsSubmitting(false);
       }
-    } finally {
-      setLoading(false);
+    } else {
+      // === LOGIN ===
+      try {
+        const { data, error: authError } = await authClient.signIn.email({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+        });
+
+        console.log("[AUTH DEBUG] signIn response:", { data, authError });
+
+        if (authError && Object.keys(authError).length > 0) throw authError;
+
+        toast.success("Connexion réussie !");
+
+        setIsRedirecting(true);
+        if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
+      } catch (err: unknown) {
+        console.error("Erreur lors de la connexion:", err);
+        const errorMessage = err instanceof Error 
+          ? translateAuthError(err.message) 
+          : "Identifiants invalides";
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
+        setIsSubmitting(false);
+      }
     }
   };
 
