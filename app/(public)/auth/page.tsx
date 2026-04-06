@@ -406,9 +406,8 @@ function AuthContent() {
           phone: form.phone.trim() || undefined,
           birthPlace: form.birthPlace.trim() || undefined,
           address: form.address?.trim() || undefined,
-          birthDate: birthDate,
+          birthDate: birthDate, // Send as Date object (Prisma DateTime)
           formationId: form.formationId || undefined,
-          // callbackURL removed - will redirect manually after success
         };
 
         const { data, error: authError } = await authClient.signUp.email(signUpData as any);
