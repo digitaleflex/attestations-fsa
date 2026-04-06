@@ -92,11 +92,20 @@ export default function OfficialDocument({ data, id = "official-document-content
         <div
           id={id}
           className={cn(
-            "flex flex-col items-center p-8 md:p-12 rounded-[24px] relative bg-white overflow-hidden transition-all duration-300",
-            isPrinting ? "w-[1120px] min-w-[1120px]" : "w-full shadow-sm"
+            "flex flex-col items-center p-8 md:p-14 rounded-[12px] relative bg-white overflow-hidden transition-all duration-300",
+            isPrinting ? "w-[1120px] min-w-[1120px]" : "w-full shadow-2xl"
           )}
-          style={{ border: "1px solid #f1f5f9" }}
+          style={{ 
+              border: "8px solid white",
+              boxShadow: "0 0 0 1px #e2e8f0, 0 0 0 3px white, 0 0 0 4px #2563eb"
+          }}
         >
+            {/* Accents de coins stylés */}
+            <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-blue-600 rounded-tl-lg opacity-20"></div>
+            <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-blue-600 rounded-tr-lg opacity-20"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-blue-600 rounded-bl-lg opacity-20"></div>
+            <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-blue-600 rounded-br-lg opacity-20"></div>
+
             {/* Filigrane discret */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.02] pointer-events-none" style={{ color: "#000000" }}>
                 <Award size={400} />
@@ -111,59 +120,63 @@ export default function OfficialDocument({ data, id = "official-document-content
               invisible={false}
             />
 
-            <div className="relative z-10 flex flex-col items-center w-full space-y-12">
-                <div className="space-y-3 text-center">
-                    <p className="text-xs uppercase tracking-[0.4em] font-black" style={{ color: "#2563eb" }}>Document Officiel</p>
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-none" style={{ color: "#1e293b" }}>
-                        {data.type === "FORMATION" ? "Attestation de Formation" :
-                         data.type === "STAGE" ? "Certificat de Stage" : "Diplôme de Réussite"}
-                    </h2>
-                </div>
+                <div className="relative z-10 flex flex-col items-center w-full space-y-8 md:space-y-10">
+                    <div className="space-y-2 text-center">
+                        <p className="text-[10px] uppercase tracking-[0.4em] font-black" style={{ color: "#2563eb" }}>Document Officiel</p>
+                        <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-none" style={{ color: "#1e293b" }}>
+                            {data.type === "FORMATION" ? "Attestation de Formation" :
+                             data.type === "STAGE" ? "Certificat de Stage" : "Diplôme de Réussite"}
+                        </h2>
+                    </div>
 
-                <div className="w-24 h-1.5 mx-auto rounded-full" style={{ background: "linear-gradient(to right, #2563eb, #10b981)" }}></div>
+                    <div className="w-16 h-1 mx-auto rounded-full" style={{ background: "linear-gradient(to right, #2563eb, #10b981)" }}></div>
 
-                <div className="py-2 text-center">
-                    <p className="text-sm mb-4 font-medium" style={{ color: "#64748b" }}>Ce document certifie officiellement le parcours de</p>
-                    <p className="text-4xl md:text-6xl font-black tracking-tighter capitalize" style={{ color: "#0f172a" }}>
-                        {data.fullName}
-                    </p>
-                </div>
+                    <div className="py-1 text-center w-full">
+                        <p className="text-[11px] mb-3 font-medium" style={{ color: "#64748b" }}>Ce document certifie officiellement le parcours de</p>
+                        <p className={cn(
+                            "font-black tracking-tighter capitalize leading-[1.1]",
+                            data.fullName.length > 40 ? "text-3xl md:text-4xl" : 
+                            data.fullName.length > 25 ? "text-4xl md:text-5xl" : "text-5xl md:text-6xl"
+                        )} style={{ color: "#0f172a" }}>
+                            {data.fullName}
+                        </p>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-                    <div className="p-6 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
-                        <p className="text-[10px] uppercase font-black mb-1.5 tracking-widest" style={{ color: "#64748b" }}>Formation / Projet</p>
-                        <p className="font-bold text-lg leading-tight" style={{ color: "#0f172a" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 w-full">
+                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
+                        <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Formation / Projet</p>
+                        <p className="font-bold text-base leading-tight md:text-lg" style={{ color: "#0f172a" }}>
                             {data.formationName}
                         </p>
                     </div>
 
-                    <div className="p-6 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
-                        <p className="text-[10px] uppercase font-black mb-1.5 tracking-widest" style={{ color: "#64748b" }}>Période d&apos;évaluation</p>
-                        <p className="font-bold text-lg" style={{ color: "#0f172a" }}>
+                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
+                        <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Période d&apos;évaluation</p>
+                        <p className="font-bold text-base md:text-lg" style={{ color: "#0f172a" }}>
                             {formatDate(data.startDate)} — {formatDate(data.endDate)}
                         </p>
                     </div>
 
-                    <div className="p-6 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
-                        <p className="text-[10px] uppercase font-black mb-1.5 tracking-widest" style={{ color: "#64748b" }}>Évaluation finale</p>
-                        <p className="font-black text-3xl" style={{ color: "#059669" }}>
+                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
+                        <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Évaluation finale</p>
+                        <p className="font-black text-2xl md:text-3xl" style={{ color: "#059669" }}>
                             {data.score} / 100
                         </p>
                     </div>
 
-                    <div className="p-6 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
-                        <p className="text-[10px] uppercase font-black mb-1.5 tracking-widest" style={{ color: "#64748b" }}>Décision du jury</p>
+                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
+                        <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Décision du jury</p>
                         <div className="flex items-center gap-3">
-                            <span className="font-black text-3xl" style={{ color: currentStatus.color }}>
+                            <span className="font-black text-2xl md:text-3xl" style={{ color: currentStatus.color }}>
                                 {currentStatus.label}
                             </span>
-                            {data.status === "VALIDATED" && <BadgeCheck className="w-7 h-7" style={{ color: "#059669" }} />}
+                            {data.status === "VALIDATED" && <BadgeCheck className="w-6 h-6 md:w-7 md:h-7" style={{ color: "#059669" }} />}
                         </div>
                     </div>
                 </div>
 
                 {/* Footer de la fiche */}
-                <div className="mt-12 pt-8 w-full flex flex-col md:flex-row items-center justify-between text-[10px] font-mono border-t border-slate-100 gap-4" style={{ color: "#64748b" }}>
+                <div className="mt-8 md:mt-10 pt-6 w-full flex flex-col md:flex-row items-center justify-between text-[9px] font-mono border-t border-slate-100 gap-3" style={{ color: "#64748b" }}>
                     <div className="flex gap-4">
                         <span className="font-medium">ID: {data.id.slice(0, 8)}...</span>
                         <span className="font-bold" style={{ color: "#334155" }}>CODE: {data.code}</span>

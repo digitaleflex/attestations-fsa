@@ -2,6 +2,7 @@
 
 import React from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { cn } from "@/lib/utils";
 
 interface CertificateTemplateProps {
   data: {
@@ -231,7 +232,11 @@ const CertificateTemplate = ({
           </p>
 
           <h2
-            className="text-6xl italic py-4 font-extrabold capitalize"
+            className={cn(
+              "italic py-4 font-extrabold capitalize leading-tight",
+              data.fullName.length > 40 ? "text-3xl md:text-4xl" : 
+              data.fullName.length > 25 ? "text-4xl md:text-5xl" : "text-6xl"
+            )}
             style={{
               fontFamily: "'Charmonman', cursive, serif",
               color: "#0f172a",
