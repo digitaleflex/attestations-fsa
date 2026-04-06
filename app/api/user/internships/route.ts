@@ -1,16 +1,19 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
-import { getCurrentUser } from '@/lib/auth';
-import { applyRateLimit } from '@/lib/rate-limit';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 // Schéma de validation pour une candidature
 const InternshipApplicationSchema = z.object({
-  university: z.string().min(2, 'L’université est requise').optional(),
-  level: z.string().min(2, 'Le niveau est requis').optional(),
-  position: z.string().min(2, 'Le poste souhaité est requis'),
-  cvUrl: z.string().url('URL du CV invalide').optional().or(z.literal('')),
-  message: z.string().min(10, 'La motivation doit contenir au moins 10 caractères').optional(),
+  university: z.string().min(2, "L’université est requise").optional(),
+  level: z.string().min(2, "Le niveau est requis").optional(),
+  position: z.string().min(2, "Le poste souhaité est requis"),
+  cvUrl: z.string().url("URL du CV invalide").optional().or(z.literal("")),
+  message: z
+    .string()
+    .min(10, "La motivation doit contenir au moins 10 caractères")
+    .optional(),
 });
 
 // GET /api/user/internships - Récupérer les candidatures de l'utilisateur
@@ -18,35 +21,48 @@ export async function GET(request: Request) {
   try {
     const userSession = await getCurrentUser(request);
     if (!userSession) {
-      return NextResponse.json({ error: 'Non autorisé - Connexion requise' }, { status: 401 });
+      return NextResponse.json(
+        { error: "Non autorisé - Connexion requise" },
+        { status: 401 },
+      );
     }
 
     const userId = userSession.id;
     // Récupérer les candidatures liées à cet utilisateur
     const applications = await prisma.internshipRequest.findMany({
       where: { userId: userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     // Statistiques
     const stats = {
       total: applications.length,
-      pending: applications.filter((a) => a.status === 'PENDING').length,
-      inReview: applications.filter((a) => a.status === 'REVIEWING').length,
-      accepted: applications.filter((a) => a.status === 'ACCEPTED').length,
-      rejected: applications.filter((a) => a.status === 'REJECTED').length,
+      pending: applications.filter(
+        (a: { status: string }) => a.status === "PENDING",
+      ).length,
+      inReview: applications.filter(
+        (a: { status: string }) => a.status === "REVIEWING",
+      ).length,
+      accepted: applications.filter(
+        (a: { status: string }) => a.status === "ACCEPTED",
+      ).length,
+      rejected: applications.filter(
+        (a: { status: string }) => a.status === "REJECTED",
+      ).length,
     };
 
     return NextResponse.json({
       applications,
-      stats
+      stats,
     });
-
   } catch (error: unknown) {
-    console.error('Erreur stages user:', error);
-    return NextResponse.json({
-      error: 'Erreur lors de la récupération des candidatures'
-    }, { status: 500 });
+    console.error("Erreur stages user:", error);
+    return NextResponse.json(
+      {
+        error: "Erreur lors de la récupération des candidatures",
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -55,16 +71,21 @@ export async function POST(request: Request) {
   try {
     const userSession = await getCurrentUser(request);
     if (!userSession) {
-      return NextResponse.json({ error: 'Non autorisé - Connexion requise' }, { status: 401 });
+      return NextResponse.json(
+        { error: "Non autorisé - Connexion requise" },
+        { status: 401 },
+      );
     }
 
     const userId = userSession.id;
 
     // Rate limiting - 3 candidatures par heure par utilisateur
-    const rateLimit = await applyRateLimit(request, 'internship');
+    const rateLimit = await applyRateLimit(request, "internship");
     if (!rateLimit.allowed && rateLimit.response) {
-      const ip = request.headers.get('x-forwarded-for') || 'unknown';
-      console.warn(`[SECURITY] Rate limit exceeded for internship application from user ${userId}, IP: ${ip}`);
+      const ip = request.headers.get("x-forwarded-for") || "unknown";
+      console.warn(
+        `[SECURITY] Rate limit exceeded for internship application from user ${userId}, IP: ${ip}`,
+      );
       return rateLimit.response;
     }
 
@@ -72,10 +93,13 @@ export async function POST(request: Request) {
     const parse = InternshipApplicationSchema.safeParse(body);
 
     if (!parse.success) {
-      return NextResponse.json({
-        message: 'Données invalides',
-        details: parse.error.errors
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: "Données invalides",
+          details: parse.error.errors,
+        },
+        { status: 400 },
+      );
     }
 
     const { university, level, position, cvUrl, message } = parse.data;
@@ -83,11 +107,14 @@ export async function POST(request: Request) {
     // Récupérer les infos de l'utilisateur pour pré-remplir la demande
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true, email: true, phone: true }
+      select: { name: true, email: true, phone: true },
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Utilisateur non trouvé" },
+        { status: 404 },
+      );
     }
 
     // Créer la candidature
@@ -102,19 +129,24 @@ export async function POST(request: Request) {
         position,
         cvUrl: cvUrl || null,
         message,
-        status: 'PENDING',
-      }
+        status: "PENDING",
+      },
     });
 
-    return NextResponse.json({
-      message: 'Candidature soumise avec succès',
-      application
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        message: "Candidature soumise avec succès",
+        application,
+      },
+      { status: 201 },
+    );
   } catch (error: unknown) {
-    console.error('Erreur candidature stage:', error);
-    return NextResponse.json({
-      error: 'Erreur lors de la soumission de la candidature'
-    }, { status: 500 });
+    console.error("Erreur candidature stage:", error);
+    return NextResponse.json(
+      {
+        error: "Erreur lors de la soumission de la candidature",
+      },
+      { status: 500 },
+    );
   }
 }

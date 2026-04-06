@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
-import { AttestationType, AttestationStatus } from '@prisma/client';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+import { AttestationType, AttestationStatus } from "@prisma/client";
 import { z } from "zod";
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from "@/lib/auth";
 
 // Schéma de validation des paramètres
 const QuerySchema = z.object({
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   try {
     const user = await getCurrentUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
     const userId = user.id;
@@ -31,20 +31,29 @@ export async function GET(request: Request) {
     // Validation avec Zod (Sécurité Totale)
     const url = new URL(request.url);
     const params = QuerySchema.safeParse({
-      status: url.searchParams.get('status') || undefined,
-      type: url.searchParams.get('type') || undefined,
-      limit: url.searchParams.get('limit') || undefined,
+      status: url.searchParams.get("status") || undefined,
+      type: url.searchParams.get("type") || undefined,
+      limit: url.searchParams.get("limit") || undefined,
     });
 
     if (!params.success) {
-      return NextResponse.json({ error: 'Paramètres invalides', details: params.error.format() }, { status: 400 });
+      return NextResponse.json(
+        { error: "Paramètres invalides", details: params.error.format() },
+        { status: 400 },
+      );
     }
 
     const { status: statusParam, type: typeParam, limit } = params.data;
 
     // Mapping des Enums
-    const status = (statusParam && statusParam !== 'all') ? (statusParam as AttestationStatus) : undefined;
-    const type = (typeParam && typeParam !== 'all') ? (typeParam as AttestationType) : undefined;
+    const status =
+      statusParam && statusParam !== "all"
+        ? (statusParam as AttestationStatus)
+        : undefined;
+    const type =
+      typeParam && typeParam !== "all"
+        ? (typeParam as AttestationType)
+        : undefined;
 
     // Récupérer les attestations directement par userId (Optimisé par Index)
     const attestations = await prisma.attestation.findMany({
@@ -59,30 +68,38 @@ export async function GET(request: Request) {
             id: true,
             name: true,
             category: true,
-          }
-        }
+          },
+        },
       },
-      orderBy: { issuedAt: 'desc' },
-      ...(limit ? { take: limit } : {})
+      orderBy: { issuedAt: "desc" },
+      ...(limit ? { take: limit } : {}),
     });
 
     // Calcul des statistiques (en mémoire) - Type Safe
     const stats: AttestationStats = {
       total: attestations.length,
-      validated: attestations.filter(a => a.status === 'VALIDATED').length,
-      pending: attestations.filter(a => a.status === 'PENDING').length,
-      rejected: attestations.filter(a => a.status === 'REJECTED').length,
+      validated: attestations.filter(
+        (a: { status: string }) => a.status === "VALIDATED",
+      ).length,
+      pending: attestations.filter(
+        (a: { status: string }) => a.status === "PENDING",
+      ).length,
+      rejected: attestations.filter(
+        (a: { status: string }) => a.status === "REJECTED",
+      ).length,
     };
 
     return NextResponse.json({
       attestations,
-      stats
+      stats,
     });
-
   } catch (error: unknown) {
-    console.error('Erreur attestations user:', error);
-    return NextResponse.json({
-      error: 'Erreur lors de la récupération des attestations'
-    }, { status: 500 });
+    console.error("Erreur attestations user:", error);
+    return NextResponse.json(
+      {
+        error: "Erreur lors de la récupération des attestations",
+      },
+      { status: 500 },
+    );
   }
 }

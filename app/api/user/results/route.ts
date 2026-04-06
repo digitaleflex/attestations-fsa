@@ -28,10 +28,7 @@ export async function GET(request: Request) {
   try {
     const userAuth = await getCurrentUser(request);
     if (!userAuth) {
-      return NextResponse.json(
-        { error: "Non autorisé" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
     const userId = userAuth.id;
@@ -57,7 +54,7 @@ export async function GET(request: Request) {
       orderBy: { submittedAt: "desc" },
     });
 
-    const results: ExamResult[] = submissions.map((sub) => {
+    const results: ExamResult[] = submissions.map((sub: any) => {
       const maxScore = sub.exam?.totalPoints || 100;
       const scorePercent =
         maxScore > 0 ? Math.round((sub.totalScore / maxScore) * 100) : 0;

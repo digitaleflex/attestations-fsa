@@ -26,7 +26,8 @@ export async function GET() {
 
     // Filter out exams without scheduledAt
     const upcomingExams = exams.filter(
-      (exam) => exam.scheduledAt && new Date(exam.scheduledAt) > new Date(),
+      (exam: { scheduledAt: Date | null }) =>
+        exam.scheduledAt && new Date(exam.scheduledAt) > new Date(),
     );
 
     return NextResponse.json({ exams: upcomingExams });

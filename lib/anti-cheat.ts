@@ -1,6 +1,6 @@
 // lib/anti-cheat.ts
 // Answer pattern analysis and cheating detection
-import { prisma } from '@/lib/prisma';
+import { prisma } from "@/lib/prisma";
 
 export interface AnswerPattern {
   userId: string;
@@ -13,23 +13,23 @@ export interface CheatingDetection {
   isSuspicious: boolean;
   flags: DetectionFlag[];
   similarityScore?: number;
-  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  confidence: "LOW" | "MEDIUM" | "HIGH";
 }
 
 export interface DetectionFlag {
   type: DetectionType;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   details: string;
   score?: number;
 }
 
 export type DetectionType =
-  | 'IDENTICAL_ANSWERS'
-  | 'SUSPICIOUS_TIMING'
-  | 'ANSWER_PATTERN_MATCH'
-  | 'RAPID_SUBMISSION'
-  | 'COPY_DETECTED'
-  | 'STATISTICAL_ANOMALY';
+  | "IDENTICAL_ANSWERS"
+  | "SUSPICIOUS_TIMING"
+  | "ANSWER_PATTERN_MATCH"
+  | "RAPID_SUBMISSION"
+  | "COPY_DETECTED"
+  | "STATISTICAL_ANOMALY";
 
 /**
  * Analyze answer patterns for a submission
@@ -38,7 +38,7 @@ export type DetectionType =
 export async function analyzeAnswerPattern(
   currentAnswers: Record<string, string>,
   examId: string,
-  userId: string
+  userId: string,
 ): Promise<CheatingDetection> {
   const flags: DetectionFlag[] = [];
 
@@ -47,7 +47,7 @@ export async function analyzeAnswerPattern(
     where: {
       examId,
       userId: { not: userId },
-      status: { in: ['COMPLETED', 'GRADED'] },
+      status: { in: ["COMPLETED", "GRADED"] },
     },
     select: {
       userId: true,
@@ -57,19 +57,21 @@ export async function analyzeAnswerPattern(
   });
 
   // Filter out sessions with no answers
-  const validSessions = otherSessions.filter(s => s.answers !== null);
+  const validSessions = otherSessions.filter(
+    (s: { answers: any }) => s.answers !== null,
+  );
 
   if (validSessions.length === 0) {
-    return { isSuspicious: false, flags: [], confidence: 'LOW' };
+    return { isSuspicious: false, flags: [], confidence: "LOW" };
   }
 
   // Check for identical answers with other users
   const identicalMatches = checkIdenticalAnswers(currentAnswers, validSessions);
   if (identicalMatches.length > 0) {
     flags.push({
-      type: 'IDENTICAL_ANSWERS',
-      severity: 'CRITICAL',
-      details: `Answers 100% identical with ${identicalMatches.length} other user(s): ${identicalMatches.map(m => m.userId).join(', ')}`,
+      type: "IDENTICAL_ANSWERS",
+      severity: "CRITICAL",
+      details: `Answers 100% identical with ${identicalMatches.length} other user(s): ${identicalMatches.map((m) => m.userId).join(", ")}`,
       score: 1.0,
     });
   }
@@ -78,10 +80,10 @@ export async function analyzeAnswerPattern(
   const highSimilarity = checkHighSimilarity(currentAnswers, validSessions);
   if (highSimilarity.length > 0) {
     flags.push({
-      type: 'ANSWER_PATTERN_MATCH',
-      severity: 'HIGH',
-      details: `High similarity (${highSimilarity.map(s => `${(s.score * 100).toFixed(0)}%`).join(', ')}) with other users`,
-      score: Math.max(...highSimilarity.map(s => s.score)),
+      type: "ANSWER_PATTERN_MATCH",
+      severity: "HIGH",
+      details: `High similarity (${highSimilarity.map((s) => `${(s.score * 100).toFixed(0)}%`).join(", ")}) with other users`,
+      score: Math.max(...highSimilarity.map((s) => s.score)),
     });
   }
 
@@ -89,8 +91,8 @@ export async function analyzeAnswerPattern(
   const totalAnswers = Object.keys(currentAnswers).length;
   if (totalAnswers > 10) {
     flags.push({
-      type: 'STATISTICAL_ANOMALY',
-      severity: 'LOW',
+      type: "STATISTICAL_ANOMALY",
+      severity: "LOW",
       details: `Submission with ${totalAnswers} answers - pattern will be monitored`,
     });
   }
@@ -98,10 +100,13 @@ export async function analyzeAnswerPattern(
   return {
     isSuspicious: flags.length > 0,
     flags,
-    similarityScore: flags.find(f => f.type === 'ANSWER_PATTERN_MATCH')?.score,
-    confidence: flags.some(f => f.severity === 'CRITICAL') ? 'HIGH'
-      : flags.some(f => f.severity === 'HIGH') ? 'MEDIUM'
-      : 'LOW',
+    similarityScore: flags.find((f) => f.type === "ANSWER_PATTERN_MATCH")
+      ?.score,
+    confidence: flags.some((f) => f.severity === "CRITICAL")
+      ? "HIGH"
+      : flags.some((f) => f.severity === "HIGH")
+        ? "MEDIUM"
+        : "LOW",
   };
 }
 
@@ -110,12 +115,12 @@ export async function analyzeAnswerPattern(
  */
 function checkIdenticalAnswers(
   currentAnswers: Record<string, string>,
-  otherSessions: { userId: string; answers: any; submittedAt: Date | null }[]
+  otherSessions: { userId: string; answers: any; submittedAt: Date | null }[],
 ): { userId: string; score: number }[] {
   const matches: { userId: string; score: number }[] = [];
 
   for (const session of otherSessions) {
-    if (!session.answers || typeof session.answers !== 'object') continue;
+    if (!session.answers || typeof session.answers !== "object") continue;
 
     const otherAnswers = session.answers as Record<string, string>;
     const currentKeys = Object.keys(currentAnswers);
@@ -125,7 +130,9 @@ function checkIdenticalAnswers(
     if (currentKeys.length !== otherKeys.length) continue;
 
     // Check if all answers match
-    const allMatch = currentKeys.every(key => currentAnswers[key] === otherAnswers[key]);
+    const allMatch = currentKeys.every(
+      (key) => currentAnswers[key] === otherAnswers[key],
+    );
 
     if (allMatch) {
       matches.push({ userId: session.userId, score: 1.0 });
@@ -140,21 +147,21 @@ function checkIdenticalAnswers(
  */
 function checkHighSimilarity(
   currentAnswers: Record<string, string>,
-  otherSessions: { userId: string; answers: any; submittedAt: Date | null }[]
+  otherSessions: { userId: string; answers: any; submittedAt: Date | null }[],
 ): { userId: string; score: number }[] {
   const similarities: { userId: string; score: number }[] = [];
   const currentKeys = Object.keys(currentAnswers);
 
   for (const session of otherSessions) {
-    if (!session.answers || typeof session.answers !== 'object') continue;
+    if (!session.answers || typeof session.answers !== "object") continue;
 
     const otherAnswers = session.answers as Record<string, string>;
     const otherKeys = Object.keys(otherAnswers);
 
     // Calculate Jaccard similarity
-    const commonKeys = currentKeys.filter(key => otherKeys.includes(key));
+    const commonKeys = currentKeys.filter((key) => otherKeys.includes(key));
     const matchingAnswers = commonKeys.filter(
-      key => currentAnswers[key] === otherAnswers[key]
+      (key) => currentAnswers[key] === otherAnswers[key],
     ).length;
 
     if (commonKeys.length > 0) {
@@ -176,19 +183,19 @@ export async function logCheatingDetection(
   examId: string,
   ipAddress: string,
   userAgent: string,
-  detection: CheatingDetection
+  detection: CheatingDetection,
 ): Promise<void> {
   for (const flag of detection.flags) {
     await prisma.securityLog.create({
       data: {
-        eventType: 'CHEATING_DETECTED',
+        eventType: "CHEATING_DETECTED",
         userId,
         ipAddress,
         userAgent,
-        resource: 'exam_submission',
+        resource: "exam_submission",
         resourceId: examId,
         action: flag.type,
-        status: 'FLAGGED',
+        status: "FLAGGED",
         severity: flag.severity,
         details: {
           flagType: flag.type,
@@ -210,11 +217,11 @@ export async function getFlaggedSubmissions(examId: string) {
   return prisma.securityLog.findMany({
     where: {
       resourceId: examId,
-      resource: 'exam_submission',
-      eventType: 'CHEATING_DETECTED',
+      resource: "exam_submission",
+      eventType: "CHEATING_DETECTED",
     },
     orderBy: {
-      timestamp: 'desc',
+      timestamp: "desc",
     },
   });
 }
