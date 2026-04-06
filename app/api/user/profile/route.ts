@@ -118,7 +118,16 @@ export async function PATCH(request: Request) {
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
-    if (birthDate) updateData.birthDate = new Date(birthDate);
+    if (birthDate) {
+      // 🩺 Support du format français jj/mm/aaaa
+      const match = birthDate.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (match) {
+        const [, d, m, y] = match;
+        updateData.birthDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 12, 0, 0);
+      } else {
+        updateData.birthDate = new Date(birthDate);
+      }
+    }
     if (birthPlace) updateData.birthPlace = birthPlace;
     if (gender) updateData.gender = gender;
 

@@ -2,7 +2,35 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// Helper pour formater la date en français (jj/mm/aaaa)
+function formatDateFr(dateStr: string | null | undefined): string {
+  if (!dateStr) return "-";
+  try {
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "-";
+  }
+}
+
+// Helper pour convertir dd/mm/yyyy vers yyyy-mm-dd pour l'input
+function parseDateForInput(dateStr: string): string {
+  if (!dateStr || dateStr === "-") return "";
+  // Si déjà en format yyyy-mm-dd (input date)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  // Si en format dd/mm/yyyy
+  const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    return `${match[3]}-${match[2]}-${match[1]}`;
+  }
+  return "";
+}
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,21 +78,21 @@ export default function UserProfilePage() {
     confirmPassword: "",
   });
 
-  useState(() => {
+  useEffect(() => {
     if (user) {
       setForm({
         name: user.name || "",
         email: user.email || "",
         phone: user.phone || "",
         address: user.address || "",
-        birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : "",
+        birthDate: user.birthDate || "",
         birthPlace: user.birthPlace || "",
         oldPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
     }
-  });
+  }, [user]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -256,22 +284,40 @@ interface ProfileFieldProps {
   isEditing: boolean;
   onChange: (value: string) => void;
   type?: string;
+  placeholder?: string;
   onCorrection?: () => void;
 }
 
-function ProfileField({ label, value, id, icon: Icon, isEditing, onChange, type = "text", onCorrection }: ProfileFieldProps) {
+import { DateInput } from "@/components/ui/date-input";
+
+function ProfileField({ label, value, id, icon: Icon, isEditing, onChange, type = "text", placeholder, onCorrection }: ProfileFieldProps) {
+  const displayValue = type === "date" && !isEditing ? formatDateFr(value) : value;
+  const inputValue = type === "date" && isEditing ? parseDateForInput(value) : value;
+  
   return (
     <div className="space-y-1.5 transition-all duration-200">
       <Label htmlFor={id} className="text-sm font-semibold text-slate-600 flex items-center gap-1.5 ml-1">
         <Icon className="w-3.5 h-3.5" /> {label}
       </Label>
       <div className="flex gap-2 items-center group">
-        <Input
-          id={id} type={type} value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={!isEditing}
-          className={`h-11 flex-1 transition-colors ${!isEditing ? "bg-slate-50/50 border-transparent text-slate-800 font-medium" : "bg-white border-blue-200 ring-blue-100"}`}
-        />
+        {type === "date" && isEditing ? (
+          <DateInput
+            id={id}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="h-11 flex-1 bg-white border-blue-200 ring-blue-100 rounded-xl"
+          />
+        ) : (
+          <Input
+            id={id} 
+            type={isEditing ? type : "text"} 
+            value={isEditing ? inputValue : displayValue}
+            placeholder={placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={!isEditing}
+            className={`h-11 flex-1 transition-colors ${!isEditing ? "bg-slate-50/50 border-transparent text-slate-800 font-medium" : "bg-white border-blue-200 ring-blue-100"}`}
+          />
+        )}
         {!isEditing && onCorrection && (
           <Button
             variant="ghost" size="icon"
