@@ -81,26 +81,18 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,
-        requireEmailVerification: false, // Set to true once email service is configured
+        requireEmailVerification: false,
     },
     databaseHooks: {
         user: {
             create: {
                 before: async (user) => {
-                    // Set default role if not provided
-                    const userRecord = user as Record<string, unknown>;
-                    if (!userRecord.role) {
-                        userRecord.role = "user";
-                    }
-                    // Normalize role to lowercase
-                    if (typeof userRecord.role === "string") {
-                        userRecord.role = userRecord.role.toLowerCase();
-                    }
-                    return Promise.resolve({ data: userRecord });
+                    // Just log user creation, role is handled by Prisma @default
+                    console.log(`[AUTH] Creating user: ${user.email}`);
+                    return Promise.resolve({ data: user });
                 },
                 after: async (user) => {
-                    // Log user creation for audit purposes
-                    console.log(`[AUTH] User created: ${user.email} (role: ${user.role})`);
+                    console.log(`[AUTH] User created successfully: ${user.email}`);
                     return Promise.resolve();
                 },
             },
