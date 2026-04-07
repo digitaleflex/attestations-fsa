@@ -12,6 +12,9 @@ const nextConfig = {
     }
     return config;
   },
+  // Exclude global-error from static generation
+  // This page is rendered dynamically at runtime only
+  staticPageGenerationTimeout: 120,
 };
 
 export default nextConfig;

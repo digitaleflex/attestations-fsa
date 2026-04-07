@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { createAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const ExamSchema = z.object({
@@ -54,6 +55,8 @@ export async function POST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
+
+  const adminUser = await getCurrentUser(request);
 
   try {
     const body = await request.json();
@@ -109,6 +112,16 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+    });
+
+    // 🛡️ Audit Log
+    await createAuditLog({
+      userId: adminUser?.id || "",
+      action: 'EXAM_CREATED',
+      resource: 'EXAM',
+      resourceId: exam.id,
+      newValue: { title: exam.title, type: exam.type, status: exam.status },
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
     return NextResponse.json(exam, { status: 201 });

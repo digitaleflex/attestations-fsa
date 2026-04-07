@@ -61,72 +61,82 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { title, description, status, scheduledAt, parts } = body;
+    const { 
+      title, 
+      description, 
+      status, 
+      scheduledAt, 
+      parts,
+      formationId,
+      duration,
+      passingScore,
+      randomizeQuestions,
+      showResults,
+      type
+    } = body;
 
-    // 1. Update basic exam info first
-    await prisma.exam.update({
+    // 1. Calculate summary data and prepare atomic update
+    const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : null;
+    const isValidDate = scheduledAtDate === null || !isNaN(scheduledAtDate.getTime());
+    
+    // Calculate totals for summary fields
+    const enabledParts = (parts && Array.isArray(parts)) ? parts.filter(p => p.enabled) : [];
+    const totalPoints = enabledParts.reduce((sum: number, p: any) => sum + (parseFloat(p.points?.toString() || "0")), 0);
+
+    // 🏆 ATOMIC UPDATE
+    const exam = await prisma.exam.update({
       where: { id },
       data: {
         title,
         description,
         status,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-      },
-    });
-
-    // 2. If parts are provided, replace them (without transaction to avoid Accelerate timeout)
-    if (parts && Array.isArray(parts)) {
-      // Delete all existing parts (Cascade will handle questions and options)
-      await prisma.examPart.deleteMany({
-        where: { examId: id },
-      });
-
-      // Create new parts one by one
-      for (let pIdx = 0; pIdx < parts.length; pIdx++) {
-        const part = parts[pIdx];
-        const newPart = await prisma.examPart.create({
-          data: {
-            examId: id,
-            title: part.title,
-            type: part.type as any,
-            duration: part.duration || 30,
-            points: part.points,
-            order: part.order ?? pIdx + 1,
-            scenario: part.scenario,
-          },
-        });
-
-        // Create questions for this part
-        if (part.questions && part.questions.length > 0) {
-          for (let qIdx = 0; qIdx < part.questions.length; qIdx++) {
-            const q = part.questions[qIdx];
-            await prisma.question.create({
-              data: {
-                partId: newPart.id,
-                text: q.text,
-                type: q.type as any,
-                points: q.points,
-                order: q.order ?? qIdx + 1,
-                options:
-                  q.options?.length > 0
-                    ? {
-                        create: q.options.map((o: any) => ({
-                          text: o.text,
-                          isCorrect: o.isCorrect,
-                          feedback: o.feedback || "",
-                        })),
-                      }
-                    : undefined,
-              },
-            });
+        scheduledAt: isValidDate ? scheduledAtDate : null,
+        formation: formationId ? { connect: { id: formationId } } : undefined,
+        duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,
+        passingScore: (passingScore !== undefined && passingScore !== null) ? parseInt(passingScore.toString()) : undefined,
+        randomizeQuestions: randomizeQuestions === true,
+        showResults: showResults === true,
+        type: type || undefined,
+        totalPoints: Math.round(totalPoints),
+        part1Enabled: enabledParts.some(p => p.type === "QCM"),
+        part2Enabled: enabledParts.some(p => p.type === "OPEN"),
+        part3Enabled: enabledParts.some(p => p.type === "CASE_STUDY"),
+        part1Questions: enabledParts.find(p => p.type === "QCM")?.questions?.length || 0,
+        part2Questions: enabledParts.find(p => p.type === "OPEN")?.questions?.length || 0,
+        part1Points: Math.round(parseFloat(enabledParts.find(p => p.type === "QCM")?.points?.toString() || "0")),
+        part2Points: Math.round(parseFloat(enabledParts.find(p => p.type === "OPEN")?.points?.toString() || "0")),
+        part3Points: Math.round(parseFloat(enabledParts.find(p => p.type === "CASE_STUDY")?.points?.toString() || "0")),
+        
+        // 🔄 Replace parts and questions in one go if provided
+        ...(parts && Array.isArray(parts) ? {
+          parts: {
+            deleteMany: {},
+            create: parts.map((p, pIdx) => ({
+              title: p.title,
+              type: p.type as any,
+              duration: p.duration ? parseInt(p.duration.toString()) : 30,
+              points: p.points ? parseInt(p.points.toString()) : 0,
+              order: p.order ? parseInt(p.order.toString()) : pIdx + 1,
+              scenario: p.scenario,
+              questions: {
+                create: (p.questions || []).map((q: any, qIdx: number) => ({
+                  text: q.text,
+                  type: q.type as any,
+                  points: q.points ? parseFloat(q.points.toString()) : 0,
+                  order: q.order ? parseInt(q.order.toString()) : qIdx + 1,
+                  options: (q.options || []).length > 0 ? {
+                    create: q.options.map((o: any) => ({
+                      text: o.text,
+                      isCorrect: o.isCorrect === true || o.isCorrect === "true",
+                      feedback: o.feedback || "",
+                    }))
+                  } : undefined
+                }))
+              }
+            }))
           }
-        }
-      }
-    }
-
-    // Return the updated exam with all relations
-    const exam = await prisma.exam.findUnique({
-      where: { id },
+        } : {})
+      },
       include: {
         parts: {
           orderBy: { order: "asc" },
@@ -141,6 +151,7 @@ export async function PATCH(
         },
       },
     });
+
 
     return NextResponse.json(exam);
   } catch (error) {

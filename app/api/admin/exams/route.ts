@@ -3,28 +3,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { isAdminAuthenticated, getCurrentUser } from "@/lib/auth";
 
 const ExamSchema = z.object({
   name: z.string().min(1),
   session: z.string().optional(),
   description: z.string().optional(),
   formationId: z.string(),
-  duration: z.number().default(3600),
-  passingScore: z.number().default(60),
+  duration: z.coerce.number().default(3600),
+  passingScore: z.coerce.number().default(60),
   randomizeQuestions: z.boolean().default(false),
   showResults: z.boolean().default(false),
   status: z.string().default("DRAFT"),
   scheduledAt: z.string().optional(),
+  type: z.string().optional(),
   // Use parts array format (same as PATCH) for complete exam structure
   parts: z
     .array(
       z.object({
         title: z.string(),
         type: z.string(),
-        duration: z.number().optional(),
-        points: z.number(),
-        order: z.number(),
+        duration: z.coerce.number().optional(),
+        points: z.coerce.number(),
+        order: z.coerce.number(),
         enabled: z.boolean().default(true),
         subject: z.string().optional(),
         scenario: z.string().optional(),
@@ -33,8 +34,8 @@ const ExamSchema = z.object({
             z.object({
               text: z.string(),
               type: z.string(),
-              points: z.number(),
-              order: z.number().optional(),
+              points: z.coerce.number(),
+              order: z.coerce.number().optional(),
               options: z
                 .array(
                   z.object({
@@ -105,8 +106,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalPoints = parts.reduce(
-      (sum, p) => sum + (p.enabled ? p.points : 0),
+    const enabledParts = parts.filter((p) => p.enabled);
+    const totalPoints = enabledParts.reduce(
+      (sum, p) => sum + p.points,
       0,
     );
 
@@ -119,89 +121,78 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ Step 1: Create Exam (Core Information)
-    const enabledParts = parts.filter((p) => p.enabled);
+    // ✅ ATOMIC CREATE (Single DB roundtrip)
     const newExam = await prisma.exam.create({
       data: {
         name,
         title: name,
         session,
         description,
-        formationId,
+        formation: { connect: { id: formationId } },
         duration,
         passingScore,
-        totalPoints,
+        totalPoints: Math.round(totalPoints),
         randomizeQuestions,
         showResults,
-        status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SCHEDULED",
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        // Legacy fields for backward compatibility
+        status: status as any,
+        type: (body.type as any) || "OFFICIAL",
+        scheduledAt: (scheduledAt && !isNaN(new Date(scheduledAt).getTime())) ? new Date(scheduledAt) : null,
+        
+        // Legacy summary fields
         part1Enabled: enabledParts.some((p) => p.type === "QCM"),
         part2Enabled: enabledParts.some((p) => p.type === "OPEN"),
         part3Enabled: enabledParts.some((p) => p.type === "CASE_STUDY"),
-        part1Questions:
-          enabledParts.find((p) => p.type === "QCM")?.questions?.length ||
-          0,
-        part2Questions:
-          enabledParts.find((p) => p.type === "OPEN")?.questions?.length ||
-          0,
-        part1Points:
-          enabledParts.find((p) => p.type === "QCM")?.points || 0,
-        part2Points:
-          enabledParts.find((p) => p.type === "OPEN")?.points || 0,
-        part3Points:
-          enabledParts.find((p) => p.type === "CASE_STUDY")?.points || 0,
+        part1Questions: enabledParts.find((p) => p.type === "QCM")?.questions?.length || 0,
+        part2Questions: enabledParts.find((p) => p.type === "OPEN")?.questions?.length || 0,
+        part1Points: Math.round(enabledParts.find((p) => p.type === "QCM")?.points || 0),
+        part2Points: Math.round(enabledParts.find((p) => p.type === "OPEN")?.points || 0),
+        part3Points: Math.round(enabledParts.find((p) => p.type === "CASE_STUDY")?.points || 0),
+
+        // Nested creation of parts and questions
+        parts: {
+          create: enabledParts.map((p, pIdx) => ({
+            title: p.title,
+            type: p.type as any,
+            duration: p.duration || 30,
+            points: Math.round(p.points),
+            order: p.order ?? pIdx + 1,
+            scenario: p.scenario || p.subject,
+            questions: {
+              create: (p.questions || []).map((q: any, qIdx: number) => ({
+                text: q.text,
+                type: q.type as any,
+                points: q.points, // Question.points is Float
+                order: q.order ?? qIdx + 1,
+                options: (q.options?.length || 0) > 0 ? {
+                  create: q.options.map((o: any) => ({
+                    text: o.text,
+                    isCorrect: o.isCorrect,
+                    feedback: o.feedback || "",
+                  }))
+                } : undefined
+              }))
+            }
+          }))
+        }
       },
+      include: {
+        formation: true,
+        parts: true
+      }
     });
 
-    const createdPartIds: string[] = [];
-
-    // ✅ Step 2-4: Create Exam Parts using the provided parts array (same as PATCH)
-    try {
-      for (let pIdx = 0; pIdx < enabledParts.length; pIdx++) {
-        const partData = enabledParts[pIdx];
-        const part = await prisma.examPart.create({
-          data: {
-            examId: newExam.id,
-            title: partData.title,
-            type: partData.type as "QCM" | "OPEN" | "CASE_STUDY",
-            duration: partData.duration || 30,
-            points: partData.points,
-            order: partData.order ?? pIdx + 1,
-            scenario: partData.scenario || partData.subject,
-          },
-        });
-        createdPartIds.push(part.id);
-
-        // Create questions for this part
-        if (partData.questions && partData.questions.length > 0) {
-          for (let qIdx = 0; qIdx < partData.questions.length; qIdx++) {
-            const q = partData.questions[qIdx];
-            await prisma.question.create({
-              data: {
-                partId: part.id,
-                text: q.text,
-                type: q.type as "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "OPEN",
-                points: q.points,
-                order: q.order ?? qIdx + 1,
-                options:
-                  (q.options?.length || 0) > 0 ? { create: q.options } : undefined,
-              },
-            });
-          }
+    // 🛡️ Audit Log
+    const adminUser = await getCurrentUser(request);
+    if (adminUser?.id) {
+      await prisma.auditLog.create({
+        data: {
+          userId: adminUser.id,
+          action: 'EXAM_CREATED',
+          resource: 'EXAM',
+          resourceId: newExam.id,
+          newValue: { title: newExam.title, type: newExam.type, status: newExam.status },
         }
-      }
-    } catch (saveError) {
-      console.error(
-        "[DATABASE SAVE ERROR] Rolling back exam creation:",
-        saveError,
-      );
-      // Clean up orphaned records
-      for (const partId of createdPartIds) {
-        await prisma.examPart.delete({ where: { id: partId } }).catch(() => {});
-      }
-      await prisma.exam.delete({ where: { id: newExam.id } }).catch(() => {});
-      throw saveError;
+      }).catch((err: any) => console.error("Audit log failed:", err));
     }
 
     return NextResponse.json(
