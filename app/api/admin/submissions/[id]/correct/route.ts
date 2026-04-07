@@ -54,7 +54,7 @@ export async function POST(
     const totalScore = qcmScore + part2Score + part3Score;
     const maxPoints = exam.totalPoints || 100;
     const percentage = Math.round((totalScore / maxPoints) * 100);
-    const passingThreshold = exam.passingScore || 60;
+    const passingThreshold = exam.passingScore || 65;
     const isPassing = percentage >= passingThreshold;
 
     // Mettre à jour la soumission
@@ -75,7 +75,7 @@ export async function POST(
       }
     });
 
-    // Si réussi (≥ 60%), générer automatiquement l'attestation si ce n'est pas un examen blanc
+    // Si réussi (≥ 65%), générer automatiquement l'attestation si ce n'est pas un examen blanc
     if (isPassing && submission.exam.type !== 'MOCK') {
       try {
         const { customAlphabet } = await import('nanoid');
@@ -118,7 +118,7 @@ export async function POST(
             certificationMention: percentage >= 90 ? 'EXCELLENCE' :
                                  percentage >= 80 ? 'TRES_BIEN' :
                                  percentage >= 70 ? 'BIEN' :
-                                 percentage >= 60 ? 'ASSEZ_BIEN' : 'PASSABLE',
+                                 percentage >= 65 ? 'ASSEZ_BIEN' : 'PASSABLE',
           }
         });
 

@@ -62,11 +62,12 @@ export async function POST(
       }
     });
 
-    // 4. Générer l'attestation si succès (>= 12/20)
+    // 4. Générer l'attestation si succès (>= 13/20 - 65%)
     let attestationCreated = false;
     let attestationCode = null;
+    const threshold = (session.exam.passingScore || 65) / 5; // Définit le seuil (13/20 par défaut)
 
-    if (totalScore >= 12 && session.exam.formationId && session.exam.type !== 'MOCK') {
+    if (totalScore >= threshold && session.exam.formationId && session.exam.type !== 'MOCK') {
       // Génération du code
       const now = new Date();
       const year = now.getFullYear();
@@ -121,14 +122,14 @@ export async function POST(
       session.candidate.name || "Candidat",
       session.exam.title,
       updatedSession.totalScore,
-      totalScore >= 12,
+      totalScore >= threshold, // Use correct threshold
       session.exam.type as any
     );
 
     // 6. Créer une notification pour le candidat
     if (session.userId) {
       const isMock = session.exam.type === 'MOCK';
-      const passed = totalScore >= 12;
+      const passed = totalScore >= threshold;
       
       await createNotification({
         userId: session.userId,

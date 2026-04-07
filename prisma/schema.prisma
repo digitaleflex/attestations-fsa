@@ -202,7 +202,7 @@ model Exam {
   part3Mode          String        @default("digital")
   part3Points        Int           @default(40)
   part3Subject       String?
-  passingScore       Int           @default(60)
+  passingScore       Int           @default(65)
   randomizeQuestions Boolean       @default(false)
   showResults        Boolean       @default(false)
   scheduledAt        DateTime?

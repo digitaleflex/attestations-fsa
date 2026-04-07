@@ -11,7 +11,7 @@ const ExamSchema = z.object({
   description: z.string().optional(),
   formationId: z.string(),
   duration: z.coerce.number().default(3600),
-  passingScore: z.coerce.number().default(60),
+  passingScore: z.coerce.number().default(65),
   randomizeQuestions: z.boolean().default(false),
   showResults: z.boolean().default(false),
   status: z.string().default("DRAFT"),
