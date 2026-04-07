@@ -106,7 +106,7 @@ export default function NotificationCenter() {
         title: "Nouveau Signalement",
         message: r.motif,
         time: new Date(r.createdAt),
-        link: `/admin/signalements`,
+        link: `/admin/signalements/${r.id}`,
         icon: AlertTriangle,
         iconClass: "text-amber-500 bg-amber-50"
     })),

@@ -4,12 +4,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type");
+
     // Fetch only scheduled exams with public info
     const exams = await prisma.exam.findMany({
       where: {
         status: "SCHEDULED",
+        type: (type as any) || undefined,
       },
       select: {
         id: true,
@@ -18,6 +22,7 @@ export async function GET() {
         description: true,
         scheduledAt: true,
         duration: true,
+        type: true,
       },
       orderBy: {
         scheduledAt: "asc",

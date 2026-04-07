@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
   // 1. Fetch statistics (Global)
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => apiFetch("/api/public/stats"),
+    queryFn: () => apiFetch("/api/public/stats") as any,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
   const { data: usersStats } = useQuery({
     queryKey: ["users-stats"],
     queryFn: async () => {
-      const users = await apiFetch("/api/users");
+      const users = await apiFetch("/api/users") as any;
       const now = new Date();
       return {
         total: users.length,
@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
   // 3. Fetch Dash V4 Stats (Monthly & Targets)
   const { data: v4Stats, isLoading: v4Loading } = useQuery({
     queryKey: ["v4-stats"],
-    queryFn: () => apiFetch("/api/admin/dashboard/stats"),
+    queryFn: () => apiFetch("/api/admin/dashboard/stats") as any,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
   const { data: recentAttestations } = useQuery({
     queryKey: ["recent-attestations"],
     queryFn: async () => {
-      const data = await apiFetch("/api/attestations?limit=5");
+      const data = await apiFetch("/api/attestations?limit=5") as any;
       return Array.isArray(data) ? data : data.attestations || [];
     },
     staleTime: 2 * 60 * 1000,

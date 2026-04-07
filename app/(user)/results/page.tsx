@@ -3,7 +3,8 @@
 export const dynamic = 'force-dynamic';
 
 import { Card } from "@/components/ui/card";
-import { CheckCircle, XCircle, BarChart3, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, XCircle, BarChart3, ChevronRight, Clock } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ export default function UserResultsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["user-results"],
-    queryFn: () => apiFetch("/api/user/results"),
+    queryFn: () => apiFetch("/api/user/results") as any,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -83,19 +84,36 @@ export default function UserResultsPage() {
                       )}
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-800">{result.examName}</h3>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-bold text-slate-800">{result.examName}</h3>
+                        <Badge variant="outline" className={result.type === 'MOCK' ? "border-indigo-200 text-indigo-600 bg-indigo-50" : "border-blue-200 text-blue-600 bg-blue-50"}>
+                          {result.type === 'MOCK' ? "BLANC" : "OFFICIEL"}
+                        </Badge>
+                      </div>
                       <p className="text-sm text-slate-500">
                         {result.completedAt ? new Date(result.completedAt).toLocaleDateString("fr-FR") : "-"}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-3xl font-bold ${result.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {result.scorePercent}%
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {result.totalScore}/{result.maxScore} points
-                    </p>
+                    {result.status === 'PENDING_REVIEW' ? (
+                      <div className="flex flex-col items-end">
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1.5 py-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          Correction en cours
+                        </Badge>
+                        <p className="text-[10px] text-slate-400 mt-1">Questions ouvertes à corriger</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className={`text-3xl font-bold ${result.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {result.scorePercent}%
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {result.totalScore}/{result.maxScore} points
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -109,7 +127,11 @@ export default function UserResultsPage() {
                       </div>
                       <div className="border-l border-slate-100 pl-4">
                         <p className="text-[10px] text-slate-400">Partie 2 & 3</p>
-                        <p className="text-sm font-bold text-slate-700">{(result.scorePart2 || 0) + (result.scorePart3 || 0)}/{(result.maxPart2 || 40) + (result.maxPart3 || 40)}</p>
+                        {result.status === 'PENDING_REVIEW' ? (
+                          <p className="text-sm font-bold text-amber-500 animate-pulse italic">À corriger</p>
+                        ) : (
+                          <p className="text-sm font-bold text-slate-700">{(result.scorePart2 || 0) + (result.scorePart3 || 0)}/{(result.maxPart2 || 40) + (result.maxPart3 || 40)}</p>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -25,7 +25,7 @@ export default function ResultDetailsPage() {
 
   const { data: result, isLoading } = useQuery({
     queryKey: ["user-result", id],
-    queryFn: () => apiFetch(`/api/user/results/${id}`),
+    queryFn: () => apiFetch(`/api/user/results/${id}`) as any,
   });
 
   const [isPrinting, setIsPrinting] = useState(false);

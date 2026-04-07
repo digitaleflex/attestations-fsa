@@ -40,7 +40,7 @@ export default function AdminContactsPage() {
     setLoading(true);
     try {
       const url = filter === "all" ? "/api/admin/contacts" : `/api/admin/contacts?status=${filter}`;
-      const data = await apiFetch(url);
+      const data = await apiFetch(url) as any;
       setContacts(data.contacts || []);
     } catch {
       toast.error("Échec du chargement des messages");

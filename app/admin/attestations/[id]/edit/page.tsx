@@ -42,14 +42,14 @@ export default function EditAttestationPage() {
 
   const { data: attData, isLoading: attLoading } = useQuery({
     queryKey: ["attestation", id],
-    queryFn: () => apiFetch(`/api/attestations/${id}`),
+    queryFn: () => apiFetch(`/api/attestations/${id}`) as any,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: formationsData } = useQuery({
-    queryKey: ["formations", "all"],
-    queryFn: () => apiFetch("/api/formations"),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["formations"],
+    queryFn: () => apiFetch("/api/formations") as any,
+    staleTime: 10 * 60 * 1000,
   });
 
   useEffect(() => {

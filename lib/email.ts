@@ -70,20 +70,26 @@ export const emailService = {
     examTitle: string,
     score: number,
     isSuccess: boolean,
+    examType: 'OFFICIAL' | 'MOCK' = 'OFFICIAL',
   ) {
     try {
       const resend = getResend();
+      const isMock = examType === 'MOCK';
+      
       const statusText = isSuccess
-        ? "FÉLICITATIONS ! Vous avez réussi."
-        : "Résultats de votre examen.";
+        ? (isMock ? "OBJECTIF ATTEINT ! Bel entraînement." : "FÉLICITATIONS ! Vous avez réussi.")
+        : (isMock ? "Entraînement terminé." : "Résultats de votre examen.");
+      
       const statusColor = isSuccess ? "#10b981" : "#475569";
+      
+      const subject = isSuccess
+        ? (isMock ? `Résultat Auto-évaluation : ${examTitle}` : "Félicitations ! Votre attestation est prête")
+        : (isMock ? `Score Entraînement : ${examTitle}` : "Résultats de votre examen - Ferme St André");
 
       await resend.emails.send({
         from: fromEmail,
         to,
-        subject: isSuccess
-          ? "Félicitations ! Votre attestation est prête"
-          : "Résultats de votre examen - Ferme St André",
+        subject: subject,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid ${statusColor}; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
@@ -91,7 +97,7 @@ export const emailService = {
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
-              <p>Votre examen "<strong>${examTitle}</strong>" a été corrigé par nos formateurs.</p>
+              <p>Votre ${isMock ? 'auto-évaluation' : 'examen'} "<strong>${examTitle}</strong>" a été corrigé.</p>
 
               <div style="margin: 32px 0; padding: 32px; text-align: center; background-color: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 14px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Note Finale</p>
@@ -99,23 +105,33 @@ export const emailService = {
                    ${score.toFixed(2)} <span style="font-size: 18px; color: #cbd5e1;">/ 20</span>
                 </p>
                 <p style="margin: 0; font-weight: bold; color: ${statusColor};">${statusText}</p>
+                ${isMock ? '<p style="margin: 8px 0 0 0; font-size: 11px; color: #6366f1; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Mode Entraînement</p>' : ''}
               </div>
 
               ${
                 isSuccess
-                  ? `
-                <p>Votre attestation de réussite a été générée automatiquement. Vous pouvez la télécharger dès maintenant depuis votre tableau de bord.</p>
-                <div style="text-align: center; margin-top: 32px;">
-                  <a href="${APP_URL}/exams/results" style="display: inline-block; padding: 16px 32px; background-color: #10b981; color: white; text-decoration: none; font-weight: bold; border-radius: 12px; shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);">
-                    Télécharger mon attestation
-                  </a>
-                </div>
-              `
+                  ? isMock 
+                    ? `
+                    <p>Bravo pour ce score ! Continuez à vous entraîner pour être prêt lors de la session officielle. Vos notes d'entraînement sont consultables sur votre relevé de notes.</p>
+                    <div style="text-align: center; margin-top: 32px;">
+                      <a href="${APP_URL}/transcript" style="display: inline-block; padding: 16px 32px; background-color: #6366f1; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
+                        Voir mon relevé de notes
+                      </a>
+                    </div>
+                    `
+                    : `
+                    <p>Votre attestation de réussite a été générée automatiquement. Vous pouvez la télécharger dès maintenant depuis votre tableau de bord.</p>
+                    <div style="text-align: center; margin-top: 32px;">
+                      <a href="${APP_URL}/results" style="display: inline-block; padding: 16px 32px; background-color: #10b981; color: white; text-decoration: none; font-weight: bold; border-radius: 12px; shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);">
+                        Télécharger mon attestation
+                      </a>
+                    </div>
+                  `
                   : `
-                <p>Le seuil de réussite est fixé à <strong>12/20</strong>. Ne vous découragez pas, la persévérance est la clé du succès. Contactez votre formateur pour les modalités de rattrapage.</p>
+                <p>Le seuil de réussite est fixé à <strong>12/20</strong>. ${isMock ? "Utilisez ce résultat pour identifier vos points d'amélioration et retentez l'expérience." : "Ne vous découragez pas, la persévérance est la clé du succès. Contactez votre formateur pour les modalités de rattrapage."}</p>
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="${APP_URL}/exams" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
-                    Retour au centre d'examens
+                  <a href="${APP_URL}/${isMock ? 'mock-exams' : 'exams'}" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
+                    ${isMock ? "Retenter l'entraînement" : "Retour au centre d'examens"}
                   </a>
                 </div>
               `
@@ -598,6 +614,45 @@ export const emailService = {
       return { success: true };
     } catch (error) {
       console.error("[EMAIL_ERROR] Verification OTP:", error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Envoi d'une notification générale personnalisée
+   */
+  async sendGeneralNotification(to: string, fullName: string, title: string, message: string) {
+    try {
+      const resend = getResend();
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject: `${title} - Ferme St André`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #ef4444; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+            </div>
+            <div style="padding: 32px; color: #334155; line-height: 1.6;">
+              <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
+              <h3 style="color: #ef4444; margin-bottom: 16px;">${title}</h3>
+              <p style="white-space: pre-wrap;">${message}</p>
+              
+              <div style="text-align: center; margin-top: 32px;">
+                <a href="${APP_URL}/dashboard" style="display: inline-block; padding: 14px 28px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 10px;">
+                  Accéder à mon tableau de bord
+                </a>
+              </div>
+            </div>
+            <div style="background-color: #f8fafc; padding: 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+              &copy; ${new Date().getFullYear()} Ferme Agro-Piscicole Cité St André. Abomey-Calavi, Bénin.
+            </div>
+          </div>
+        `,
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("[EMAIL_ERROR] General Notification:", error);
       return { success: false, error };
     }
   },

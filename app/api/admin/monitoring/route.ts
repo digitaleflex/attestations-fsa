@@ -12,15 +12,19 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50");
     const severity = searchParams.get("severity");
-    const type = searchParams.get("type"); // "SECURITY" or "AUDIT"
 
-    // Fetch Security Logs
+    // Fetch Security Logs with User context
     const securityQuery: any = {
       take: limit,
       orderBy: { timestamp: "desc" },
       include: {
-        // userId is optional, we might need a way to link it manually if needed
-        // or just rely on the details/userId field
+        user: { 
+            select: { 
+                name: true, 
+                email: true, 
+                id: true 
+            } 
+        }
       }
     };
 
@@ -45,10 +49,10 @@ export async function GET(request: Request) {
         prisma.securityLog.count({ where: { action: "SUBMISSION_TOO_FAST" } }),
         prisma.examSession.count({ where: { status: "COMPLETED" } }),
         prisma.user.count({ where: { role: "USER" } }),
-        // ✅ EXAM MONITORING: Tab switches and cheating detections
         prisma.securityLog.count({ where: { eventType: "EXAM_MONITORING" } }),
         prisma.securityLog.count({ where: { eventType: "CHEATING_DETECTED" } }),
         prisma.securityLog.count({ where: { severity: "CRITICAL" } }),
+        prisma.examSession.count({ where: { status: "PENDING_REVIEW" } }),
       ])
     ]);
 
@@ -60,10 +64,10 @@ export async function GET(request: Request) {
         submissionFlags: stats[1],
         totalExamsCompleted: stats[2],
         totalCandidates: stats[3],
-        // ✅ EXAM MONITORING stats
         tabSwitchEvents: stats[4],
         cheatingDetections: stats[5],
         criticalEvents: stats[6],
+        pendingReviewCount: stats[7],
       }
     });
   } catch (error) {
@@ -71,3 +75,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
+

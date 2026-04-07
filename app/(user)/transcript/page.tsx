@@ -190,7 +190,14 @@ export default function TranscriptPage() {
                 const passed = percentage >= 60;
                 return (
                   <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-3 font-medium text-slate-800">{exam.examName}</td>
+                    <td className="py-3 font-medium text-slate-800">
+                      <div className="flex flex-col">
+                        <span>{exam.examName}</span>
+                        {exam.type === 'MOCK' && (
+                          <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Examen Blanc</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3 text-center font-bold" style={{ color: passed ? "#059669" : "#dc2626" }}>
                       {percentage}%
                     </td>
@@ -258,6 +265,7 @@ export default function TranscriptPage() {
               ...e,
               score: Math.round((e.score / e.totalPoints) * 100),
               totalPoints: 100,
+              type: e.type
             })),
             attestations: data.attestations,
             globalAverage: data.stats.globalAverage,

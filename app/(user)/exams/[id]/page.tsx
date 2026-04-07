@@ -14,8 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { 
   Clock, AlertCircle, CheckCircle, ChevronRight, ChevronLeft, 
-  BookOpen, FileText, PenTool, Eye, Save
+  BookOpen, FileText, PenTool, Eye, Save, Upload, Trash2, Image as ImageIcon,
+  ShieldCheck
 } from "lucide-react";
+
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +51,9 @@ export default function ExamSessionPage() {
   const [showPart3Subject, setShowPart3Subject] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [scans, setScans] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,15 +77,42 @@ export default function ExamSessionPage() {
   // Fetch exam data
   const { data: exam, isLoading: examLoading } = useQuery({
     queryKey: ["exam", id],
-    queryFn: () => apiFetch(`/api/exams/${id}`),
+    queryFn: () => apiFetch(`/api/exams/${id}`) as Promise<{
+      id: string;
+      name: string;
+      description: string;
+      duration: number;
+      part1Enabled: boolean;
+      part2Enabled: boolean;
+      part3Enabled: boolean;
+      part1Points: number;
+      part2Points: number;
+      part3Points: number;
+      part1Questions: number;
+      part2Questions: number;
+      part3Mode: string;
+      part3Subject: string | null;
+      passingScore: number;
+      randomizeQuestions: boolean;
+      showResults: boolean;
+      status: string;
+      totalPoints: number;
+      parts: Array<{
+        id: string;
+        order: number;
+        type: string;
+        questions?: Array<any>;
+      }>;
+    }>,
     staleTime: 5 * 60 * 1000,
   });
 
   // Start exam session
   const startMutation = useMutation({
     mutationFn: () => apiFetch(`/api/exams/${id}/start`, { method: "POST" }),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setTimeRemaining(data.duration || 3600);
+      setSessionId(data.id); // Guardar el ID de session para los scans
       startTimer();
     },
     onError: (error: any) => {
@@ -178,7 +210,49 @@ export default function ExamSessionPage() {
 
     submitMutation.mutate(answers);
 
+    submitMutation.mutate(answers);
+
     if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !sessionId) return;
+
+    setIsUploading(true);
+    const file = files[0];
+
+    try {
+        // En un entorno real, subiríamos a S3/Cloudinary aquí.
+        // Simulamos el upload convirtiendo a Base64 para el demo o usando un placeholder
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64String = reader.result as string;
+            
+            // On appelle notre nouvelle API
+            const res = await fetch(`/api/user/exams/session/${sessionId}/scans`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    url: base64String, // On stocke le base64 pour le moment (démo)
+                    fileName: file.name,
+                    fileSize: file.size,
+                    pageNumber: scans.length + 1
+                })
+            });
+
+            if (!res.ok) throw new Error("Échec de l'upload");
+            
+            const data = await res.json();
+            setScans(prev => [...prev, data.scan]);
+            toast.success("Page ajoutée avec succès !");
+        };
+        reader.readAsDataURL(file);
+    } catch (error) {
+        toast.error("Erreur lors de l'envoi du fichier");
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   // Auto-save (every 30 seconds)
@@ -314,37 +388,40 @@ export default function ExamSessionPage() {
                 </AlertDescription>
               </Alert>
 
-              <Alert className="bg-red-50 border-red-200">
-                <Eye className="w-5 h-5 text-red-600" />
-                <AlertTitle className="text-red-800 font-bold uppercase tracking-wider">🔒 CHARTE D&apos;INTÉGRITÉ ACADÉMIQUE - ANTI-TRICHE</AlertTitle>
-                <AlertDescription className="text-red-700">
+              <Alert className="bg-indigo-50 border-indigo-200">
+                <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                <AlertTitle className="text-indigo-800 font-bold uppercase tracking-wider">🔒 CHARTE D&apos;INTÉGRITÉ ACADÉMIQUE - SESSION MOBILE</AlertTitle>
+                <AlertDescription className="text-indigo-700">
                   <div className="space-y-4 mt-3">
-                    <p className="font-bold underline decoration-red-300 text-sm">Règles fondamentales et précautions obligatoires :</p>
+                    <p className="font-bold underline decoration-indigo-300 text-sm">Précautions obligatoires pour composer sur Smartphone :</p>
                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6 list-none mt-2">
                         <li className="flex items-center gap-2 text-xs">
-                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">1</span>
-                            <span><strong>Interdiction de changer d&apos;onglet</strong></span>
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0 font-bold">1</span>
+                            <span><strong>Mode "Ne pas déranger"</strong> vivement conseillé</span>
                         </li>
                         <li className="flex items-center gap-2 text-xs">
-                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">2</span>
-                            <span><strong>Interdiction du copier-coller</strong></span>
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0 font-bold">2</span>
+                            <span><strong>Interdiction de changer d&apos;application</strong></span>
                         </li>
                         <li className="flex items-center gap-2 text-xs">
-                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">3</span>
-                            <span><strong>Usage des smartphones interdit</strong></span>
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0 font-bold">3</span>
+                            <span><strong>Batterie chargée</strong> (minimum 50%)</span>
                         </li>
                         <li className="flex items-center gap-2 text-xs">
-                            <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] shrink-0 font-bold">4</span>
-                            <span><strong>Appui externe interdit</strong> (ChatGPT...)</span>
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0 font-bold">4</span>
+                            <span><strong>Appui externe interdit</strong> (IA, Recherche Google)</span>
                         </li>
                     </ul>
                     
-                    <div className="p-3 bg-white/50 rounded-xl border border-red-200/50 text-[10px] italic leading-relaxed">
-                        ⚠️ <strong>SANCTION :</strong> Tout événement suspect est enregistré nominativement. Au-delà de 3 changements d&apos;onglet, l&apos;examen sera signalé et pourra être annulé.
+                    <div className="p-4 bg-white/60 rounded-2xl border border-indigo-200 text-[11px] leading-relaxed">
+                        <p className="mb-2">📱 <strong>AVIS AUX CANDIDATS SUR MOBILE :</strong> Vous avez choisi de composer sur smartphone. Votre navigation est surveillée. Un changement d&apos;onglet ou de fenêtre (répondre à un message, appel entrant) peut être détecté comme une tentative de fraude.</p>
+                        <p>Tout événement suspect est enregistré nominativement. Restez concentré sur cette page jusqu&apos;à la fin de l&apos;épreuve.</p>
                     </div>
                   </div>
                 </AlertDescription>
               </Alert>
+
+
             </div>
 
             <div className="flex flex-col items-center justify-center gap-6 py-8 border-t border-slate-100">
@@ -753,12 +830,55 @@ export default function ExamSessionPage() {
                       </p>
                     </div>
 
+                    <div className="space-y-4">
+                        <Label className="text-sm font-bold text-slate-700 uppercase tracking-widest">
+                            Vos scans de composition ({scans.length})
+                        </Label>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {scans.map((scan, idx) => (
+                                <div key={scan.id || idx} className="relative group aspect-[3/4] rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-100 shadow-sm transition-all hover:border-emerald-500">
+                                    <img src={scan.url} alt={`Scan ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <Badge className="bg-white text-slate-900 absolute top-2 left-2">P. {scan.pageNumber}</Badge>
+                                        <Button variant="destructive" size="icon" className="h-8 w-8 rounded-full" onClick={() => {
+                                            setScans(prev => prev.filter(s => s.id !== scan.id));
+                                            toast.info("Page retirée (simulé)");
+                                        }}>
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                            
+                            <label className={cn(
+                                "flex flex-col items-center justify-center aspect-[3/4] rounded-xl border-2 border-dashed border-slate-300 bg-white hover:border-emerald-500 hover:bg-emerald-50 cursor-pointer transition-all",
+                                isUploading && "opacity-50 pointer-events-none"
+                            )}>
+                                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                                {isUploading ? (
+                                    <div className="flex flex-col items-center gap-2 text-emerald-600">
+                                        <div className="animate-spin w-6 h-6 border-4 border-emerald-500 border-t-transparent rounded-full" />
+                                        <span className="text-[10px] font-bold">Envoi...</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                                            <Upload className="w-5 h-5 text-slate-400" />
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">Ajouter une page</span>
+                                    </div>
+                                )}
+                            </label>
+                        </div>
+                    </div>
+
                     <Alert className="bg-emerald-50 border-emerald-200">
                       <CheckCircle className="w-5 h-5 text-emerald-600" />
                       <AlertTitle className="text-emerald-800">Composition terminée ?</AlertTitle>
                       <AlertDescription className="text-emerald-700 text-sm">
-                        <p className="mt-2">
-                          Si vous avez fini de rédiger sur vos feuilles de composition, cliquez sur "Terminer et soumettre".
+                        <p className="mt-2 text-emerald-600 font-medium">
+                            Une fois que vous avez ajouté toutes les pages de votre composition, vous pouvez soumettre votre examen définitvement.
                         </p>
                       </AlertDescription>
                     </Alert>

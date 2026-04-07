@@ -253,21 +253,26 @@ export function CountdownTimer({
 
         {/* Actions */}
         <div className="flex gap-2 pt-3 border-t">
-          <Link href={`/exams/${examId}`} className="flex-1">
+          {time.isPast ? (
+            <Link href={`/exams/${examId}`} className="flex-1">
+              <Button
+                className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 font-bold h-12 rounded-xl transition-all shadow-lg shadow-emerald-100"
+              >
+                <Play className="w-4 h-4" />
+                Commencer maintenant
+              </Button>
+            </Link>
+          ) : (
             <Button
-              className={`w-full gap-2 ${
-                time.isPast
-                  ? 'bg-emerald-600 hover:bg-emerald-700'
-                  : time.isVerySoon
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              disabled
+              className="flex-1 gap-2 bg-slate-200 text-slate-400 cursor-not-allowed font-bold h-12 rounded-xl border-none shadow-none"
             >
-              <Play className="w-4 h-4" />
-              {time.isPast ? "Commencer maintenant" : "Accéder à l'examen"}
+              <Clock className="w-4 h-4" />
+              Accès verrouillé (Attendre l'heure)
             </Button>
-          </Link>
+          )}
         </div>
+
       </div>
     </Card>
   );

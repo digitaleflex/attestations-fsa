@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { NotificationType } from '@prisma/client';
+import { pusherServer } from '@/lib/pusher';
 
 type CreateNotificationInput = {
   userId: string;
@@ -15,7 +16,7 @@ type CreateNotificationInput = {
  */
 export async function createNotification(input: CreateNotificationInput) {
   try {
-    return await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId: input.userId,
         type: input.type,
@@ -25,6 +26,11 @@ export async function createNotification(input: CreateNotificationInput) {
         metadata: input.metadata || undefined,
       },
     });
+
+    // Déclencher l'événement Pusher pour la mise à jour temps réel
+    await pusherServer.trigger(`user-${input.userId}`, 'notification', notification);
+
+    return notification;
   } catch (error: unknown) {
     console.error('[NOTIFICATION ERROR]', error);
     return null;

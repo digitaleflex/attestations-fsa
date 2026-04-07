@@ -26,6 +26,7 @@ export async function POST(
         id: true,
         status: true,
         duration: true,
+        type: true,
       }
     });
 
@@ -83,6 +84,7 @@ export async function POST(
         userId: user.id,
         status: 'IN_PROGRESS',
         startedAt: new Date(),
+        type: exam.type,
       }
     });
 

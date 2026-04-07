@@ -19,6 +19,7 @@ interface TranscriptTemplateProps {
       part1Score?: number;
       part2Score?: number;
       part3Score?: number;
+      type?: string;
     }[];
     attestations: {
       formationName: string;
@@ -133,7 +134,9 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
                 const badge = getStatusBadge(exam.status, exam.score);
                 return (
                   <tr key={idx} className="border-b" style={{ borderColor: "#e2e8f0" }}>
-                    <td className="py-2.5 font-medium text-slate-800">{exam.examName}</td>
+                    <td className="py-2.5 font-medium text-slate-800">
+                      {exam.examName} {exam.type === 'MOCK' ? <span style={{ fontSize: '8px', color: '#6366f1', fontWeight: 'bold' }}>(BLANC)</span> : ''}
+                    </td>
                     <td className="py-2.5 text-center font-bold" style={{ color: badge.color }}>
                       {exam.score}/{exam.totalPoints}
                     </td>

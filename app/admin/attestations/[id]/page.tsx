@@ -111,14 +111,14 @@ export default function AttestationDetailsPage() {
   useEffect(() => {
     setLoading(true);
     apiFetch(`/api/attestations/${id}`, {}, false)
-      .then(async (attData) => {
+      .then(async (attData: any) => {
         setData(attData);
         setLoading(false);
         
         // Charger le relevé de notes si un userId est dispo
         if (attData.userId) {
           try {
-            const transcript = await apiFetch(`/api/admin/transcript/${attData.userId}`, {}, false);
+            const transcript = await apiFetch(`/api/admin/transcript/${attData.userId}`, {}, false) as any;
             setTranscriptData(transcript);
           } catch (e) {
             console.log("Pas de relevé disponible pour ce candidat");
@@ -133,7 +133,7 @@ export default function AttestationDetailsPage() {
 
   const fetchAuditLogs = async () => {
     try {
-      const logs = await apiFetch(`/api/admin/attestations/${id}/audit`, {}, false);
+      const logs = await apiFetch(`/api/admin/attestations/${id}/audit`, {}, false) as any;
       setAuditLogs(logs);
     } catch (e) {
       console.error("Erreur lors du chargement des logs d'audit");
@@ -165,7 +165,7 @@ export default function AttestationDetailsPage() {
       if (action === 'RETROGRADE') {
         toast.success("✅ Candidat rétrogradé. L'attestation est maintenant 'En attente' et l'examen réinitialisé.");
         // Rafraîchir les données locales au lieu de rediriger
-        apiFetch(`/api/attestations/${id}`, {}, false).then(setData);
+        apiFetch(`/api/attestations/${id}`, {}, false).then(setData as any);
         fetchAuditLogs();
         return;
       }

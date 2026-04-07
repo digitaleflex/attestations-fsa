@@ -285,6 +285,7 @@ model ExamSession {
   updatedAt   DateTime          @updatedAt
   answers     Json?             @default("{}")
   scans       CompositionScan[]
+  type        ExamType          @default(OFFICIAL)
   exam        Exam              @relation(fields: [examId], references: [id])
   candidate   User              @relation(fields: [userId], references: [id])
 

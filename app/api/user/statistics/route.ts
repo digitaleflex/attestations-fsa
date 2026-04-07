@@ -58,8 +58,20 @@ export async function GET(request: Request) {
     );
     const attestationsCount = validAttestations.length;
 
-    const examsCompleted = examSubmissions.length;
-    const examsPassed = examSubmissions.filter((sub: any) => {
+    const officialExams = examSubmissions.filter((s: any) => s.exam?.type === 'OFFICIAL' || s.type === 'OFFICIAL');
+    const mockExams = examSubmissions.filter((s: any) => s.exam?.type === 'MOCK' || s.type === 'MOCK');
+
+    const examsCompleted = officialExams.length;
+    const examsPassed = officialExams.filter((sub: any) => {
+      const maxPoints = sub.exam?.totalPoints || 100;
+      const scorePercent =
+        maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
+      const passingScore = sub.exam?.passingScore || 60;
+      return scorePercent >= passingScore;
+    }).length;
+
+    const mockExamsCompleted = mockExams.length;
+    const mockExamsPassed = mockExams.filter((sub: any) => {
       const maxPoints = sub.exam?.totalPoints || 100;
       const scorePercent =
         maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
@@ -70,7 +82,7 @@ export async function GET(request: Request) {
     const averageScore =
       examsCompleted > 0
         ? Math.round(
-            examSubmissions.reduce((sum: number, sub: any) => {
+            officialExams.reduce((sum: number, sub: any) => {
               const maxPoints = sub.exam?.totalPoints || 100;
               return (
                 sum +
@@ -138,6 +150,12 @@ export async function GET(request: Request) {
         name: "Premier Examen Réussi",
         icon: "✅",
       });
+    if (mockExamsPassed >= 1)
+      badges.push({
+        id: "first_mock",
+        name: "Entraînement Actif",
+        icon: "🧠",
+      });
     if (averageScore >= 90)
       badges.push({ id: "excellence", name: "Excellence", icon: "⭐" });
 
@@ -147,6 +165,8 @@ export async function GET(request: Request) {
         totalAttestations: attestationsCount,
         totalExams: examsCompleted,
         examsPassed,
+        totalMockExams: mockExamsCompleted,
+        mockExamsPassed,
         averageScore,
         totalInternships: internshipsApplied,
         internshipsAccepted,

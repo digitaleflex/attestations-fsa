@@ -31,7 +31,7 @@ export default function AdminNotificationsPage() {
 
   const { data: formations } = useQuery({
     queryKey: ["formations"],
-    queryFn: () => apiFetch("/api/formations"),
+    queryFn: () => apiFetch("/api/formations") as any,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +51,7 @@ export default function AdminNotificationsPage() {
           formationId,
           sendEmail
         })
-      });
+      }) as any;
 
       toast.success(res.message || "Notification envoyée !");
       setTitle("");

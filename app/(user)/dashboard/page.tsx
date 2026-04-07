@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon } from "lucide-react";
+import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -192,7 +192,7 @@ export default function UserDashboardPage() {
   };
 
   const chartData = {
-    labels: ['Examens', 'Validés', 'En cours'],
+    labels: ['Examens Officiels', 'Réussites', 'En cours'],
     datasets: [{
       label: 'Ma Progression',
       data: [
@@ -448,22 +448,81 @@ export default function UserDashboardPage() {
             <div className="lg:col-span-2 space-y-8">
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                    {[
-                       { label: "Attestations", val: statsData?.overview?.totalAttestations || 0, icon: FileText, bg: "bg-blue-500" },
-                       { label: "Réussites", val: statsData?.overview?.examsPassed || 0, icon: CheckCircle, bg: "bg-emerald-500" },
-                       { label: "Examens", val: statsData?.overview?.totalExams || 0, icon: BookOpen, bg: "bg-amber-500" },
+                       { label: "Attestations", val: statsData?.overview?.totalAttestations || 0, icon: FileText, bg: "bg-blue-600" },
+                       { label: "Réussites Off.", val: statsData?.overview?.examsPassed || 0, icon: CheckCircle, bg: "bg-emerald-600" },
+                       { label: "Examen Blanc", val: statsData?.overview?.totalMockExams || 0, icon: GraduationCap, bg: "bg-indigo-500" },
+                       { label: "Score Moyen", val: (statsData?.overview?.averageScore || 0) + "%", icon: TrendingUp, bg: "bg-amber-500" },
                    ].map(s => (
-                       <Card key={s.label} className="p-6 border-none shadow-premium bg-white flex items-center gap-4 hover:shadow-lg transition-all">
-                           <div className={`w-12 h-12 rounded-xl ${s.bg} flex items-center justify-center text-white shadow-lg`}>
-                               <s.icon className="w-6 h-6" />
+                       <Card key={s.label} className="p-4 border-none shadow-premium bg-white flex items-center gap-3 hover:shadow-lg transition-all group overflow-hidden relative">
+                           <div className={`absolute top-0 right-0 w-12 h-12 ${s.bg} opacity-[0.03] rounded-bl-full group-hover:scale-[3] transition-transform duration-700`} />
+                           <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center text-white shadow-lg flex-shrink-0`}>
+                               <s.icon className="w-5 h-5" />
                            </div>
-                           <div>
-                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-                               <p className="text-2xl font-black text-slate-900">{s.val}</p>
+                           <div className="min-w-0">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{s.label}</p>
+                               <p className="text-xl font-black text-slate-900 truncate">{s.val}</p>
                            </div>
                        </Card>
                    ))}
+                </div>
+
+                {/* Exams Status Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Official Exam Status */}
+                    <Card className="p-6 border-none shadow-premium bg-white group hover:shadow-xl transition-all border-l-4 border-l-blue-600">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-blue-600" /> Session Officielle
+                            </h3>
+                            <Link href="/exams">
+                                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold">Détails</Button>
+                            </Link>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500 uppercase">Examens officiels</span>
+                                <span className="text-sm font-black text-slate-900">{statsData?.overview?.totalExams || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500 uppercase">Réussites</span>
+                                <span className="text-sm font-black text-emerald-600">{statsData?.overview?.examsPassed || 0}</span>
+                            </div>
+                            <Link href="/exams" className="block pt-2">
+                                <Button className="w-full bg-slate-900 hover:bg-black h-10 rounded-xl text-[10px] font-black uppercase tracking-wider gap-2">
+                                    <Play className="w-3 h-3" /> Accéder à la session
+                                </Button>
+                            </Link>
+                        </div>
+                    </Card>
+
+                    {/* Mock Exam Status */}
+                    <Card className="p-6 border-none shadow-premium bg-white group hover:shadow-xl transition-all border-l-4 border-l-indigo-600">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <GraduationCap className="w-4 h-4 text-indigo-600" /> Auto-Évaluation
+                            </h3>
+                            <Link href="/mock-exams">
+                                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold">Détails</Button>
+                            </Link>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500 uppercase">Entraînements</span>
+                                <span className="text-sm font-black text-slate-900">{statsData?.overview?.totalMockExams || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500 uppercase">Objectif atteint</span>
+                                <span className="text-sm font-black text-indigo-600">{statsData?.overview?.mockExamsPassed || 0}</span>
+                            </div>
+                            <Link href="/mock-exams" className="block pt-2">
+                                <Button variant="outline" className="w-full border-indigo-100 text-indigo-600 hover:bg-indigo-50 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider gap-2">
+                                    <Clock className="w-3 h-3" /> S'entraîner maintenant
+                                </Button>
+                            </Link>
+                        </div>
+                    </Card>
                 </div>
 
                 {/* My Attestations List */}
@@ -549,7 +608,8 @@ export default function UserDashboardPage() {
                                                         <span className="text-sm font-black text-emerald-700">{( (att.stageScore || 0) / 5 ).toFixed(2)}/20</span>
                                                     </div>
                                                  ) : (
-                                                    <Link href="/internship" className="bg-gradient-to-r from-emerald-600 to-teal-600 p-2.5 rounded-xl text-white flex items-center justify-center gap-2 hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg active:scale-95 shadow-emerald-100">
+                                                    <Link href="/internships"
+ className="bg-gradient-to-r from-emerald-600 to-teal-600 p-2.5 rounded-xl text-white flex items-center justify-center gap-2 hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg active:scale-95 shadow-emerald-100">
                                                         <span className="text-[9px] font-black uppercase">Postuler au Stage</span>
                                                         <ArrowRight className="w-3 h-3" />
                                                     </Link>
@@ -620,11 +680,16 @@ export default function UserDashboardPage() {
                     <div className="space-y-2 pt-4">
                         <Link href="/exams">
                             <Button className="w-full bg-slate-900 hover:bg-slate-800 rounded-xl h-12 font-bold gap-2">
-                                <BookOpen className="w-4 h-4" /> Passer un examen
+                                <ShieldCheck className="w-4 h-4 text-amber-400" /> Session Officielle
+                            </Button>
+                        </Link>
+                        <Link href="/mock-exams">
+                            <Button variant="outline" className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl h-12 font-bold gap-2">
+                                <GraduationCap className="w-4 h-4" /> Examen Blanc
                             </Button>
                         </Link>
                         <Link href="/profile">
-                            <Button variant="outline" className="w-full rounded-xl h-12 font-bold border-slate-200">
+                            <Button variant="ghost" className="w-full rounded-xl h-10 font-bold text-slate-500 hover:text-slate-900">
                                 Gérer mon profil
                             </Button>
                         </Link>

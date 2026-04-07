@@ -9,6 +9,26 @@ import { ArrowLeft, Download, QrCode, Share2, ShieldCheck, Printer } from "lucid
 import Link from "next/link";
 import OfficialDocument from "@/components/OfficialDocument";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle } from "lucide-react";
 /**
  * Page d'aperçu d'attestation pour le candidat
  */
@@ -18,6 +38,13 @@ export default function AttestationPreviewPage() {
   const id = params?.id as string;
   const router = useRouter();
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [open, setOpen] = useState(false);
+  
+  // Correction Form State
+  const [field, setField] = useState("fullName");
+  const [newValue, setNewValue] = useState("");
+  const [reason, setReason] = useState("");
 
   const { data: att, isLoading } = useQuery({
     queryKey: ["user-attestation", id],
@@ -89,6 +116,34 @@ export default function AttestationPreviewPage() {
         error: 'Erreur lors du téléchargement. Veuillez réessayer.',
       }
     );
+  };
+
+  const handleCorrectionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newValue) {
+      toast.error("Veuillez saisir la nouvelle valeur");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/user/attestations/${id}/correction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field, newValue, reason }),
+      });
+
+      if (!res.ok) throw new Error("Erreur");
+      
+      toast.success("Demande envoyée ! Un administrateur va l'étudier.");
+      setOpen(false);
+      setNewValue("");
+      setReason("");
+    } catch (error) {
+      toast.error("Erreur lors de l'envoi de la demande");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) return <div className="h-screen flex items-center justify-center">Chargement...</div>;
@@ -165,13 +220,74 @@ export default function AttestationPreviewPage() {
                    <p className="text-slate-500">Un recruteur peut scanner ce diplôme.</p>
                 </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/verifier/${att.code}`);
-                toast.success("Lien de vérification copié !");
-            }}>
-                <Share2 className="w-4 h-4" />
-                Copier le lien
-            </Button>
+            <div className="flex gap-2">
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50">
+                            <AlertTriangle className="w-4 h-4" />
+                            Signaler une erreur
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                        <form onSubmit={handleCorrectionSubmit}>
+                            <DialogHeader>
+                                <DialogTitle>Signaler une erreur</DialogTitle>
+                                <DialogDescription>
+                                    Votre attestation contient une erreur ? Indiquez-nous les corrections à apporter.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="field">Champ à corriger</Label>
+                                    <Select value={field} onValueChange={setField}>
+                                        <SelectTrigger id="field">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="fullName">Nom Complet</SelectItem>
+                                            <SelectItem value="birthDate">Date de Naissance</SelectItem>
+                                            <SelectItem value="birthPlace">Lieu de Naissance</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="newValue">Valeur correcte</Label>
+                                    <Input 
+                                        id="newValue" 
+                                        placeholder={field === 'fullName' ? 'Ex: Jean Dupont' : field === 'birthDate' ? 'Ex: 1990-01-01' : 'Ex: Cotonou'}
+                                        type={field === 'birthDate' ? 'date' : 'text'}
+                                        v-model="newValue"
+                                        value={newValue}
+                                        onChange={(e) => setNewValue(e.target.value)}
+                                        required 
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="reason">Motif (Optionnel)</Label>
+                                    <Textarea 
+                                        id="reason" 
+                                        placeholder="Pourquoi souhaitez-vous cette correction ?"
+                                        value={reason}
+                                        onChange={(e) => setReason(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting ? "Envoi..." : "Envoyer la demande"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/verifier/${att.code}`);
+                    toast.success("Lien de vérification copié !");
+                }}>
+                    <Share2 className="w-4 h-4" />
+                    Copier le lien
+                </Button>
+            </div>
         </Card>
       </div>
     </div>

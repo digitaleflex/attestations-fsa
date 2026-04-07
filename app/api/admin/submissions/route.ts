@@ -26,11 +26,12 @@ export async function GET() {
             id: true,
             name: true,
             description: true,
+            type: true,
           },
         },
       },
       orderBy: { startedAt: "desc" },
-    })) as Array<{ status: string; score: number | null }>;
+    })) as Array<{ status: string; score: number | null; type: string }>;
 
     // Statistiques
     const stats = {

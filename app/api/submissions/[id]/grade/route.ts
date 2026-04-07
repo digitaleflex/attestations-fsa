@@ -121,20 +121,27 @@ export async function POST(
       session.candidate.name || "Candidat",
       session.exam.title,
       updatedSession.totalScore,
-      totalScore >= 12
+      totalScore >= 12,
+      session.exam.type as any
     );
 
     // 6. Créer une notification pour le candidat
     if (session.userId) {
+      const isMock = session.exam.type === 'MOCK';
       const passed = totalScore >= 12;
+      
       await createNotification({
         userId: session.userId,
         type: 'EXAM_RESULT_PUBLISHED',
-        title: passed ? 'Examen réussi ! 🎉' : 'Résultat d\'examen disponible',
+        title: passed 
+          ? (isMock ? 'Entraînement réussi ! 🎯' : 'Examen réussi ! 🎉')
+          : 'Résultat disponible',
         message: passed
-          ? `Félicitations ! Vous avez réussi l'examen "${session.exam.title}" avec un score de ${updatedSession.totalScore}/20.${attestationCreated ? ` Une attestation a été créée (code: ${attestationCode}).` : ''}`
-          : `Votre résultat pour l'examen "${session.exam.title}" est de ${updatedSession.totalScore}/20. Vous pouvez retenter l'examen.`,
-        link: passed ? `/attestations` : `/results/${id}`,
+          ? (isMock 
+              ? `Bravo ! Vous avez obtenu ${updatedSession.totalScore}/20 à l'auto-évaluation "${session.exam.title}".`
+              : `Félicitations ! Vous avez réussi l'examen "${session.exam.title}" (${updatedSession.totalScore}/20).${attestationCreated ? ` Votre attestation est prête.` : ''}`)
+          : `Votre score pour "${session.exam.title}" est de ${updatedSession.totalScore}/20.`,
+        link: isMock ? '/transcript' : (passed ? '/attestations' : `/results`),
       });
     }
 

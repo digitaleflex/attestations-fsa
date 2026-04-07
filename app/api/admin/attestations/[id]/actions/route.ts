@@ -99,7 +99,7 @@ export async function POST(
           type: 'GENERAL',
           title: 'Examen à repasser 🔄',
           message: `Votre évaluation pour "${attestation.formation?.name}" a été réinitialisée. Vous devez repasser l'examen. Motif : ${reason}`,
-          link: '/exam'
+          link: '/exams'
         });
 
         await createAuditLog({

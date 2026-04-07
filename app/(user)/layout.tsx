@@ -75,7 +75,7 @@ export default function UserLayout({
     { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
     { name: "Mes Attestations", href: "/attestations", icon: FileText },
     { name: "Examens", href: "/exams", icon: BookOpen },
-    { name: "Examens Blancs", href: "/mock-exams", icon: BookOpen },
+    { name: "Examens Blancs", href: "/mock-exams", icon: GraduationCap },
     { name: "Stages", href: "/internships", icon: Briefcase },
     { name: "Résultats", href: "/results", icon: BarChart3 },
     { name: "Relevé de notes", href: "/transcript", icon: GraduationCap },

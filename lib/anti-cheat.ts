@@ -2,6 +2,14 @@
 // Answer pattern analysis and cheating detection
 import { prisma } from "@/lib/prisma";
 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 export interface AnswerPattern {
   userId: string;
   examId: string;
@@ -31,6 +39,12 @@ export type DetectionType =
   | "COPY_DETECTED"
   | "STATISTICAL_ANOMALY";
 
+type SessionData = {
+  userId: string;
+  answers: Record<string, unknown> | null;
+  submittedAt: Date | null;
+};
+
 /**
  * Analyze answer patterns for a submission
  * Returns detection flags if suspicious patterns are found
@@ -42,8 +56,7 @@ export async function analyzeAnswerPattern(
 ): Promise<CheatingDetection> {
   const flags: DetectionFlag[] = [];
 
-  // Get all other submissions for this exam
-  const otherSessions = await prisma.examSession.findMany({
+  const otherSessions: SessionData[] = await prisma.examSession.findMany({
     where: {
       examId,
       userId: { not: userId },
@@ -56,16 +69,14 @@ export async function analyzeAnswerPattern(
     },
   });
 
-  // Filter out sessions with no answers
   const validSessions = otherSessions.filter(
-    (s: { answers: any }) => s.answers !== null,
+    (s: SessionData): s is SessionData => s.answers !== null,
   );
 
   if (validSessions.length === 0) {
     return { isSuspicious: false, flags: [], confidence: "LOW" };
   }
 
-  // Check for identical answers with other users
   const identicalMatches = checkIdenticalAnswers(currentAnswers, validSessions);
   if (identicalMatches.length > 0) {
     flags.push({
@@ -76,7 +87,6 @@ export async function analyzeAnswerPattern(
     });
   }
 
-  // Check for high similarity (>90% same answers)
   const highSimilarity = checkHighSimilarity(currentAnswers, validSessions);
   if (highSimilarity.length > 0) {
     flags.push({
@@ -87,7 +97,6 @@ export async function analyzeAnswerPattern(
     });
   }
 
-  // Check for rapid submission pattern
   const totalAnswers = Object.keys(currentAnswers).length;
   if (totalAnswers > 10) {
     flags.push({
@@ -110,12 +119,9 @@ export async function analyzeAnswerPattern(
   };
 }
 
-/**
- * Check if answers are 100% identical with other submissions
- */
 function checkIdenticalAnswers(
   currentAnswers: Record<string, string>,
-  otherSessions: { userId: string; answers: any; submittedAt: Date | null }[],
+  otherSessions: SessionData[],
 ): { userId: string; score: number }[] {
   const matches: { userId: string; score: number }[] = [];
 
@@ -126,10 +132,8 @@ function checkIdenticalAnswers(
     const currentKeys = Object.keys(currentAnswers);
     const otherKeys = Object.keys(otherAnswers);
 
-    // Must have same number of answers
     if (currentKeys.length !== otherKeys.length) continue;
 
-    // Check if all answers match
     const allMatch = currentKeys.every(
       (key) => currentAnswers[key] === otherAnswers[key],
     );
@@ -142,12 +146,9 @@ function checkIdenticalAnswers(
   return matches;
 }
 
-/**
- * Check for high similarity (>90%) with other submissions
- */
 function checkHighSimilarity(
   currentAnswers: Record<string, string>,
-  otherSessions: { userId: string; answers: any; submittedAt: Date | null }[],
+  otherSessions: SessionData[],
 ): { userId: string; score: number }[] {
   const similarities: { userId: string; score: number }[] = [];
   const currentKeys = Object.keys(currentAnswers);
@@ -158,7 +159,6 @@ function checkHighSimilarity(
     const otherAnswers = session.answers as Record<string, string>;
     const otherKeys = Object.keys(otherAnswers);
 
-    // Calculate Jaccard similarity
     const commonKeys = currentKeys.filter((key) => otherKeys.includes(key));
     const matchingAnswers = commonKeys.filter(
       (key) => currentAnswers[key] === otherAnswers[key],
@@ -175,9 +175,6 @@ function checkHighSimilarity(
   return similarities;
 }
 
-/**
- * Log cheating detection to SecurityLog table
- */
 export async function logCheatingDetection(
   userId: string,
   examId: string,
@@ -204,15 +201,12 @@ export async function logCheatingDetection(
           score: flag.score,
           confidence: detection.confidence,
           similarityScore: detection.similarityScore,
-        } as any,
+        },
       },
     });
   }
 }
 
-/**
- * Get all flagged submissions for an exam (admin view)
- */
 export async function getFlaggedSubmissions(examId: string) {
   return prisma.securityLog.findMany({
     where: {

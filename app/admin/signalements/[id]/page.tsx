@@ -43,7 +43,7 @@ export default function SignalementDetailsPage() {
   const { data: report, isLoading, error } = useQuery({
     queryKey: ["report", id],
     queryFn: async () => {
-      const data = await apiFetch(`/api/signalement?id=${id}`);
+      const data = await apiFetch(`/api/signalement?id=${id}`) as any;
       return data;
     },
     staleTime: 5 * 60 * 1000,

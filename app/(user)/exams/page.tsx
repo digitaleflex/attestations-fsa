@@ -29,16 +29,51 @@ export default function UserExamsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["user-exams"],
     queryFn: async () => {
-      return apiFetch("/api/user/exams?type=OFFICIAL");
+      return apiFetch("/api/user/exams?type=OFFICIAL") as Promise<{
+        exams: Array<{
+          id: string;
+          name: string;
+          description: string;
+          status: string;
+          duration: number;
+          totalPoints: number;
+          passingScore: number;
+          part1Enabled: boolean;
+          part2Enabled: boolean;
+          part3Enabled: boolean;
+          scheduledAt?: string;
+        }>;
+        canClaim: boolean;
+        claimedCode?: string;
+        stats: {
+          total: number;
+          available: number;
+          completed: number;
+          inProgress: number;
+          passed: number;
+          failed: number;
+        };
+      }>;
     },
     staleTime: 2 * 60 * 1000,
   });
 
   // Fetch scheduled exams for countdown
   const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
-    queryKey: ["scheduled-exams"],
+    queryKey: ["scheduled-exams", "OFFICIAL"],
     queryFn: async () => {
-      return apiFetch("/api/exams/scheduled");
+      return apiFetch("/api/exams/scheduled?type=OFFICIAL") as Promise<{
+        exams: Array<{
+          id: string;
+          name: string;
+          description: string;
+          scheduledAt: string;
+          status: string;
+          duration: number;
+          totalPoints: number;
+          passingScore: number;
+        }>;
+      }>;
     },
     staleTime: 60 * 1000, // Update every minute for countdown
   });

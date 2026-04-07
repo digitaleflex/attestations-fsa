@@ -149,6 +149,14 @@ export async function POST(
       }
     }
 
+    // ✅ Detect if exam has manual grading parts (Part 2 or 3)
+    const allExamParts = await prisma.examPart.findMany({
+      where: { examId },
+      select: { order: true, type: true }
+    });
+    const hasManualGrading = allExamParts.some((p: { order: number; type: string }) => p.order > 1);
+    const finalStatus = hasManualGrading ? 'PENDING_REVIEW' : 'COMPLETED';
+
     // ✅ Atomic update: only succeeds if session is still submittable
     const result = await prisma.examSession.updateMany({
       where: {
@@ -157,7 +165,7 @@ export async function POST(
         status: { in: ['IN_PROGRESS', 'PENDING'] },
       },
       data: {
-        status: 'COMPLETED',
+        status: finalStatus,
         submittedAt: new Date(),
         answers: answers,
         scorePart1: Math.round(scorePart1 * 100) / 100,
@@ -181,7 +189,7 @@ export async function POST(
       action: 'EXAM_SUBMITTED',
       resource: 'EXAM',
       resourceId: examId,
-      newValue: { status: 'COMPLETED', scorePart1: Math.round(scorePart1 * 100) / 100 },
+      newValue: { status: finalStatus, scorePart1: Math.round(scorePart1 * 100) / 100 },
       ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
@@ -228,7 +236,7 @@ export async function POST(
       submissionId: updatedSession?.id,
       scorePart1: updatedSession?.scorePart1,
       totalScore: updatedSession?.totalScore,
-      status: 'COMPLETED',
+      status: finalStatus,
     };
 
     // ✅ Cache response for idempotency

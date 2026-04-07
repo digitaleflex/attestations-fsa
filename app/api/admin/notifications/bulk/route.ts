@@ -42,9 +42,14 @@ export async function POST(request: Request) {
       })
     );
 
-    // Emails (optionnel pour éviter de saturer le quota si beaucoup de monde)
+    // Emails (optionnel)
     const emailPromises = sendEmail ? users.map((user: any) => 
-      emailService.sendWaitlistConfirmation(user.email) 
+      emailService.sendGeneralNotification(
+        user.email,
+        user.name || "Candidat",
+        title,
+        message
+      ) 
     ) : [];
 
     await Promise.all([...notificationPromises, ...emailPromises]);

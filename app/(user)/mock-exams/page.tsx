@@ -29,16 +29,16 @@ export default function UserMockExamsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["user-mock-exams"],
     queryFn: async () => {
-      return apiFetch("/api/user/exams?type=MOCK");
+      return apiFetch("/api/user/exams?type=MOCK") as any;
     },
     staleTime: 2 * 60 * 1000,
   });
 
   // Fetch scheduled exams for countdown
   const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
-    queryKey: ["scheduled-exams"],
+    queryKey: ["scheduled-exams", "MOCK"],
     queryFn: async () => {
-      return apiFetch("/api/exams/scheduled");
+      return apiFetch("/api/exams/scheduled?type=MOCK") as any;
     },
     staleTime: 60 * 1000, // Update every minute for countdown
   });

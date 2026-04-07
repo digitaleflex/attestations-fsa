@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
             type: 'GENERAL',
             title: 'Examen à repasser 🔄',
             message: `Votre évaluation pour "${attestation.formation?.name}" a été réinitialisée.`,
-            link: '/exam'
+            link: '/exams'
           });
         }
         

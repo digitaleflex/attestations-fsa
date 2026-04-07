@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
 import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
 import { emailService } from '@/lib/email';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/admin/submissions/[id]/correct - Corriger une soumission
 export async function POST(
@@ -74,8 +75,8 @@ export async function POST(
       }
     });
 
-    // Si réussi (≥ 60%), générer automatiquement l'attestation
-    if (isPassing) {
+    // Si réussi (≥ 60%), générer automatiquement l'attestation si ce n'est pas un examen blanc
+    if (isPassing && submission.exam.type !== 'MOCK') {
       try {
         const { customAlphabet } = await import('nanoid');
         const customNanoid = customAlphabet('1234567890abcdef', 5);
@@ -110,6 +111,7 @@ export async function POST(
             startDate: submission.startedAt,
             endDate: submission.submittedAt || new Date(),
             location: 'En ligne',
+            userId: submission.userId, // ✅ Lie à l'utilisateur si possible
             instructor: 'Système automatique',
             issuingCompany: 'Ferme St André',
             certificationScore: percentage,
@@ -125,21 +127,40 @@ export async function POST(
       }
     }
 
-    // Notification du candidat (Optionnel, n'échoue pas la requête si l'email échoue)
+    // Notification du candidat (Email)
     if (submission.candidate.email) {
        emailService.sendExamResults(
         submission.candidate.email,
         submission.candidate.name || "",
         submission.exam.title,
         totalScore,
-        isPassing
+        isPassing,
+        submission.exam.type as any
       ).catch(err => console.error("[EMAIL_NOTIF_ERROR]", err));
+    }
+
+    // Notification du candidat (In-App)
+    if (submission.userId) {
+        const isMock = submission.exam.type === 'MOCK';
+        await createNotification({
+            userId: submission.userId,
+            type: 'EXAM_RESULT_PUBLISHED',
+            title: isPassing 
+              ? (isMock ? 'Entraînement corrigé ! 🎯' : 'Examen corrigé ! 🎉')
+              : 'Correction disponible',
+            message: isPassing
+              ? (isMock 
+                  ? `Votre auto-évaluation "${submission.exam.title}" a été corrigée. Score: ${totalScore}/${maxPoints}.`
+                  : `Félicitations ! Votre examen "${submission.exam.title}" a été corrigé (${totalScore}/${maxPoints}).${isPassing && submission.exam.type !== 'MOCK' ? ' Votre attestation est prête.' : ''}`)
+              : `La correction de "${submission.exam.title}" est terminée. Score: ${totalScore}/${maxPoints}.`,
+            link: isMock ? '/transcript' : (isPassing ? '/attestations' : '/results'),
+        });
     }
 
     return NextResponse.json({
       message: 'Correction enregistrée avec succès',
       success: true,
-      attestationGenerated: isPassing,
+      attestationGenerated: isPassing && submission.exam.type !== 'MOCK',
     });
 
   } catch (error: any) {
