@@ -6,6 +6,10 @@ import { TopLoader } from "@/components/TopLoader";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// Force all pages to use dynamic rendering instead of static generation
+// This prevents build errors with client components that use React hooks
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: "FSA - Plateforme d'Attestations",
   description: "Gestion des attestations de formation",

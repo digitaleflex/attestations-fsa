@@ -7,6 +7,7 @@ const ExamSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   status: z.enum(['DRAFT', 'PUBLISHED', 'SCHEDULED', 'ARCHIVED']).default('DRAFT'),
+  type: z.enum(['OFFICIAL', 'MOCK']).default('OFFICIAL'),
   scheduledAt: z.string().optional().nullable(),
   parts: z.array(z.object({
     title: z.string(),
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 });
     }
 
-    const { title, description, status, scheduledAt, parts } = parse.data;
+    const { title, description, status, type, scheduledAt, parts } = parse.data;
 
     const exam = await prisma.exam.create({
       data: {
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
         name: title, // title and name are both in schema
         description,
         status,
+        type,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         parts: {
           create: parts.map((part) => ({

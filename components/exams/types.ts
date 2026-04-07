@@ -43,6 +43,7 @@ export interface ExamFormData {
   totalPoints?: number;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SCHEDULED";
   scheduledAt: string;
+  type?: "OFFICIAL" | "MOCK";
   part1Enabled?: boolean;
   part2Enabled?: boolean;
   part3Enabled?: boolean;

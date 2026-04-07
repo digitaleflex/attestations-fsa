@@ -208,6 +208,7 @@ model Exam {
   scheduledAt        DateTime?
   session            String?
   formation          Formation?    @relation(fields: [formationId], references: [id])
+  type               ExamType      @default(OFFICIAL)
   parts              ExamPart[]
   sessions           ExamSession[]
   users              User[]
@@ -465,6 +466,11 @@ enum ExamStatus {
   PUBLISHED
   SCHEDULED
   ARCHIVED
+}
+
+enum ExamType {
+  OFFICIAL
+  MOCK
 }
 
 enum QuestionType {

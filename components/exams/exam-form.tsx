@@ -38,6 +38,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
     showResults: initialData?.showResults ?? false,
     parts: initialData?.parts || DEFAULT_PARTS,
     formationId: initialData?.formationId || "",
+    type: initialData?.type || "OFFICIAL",
   });
 
   const steps = [
@@ -138,6 +139,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
           title: formData.title,
           description: formData.description,
           status: formData.status,
+          type: formData.type || "OFFICIAL",
           scheduledAt: formData.scheduledAt,
           formationId: formData.formationId,
           session: formData.session,

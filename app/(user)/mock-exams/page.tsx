@@ -21,15 +21,15 @@ import {
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api-client";
 
-export default function UserExamsPage() {
+export default function UserMockExamsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["user-exams"],
+    queryKey: ["user-mock-exams"],
     queryFn: async () => {
-      return apiFetch("/api/user/exams?type=OFFICIAL");
+      return apiFetch("/api/user/exams?type=MOCK");
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -96,7 +96,7 @@ export default function UserExamsPage() {
             <p className="text-2xl font-bold text-slate-800">{data?.stats?.total || 0}</p>
           </Card>
           <Card className="p-4 bg-white shadow-sm border-l-4 border-l-slate-500">
-            <p className="text-sm text-slate-500">Disponibles</p>
+            <p className="text-sm text-slate-500">Blancs Disponibles</p>
             <p className="text-2xl font-bold text-slate-600">{data?.stats?.available || 0}</p>
           </Card>
           <Card className="p-4 bg-white shadow-sm border-l-4 border-l-blue-500">
@@ -127,9 +127,9 @@ export default function UserExamsPage() {
                 <Calendar className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-800">Examens Programmés</h2>
+                <h2 className="text-xl font-bold text-slate-800">Pratique & Entraînement</h2>
                 <p className="text-sm text-slate-500">
-                  {scheduledData.exams.length} examen(s) à venir
+                  {data?.exams?.length || 0} examen(s) blanc(s) disponibles pour votre préparation
                 </p>
               </div>
             </div>
@@ -202,7 +202,7 @@ export default function UserExamsPage() {
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-md">
                         < BookOpen className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">

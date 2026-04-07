@@ -55,6 +55,7 @@ type Exam = {
   _count: {
     submissions: number;
   };
+  type: 'OFFICIAL' | 'MOCK';
 };
 
 export default function AdminExamsPage() {
@@ -234,6 +235,9 @@ export default function AdminExamsPage() {
                         {exam.session && (
                           <div className="flex items-center gap-1 mt-1">
                              <Badge variant="outline" className="bg-slate-900 text-white border-none rounded-md px-2 py-0 text-[9px] font-black">{exam.session}</Badge>
+                             <Badge variant="outline" className={`${exam.type === 'MOCK' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-amber-100 text-amber-700 border-amber-200'} rounded-md px-2 py-0 text-[9px] font-black uppercase`}>
+                               {exam.type === 'MOCK' ? 'Blanc' : 'Officiel'}
+                             </Badge>
                           </div>
                         )}
                     </div>
@@ -296,8 +300,11 @@ export default function AdminExamsPage() {
                              </div>
                              <div>
                                 <p className="font-black text-slate-900 leading-tight">{exam.title}</p>
-                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider italic flex items-center gap-1">
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider italic flex items-center gap-2">
                                    <Users className="w-3 h-3" /> {exam._count.submissions} candidats {exam.session && `• SESSION ${exam.session}`}
+                                   <Badge variant="outline" className={`${exam.type === 'MOCK' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'} p-0 px-1.5 text-[8px] h-4 font-black`}>
+                                     {exam.type === 'MOCK' ? 'BLANC' : 'OFFICIEL'}
+                                   </Badge>
                                 </p>
                              </div>
                           </div>

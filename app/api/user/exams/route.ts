@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 const ExamsQuerySchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
+  type: z.enum(['OFFICIAL', 'MOCK']).optional(),
   limit: z.coerce.number().min(1).max(50).optional(),
 });
 
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     const params = ExamsQuerySchema.safeParse({
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
+      type: (searchParams.get("type") as any) || undefined,
       limit: searchParams.get("limit") || undefined,
     });
 
@@ -42,6 +44,7 @@ export async function GET(request: Request) {
       prisma.exam.findMany({
         where: {
           status: "PUBLISHED",
+          type: params.data.type || undefined,
           // On pourrait ajouter des filtres ici basés sur params.data
         },
         select: {
@@ -55,11 +58,17 @@ export async function GET(request: Request) {
           part1Questions: true,
           part2Questions: true,
           part3Enabled: true,
+          type: true,
         },
         ...(params.data.limit ? { take: params.data.limit } : {}),
       }),
       prisma.examSession.findMany({
-        where: { userId },
+        where: { 
+          userId,
+          exam: {
+            type: params.data.type || undefined
+          }
+        },
         select: {
           id: true,
           examId: true,
@@ -77,6 +86,7 @@ export async function GET(request: Request) {
               part1Questions: true,
               part2Questions: true,
               part3Enabled: true,
+              type: true,
             },
           },
         },
@@ -113,6 +123,7 @@ export async function GET(request: Request) {
         completedAt: sub.submittedAt,
         duration: `${Math.round(exam.duration / 60)} minutes`,
         questionCount: qCount,
+        type: exam.type,
       };
     });
 
@@ -135,6 +146,7 @@ export async function GET(request: Request) {
           exam.part1Questions +
           exam.part2Questions +
           (exam.part3Enabled ? 1 : 0),
+        type: exam.type,
       }));
 
     const examsResult = [...completedExams, ...availableResult];

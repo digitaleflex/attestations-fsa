@@ -75,6 +75,7 @@ export async function PATCH(
       passingScore,
       randomizeQuestions,
       showResults,
+      type,
     } = body;
 
     // 1. Update basic exam info first
@@ -92,6 +93,7 @@ export async function PATCH(
         passingScore: passingScore ? parseInt(passingScore.toString()) : undefined,
         randomizeQuestions: randomizeQuestions === true,
         showResults: showResults === true,
+        type: type || undefined,
       },
     });
 

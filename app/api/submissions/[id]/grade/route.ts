@@ -66,7 +66,7 @@ export async function POST(
     let attestationCreated = false;
     let attestationCode = null;
 
-    if (totalScore >= 12 && session.exam.formationId) {
+    if (totalScore >= 12 && session.exam.formationId && session.exam.type !== 'MOCK') {
       // Génération du code
       const now = new Date();
       const year = now.getFullYear();

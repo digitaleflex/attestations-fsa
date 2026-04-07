@@ -63,6 +63,25 @@ export function StepGeneral({ formData, updateFormData }: Props) {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="examType" className="text-sm font-semibold">
+            <Target className="w-4 h-4 inline mr-2" />
+            Type d&apos;Examen *
+          </Label>
+          <select
+            id="examType"
+            className="w-full h-11 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 outline-none bg-white font-bold"
+            value={formData.type || "OFFICIAL"}
+            onChange={(e) => updateFormData({ type: e.target.value as "OFFICIAL" | "MOCK" })}
+          >
+            <option value="OFFICIAL">🎓 Examen Officiel (Génère une attestation)</option>
+            <option value="MOCK">📝 Examen Blanc (Entraînement uniquement)</option>
+          </select>
+          <p className="text-[10px] text-slate-400 font-medium">
+            Les examens blancs ne génèrent pas d&apos;attestation, même en cas de réussite.
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="formationId" className="text-sm font-semibold">
             <BookOpen className="w-4 h-4 inline mr-2" />
             Formation *
