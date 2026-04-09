@@ -1,6 +1,6 @@
 # 📊 Inventaire Complet des Fonctionnalités
 
-**Dernière mise à jour** : 9 avril 2026  
+**Dernière mise à jour** : 9 avril 2026 (18h30)  
 **Projet** : Attestations FSA - Ferme Agro-Piscicole Cité St André  
 **Stack** : Next.js 16.2.2, Better Auth, PostgreSQL + Prisma, Pusher, Upstash Redis, Resend
 
@@ -10,34 +10,65 @@
 
 | Catégorie | Progression | Statut |
 |-----------|-------------|--------|
-| Authentification | 100% | ✅ Complet |
-| Dashboard Admin | 95% | ✅ Complet |
-| Pages Publiques | 90% | ✅ Complet |
-| Gestion des Examens | 90% | ✅ Complet |
-| Gestion des Attestations | 85% | ✅ Complet |
-| Waitlist | 85% | ✅ Complet |
-| Résultats & Transcripts | 80% | ✅ Complet |
-| Contact & Support | 80% | ✅ Complet |
-| Sécurité | 80% | ✅ Complet |
-| Demandes de Correction | 80% | ✅ Complet |
-| Paramètres | 90% | ✅ Complet |
-| Gestion des Stages | 75% | ⚠️ Améliorable |
-| Ressources | 75% | ⚠️ Améliorable |
-| Notifications | 70% | ⚠️ Améliorable |
-| Anti-Triche | 70% | ⚠️ Améliorable |
-| Audit Logging | 65% | ⚠️ Améliorable |
-| Chat System | 60% | 🔧 Partiel |
-| Portfolio | 60% | 🔧 Partiel |
-| Monitoring Examen | 40% | 🔧 Partiel |
-| Tests | 15% | 🔴 Insuffisant |
+| 🔐 Authentification | 100% | ✅ Complet |
+| 🔐 Authentification 2FA | 100% | ✅ Complet |
+| 🛡️ Sécurité | 95% | ✅ Complet |
+| 📊 Dashboard Admin | 95% | ✅ Complet |
+| 🌐 Pages Publiques | 90% | ✅ Complet |
+| 📝 Gestion des Examens | 90% | ✅ Complet |
+| ⚙️ Paramètres | 90% | ✅ Complet |
+| 📜 Gestion des Attestations | 85% | ✅ Complet |
+| ⏳ Waitlist | 85% | ✅ Complet |
+| 🎓 Résultats & Transcripts | 80% | ✅ Complet |
+| 📞 Contact & Support | 80% | ✅ Complet |
+| ✏️ Demandes de Correction | 80% | ✅ Complet |
+| 💼 Gestion des Stages | 75% | ⚠️ Améliorable |
+| 📚 Ressources | 75% | ⚠️ Améliorable |
+| 🔔 Notifications | 70% | ⚠️ Améliorable |
+| 🛡️ Anti-Triche | 70% | ⚠️ Améliorable |
+| 📋 Audit Logging | 65% | ⚠️ Améliorable |
+| 💬 Chat System | 60% | 🔧 Partiel |
+| 📁 Portfolio | 60% | 🔧 Partiel |
+| 📹 Monitoring Examen | 40% | 🔧 Partiel |
+| 🧪 Tests | 15% | 🔴 Insuffisant |
 
-**Progression Globale du Projet : ~78%**
+**Progression Globale du Projet : ~79%** (+1% depuis 2FA)
+
+---
+
+## 🆕 Corrections Récentes (9 avril 2026)
+
+### Authentification 2FA (100% - Nouveau ✅)
+- ✅ Plugin `twoFactor()` configuré dans `lib/auth.ts`
+- ✅ Plugin `twoFactorClient()` dans `lib/auth-client.ts`
+- ✅ Page `/admin/2fa/setup` (activation avec QR code)
+- ✅ Page `/admin/2fa/verify` (3 méthodes : TOTP, Email, Secours)
+- ✅ Intégration login admin avec `twoFactorRedirect`
+- ✅ Service email `sendTwoFactorOTP()` avec template dédié
+- ✅ **2FA DÉSACTIVÉE par défaut** (activation volontaire)
+- ✅ Documentation : `doc/authentication/02-2fa-admin.md`
+
+### Sécurité Renforcée (80% → 95%)
+- ✅ **Fonction `getAdminUser()` atomique** - Un seul appel pour auth + user
+- ✅ **Typage sécurisé de `getUserRole()`** - Plus de cast unsafe
+- ✅ **31 routes API admin uniformisées** - Pattern `getAdminUser()` partout
+- ✅ **Audit logs complétés** - Portfolio, corrections, stages ajoutés
+- ✅ **Type `AuditAction` étendu** - 17 nouvelles actions
+- ✅ **4 rate limits admin** - Bulk, notifications, settings, login
+- ✅ **Zéro erreur TypeScript** - Code prêt production
+
+### Infrastructure
+- ✅ **Upstash Redis configuré** - Rate limiting actif
+- ✅ **react-qr-code installé** - Support QR code 2FA
+- ✅ **Prisma Client généré** - Colonnes 2FA prêtes
 
 ---
 
 ## 1. 🔐 Authentification (100%)
 
-### Documenté dans : `doc/authentication/01-inscription-connexion.md`
+### Documenté dans : 
+- `doc/authentication/01-inscription-connexion.md`
+- `doc/authentication/02-2fa-admin.md` (Nouveau ✅)
 
 **Fonctionnalités implémentées :**
 - ✅ Inscription/connexion email-mot de passe (Better Auth)
@@ -48,8 +79,11 @@
 - ✅ Protection des routes admin (middleware + API)
 - ✅ Fonction `getAdminUser()` atomique (sécurité renforcée)
 - ✅ Typage sécurisé des rôles
+- ✅ **2FA Admin (Nouveau)** - TOTP + Email + Codes de secours
+- ✅ **2FA DÉSACTIVÉE par défaut** (activation volontaire)
+- ✅ Pages `/admin/2fa/setup` et `/admin/2fa/verify`
 
-**Pages :** `/login`, `/register`, `/forgot-password`, `/reset-password`, `/admin/login`  
+**Pages :** `/login`, `/register`, `/forgot-password`, `/reset-password`, `/admin/login`, `/admin/2fa/setup`, `/admin/2fa/verify`  
 **Fichiers clés :** `lib/auth.ts`, `lib/auth-client.ts`, `lib/otp-store.ts`
 
 ---
@@ -305,13 +339,13 @@
 
 ---
 
-## 14. 🔒 Sécurité (80%)
+## 14. 🔒 Sécurité (95% ✅)
 
 ### Documenté dans : `doc/security/01-mesures-securite.md`
 
 **Fonctionnalités implémentées :**
 - ✅ Rate limiting via Upstash Redis (configurable par endpoint)
-- ✅ 4 rate limits admin : bulk, notifications, settings, login
+- ✅ **4 rate limits admin** : bulk (10/5min), notifications (5/10min), settings (20/h), login (5/15min)
 - ✅ Sanitization des entrées (prévention XSS/injection SQL)
 - ✅ Validation Zod stricte
 - ✅ Traduction des erreurs en français
@@ -321,12 +355,16 @@
 - ✅ Cookies de session httpOnly
 - ✅ Liste blanche d'origines de confiance
 - ✅ Fonction `getAdminUser()` atomique
+- ✅ **Authentification 2FA pour admins** (Nouveau ✅)
+  - TOTP (Google Authenticator, Authy)
+  - OTP Email (5 min, 5 essais)
+  - Codes de secours (10 codes, usage unique)
+  - Appareil de confiance (30 jours)
 
 **Améliorations possibles :**
-- ⚠️ Authentification 2FA pour admins
-- ⚠| Whitelist IP pour accès admin
-- ⚠| Chiffrement des données au repos
-- ⚠| Protection DDoS avancée
+- ⚠️ Whitelist IP pour accès admin (production)
+- ⚠️ Chiffrement des données au repos
+- ⚠️ Protection DDoS avancée
 
 ---
 
@@ -438,26 +476,32 @@
 ## 📈 Prochaines Étapes Recommandées
 
 ### Priorité Haute (Sécurité)
-1. **Implémenter 2FA pour admins**
-2. **Réduire durée de session admin** (30min inactivité)
-3. **Utiliser systématiquement `getAdminUser()`** (fait ✅)
-4. **Ajouter rate limiting sur toutes routes sensibles** (fait ✅)
-5. **Compléter audit logs** (fait ✅)
+1. ~~**Implémenter 2FA pour admins**~~ (fait ✅)
+2. ⏳ **Réduire durée de session admin** (30min inactivité)
+3. ~~**Utiliser systématiquement `getAdminUser()`**~~ (fait ✅)
+4. ~~**Ajouter rate limiting sur toutes routes sensibles**~~ (fait ✅)
+5. ~~**Compléter audit logs**~~ (fait ✅)
+6. ⏳ **Forçage 2FA pour TOUS les admins** (politique)
 
 ### Priorité Moyenne (Qualité)
-6. **Réduire les `any`** (remplacer par types génériques)
-7. **Écrire tests unitaires et d'intégration**
-8. **Documentation complète portfolio**
-9. **Finaliser système de chat**
+7. ⏳ **Réduire les `any`** (remplacer par types génériques)
+8. ⏳ **Écrire tests unitaires et d'intégration**
+9. ⏳ **Documentation complète portfolio**
+10. ⏳ **Finaliser système de chat**
 
 ### Priorité Basse (Améliorations)
-10. **Monitoring examen côté client**
-11. **Notifications email/SMS**
-12. **Anti-triche avancé**
-13. **Stockage cloud pour ressources**
+11. ⏳ **Monitoring examen côté client**
+12. ⏳ **Notifications email/SMS**
+13. ⏳ **Anti-triche avancé**
+14. ⏳ **Stockage cloud pour ressources**
 
 ---
 
-**Total des fonctionnalités : 20 modules**  
-**Progression moyenne : ~78%**  
-**Prêt pour production : Oui (avec réserves sur les tests et 2FA)**
+**Total des fonctionnalités : 21 modules** (dont 2FA)  
+**Progression moyenne : ~79%**  
+**Prêt pour production : Oui (avec réserves sur les tests)**
+
+---
+
+**Dernière mise à jour** : 9 avril 2026 à 18h30  
+**Prochaine révision** : Après implémentation session timeout admin

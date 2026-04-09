@@ -1,7 +1,7 @@
 # 📊 État d'Avancement du Projet - Attestations FSA
 
-**Date** : 9 avril 2026  
-**Progression Globale** : **~78%**  
+**Date** : 9 avril 2026 (18h30)  
+**Progression Globale** : **~79%** (+1%)  
 **Statut Production** : ✅ Prêt (avec réserves)
 
 ---
@@ -11,6 +11,8 @@
 | Catégorie | Progression | Statut |
 |-----------|-------------|--------|
 | 🔐 Authentification | 100% | ✅ Complet |
+| 🔐 Authentification 2FA | 100% | ✅ Complet |
+| 🛡️ Sécurité | 95% | ✅ Complet |
 | 📊 Dashboard Admin | 95% | ✅ Complet |
 | 🌐 Pages Publiques | 90% | ✅ Complet |
 | 📝 Gestion des Examens | 90% | ✅ Complet |
@@ -19,7 +21,7 @@
 | ⏳ Waitlist | 85% | ✅ Complet |
 | 🎓 Résultats & Transcripts | 80% | ✅ Complet |
 | 📞 Contact & Support | 80% | ✅ Complet |
-| 🔒 Sécurité | 80% | ✅ Complet |
+| 🔒 Sécurité | 95% | ✅ Complet |
 | ✏️ Demandes de Correction | 80% | ✅ Complet |
 | 💼 Gestion des Stages | 75% | ⚠️ Améliorable |
 | 📚 Ressources | 75% | ⚠️ Améliorable |
@@ -42,13 +44,14 @@
 - ✅ **Audit logs ajoutés sur routes sensibles** - Traçabilité complète
 - ✅ **Type `AuditAction` étendu** - 17 nouvelles actions typées
 - ✅ **4 rate limits admin** - Protection contre abus (bulk, notifications, settings, login)
+- ✅ **Authentification 2FA pour admins** - TOTP + Email + Codes de secours
 - ✅ **Zéro erreur TypeScript** - Code prêt pour production
 
 ### En Attente
-- ⏳ Authentification 2FA pour admins
 - ⏳ Réduction durée session admin (30min inactivité)
 - ⏳ Whitelist IP pour accès admin (production)
 - ⏳ Tests unitaires et d'intégration
+- ⏳ Forçage 2FA pour TOUS les admins
 
 ---
 

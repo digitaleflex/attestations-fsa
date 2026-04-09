@@ -41,7 +41,17 @@ export default function AdminLoginPage() {
           setError(translated);
           toast.error(translated);
         },
-        onSuccess: () => {
+        onSuccess: (context) => {
+          // 🔐 Check if 2FA verification is required
+          if (context.data?.twoFactorRedirect) {
+            toast.info("Vérification 2FA requise", {
+              description: "Redirection vers la page de vérification...",
+              duration: 3000,
+            });
+            window.location.href = "/admin/2fa/verify";
+            return;
+          }
+          
           toast.success("Connexion réussie ! Redirection...", {
             description: "Veuillez patienter...",
             duration: 3000,

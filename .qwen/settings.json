@@ -8,7 +8,9 @@
       "Bash(pnpm *)",
       "Bash(del *)",
       "Bash(tasklist)",
-      "Bash(findstr *)"
+      "Bash(findstr *)",
+      "Bash(type *)",
+      "Bash(npm *)"
     ]
   },
   "$version": 3

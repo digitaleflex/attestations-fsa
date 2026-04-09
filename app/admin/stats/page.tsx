@@ -5,6 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, CheckCircle, Clock, XCircle, Users, GraduationCap, Award, TrendingUp, TrendingDown, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell,
+  PieChart, Pie
+} from "recharts";
 
 export default function AdminStatsPage() {
   const { data: stats, isLoading } = useQuery({
@@ -28,6 +33,16 @@ export default function AdminStatsPage() {
         admins: users.filter((u: any) => u.role === "admin").length,
         candidates: users.filter((u: any) => u.role === "user").length,
       };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const { data: advancedStats, isLoading: isAdvancedLoading } = useQuery({
+    queryKey: ["advanced-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/stats/advanced");
+      if (!res.ok) return null;
+      return res.json();
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -173,8 +188,91 @@ export default function AdminStatsPage() {
           })}
         </div>
 
-        {/* Répartition par statut */}
-        <Card className="p-6 bg-white shadow-sm">
+        {/* Graphiques Avancés */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+           {/* Évolution des inscriptions */}
+           <Card className="p-6 bg-white shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                 <h2 className="text-lg font-bold text-slate-800">📈 Inscriptions (30j)</h2>
+                 <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Utilisateurs / Jour</p>
+              </div>
+              <div className="h-[300px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={advancedStats?.dailyUsers || []}>
+                       <defs>
+                          <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                             <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                       </defs>
+                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                       <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                       <Tooltip 
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                       />
+                       <Area type="monotone" dataKey="count" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+                    </AreaChart>
+                 </ResponsiveContainer>
+              </div>
+           </Card>
+
+           {/* Performance par Formation */}
+           <Card className="p-6 bg-white shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                 <h2 className="text-lg font-bold text-slate-800">🏤 Top Formations</h2>
+                 <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Attestations délivrées</p>
+              </div>
+              <div className="h-[300px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={advancedStats?.formationStats || []} layout="vertical">
+                       <XAxis type="number" hide />
+                       <YAxis dataKey="name" type="category" width={100} axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#475569', fontWeight: 600}} />
+                       <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                       <Bar dataKey="attestations" radius={[0, 10, 10, 0]} barSize={20}>
+                          {advancedStats?.formationStats.map((entry: any, index: number) => (
+                             <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#6366f1' : '#a855f7'} />
+                          ))}
+                       </Bar>
+                    </BarChart>
+                 </ResponsiveContainer>
+              </div>
+           </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+           {/* Répartition par statut (Donut) */}
+           <Card className="p-6 bg-white shadow-sm flex flex-col items-center">
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 text-center">Session Status</h2>
+              <div className="h-[250px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                       <Pie
+                          data={advancedStats?.sessionStats || []}
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                       >
+                          {advancedStats?.sessionStats.map((entry: any, index: number) => (
+                             <Cell key={`cell-${index}`} fill={['#10b981', '#f59e0b', '#ef4444'][index % 3]} />
+                          ))}
+                       </Pie>
+                       <Tooltip />
+                    </PieChart>
+                 </ResponsiveContainer>
+              </div>
+              <div className="flex gap-4 mt-2">
+                 {advancedStats?.sessionStats.map((s: any, i: number) => (
+                    <div key={i} className="flex items-center gap-1">
+                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ['#10b981', '#f59e0b', '#ef4444'][i % 3] }} />
+                       <span className="text-[10px] font-bold text-slate-600">{s.name}</span>
+                    </div>
+                 ))}
+              </div>
+           </Card>
+
+           {/* Répartition par statut (Barres existantes mais stylisées) */}
+           <Card className="lg:col-span-2 p-6 bg-white shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 mb-6">📊 Répartition par statut</h2>
           <div className="space-y-6">
             <div>
@@ -229,6 +327,7 @@ export default function AdminStatsPage() {
             </div>
           </div>
         </Card>
+      </div>
 
         {/* Résumé */}
         <Card className="p-6 bg-gradient-to-r from-emerald-500 to-blue-600 text-white shadow-lg">

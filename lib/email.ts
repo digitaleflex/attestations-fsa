@@ -659,4 +659,105 @@ export const emailService = {
       return { success: false, error };
     }
   },
+
+  /**
+   * Envoi du code 2FA pour l'authentification admin
+   */
+  async sendTwoFactorOTP(to: string, fullName: string, otp: string) {
+    try {
+      const resend = getResend();
+      const year = new Date().getFullYear();
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject: `🔐 Code de vérification 2FA - FSA Admin`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #fef2f2; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef2f2; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.08);">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%); padding: 40px 32px; text-align: center;">
+                        <div style="margin-bottom: 16px;">
+                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                        </div>
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
+                          🔐 Vérification 2FA Requise
+                        </h1>
+                        <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">
+                          Ferme Agro-Piscicole Cité St André
+                        </p>
+                      </td>
+                    </tr>
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 32px;">
+                        <p style="margin: 0 0 24px 0; font-size: 16px; color: #475569; line-height: 1.6;">
+                          Bonjour <strong style="color: #0f172a;">${fullName}</strong>,
+                        </p>
+                        <p style="margin: 0 0 32px 0; font-size: 15px; color: #64748b; line-height: 1.7;">
+                          Une tentative de connexion à votre compte administrateur a été détectée. Utilisez le code suivant pour compléter la vérification en deux étapes :
+                        </p>
+                        
+                        <!-- OTP Code -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                          <tr>
+                            <td style="background-color: #fef2f2; border: 2px dashed #dc2626; border-radius: 12px; padding: 24px; text-align: center;">
+                              <p style="margin: 0 0 8px 0; font-size: 14px; color: #991b1b; font-weight: 600;">
+                                VOTRE CODE 2FA
+                              </p>
+                              <p style="margin: 0; font-size: 36px; font-weight: 800; color: #dc2626; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                                ${otp}
+                              </p>
+                              <p style="margin: 8px 0 0 0; font-size: 12px; color: #b91c1c;">
+                                Valide pendant <strong>5 minutes</strong>
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Security Warning -->
+                        <div style="margin-top: 32px; padding: 20px; background-color: #fef3c7; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                          <p style="margin: 0; font-size: 14px; color: #92400e;">
+                            <strong>⚠️ Important :</strong> Si vous n'avez pas tenté de vous connecter, ignorez cet email et contactez immédiatement l'administrateur système.
+                          </p>
+                        </div>
+
+                        <!-- Footer Info -->
+                        <div style="margin-top: 32px; padding: 20px; background-color: #f8fafc; border-radius: 12px;">
+                          <p style="margin: 0 0 8px 0; font-size: 14px; color: #475569;">
+                            <strong>Alternative :</strong> Vous pouvez aussi utiliser votre application d'authentification (Google Authenticator, Authy, etc.) pour générer le code.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                      <td style="background-color: #f8fafc; padding: 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                        <p style="margin: 0;">&copy; ${year} Ferme Agro-Piscicole Cité St André. Abomey-Calavi, Bénin.</p>
+                        <p style="margin: 8px 0 0 0;">Ceci est un message automatique sécurisé. Ne pas répondre.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `,
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("[EMAIL_ERROR] 2FA OTP:", error);
+      return { success: false, error };
+    }
+  },
 };

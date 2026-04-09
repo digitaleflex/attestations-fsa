@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const userId = userAuth.id;
 
     // ÉTAPE 1 : Requêtes de base en PARALLÈLE
-    const [user, allUserAttestations, examSubmissions, internshipApplications] =
+    const [user, allUserAttestations, examSubmissions, internshipApplications, totalMissions, completedMissions, recentExams] =
       await Promise.all([
         prisma.user.findUnique({
           where: { id: userId },
@@ -43,6 +43,22 @@ export async function GET(request: Request) {
                 })
               : [],
           ),
+        prisma.portfolioMission.count(),
+        prisma.userPortfolioMission.count({
+          where: { userId: userId, status: 'COMPLETED' }
+        }),
+        prisma.examSession.findMany({
+          where: { userId: userId },
+          orderBy: { submittedAt: 'desc' },
+          take: 3,
+          select: {
+            id: true,
+            totalScore: true,
+            submittedAt: true,
+            status: true,
+            exam: { select: { title: true, totalPoints: true } }
+          }
+        })
       ]);
 
     if (!user) {
@@ -174,6 +190,11 @@ export async function GET(request: Request) {
       recentActivity,
       monthlyProgression,
       badges,
+      portfolio: {
+        totalMissions,
+        completedMissions
+      },
+      recentExams
     });
   } catch (err: unknown) {
     console.error("Erreur statistiques user:", err);
