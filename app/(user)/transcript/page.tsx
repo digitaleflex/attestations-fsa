@@ -40,11 +40,12 @@ export default function TranscriptPage() {
         if (!element) throw new Error("Template non trouvé");
 
         const opt = {
-          margin: 10,
+          margin: 0,
           filename: `Releve_Notes_${data.user.fullName.replace(/\s+/g, '_')}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          image: { type: 'jpeg', quality: 1.0 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: 'avoid-all' }
         };
 
         await html2pdfFn().set(opt).from(element).save();
@@ -253,7 +254,7 @@ export default function TranscriptPage() {
       )}
 
       {/* Hidden Template for PDF */}
-      <div className="hidden" aria-hidden="true">
+      <div style={{ position: 'absolute', left: '-9999px', top: 0, visibility: 'hidden' }} aria-hidden="true">
         <TranscriptTemplate
           id="transcript-content"
           data={{

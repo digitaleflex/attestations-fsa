@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import { Award, CheckCircle, TrendingUp } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
 
 interface TranscriptTemplateProps {
   data: {
@@ -42,17 +40,16 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
     return new Date(d).toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "2-digit",
-      year: "numeric"
+      year: "numeric",
     });
   };
 
-  const getStatusBadge = (status: string, score: number) => {
-    const passingScore = 60;
-    const passed = score >= passingScore;
+  const getStatusBadge = (score: number) => {
+    const passed = score >= 60;
     return {
       label: passed ? "ADMIS" : "NON ADMIS",
       color: passed ? "#059669" : "#dc2626",
-      bg: passed ? "#ecfdf5" : "#fef2f2"
+      bg: passed ? "#ecfdf5" : "#fef2f2",
     };
   };
 
@@ -68,90 +65,135 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
 
   return (
     <div
-      style={{ width: "794px", minHeight: "1123px", fontFamily: "'Times New Roman', Times, serif", backgroundColor: "#ffffff" }}
       id={id}
-      className="relative"
+      style={{
+        width: "794px",
+        height: "1122px",
+        fontFamily: "'Georgia', 'Times New Roman', serif",
+        backgroundColor: "#ffffff",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        position: "relative",
+      }}
     >
-      <div className="w-full h-full p-12 relative flex flex-col border-2" style={{ borderColor: "#1e293b" }}>
-        {/* Bordure décorative */}
-        <div className="absolute inset-6 border" style={{ borderColor: "#94a3b8" }}></div>
+      {/* Outer border frame */}
+      <div
+        style={{
+          position: "absolute",
+          inset: "10px",
+          border: "2px solid #1e3a5f",
+          boxSizing: "border-box",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "14px",
+          border: "0.5px solid #93c5fd",
+          boxSizing: "border-box",
+        }}
+      />
 
-        {/* Header */}
-        <div className="text-center mb-8 pb-6 border-b-2" style={{ borderColor: "#1e293b" }}>
-          <p className="text-sm uppercase tracking-[0.3em] font-bold mb-2" style={{ color: "#2563eb" }}>
+      {/* Content wrapper */}
+      <div
+        style={{
+          position: "absolute",
+          inset: "22px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0px",
+          padding: "12px 24px 10px",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* ── HEADER ── */}
+        <div style={{ textAlign: "center", borderBottom: "1.5px solid #1e3a5f", paddingBottom: "10px", marginBottom: "10px" }}>
+          <p style={{ fontSize: "9px", letterSpacing: "0.35em", fontWeight: 700, color: "#2563eb", marginBottom: "4px", textTransform: "uppercase", fontFamily: "Arial, sans-serif" }}>
             Ferme Agro-Piscicole Cité St André
           </p>
-          <h1 className="text-4xl font-black tracking-tight uppercase mb-2" style={{ color: "#0f172a" }}>
-            Relevé de Notes Officiel
+          <h1 style={{ fontSize: "26px", fontWeight: 900, letterSpacing: "-0.5px", color: "#0f172a", margin: "0 0 6px", textTransform: "uppercase" }}>
+            Relevé de <span style={{ textDecoration: "underline", textUnderlineOffset: "3px" }}>Notes</span> Officiel
           </h1>
-          <div className="w-24 h-1 mx-auto" style={{ backgroundColor: "#2563eb" }}></div>
+          <div style={{ width: "60px", height: "2px", background: "linear-gradient(to right, #2563eb, #059669)", margin: "0 auto" }} />
         </div>
 
-        {/* Informations du candidat */}
-        <div className="px-8 mb-8">
-          <h2 className="text-lg font-bold mb-4 uppercase tracking-wider" style={{ color: "#2563eb" }}>
+        {/* ── INFORMATIONS CANDIDAT ── */}
+        <div style={{ marginBottom: "10px" }}>
+          <p style={{ fontSize: "9px", fontWeight: 800, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "5px", fontFamily: "Arial, sans-serif" }}>
             Informations du candidat
-          </h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 20px", fontSize: "10px", color: "#334155" }}>
             <div>
-              <span className="text-slate-500">Nom complet :</span>
-              <span className="ml-2 font-bold text-slate-800">{data.fullName}</span>
+              <span style={{ color: "#64748b" }}>Nom complet : </span>
+              <span style={{ fontWeight: 700, color: "#0f172a" }}>{data.fullName}</span>
             </div>
             <div>
-              <span className="text-slate-500">Email :</span>
-              <span className="ml-2 font-bold text-slate-800">{data.email}</span>
+              <span style={{ color: "#64748b" }}>Email : </span>
+              <span style={{ fontWeight: 700, color: "#0f172a" }}>{data.email}</span>
             </div>
             <div>
-              <span className="text-slate-500">Date de naissance :</span>
-              <span className="ml-2 font-bold text-slate-800">{formatDate(data.birthDate)}</span>
+              <span style={{ color: "#64748b" }}>Date de naissance : </span>
+              <span style={{ fontWeight: 700, color: "#0f172a" }}>{formatDate(data.birthDate)}</span>
             </div>
             <div>
-              <span className="text-slate-500">Lieu de naissance :</span>
-              <span className="ml-2 font-bold text-slate-800">{data.birthPlace}</span>
+              <span style={{ color: "#64748b" }}>Lieu de naissance : </span>
+              <span style={{ fontWeight: 700, color: "#0f172a" }}>{data.birthPlace}</span>
             </div>
           </div>
         </div>
 
-        {/* Résultats des examens */}
-        <div className="px-8 mb-8 flex-1">
-          <h2 className="text-lg font-bold mb-4 uppercase tracking-wider" style={{ color: "#2563eb" }}>
-            Résultats d'examens
-          </h2>
-          <table className="w-full text-xs">
+        {/* ── RÉSULTATS D'EXAMENS ── */}
+        <div style={{ marginBottom: "10px", flex: "1" }}>
+          <p style={{ fontSize: "9px", fontWeight: 800, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "6px", fontFamily: "Arial, sans-serif" }}>
+            Résultats d&apos;examens
+          </p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9.5px" }}>
             <thead>
-              <tr className="border-b-2" style={{ borderColor: "#1e293b" }}>
-                <th className="text-left py-2 font-bold text-slate-700">Examen</th>
-                <th className="text-center py-2 font-bold text-slate-700">Score</th>
-                <th className="text-center py-2 font-bold text-slate-700">Partie 1</th>
-                <th className="text-center py-2 font-bold text-slate-700">Partie 2</th>
-                <th className="text-center py-2 font-bold text-slate-700">Partie 3</th>
-                <th className="text-center py-2 font-bold text-slate-700">Statut</th>
-                <th className="text-right py-2 font-bold text-slate-700">Date</th>
+              <tr style={{ borderBottom: "1.5px solid #1e3a5f" }}>
+                <th style={{ textAlign: "left", padding: "4px 4px 4px 0", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Examen</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Score</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Partie 1</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Partie 2</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Partie 3</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Statut</th>
+                <th style={{ textAlign: "right", padding: "4px 0 4px 4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</th>
               </tr>
             </thead>
             <tbody>
               {data.examResults.map((exam, idx) => {
-                const badge = getStatusBadge(exam.status, exam.score);
+                const badge = getStatusBadge(exam.score);
                 return (
-                  <tr key={idx} className="border-b" style={{ borderColor: "#e2e8f0" }}>
-                    <td className="py-2.5 font-medium text-slate-800">
-                      {exam.examName} {exam.type === 'MOCK' ? <span style={{ fontSize: '8px', color: '#6366f1', fontWeight: 'bold' }}>(BLANC)</span> : ''}
+                  <tr key={idx} style={{ borderBottom: "0.5px solid #e2e8f0", backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
+                    <td style={{ padding: "5px 4px 5px 0", color: "#1e293b", fontWeight: 500, maxWidth: "220px" }}>
+                      {exam.examName}
+                      {exam.type === "MOCK" && (
+                        <span style={{ fontSize: "7px", color: "#6366f1", fontWeight: 800, marginLeft: "4px" }}>(BLANC)</span>
+                      )}
                     </td>
-                    <td className="py-2.5 text-center font-bold" style={{ color: badge.color }}>
+                    <td style={{ textAlign: "center", padding: "5px 4px", fontWeight: 800, color: badge.color }}>
                       {exam.score}/{exam.totalPoints}
                     </td>
-                    <td className="py-2.5 text-center text-slate-600">{exam.part1Score ?? "-"}</td>
-                    <td className="py-2.5 text-center text-slate-600">{exam.part2Score ?? "-"}</td>
-                    <td className="py-2.5 text-center text-slate-600">{exam.part3Score ?? "-"}</td>
-                    <td className="py-2.5 text-center">
-                      <span
-                        className="inline-block px-2 py-0.5 rounded text-[10px] font-bold"
-                        style={{ backgroundColor: badge.bg, color: badge.color }}
-                      >
+                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.part1Score ?? "–"}</td>
+                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.part2Score ?? "–"}</td>
+                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.part3Score ?? "–"}</td>
+                    <td style={{ textAlign: "center", padding: "5px 4px" }}>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "1px 7px",
+                        borderRadius: "3px",
+                        fontSize: "8px",
+                        fontWeight: 800,
+                        fontFamily: "Arial, sans-serif",
+                        backgroundColor: badge.bg,
+                        color: badge.color,
+                        letterSpacing: "0.05em",
+                      }}>
                         {badge.label}
                       </span>
                     </td>
-                    <td className="py-2.5 text-right text-slate-600">{formatDate(exam.date)}</td>
+                    <td style={{ textAlign: "right", padding: "5px 0 5px 4px", color: "#64748b" }}>
+                      {formatDate(exam.date)}
+                    </td>
                   </tr>
                 );
               })}
@@ -159,73 +201,34 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
           </table>
         </div>
 
-        {/* Attestations obtenues */}
-        {data.attestations.length > 0 && (
-          <div className="px-8 mb-8">
-            <h2 className="text-lg font-bold mb-4 uppercase tracking-wider" style={{ color: "#2563eb" }}>
-              Attestations obtenues
-            </h2>
-            <div className="space-y-2">
-              {data.attestations.map((att, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 rounded border"
-                  style={{ borderColor: "#e2e8f0", backgroundColor: "#f8fafc" }}
-                >
-                  <div>
-                    <p className="font-bold text-sm text-slate-800">{att.formationName}</p>
-                    <p className="text-xs text-slate-500">
-                      {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
-                      {att.score ? ` • Score: ${att.score}/100` : ""}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-mono font-bold text-slate-600">{att.code}</p>
-                    <p className="text-[10px] text-slate-400">{formatDate(att.issuedAt)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Résumé global */}
-        <div className="px-8 mb-8">
-          <h2 className="text-lg font-bold mb-4 uppercase tracking-wider" style={{ color: "#2563eb" }}>
+        {/* ── RÉSUMÉ GLOBAL ── */}
+        <div style={{ marginBottom: "10px" }}>
+          <p style={{ fontSize: "9px", fontWeight: 800, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "6px", fontFamily: "Arial, sans-serif" }}>
             Résumé global
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded border" style={{ borderColor: "#e2e8f0", backgroundColor: "#f8fafc" }}>
-              <p className="text-xs text-slate-500 mb-1">Examens passés</p>
-              <p className="text-2xl font-black text-slate-800">{data.totalExams}</p>
-            </div>
-            <div className="p-4 rounded border" style={{ borderColor: "#e2e8f0", backgroundColor: "#f8fafc" }}>
-              <p className="text-xs text-slate-500 mb-1">Examens réussis</p>
-              <p className="text-2xl font-black" style={{ color: "#059669" }}>{data.passedExams}</p>
-            </div>
-            <div className="p-4 rounded border" style={{ borderColor: "#e2e8f0", backgroundColor: "#f8fafc" }}>
-              <p className="text-xs text-slate-500 mb-1">Taux de réussite</p>
-              <p className="text-2xl font-black" style={{ color: "#2563eb" }}>{data.successRate}%</p>
-            </div>
-            <div className="p-4 rounded border" style={{ borderColor: "#e2e8f0", backgroundColor: "#f8fafc" }}>
-              <p className="text-xs text-slate-500 mb-1">Mention globale</p>
-              <p className="text-2xl font-black" style={{ color: mention.color }}>{mention.label}</p>
-            </div>
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "8px" }}>
+            {[
+              { label: "Examens passés", value: String(data.totalExams), color: "#1e293b" },
+              { label: "Examens réussis", value: String(data.passedExams), color: "#059669" },
+              { label: "Taux de réussite", value: `${data.successRate}%`, color: "#2563eb" },
+              { label: "Mention globale", value: mention.label, color: mention.color },
+            ].map((item, i) => (
+              <div key={i} style={{ border: "0.5px solid #e2e8f0", borderRadius: "4px", padding: "8px 10px", backgroundColor: "#f8fafc" }}>
+                <p style={{ fontSize: "8px", color: "#94a3b8", marginBottom: "4px", fontFamily: "Arial, sans-serif", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</p>
+                <p style={{ fontSize: "18px", fontWeight: 900, color: item.color, lineHeight: 1 }}>{item.value}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-8 pt-6 border-t" style={{ borderColor: "#e2e8f0" }}>
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-slate-400 font-mono">
-              Document généré le {new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-            </p>
-            <div className="flex items-center gap-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "#1e293b" }}>
-                © FERME SAINT ANDRÉ
-              </p>
-            </div>
-          </div>
+        {/* ── FOOTER ── */}
+        <div style={{ borderTop: "0.5px solid #cbd5e1", paddingTop: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <p style={{ fontSize: "8px", color: "#94a3b8", fontFamily: "Arial, sans-serif" }}>
+            Document généré le {new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+          </p>
+          <p style={{ fontSize: "8.5px", fontWeight: 800, color: "#1e293b", letterSpacing: "0.2em", textTransform: "uppercase", fontFamily: "Arial, sans-serif" }}>
+            © Ferme Saint André
+          </p>
         </div>
       </div>
     </div>
