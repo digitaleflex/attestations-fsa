@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon, Play } from "lucide-react";
+import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon, Play, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -243,6 +243,42 @@ export default function UserDashboardPage() {
               </div>
             </div>
           </div>
+        </Card>
+
+        {/* Portfolio Journey (New) */}
+        <Card className="p-6 border-none shadow-premium bg-white relative overflow-hidden">
+           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
+                    <Rocket className="w-6 h-6" />
+                 </div>
+                 <div>
+                    <h3 className="font-black text-slate-900 tracking-tight">VOTRE PARCOURS PROFESSIONNEL</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                      Missions validées : {statsData?.portfolio?.completedMissions || 0} / {statsData?.portfolio?.totalMissions || 0}
+                    </p>
+                 </div>
+              </div>
+              <div className="flex-1 max-w-md w-full">
+                 <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black text-indigo-600">PROGRESSION</span>
+                    <span className="text-[10px] font-black text-indigo-600">
+                      {statsData?.portfolio?.totalMissions ? Math.round((statsData.portfolio.completedMissions / statsData.portfolio.totalMissions) * 100) : 0}%
+                    </span>
+                 </div>
+                 <div className="h-2 bg-indigo-50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-1000" 
+                      style={{ width: `${statsData?.portfolio?.totalMissions ? Math.round((statsData.portfolio.completedMissions / statsData.portfolio.totalMissions) * 100) : 0}%` }} 
+                    />
+                 </div>
+              </div>
+              <Link href="/portfolio">
+                 <Button className="bg-indigo-600 hover:bg-indigo-700 h-10 px-6 rounded-xl font-black text-[10px] uppercase tracking-wider">
+                    Continuer mes missions
+                 </Button>
+              </Link>
+           </div>
         </Card>
 
         {/* 📢 Nouvelles de la Direction */}
@@ -665,6 +701,54 @@ export default function UserDashboardPage() {
                         </Badge>
                     </div>
                 </Card>
+
+                {/* Recent Submissions (New) */}
+                <Card className="p-6 border-none shadow-premium bg-white">
+                   <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-emerald-500" /> Vos Dernières Notes
+                   </h3>
+                   <div className="space-y-4">
+                      {statsData?.recentExams?.length > 0 ? (
+                        statsData.recentExams.map((ex: any) => (
+                          <div key={ex.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                             <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-800 truncate">{ex.exam?.title}</p>
+                                <p className="text-[9px] text-slate-400 font-medium">Le {new Date(ex.submittedAt).toLocaleDateString()}</p>
+                             </div>
+                             <div className="text-right">
+                                <p className={cn(
+                                  "text-xs font-black",
+                                  ex.totalScore >= (ex.exam?.totalPoints * 0.6) ? "text-emerald-600" : "text-rose-600"
+                                )}>
+                                  {ex.totalScore}/{ex.exam?.totalPoints}
+                                </p>
+                                <Badge variant="outline" className="text-[8px] h-4 leading-none font-bold uppercase tracking-tighter">
+                                   {ex.status === 'COMPLETED' ? 'Validé' : 'En révision'}
+                                </Badge>
+                             </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-slate-400 font-bold text-center py-4 italic">Aucun examen passé récemment</p>
+                      )}
+                   </div>
+                </Card>
+
+                {/* Portfolio Public Preview (New) */}
+                {statsData?.portfolio?.completedMissions > 0 && (
+                   <Card className="p-6 bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-none shadow-xl relative overflow-hidden">
+                      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-3">Votre Vitrine est active</h4>
+                      <p className="text-[11px] text-indigo-100/80 mb-4 leading-relaxed font-medium">
+                        Partagez votre portfolio officiel avec des recruteurs pour booster votre carrière.
+                      </p>
+                      <Link href={`/p/${user?.email.split('@')[0]}`}>
+                        <Button className="w-full bg-white text-indigo-600 hover:bg-indigo-50 font-black text-[10px] uppercase h-10 rounded-xl shadow-lg border-none">
+                           Voir mon site public
+                        </Button>
+                      </Link>
+                   </Card>
+                )}
 
                 {/* Profile Card */}
                 <Card className="p-8 border-none shadow-premium bg-white space-y-6">
