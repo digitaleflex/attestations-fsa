@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import Image from "next/image";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 type Submission = {
   id: string;
@@ -65,6 +67,7 @@ export default function GradeSubmissionPage() {
   const [loading, setLoading] = useState(true);
   const [score2, setScore2] = useState<number>(0);
   const [score3, setScore3] = useState<number>(0);
+  const [internshipScore, setInternshipScore] = useState<number>(10); // Par défaut 10/20
   const [obs, setObs] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -76,6 +79,10 @@ export default function GradeSubmissionPage() {
         setSubmission(data);
         setScore2(data.scorePart2 || 0);
         setScore3(data.scorePart3 || 0);
+        // Note de stage stockée sur 100, on affiche sur 20
+        if (data.internshipScore) {
+          setInternshipScore(data.internshipScore / 5);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -99,6 +106,7 @@ export default function GradeSubmissionPage() {
         body: JSON.stringify({
           part2Score: parseFloat(score2.toString()),
           part3Score: parseFloat(score3.toString()),
+          internshipScore: parseFloat(internshipScore.toString()),
           observations: obs
         })
       });
@@ -125,36 +133,56 @@ export default function GradeSubmissionPage() {
 
   const totalRaw = submission.scorePart1 + score2 + score3;
   const maxTotal = submission.exam.totalPoints || 100;
-  const finalScore = (totalRaw / maxTotal) * 20; // Toujours sur 20 pour l'affichage standard
+  
+  const examScoreOn20 = (totalRaw / maxTotal) * 20;
+  const internshipOn20 = internshipScore; // Déjà sur 20
+  const finalScoreOn20 = (examScoreOn20 + internshipOn20) / 2;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-32">
+      {/* Header Premium & Responsive */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 sticky top-4 z-20 backdrop-blur-xl bg-white/90">
         <div className="flex items-center gap-4">
           <Link href="/admin/submissions">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <ChevronLeft className="w-6 h-6" />
+            <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-slate-100 h-12 w-12 transition-all">
+              <ChevronLeft className="w-6 h-6 text-slate-600" />
             </Button>
           </Link>
           <div className="space-y-1">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Correction de Copie</h1>
-            <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200">ID: {submission.id}</Badge>
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Correcteur v2.1</span>
+               {submission.status === 'GRADED' && (
+                  <Badge className="bg-amber-50 text-amber-600 border-amber-100 text-[9px] uppercase font-black tracking-widest px-2 py-0">
+                    MODIFICATION
+                  </Badge>
+               )}
+            </div>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-none">Correction de Copie</h1>
+            <p className="text-[10px] font-mono text-slate-400 truncate max-w-[120px] md:max-w-none">ID: {submission.id}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Note Finale Estimée</p>
-            <p className="text-3xl font-black text-emerald-600">{finalScore.toFixed(2)} <span className="text-sm text-slate-300">/ 20</span></p>
+        <div className="flex items-center justify-between md:justify-end gap-6 md:gap-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-50">
+          <div className="text-left md:text-right shrink-0">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Score Final</p>
+            <p className="text-3xl font-black text-indigo-600 flex items-baseline gap-1">
+               {finalScoreOn20.toFixed(2)} 
+               <span className="text-sm text-slate-300 font-bold">/ 20</span>
+            </p>
           </div>
           <Button 
             disabled={isSaving} 
             onClick={() => setShowConfirm(true)} 
-            size="lg" 
-            className="bg-slate-900 hover:bg-slate-800 gap-2 h-12 px-8 shadow-xl hover:shadow-2xl transition-all"
+            className={cn(
+              "h-14 px-8 rounded-2xl font-black uppercase text-xs tracking-widest transition-all gap-3 shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0",
+              submission.status === 'GRADED' 
+                ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                : "bg-slate-900 hover:bg-slate-800 text-white"
+            )}
           >
-            {isSaving ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
-            Valider la note
+            {isSaving ? <Loader2 className="animate-spin w-5 h-5" /> : <Save className="w-5 h-5" />}
+            <span className="hidden sm:inline">{submission.status === 'GRADED' ? "Actualiser" : "Enregistrer"}</span>
+            <span className="sm:hidden">OK</span>
           </Button>
         </div>
       </div>
@@ -210,6 +238,23 @@ export default function GradeSubmissionPage() {
                 />
               </div>
               <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-slate-400">Note de Stage (Sur 20)</label>
+                <div className="relative">
+                   <Input 
+                    type="number" 
+                    max={20}
+                    step="0.5"
+                    className="bg-blue-900/50 border-blue-700 text-blue-100 text-lg h-12"
+                    value={internshipScore}
+                    onChange={(e) => setInternshipScore(Number(e.target.value))}
+                  />
+                  <div className="absolute right-3 top-3">
+                     <Award className="w-5 h-5 text-blue-400" />
+                  </div>
+                </div>
+                <p className="text-[10px] text-blue-300/60 font-medium">L'évaluation finale sera la moyenne : (Examen + Stage) / 2</p>
+              </div>
+              <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-slate-400">Observations</label>
                 <Textarea 
                   placeholder="Commentaire pour le candidat..."
@@ -246,10 +291,11 @@ export default function GradeSubmissionPage() {
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {submission.scans.map((scan: any) => (
                    <div key={scan.id} className="group relative overflow-hidden rounded-2xl border-4 border-white shadow-xl bg-slate-200 aspect-[3/4] transition-all hover:shadow-2xl">
-                     <img 
+                     <Image 
                        src={scan.url} 
                        alt={`Copie - Page ${scan.pageNumber}`} 
-                       className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                       fill
+                       className="object-cover transition-transform group-hover:scale-110"
                      />
                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
                        <p className="text-white font-black uppercase text-sm mb-1">Page {scan.pageNumber}</p>
@@ -307,12 +353,14 @@ export default function GradeSubmissionPage() {
         <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl max-w-[450px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-slate-900 font-bold text-xl">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-              Confirmer la notation ?
+              <CheckCircle2 className={cn("w-6 h-6", submission.status === 'GRADED' ? "text-amber-600" : "text-emerald-600")} />
+              {submission.status === 'GRADED' ? "Modifier la notation ?" : "Confirmer la notation ?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-                Vous êtes sur le point de valider la note de <span className="font-bold text-slate-900">{finalScore.toFixed(2)}/20</span>. 
-                Une fois validée, le candidat pourra consulter son résultat et, s'il a réussi, son attestation sera générée.
+                {submission.status === 'GRADED' 
+                  ? `Vous allez mettre à jour la note globale à ${finalScoreOn20.toFixed(2)}/20. Les changements seront visibles immédiatement par le candidat.`
+                  : `Vous êtes sur le point de valider la note globale de ${finalScoreOn20.toFixed(2)}/20. Une fois validée, le candidat pourra consulter son résultat et, s'il a réussi, son attestation sera générée.`
+                }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-3">

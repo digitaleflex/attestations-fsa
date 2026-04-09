@@ -229,7 +229,7 @@ export default function AdminInternshipsPage() {
               </div>
 
               <div className="p-8 space-y-8 bg-white">
-                 <div className="grid grid-cols-2 gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Coordonnées</h4>
                        <div className="space-y-3">

@@ -8,9 +8,10 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
-  Upload, FileText, Image, X, CheckCircle, AlertCircle, 
+  Upload, FileText, Image as ImageIcon, X, CheckCircle, AlertCircle, 
   Eye, Trash2, Download, ArrowLeft
 } from "lucide-react";
+import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -209,7 +210,7 @@ export default function AdminSubmissionScansPage() {
                           className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
                         >
                           {file.type.startsWith("image/") ? (
-                            <Image className="w-5 h-5 text-blue-500" />
+                            <ImageIcon className="w-5 h-5 text-blue-500" />
                           ) : (
                             <FileText className="w-5 h-5 text-red-500" />
                           )}
@@ -249,7 +250,7 @@ export default function AdminSubmissionScansPage() {
             {existingScans.length > 0 && (
               <Card className="p-6 bg-white shadow-sm">
                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <Image className="w-5 h-5 text-blue-500" />
+                  <ImageIcon className="w-5 h-5 text-blue-500" />
                   Scans existants ({existingScans.length})
                 </h3>
 
@@ -258,10 +259,11 @@ export default function AdminSubmissionScansPage() {
                     <Card key={scan.id} className="overflow-hidden group">
                       <div className="aspect-video bg-slate-100 relative">
                         {scan.url?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                          <img
+                          <Image
                             src={scan.url}
                             alt={`Scan ${scan.pageNumber || ""}`}
-                            className="w-full h-full object-cover cursor-pointer"
+                            fill
+                            className="object-cover cursor-pointer"
                             onClick={() => setPreviewUrl(scan.url)}
                           />
                         ) : (
