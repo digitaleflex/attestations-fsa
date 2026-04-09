@@ -30,7 +30,7 @@ export default function InternshipApplicationPage() {
     university: "",
     level: "",
     position: "",
-    cvUrl: "",
+    cvFile: null as File | null,
     message: ""
   });
 
@@ -39,10 +39,29 @@ export default function InternshipApplicationPage() {
     setLoading(true);
 
     try {
+      // Prepare payload, converting CV file to base64 if present
+      const payload = { ...formData } as any;
+      if (formData.cvFile) {
+        const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        try {
+          const base64 = await toBase64(formData.cvFile);
+          payload.cvUrl = base64; // store as base64 string
+        } catch (e) {
+          toast.error('Erreur de lecture du CV');
+          setLoading(false);
+          return;
+        }
+        delete payload.cvFile;
+      }
       const res = await fetch("/api/public/internships", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) throw new Error("Erreur");
@@ -211,12 +230,15 @@ export default function InternshipApplicationPage() {
             </div>
 
             <div className="space-y-3">
-               <Label htmlFor="cvUrl" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Lien CV (Google Drive/Dropbox)</Label>
+               <Label htmlFor="cvFile" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Télécharger votre CV (PDF)</Label>
                <Input
-                 id="cvUrl"
-                 placeholder="Lien vers votre CV document PDF"
-                 value={formData.cvUrl}
-                 onChange={(e) => setFormData({...formData, cvUrl: e.target.value})}
+                 id="cvFile"
+                 type="file"
+                 accept=".pdf"
+                 onChange={(e) => {
+                   const file = e.target.files?.[0] || null;
+                   setFormData({ ...formData, cvFile: file });
+                 }}
                  className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
                />
             </div>
