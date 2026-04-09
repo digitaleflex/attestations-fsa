@@ -50,6 +50,8 @@ export async function GET(request: Request) {
       examName: session.exam.title || session.exam.name,
       score: session.score,
       totalPoints: session.exam.totalPoints || 20,
+      internshipScore: session.internshipScore,
+      finalScore: session.finalScore,
       status: session.status,
       type: session.exam.type,
       date: session.submittedAt || session.startedAt,
@@ -80,9 +82,11 @@ export async function GET(request: Request) {
     // Calculer les statistiques
     const totalExams = examSessions.length;
     const passedExams = examSessions.filter((s: any) => {
-      const percentage = (s.score / (s.exam.totalPoints || 20)) * 100;
-      return percentage >= 60;
+      // On utilise le finalScore (moyenne exam+stage) si disponible
+      const percentage = s.finalScore || (s.score / (s.exam.totalPoints || 20)) * 100;
+      return percentage >= 65; // Seuil FSA à 65%
     }).length;
+    
     const successRate =
       totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
 
@@ -90,8 +94,7 @@ export async function GET(request: Request) {
     const globalAverage =
       examSessions.length > 0
         ? examSessions.reduce((acc: number, session: any) => {
-            const maxScore = session.exam.totalPoints || 20;
-            const percentage = (session.score / maxScore) * 100;
+            const percentage = session.finalScore || (session.score / (session.exam.totalPoints || 20)) * 100;
             return acc + percentage;
           }, 0) / examSessions.length
         : 0;

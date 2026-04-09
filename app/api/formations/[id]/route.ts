@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 
 // Schéma de validation pour la modification d'une formation
@@ -18,7 +18,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const { id } = await params;
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
@@ -50,7 +51,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const { id } = await params;
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {
@@ -68,7 +70,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const { id } = await params;
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {

@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/error-handler";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { sanitizeInput } from "@/lib/sanitization";
@@ -18,10 +18,11 @@ const CreateUserSchema = z.object({
 });
 
 // GET - Liste des utilisateurs (Admin uniquement)
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Authentification admin requise
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }
@@ -59,7 +60,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     // Authentification admin requise
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }

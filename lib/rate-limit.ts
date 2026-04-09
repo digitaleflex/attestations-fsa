@@ -114,6 +114,42 @@ export const rateLimits = {
     analytics: true,
     prefix: "ratelimit:contact",
   }) : null,
+
+  // ==========================================
+  // ADMIN RATE LIMITS - Sécurité renforcée
+  // ==========================================
+
+  // Admin bulk operations (attestations, users, etc.)
+  adminBulk: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(10, "5 m"),  // 10 opérations / 5min
+    analytics: true,
+    prefix: "ratelimit:admin-bulk",
+  }) : null,
+
+  // Admin bulk notifications
+  adminNotifications: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "10 m"),  // 5 envois / 10min
+    analytics: true,
+    prefix: "ratelimit:admin-notifications",
+  }) : null,
+
+  // Admin settings changes
+  adminSettings: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(20, "1 h"),  // 20 modifications / heure
+    analytics: true,
+    prefix: "ratelimit:admin-settings",
+  }) : null,
+
+  // Admin login (spécifique, plus restrictif que login user)
+  adminLogin: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "15 m"),  // 5 essais / 15min
+    analytics: true,
+    prefix: "ratelimit:admin-login",
+  }) : null,
 }
 
 // ✅ FIX: Accept Request instead of NextRequest

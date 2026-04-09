@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 import { handleApiError, formatValidationError } from '@/lib/error-handler';
 import type { Prisma } from '@prisma/client';
@@ -16,7 +16,8 @@ const FormationSchema = z.object({
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const url = new URL(request.url);
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
     const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
     const body = await request.json();

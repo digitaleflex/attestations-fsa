@@ -1,15 +1,22 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated, getCurrentUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const adminUser = await getCurrentUser(request);
+  // 🛡️ Rate limiting - Protection contre abus bulk operations
+  const rateLimit = await applyRateLimit(request, 'adminBulk');
+  if (!rateLimit.allowed && rateLimit.response) {
+    return rateLimit.response;
+  }
+
   const { ids, action } = await request.json();
 
   if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -83,7 +90,7 @@ export async function POST(request: NextRequest) {
     // 🛡️ Audit Log
     await createAuditLog({
       userId: adminUser?.id || "",
-      action: `BULK_${action}`,
+      action: 'BULK_ACTION',
       resource: 'ATTESTATION',
       resourceId: ids.join(','),
       newValue: { count: ids.length, action, ids },

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { isAdminAuthenticated, getAdminUser } from '@/lib/auth';
 
 // GET /api/admin/submissions/[id] - Récupérer une soumission spécifique
 export async function GET(
@@ -8,7 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!await isAdminAuthenticated()) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
     }
 

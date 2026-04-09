@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 
 export async function GET(
   request: Request,
@@ -8,7 +8,8 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 

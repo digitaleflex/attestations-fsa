@@ -2,7 +2,8 @@
 // Admin: gérer les portfolios des utilisateurs
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 import { z } from "zod";
 
 const PortfolioUpdateSchema = z.object({
@@ -14,7 +15,8 @@ const PortfolioUpdateSchema = z.object({
 // GET - Lister les utilisateurs avec portfolios
 export async function GET(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
@@ -67,7 +69,8 @@ export async function GET(request: Request) {
 // PATCH - Mettre à jour le portfolio d'un utilisateur
 export async function PATCH(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
@@ -114,6 +117,16 @@ export async function PATCH(request: Request) {
         portfolioSlug: true,
         portfolioEnabled: true,
       },
+    });
+
+    // 🛡️ Audit Log
+    await createAuditLog({
+      userId: adminUser.id,
+      action: 'USER_PORTFOLIO_UPDATED' as any,
+      resource: 'USER_PORTFOLIO',
+      resourceId: userId,
+      newValue: { slug: updated.portfolioSlug, enabled: updated.portfolioEnabled },
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
     return NextResponse.json(updated);

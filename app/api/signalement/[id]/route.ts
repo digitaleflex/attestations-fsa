@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { isAdminAuthenticated } from "@/lib/auth"
+import { getAdminUser } from "@/lib/auth"
 import { handleApiError } from "@/lib/error-handler"
 
 /**
@@ -14,7 +14,8 @@ export async function DELETE(
   const { id } = await params;
   try {
     // ✅ Sécurité : Vérifier si l'utilisateur est admin
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(req);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
@@ -62,7 +63,8 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(req);
+    if (!adminUser) {
         return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 

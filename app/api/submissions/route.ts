@@ -3,14 +3,15 @@
 // ✅ FIX: Standardisation du format de réponse d'erreur
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { handleApiError } from '@/lib/error-handler';
 import type { Prisma } from '@prisma/client';
 import type { ExamSessionStatus } from '@/lib/prisma-types';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }

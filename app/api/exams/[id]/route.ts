@@ -1,13 +1,14 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated, getCurrentUser } from "@/lib/auth";
+import { getAdminUser, getCurrentUser } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser(request);
-  if (!user && !(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!user && !adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -53,7 +54,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -167,7 +169,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 

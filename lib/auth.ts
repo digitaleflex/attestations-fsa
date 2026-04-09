@@ -37,7 +37,7 @@ if (!authSecret && process.env.NODE_ENV === "development") {
   );
 }
 
-import { admin } from "better-auth/plugins";
+import { admin, twoFactor } from "better-auth/plugins";
 import { emailOTP } from "better-auth/plugins";
 
 /**
@@ -107,6 +107,33 @@ export const auth = betterAuth({
     admin({
       adminUserIds: ["eflexcloud@gmail.com", "admin@fermestandre.com"],
     }),
+    twoFactor({
+      issuer: "Ferme Agro-Piscicole Cité St André",
+      totpOptions: {
+        digits: 6,
+        period: 30,
+      },
+      otpOptions: {
+        sendOTP: async ({ user, otp }) => {
+          const { emailService } = await import("@/lib/email");
+          await emailService.sendTwoFactorOTP(
+            user.email,
+            user.name || "Administrateur",
+            otp,
+          );
+        },
+        period: 5,
+        allowedAttempts: 5,
+        storeOTP: "encrypted",
+      },
+      backupCodeOptions: {
+        amount: 10,
+        length: 10,
+        storeBackupCodes: "encrypted",
+      },
+      twoFactorCookieMaxAge: 600, // 10 minutes
+      trustDeviceMaxAge: 30 * 24 * 60 * 60, // 30 days
+    }),
     emailOTP({
       otpLength: 6,
       expiresIn: 60 * 10, // 10 minutes
@@ -165,27 +192,35 @@ async function getLegacySessionId(request?: Request): Promise<string | null> {
 }
 
 /**
- * ✅ FIX: Helper to safely extract role from session user
+ * ✅ FIX: Helper to safely extract role from session user with proper typing
  */
-function getUserRole(user: Record<string, unknown>): string | undefined {
-  return user.role as string | undefined;
+function getUserRole(user: { role?: unknown }): string | undefined {
+  if (typeof user.role === "string") {
+    return user.role;
+  }
+  return undefined;
 }
 
 /**
- * Vérifie si l'utilisateur est un administrateur (Hybride)
+ * 🔒 Récupère l'admin authentifié en un seul appel atomique
+ * Retourne null si non authentifié ou non admin
+ * 
+ * @param request - La requête HTTP (obligatoire pour les routes API)
+ * @returns L'utilisateur admin ou null
  */
-export async function isAdminAuthenticated(
-  request?: Request,
-): Promise<boolean> {
+export async function getAdminUser(request: Request): Promise<SessionUser | null> {
   try {
     // 1. Essai avec Better Auth
-    const session = request
-      ? await auth.api.getSession({ headers: request.headers })
-      : await auth.api.getSession({ headers: await headers() });
+    const session = await auth.api.getSession({ headers: request.headers });
 
-    // ✅ FIX: Case-insensitive role check (Better Auth stores 'admin', legacy uses 'ADMIN')
     if (session?.user && getUserRole(session.user)?.toLowerCase() === "admin") {
-      return true;
+      return {
+        id: session.user.id as string,
+        email: session.user.email as string,
+        name: (session.user.name as string | null | undefined) || null,
+        role: getUserRole(session.user) || "ADMIN",
+        emailVerified: !!session.user.emailVerified,
+      };
     }
 
     // 2. Fallback avec session legacy (Table User uniquement)
@@ -193,16 +228,36 @@ export async function isAdminAuthenticated(
     if (legacyId) {
       const user = await prisma.user.findUnique({
         where: { id: legacyId },
-        select: { id: true, role: true },
+        select: { id: true, email: true, name: true, role: true },
       });
-      return user?.role?.toUpperCase() === "ADMIN";
+      
+      if (user?.role?.toUpperCase() === "ADMIN") {
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          emailVerified: false,
+        };
+      }
     }
 
-    return false;
+    return null;
   } catch (error: unknown) {
-    console.error("[AUTH ERROR] isAdminAuthenticated:", error);
-    return false;
+    console.error("[AUTH ERROR] getAdminUser:", error);
+    return null;
   }
+}
+
+/**
+ * Vérifie si l'utilisateur est un administrateur (Hybride)
+ * @deprecated Utilisez getAdminUser() pour obtenir l'utilisateur ET vérifier le rôle en un seul appel
+ */
+export async function isAdminAuthenticated(
+  request: Request,
+): Promise<boolean> {
+  const adminUser = await getAdminUser(request);
+  return adminUser !== null;
 }
 
 /**

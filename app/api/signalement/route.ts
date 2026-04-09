@@ -8,7 +8,7 @@ import { NextRequest } from "next/server"
 import { applyRateLimit } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/error-handler'
 import { sanitizeInput } from '@/lib/sanitization'
-import { isAdminAuthenticated } from '@/lib/auth'
+import { getAdminUser } from '@/lib/auth'
 import { pusherServer } from '@/lib/pusher'
 
 // Schéma de validation pour un signalement
@@ -99,7 +99,8 @@ export async function POST(req: Request) {
 export async function GET(req: NextRequest) {
   try {
     // ✅ Sécurité : Lister les signalements est réservé aux admins
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(req);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
@@ -148,7 +149,8 @@ export async function GET(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(req);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 

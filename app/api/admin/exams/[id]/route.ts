@@ -2,14 +2,15 @@
 // Admin exam update route
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated, getCurrentUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -55,12 +56,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const { id } = await params;
-  const adminUser = await getCurrentUser(request);
 
   try {
     const body = await request.json();
@@ -187,12 +188,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const { id } = await params;
-  const adminUser = await getCurrentUser(request);
 
   try {
     await prisma.exam.delete({

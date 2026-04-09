@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { isAdminAuthenticated, getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 
 const UpdateUserSchema = z.object({
@@ -26,7 +26,8 @@ export async function GET(
 ) {
   try {
     // ✅ FIX: Add admin authentication
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }
@@ -78,7 +79,8 @@ export async function PATCH(
 ) {
   try {
     // ✅ FIX: Add admin authentication
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }
@@ -164,7 +166,7 @@ export async function PATCH(
     // Enregistrer le log d'audit
     await createAuditLog({
       userId: id,
-      action: data.status ? (data.status === 'ACTIVE' ? 'ACCOUNT_UNBLOCKED' : 'ACCOUNT_BLOCKED') : 'ADMIN_UPDATE_PROFILE',
+      action: (data.status ? (data.status === 'ACTIVE' ? 'ACCOUNT_UNBLOCKED' : 'ACCOUNT_BLOCKED') : 'ADMIN_UPDATE_PROFILE') as any,
       resource: 'USER',
       resourceId: id,
       oldValue: { status: currentUser.status, role: currentUser.role },
@@ -198,7 +200,8 @@ export async function DELETE(
 ) {
   try {
     // ✅ FIX: Add admin authentication
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }

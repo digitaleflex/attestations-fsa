@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, isAdminAuthenticated } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 
 /**
@@ -8,10 +8,10 @@ import { createAuditLog } from "@/lib/audit";
  */
 export async function POST(request: Request) {
   try {
-    const adminUser = await getCurrentUser(request);
+    const adminUser = await getAdminUser(request);
 
     // Seul un admin peut logger des actions via cet endpoint (sécurité)
-    if (!(await isAdminAuthenticated())) {
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 

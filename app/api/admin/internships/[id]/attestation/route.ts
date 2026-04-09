@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
+import { createAuditLog } from '@/lib/audit';
 import { customAlphabet } from 'nanoid';
 
 const nanoid = customAlphabet('1234567890abcdef', 5);
@@ -10,7 +11,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
@@ -95,6 +97,21 @@ export async function POST(
     await prisma.internshipRequest.update({
       where: { id },
       data: { status: 'ARCHIVED' }
+    });
+
+    // 🛡️ Audit Log
+    await createAuditLog({
+      userId: adminUser.id,
+      action: 'INTERNSHIP_ATTESTATION_GENERATED' as any,
+      resource: 'INTERNSHIP_ATTESTATION',
+      resourceId: attestation.id,
+      newValue: { 
+          code: attestation.code,
+          internshipRequestId: id,
+          userId: internship.userId,
+          stageScore: parseFloat(stageScore || "100")
+      },
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
     return NextResponse.json({

@@ -19,16 +19,32 @@ const InternshipSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // ✅ RATE LIMITING - 3 candidatures maximum par heure
+    // ✅ RATE LIMITING
     const rateLimit = await applyRateLimit(request, 'internship');
     if (!rateLimit.allowed && rateLimit.response) {
-      const ip = request.headers.get('x-forwarded-for') || 'unknown';
-      console.warn(`[SECURITY] Rate limit exceeded for internship application from IP: ${ip}`);
       return rateLimit.response;
     }
 
-    const body = await request.json();
-    const parseResult = InternshipSchema.safeParse(body);
+    const contentType = request.headers.get('content-type') || '';
+    let data: any = {};
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      data = {
+        fullName: formData.get('fullName'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        position: formData.get('position'),
+        university: formData.get('university'),
+        level: formData.get('level'),
+        cvUrl: formData.get('cvUrl'), // Base64 or we handle file here
+        message: formData.get('message'),
+      };
+    } else {
+      data = await request.json();
+    }
+
+    const parseResult = InternshipSchema.safeParse(data);
 
     if (!parseResult.success) {
       return NextResponse.json(
@@ -39,7 +55,6 @@ export async function POST(request: NextRequest) {
 
     const { fullName, email, phone, university, level, position, cvUrl, message } = parseResult.data;
 
-    // ✅ SANITIZATION
     const sanitizedEmail = sanitizeInput(email).toLowerCase();
     const sanitizedName = sanitizeInput(fullName);
 
@@ -57,12 +72,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Envoi de l'email de confirmation
     await emailService.sendInternshipConfirmation(sanitizedEmail, sanitizedName);
 
     return NextResponse.json(internshipRequest, { status: 201 });
   } catch (error) {
-    console.error(error);
+    console.error("[INTERNSHIP_POST_ERROR]", error);
     return NextResponse.json({ message: "Erreur lors de la soumission de la demande" }, { status: 500 });
   }
 }

@@ -1,10 +1,11 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import * as XLSX from "xlsx";
 
 export async function POST(request: NextRequest) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 

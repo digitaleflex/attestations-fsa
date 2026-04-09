@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
@@ -24,13 +26,14 @@ export async function GET() {
   }
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const { id, status } = await req.json();
+    const { id, status } = await request.json();
 
     if (!id || !status) {
       return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
@@ -84,6 +87,21 @@ export async function PATCH(req: Request) {
               data: attUpdateData
           });
       }
+
+      // 🛡️ Audit Log
+      await createAuditLog({
+          userId: adminUser.id,
+          action: 'CORRECTION_APPROVED',
+          resource: 'CORRECTION_REQUEST',
+          resourceId: id,
+          newValue: { 
+              field: correction.field, 
+              oldValue: correction.oldValue,
+              newValue: correction.newValue,
+              userId: correction.userId 
+          },
+          ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+      });
     }
 
     // 4. Notification pour l'utilisateur
@@ -100,6 +118,21 @@ export async function PATCH(req: Request) {
             field: correction.field
         }
     });
+
+    // 🛡️ Audit Log for rejection
+    if (status === "REJECTED") {
+        await createAuditLog({
+            userId: adminUser.id,
+            action: 'CORRECTION_REJECTED',
+            resource: 'CORRECTION_REQUEST',
+            resourceId: id,
+            newValue: { 
+                field: correction.field,
+                userId: correction.userId 
+            },
+            ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+        });
+    }
 
     return NextResponse.json({ success: true, data: updatedRequest });
   } catch (error) {

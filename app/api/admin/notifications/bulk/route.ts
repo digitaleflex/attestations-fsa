@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { emailService } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+  }
+
+  // 🛡️ Rate limiting - Protection contre spam notifications
+  const rateLimit = await applyRateLimit(request, 'adminNotifications');
+  if (!rateLimit.allowed && rateLimit.response) {
+    return rateLimit.response;
   }
 
   try {

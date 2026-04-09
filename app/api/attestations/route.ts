@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
-import { isAdminAuthenticated } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
@@ -34,7 +34,8 @@ const AttestationSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
   } catch (authError) {
@@ -87,7 +88,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAdminAuthenticated())) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {

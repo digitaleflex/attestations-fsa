@@ -1,11 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { createAuditLog } from '@/lib/audit';
+import { applyRateLimit } from '@/lib/rate-limit';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
@@ -36,9 +38,15 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const adminUser = await getCurrentUser(request);
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
+    }
+
+    // 🛡️ Rate limiting - Protection contre modifications excessives
+    const rateLimit = await applyRateLimit(request, 'adminSettings');
+    if (!rateLimit.allowed && rateLimit.response) {
+      return rateLimit.response;
     }
 
     const body = await request.json();

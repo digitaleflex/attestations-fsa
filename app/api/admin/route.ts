@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 
 // Schéma de validation pour la modification du profil admin
@@ -18,18 +18,14 @@ const AdminProfileSchema = z.object({
 });
 
 // GET /api/admin - Récupérer le profil de l'admin connecté
-export async function GET() {
-  if (!await isAdminAuthenticated()) {
-    return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
-  }
-
-  const user = await getCurrentUser();
-  if (!user) {
+export async function GET(request: Request) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
   }
 
   const admin = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { id: adminUser.id },
     select: {
       id: true,
       name: true,
@@ -47,12 +43,8 @@ export async function GET() {
 
 // PATCH /api/admin - Mettre à jour le profil de l'admin
 export async function PATCH(request: Request) {
-  if (!await isAdminAuthenticated()) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
-
-  const user = await getCurrentUser();
-  if (!user) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
@@ -66,7 +58,7 @@ export async function PATCH(request: Request) {
 
   // On récupère les infos complètes (incluant le password pour comparaison)
   const currentUser = await prisma.user.findUnique({
-    where: { id: user.id }
+    where: { id: adminUser.id }
   });
 
   if (!currentUser) return NextResponse.json({ message: 'Admin introuvable' }, { status: 404 });

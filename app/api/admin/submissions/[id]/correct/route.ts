@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
 import { emailService } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
+import { createAuditLog } from '@/lib/audit';
+import { pusherServer } from '@/lib/pusher';
 
 // POST /api/admin/submissions/[id]/correct - Corriger une soumission
 export async function POST(
@@ -11,15 +13,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!await isAdminAuthenticated()) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: 'Non autorisé - Admin requis' }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await request.json();
-    const { part2Score, part3Score } = body;
-
-    const admin = await getCurrentUser();
+    const { part2Score, part3Score, internshipScore = 0 } = body;
 
     // Récupérer la soumission avec l'examen
     const submission = await prisma.examSession.findUnique({
@@ -49,29 +50,66 @@ export async function POST(
       throw new ApiErrorImpl('VALIDATION', `Le score Partie 3 doit être entre 0 et ${exam.part3Points || 40}`);
     }
 
-    // Calculer le score total
+    // Calculer le score total de l'examen
     const qcmScore = submission.scorePart1 || 0;
-    const totalScore = qcmScore + part2Score + part3Score;
+    const examTotalPoints = qcmScore + part2Score + part3Score;
     const maxPoints = exam.totalPoints || 100;
-    const percentage = Math.round((totalScore / maxPoints) * 100);
+    
+    // Conversion sur 100 pour la logique de réussite
+    const examPercentage = (examTotalPoints / maxPoints) * 100;
+    
+    // Calcul de la note finale combinée (Évaluation Global = [Note Exam % + Note Stage %] / 2)
+    // On suppose ici que internshipScore est fourni sur 100 (ou on le normalise s'il est sur 20)
+    // Si l'utilisateur saisit sur 20, on multiplie par 5.
+    const normalizedInternshipScore = internshipScore <= 20 ? internshipScore * 5 : internshipScore;
+    
+    // Pour un examen blanc, la note finale est uniquement la note de l'examen.
+    // Pour un examen officiel, c'est la moyenne (Exam + Stage) / 2.
+    const finalPercentage = submission.exam.type === 'MOCK' 
+      ? examPercentage 
+      : (examPercentage + normalizedInternshipScore) / 2;
+    
     const passingThreshold = exam.passingScore || 65;
-    const isPassing = percentage >= passingThreshold;
+    const isPassing = finalPercentage >= passingThreshold;
 
     // Mettre à jour la soumission
     const updatedSubmission = await prisma.examSession.update({
       where: { id },
       data: {
         status: 'GRADED',
-        score: totalScore,
-        totalScore: totalScore,
+        score: examTotalPoints,
+        totalScore: examTotalPoints,
+        internshipScore: normalizedInternshipScore,
+        finalScore: finalPercentage,
         gradedAt: new Date(),
         scorePart2: part2Score,
         scorePart3: part3Score,
-        gradedBy: admin?.id
+        gradedBy: adminUser?.id
       },
       include: {
         candidate: true,
         exam: true,
+      }
+    });
+    
+    // Journal d'audit
+    const isNewGrading = submission.status !== 'GRADED';
+    await createAuditLog({
+      userId: adminUser.id,
+      action: isNewGrading ? "GRADE_EXAM" : "UPDATE_GRADE",
+      resource: "ExamSession",
+      resourceId: id,
+      oldValue: isNewGrading ? null : {
+        score: submission.score,
+        internshipScore: submission.internshipScore,
+        finalScore: submission.finalScore,
+        status: submission.status
+      },
+      newValue: {
+        score: updatedSubmission.score,
+        internshipScore: updatedSubmission.internshipScore,
+        finalScore: updatedSubmission.finalScore,
+        status: updatedSubmission.status
       }
     });
 
@@ -114,11 +152,12 @@ export async function POST(
             userId: submission.userId, // ✅ Lie à l'utilisateur si possible
             instructor: 'Système automatique',
             issuingCompany: 'Ferme St André',
-            certificationScore: percentage,
-            certificationMention: percentage >= 90 ? 'EXCELLENCE' :
-                                 percentage >= 80 ? 'TRES_BIEN' :
-                                 percentage >= 70 ? 'BIEN' :
-                                 percentage >= 65 ? 'ASSEZ_BIEN' : 'PASSABLE',
+            certificationScore: finalPercentage,
+            stageScore: normalizedInternshipScore,
+            certificationMention: finalPercentage >= 90 ? 'EXCELLENCE' :
+                                 finalPercentage >= 80 ? 'TRES_BIEN' :
+                                 finalPercentage >= 70 ? 'BIEN' :
+                                 finalPercentage >= 65 ? 'ASSEZ_BIEN' : 'PASSABLE',
           }
         });
 
@@ -133,7 +172,7 @@ export async function POST(
         submission.candidate.email,
         submission.candidate.name || "",
         submission.exam.title,
-        totalScore,
+        finalPercentage,
         isPassing,
         submission.exam.type as any
       ).catch(err => console.error("[EMAIL_NOTIF_ERROR]", err));
@@ -150,10 +189,17 @@ export async function POST(
               : 'Correction disponible',
             message: isPassing
               ? (isMock 
-                  ? `Votre auto-évaluation "${submission.exam.title}" a été corrigée. Score: ${totalScore}/${maxPoints}.`
-                  : `Félicitations ! Votre examen "${submission.exam.title}" a été corrigé (${totalScore}/${maxPoints}).${isPassing && submission.exam.type !== 'MOCK' ? ' Votre attestation est prête.' : ''}`)
-              : `La correction de "${submission.exam.title}" est terminée. Score: ${totalScore}/${maxPoints}.`,
+                  ? `Votre auto-évaluation "${submission.exam.title}" a été corrigée. Score: ${examTotalPoints}/${maxPoints}.`
+                  : `Félicitations ! Votre examen "${submission.exam.title}" a été corrigé avec une moyenne globale de ${finalPercentage.toFixed(2)}/100.${isPassing && submission.exam.type !== 'MOCK' ? ' Votre attestation est prête.' : ''}`)
+              : `La correction de "${submission.exam.title}" est terminée. Moyenne: ${finalPercentage.toFixed(2)}/100.`,
             link: isMock ? '/transcript' : (isPassing ? '/attestations' : '/results'),
+        });
+
+        // Déclenchement Pusher
+        await pusherServer.trigger(`user-${submission.userId}`, "notification", {
+            title: isPassing ? "Résultat disponible ! 🎉" : "Correction terminée",
+            message: `Votre copie pour "${submission.exam.title}" a été corrigée.`,
+            score: Math.round(finalPercentage)
         });
     }
 

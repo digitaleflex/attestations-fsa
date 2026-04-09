@@ -8,7 +8,7 @@ import { join } from 'path'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { handleApiError, ApiErrorImpl } from '@/lib/error-handler'
-import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth'
+import { getAdminUser } from '@/lib/auth'
 
 // ============================================================================
 // CONFIGURATION DE SÉCURITÉ
@@ -84,15 +84,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ Authentification unifiée avec Better Auth
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }
       )
     }
 
-    const adminUser = await getCurrentUser()
     const { id } = await params
 
     // ✅ Utilise examSession (nouveau nom du modèle)
@@ -131,16 +130,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ Authentification unifiée avec Better Auth
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }
       )
     }
 
-    const adminUser = await getCurrentUser()
-    const adminId = (adminUser as { id?: string })?.id
+    const adminId = adminUser.id;
 
     const { id } = await params
 
@@ -271,8 +269,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ Authentification unifiée avec Better Auth
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: 'Non autorisé - Authentification admin requise' },
         { status: 401 }

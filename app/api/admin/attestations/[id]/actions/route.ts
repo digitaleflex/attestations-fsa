@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { getAdminUser } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
 
@@ -9,9 +9,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const adminUser = await getCurrentUser(request);
+  const adminUser = await getAdminUser(request);
 
-  if (!(await isAdminAuthenticated())) {
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 

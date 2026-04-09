@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated, getCurrentUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import { z } from "zod";
 import { createAuditLog } from "@/lib/audit";
 
@@ -15,10 +15,10 @@ const ResourceSchema = z.object({
 });
 
 // GET /api/admin/resources - Liste des ressources
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const isAdmin = await isAdminAuthenticated();
-    if (!isAdmin) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const resources = await prisma.resource.findMany({
       orderBy: { createdAt: "desc" },
@@ -34,8 +34,8 @@ export async function GET() {
 // POST /api/admin/resources - Créer une ressource
 export async function POST(request: Request) {
   try {
-    const adminUser = await getCurrentUser(request);
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
@@ -76,8 +76,8 @@ export async function POST(request: Request) {
 // DELETE /api/admin/resources?id=...
 export async function DELETE(request: Request) {
   try {
-    const adminUser = await getCurrentUser(request);
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
         return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
@@ -112,8 +112,8 @@ export async function DELETE(request: Request) {
 // PATCH /api/admin/resources?id=...
 export async function PATCH(request: Request) {
   try {
-    const adminUser = await getCurrentUser(request);
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
         return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 

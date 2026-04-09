@@ -3,11 +3,15 @@
 // Supports 50+ concurrent candidates safely
 // ✅ ANTI-CHEAT: Time-based detection and answer pattern analysis
 import { NextResponse } from 'next/server';
+import { checkBotId } from 'botid/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { applyRateLimitByUser } from '@/lib/rate-limit';
 import { analyzeAnswerPattern, logCheatingDetection } from '@/lib/anti-cheat';
 import { createAuditLog } from '@/lib/audit';
+import { pusherServer } from '@/lib/pusher';
+
+
 
 // In-memory idempotency cache (key -> timestamp)
 // Prevents duplicate processing of the same request
@@ -28,6 +32,21 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // ✅ Vercel BotID: Check if the request is from a legitimate user
+  try {
+    const botResult = await checkBotId();
+    if (botResult.isBot) {
+      console.warn('[BOT_DETECTION] Bot detected during exam submission');
+      return NextResponse.json(
+        { error: 'Activité suspecte détectée. Veuillez rafraîchir la page.' }, 
+        { status: 403 }
+      );
+    }
+  } catch (e) {
+    // Fail-open strategy if checkBotId fails or is not configured
+    console.error('[BOTID_ERROR]', e);
+  }
+
   try {
     const user = await getCurrentUser(request);
     if (!user) {
@@ -251,6 +270,14 @@ export async function POST(
         if (now - val.timestamp > IDEMPOTENCY_TTL) idempotencyCache.delete(key);
       }
     }
+
+    // ✅ Déclenchement Pusher pour l'admin
+    await pusherServer.trigger('admin-updates', 'new-submission', {
+        candidateName: user.name,
+        examId: examId,
+        status: finalStatus,
+        timestamp: new Date().toISOString()
+    });
 
     return NextResponse.json(response, { status: 201 });
 

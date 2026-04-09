@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { isAdminAuthenticated, getCurrentUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 
 const ExamSchema = z.object({
   name: z.string().min(1),
@@ -56,9 +56,8 @@ const ExamSchema = z.object({
 // POST /api/admin/exams - create a new exam
 export async function POST(request: Request) {
   try {
-    // 🔒 1. Vérifie si l'utilisateur est un administrateur
-    const isAdmin = await isAdminAuthenticated();
-    if (!isAdmin) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Admin requis" },
         { status: 401 },
@@ -182,7 +181,6 @@ export async function POST(request: Request) {
     });
 
     // 🛡️ Audit Log
-    const adminUser = await getCurrentUser(request);
     if (adminUser?.id) {
       await prisma.auditLog.create({
         data: {
@@ -216,10 +214,10 @@ export async function POST(request: Request) {
 }
 
 // GET /api/admin/exams - List exams
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const isAdmin = await isAdminAuthenticated();
-    if (!isAdmin) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 

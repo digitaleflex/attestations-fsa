@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 
 // GET /api/admin/submissions - Récupérer toutes les soumissions
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Admin requis" },
         { status: 401 },
@@ -31,7 +32,7 @@ export async function GET() {
         },
       },
       orderBy: { startedAt: "desc" },
-    })) as Array<{ status: string; score: number | null; type: string }>;
+    })) as Array<{ status: string; score: number | null; finalScore: number | null; type: string }>;
 
     // Statistiques
     const stats = {
@@ -39,9 +40,9 @@ export async function GET() {
       pendingReview: submissions.filter((s) => s.status === "PENDING_REVIEW")
         .length,
       inProgress: submissions.filter((s) => s.status === "IN_PROGRESS").length,
-      completed: submissions.filter((s) => s.status === "COMPLETED").length,
+      completed: submissions.filter((s) => s.status === "GRADED").length,
       passed: submissions.filter(
-        (s) => s.status === "COMPLETED" && (s.score || 0) >= 60,
+        (s) => s.status === "GRADED" && (s.finalScore || s.score || 0) >= 65,
       ).length,
     };
 

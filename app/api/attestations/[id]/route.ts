@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 import { createNotification } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
@@ -38,9 +38,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser(request);
-  const isAdmin = await isAdminAuthenticated(request);
-  
-  if (!user && !isAdmin) {
+  const adminUser = await getAdminUser(request);
+
+  if (!user && !adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
@@ -58,7 +58,7 @@ export async function GET(
     }
 
     // Sécurité: Un simple utilisateur ne peut voir que SA propre attestation
-    if (!isAdmin && attestation.userId !== user?.id) {
+    if (!adminUser && attestation.userId !== user?.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
@@ -74,9 +74,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const adminUser = await getCurrentUser(request);
+  const adminUser = await getAdminUser(request);
 
-  if (!(await isAdminAuthenticated())) {
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
@@ -173,9 +173,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const adminUser = await getCurrentUser(request);
+  const adminUser = await getAdminUser(request);
 
-  if (!(await isAdminAuthenticated())) {
+  if (!adminUser) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 

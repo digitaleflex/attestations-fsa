@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated, getCurrentUser } from '@/lib/auth';
+import { getAdminUser, getCurrentUser } from '@/lib/auth';
 import { customAlphabet } from 'nanoid';
 import { emailService } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
@@ -13,14 +13,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await isAdminAuthenticated())) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         { error: "Non autorisé - Authentification admin requise" },
         { status: 401 }
       );
     }
 
-    const adminUser = await getCurrentUser();
+    const currentUser = await getCurrentUser(request);
 
     const { id } = await params; // Session ID
     const body = await request.json();
@@ -148,7 +149,7 @@ export async function POST(
 
     // ✅ FIX: Logger l'action de notation pour audit
     console.log(
-      `[AUDIT] Note enregistrée par admin ${(adminUser as { email?: string })?.email || 'unknown'} | ` +
+      `[AUDIT] Note enregistrée par admin ${(currentUser as { email?: string })?.email || 'unknown'} | ` +
       `Session: ${id} | Score: ${updatedSession.totalScore}/20 | ` +
       `Attestation: ${attestationCreated ? 'CRÉÉE (' + attestationCode + ')' : 'NON CRÉÉE'}`
     );
