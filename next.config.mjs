@@ -1,3 +1,5 @@
+import { withBotId } from 'botid/next/config';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {},
@@ -12,9 +14,15 @@ const nextConfig = {
     }
     return config;
   },
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' },
+    ],
+  },
   // Exclude global-error from static generation
   // This page is rendered dynamically at runtime only
   staticPageGenerationTimeout: 120,
 };
 
-export default nextConfig;
+export default withBotId(nextConfig);

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "./providers";
 import * as React from "react";
 import { TopLoader } from "@/components/TopLoader";
+import { BotIdClient } from "botid/client";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="fr" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#16a34a" />
+        <BotIdClient protect={[{ path: "/api/exams/*/submit", method: "POST" }]} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
