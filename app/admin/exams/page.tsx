@@ -278,69 +278,126 @@ export default function AdminExamsPage() {
           })}
         </div>
         ) : (
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
-             <table className="w-full text-left border-collapse">
-               <thead>
-                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Épreuve</th>
-                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Statut</th>
-                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Points</th>
-                   <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-slate-50">
-                 {filteredExams.map((exam) => {
-                   const config = statusConfig[exam.status as keyof typeof statusConfig];
-                   return (
-                     <tr key={exam.id} className="hover:bg-slate-50/30 transition-colors group">
-                       <td className="px-8 py-5">
-                          <div className="flex items-center gap-4">
-                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${config.color} border shadow-sm`}>
-                                <config.icon className="w-5 h-5" />
-                             </div>
-                             <div>
-                                <p className="font-black text-slate-900 leading-tight">{exam.title}</p>
-                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider italic flex items-center gap-2">
-                                   <Users className="w-3 h-3" /> {exam._count.submissions} candidats {exam.session && `• SESSION ${exam.session}`}
-                                   <Badge variant="outline" className={`${exam.type === 'MOCK' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'} p-0 px-1.5 text-[8px] h-4 font-black`}>
-                                     {exam.type === 'MOCK' ? 'BLANC' : 'OFFICIEL'}
-                                   </Badge>
-                                </p>
-                             </div>
-                          </div>
-                       </td>
-                       <td className="px-8 py-5">
-                         <div className="flex items-center gap-2">
-                           <div className={`h-2 w-2 rounded-full ${config.dot}`} />
-                           <span className="text-xs font-bold text-slate-600">{config.label}</span>
+          <>
+            {/* Table View (Desktop) */}
+            <div className="hidden md:block bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+               <table className="w-full text-left border-collapse">
+                 <thead>
+                   <tr className="bg-slate-50/50 border-b border-slate-100">
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Épreuve</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Statut</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Points</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-50">
+                   {filteredExams.map((exam) => {
+                     const config = statusConfig[exam.status as keyof typeof statusConfig];
+                     return (
+                       <tr key={exam.id} className="hover:bg-slate-50/30 transition-colors group">
+                         <td className="px-8 py-5">
+                            <div className="flex items-center gap-4">
+                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${config.color} border shadow-sm`}>
+                                  <config.icon className="w-5 h-5" />
+                               </div>
+                               <div>
+                                  <p className="font-black text-slate-900 leading-tight">{exam.title}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider italic flex items-center gap-2">
+                                     <Users className="w-3 h-3" /> {exam._count.submissions} candidats {exam.session && `• SESSION ${exam.session}`}
+                                     <Badge variant="outline" className={`${exam.type === 'MOCK' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'} p-0 px-1.5 text-[8px] h-4 font-black`}>
+                                       {exam.type === 'MOCK' ? 'BLANC' : 'OFFICIEL'}
+                                     </Badge>
+                                  </p>
+                               </div>
+                            </div>
+                         </td>
+                         <td className="px-8 py-5">
+                           <div className="flex items-center gap-2">
+                             <div className={`h-2 w-2 rounded-full ${config.dot}`} />
+                             <span className="text-xs font-bold text-slate-600">{config.label}</span>
+                           </div>
+                         </td>
+                         <td className="px-8 py-5">
+                           <span className="text-sm font-black text-slate-800">{exam.totalPoints} pts</span>
+                         </td>
+                         <td className="px-8 py-5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                               <Link href={`/admin/exams/${exam.id}/edit`}>
+                                  <Button size="sm" variant="ghost" className="rounded-lg h-9 w-9 p-0 hover:bg-white hover:shadow-sm">
+                                     <Edit className="w-4 h-4 text-slate-400" />
+                                  </Button>
+                               </Link>
+                               <Button size="sm" variant="ghost" className="rounded-lg h-9 w-9 p-0 hover:bg-white hover:shadow-sm text-rose-500" onClick={() => setDeleteId(exam.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                               <Link href={`/admin/exams/${exam.id}/edit`}>
+                                  <Button size="sm" variant="outline" className="rounded-xl h-9 px-4 font-bold bg-slate-50 hover:bg-blue-600 hover:text-white transition-all">
+                                     Gérer <ChevronRight className="w-4 h-4 ml-1" />
+                                  </Button>
+                               </Link>
+                            </div>
+                         </td>
+                       </tr>
+                     )
+                   })}
+                 </tbody>
+               </table>
+            </div>
+
+            {/* Mobile Card View for List Mode */}
+            <div className="md:hidden space-y-4">
+               {filteredExams.map((exam) => {
+                 const config = statusConfig[exam.status as keyof typeof statusConfig];
+                 return (
+                   <Card key={exam.id} className="p-5 bg-white border-slate-100 rounded-2xl shadow-sm">
+                      <div className="flex items-start justify-between mb-4">
+                         <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${config.color} border shadow-sm`}>
+                               <config.icon className="w-5 h-5" />
+                            </div>
+                            <div className="min-w-0">
+                               <h3 className="font-black text-slate-900 truncate pr-4">{exam.title}</h3>
+                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">
+                                 {exam.session || "Session Libre"} • {exam.type === 'MOCK' ? 'Blanc' : 'Officiel'}
+                               </p>
+                            </div>
                          </div>
-                       </td>
-                       <td className="px-8 py-5">
-                         <span className="text-sm font-black text-slate-800">{exam.totalPoints} pts</span>
-                       </td>
-                       <td className="px-8 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                             <Link href={`/admin/exams/${exam.id}/edit`}>
-                                <Button size="sm" variant="ghost" className="rounded-lg h-9 w-9 p-0 hover:bg-white hover:shadow-sm">
-                                   <Edit className="w-4 h-4 text-slate-400" />
-                                </Button>
-                             </Link>
-                             <Button size="sm" variant="ghost" className="rounded-lg h-9 w-9 p-0 hover:bg-white hover:shadow-sm text-rose-500" onClick={() => setDeleteId(exam.id)}>
-                                <Trash2 className="w-4 h-4" />
-                             </Button>
-                             <Link href={`/admin/exams/${exam.id}/edit`}>
-                                <Button size="sm" variant="outline" className="rounded-xl h-9 px-4 font-bold bg-slate-50 hover:bg-blue-600 hover:text-white transition-all">
-                                   Gérer <ChevronRight className="w-4 h-4 ml-1" />
-                                </Button>
-                             </Link>
-                          </div>
-                       </td>
-                     </tr>
-                   )
-                 })}
-               </tbody>
-             </table>
-          </div>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
+                                  <MoreVertical className="w-4 h-4" />
+                               </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 p-2 rounded-xl">
+                               <DropdownMenuItem asChild>
+                                 <Link href={`/admin/exams/${exam.id}/edit`} className="flex gap-2">
+                                  <Edit className="w-4 h-4" /> Éditer
+                                 </Link>
+                               </DropdownMenuItem>
+                               <DropdownMenuItem asChild>
+                                 <Link href={`/admin/submissions?examId=${exam.id}`} className="flex gap-2">
+                                  <TrendingUp className="w-4 h-4" /> Résultats
+                                 </Link>
+                               </DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => setDeleteId(exam.id)} className="text-rose-600 gap-2">
+                                 <Trash2 className="w-4 h-4" /> Supprimer
+                               </DropdownMenuItem>
+                            </DropdownMenuContent>
+                         </DropdownMenu>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                         <div className="flex items-center gap-2">
+                            <div className={`h-2 w-2 rounded-full ${config.dot}`} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">{config.label}</span>
+                         </div>
+                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{exam.totalPoints} Points</span>
+                      </div>
+                   </Card>
+                 )
+               })}
+            </div>
+          </>
         )
       )}
 

@@ -27,7 +27,10 @@ import {
   Bell,
   Search,
   Activity,
-  Layers
+  Layers,
+  ShieldCheck,
+  ClipboardCheck,
+  Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
@@ -124,6 +127,16 @@ export default function AdminDashboardPage() {
     queryFn: async () => {
       const reports = await apiFetch("/api/signalement");
       return Array.isArray(reports) ? reports.filter((r: any) => r.status === "NOUVEAU").length : 0;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // 6. Fetch pending portfolios
+  const { data: pendingPortfoliosCount } = useQuery({
+    queryKey: ["pending-portfolios-count"],
+    queryFn: async () => {
+      const users = await apiFetch("/api/users") as any;
+      return Array.isArray(users) ? users.filter((u: any) => u.portfolioStatus === "PENDING_VALIDATION").length : 0;
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -265,11 +278,68 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Quick Access / Security */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Link href="/admin/logs">
+            <Card className="p-4 border-none shadow-premium bg-slate-900 text-white hover:bg-slate-800 transition-all cursor-pointer group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-white/50">Sécurité</p>
+                    <p className="text-sm font-bold">Journal d'Audit</p>
+                  </div>
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-white/30 group-hover:text-white transition-all transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              </div>
+            </Card>
+          </Link>
+          
+          <Link href="/admin/portfolios">
+            <Card className="p-4 border-none shadow-premium bg-white hover:bg-slate-50 transition-all cursor-pointer group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                    <Trophy className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Certification</p>
+                    <p className="text-sm font-bold text-slate-900">Validation Portfolios</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                   {(pendingPortfoliosCount || 0) > 0 && <Badge className="bg-rose-500 text-white border-none text-[8px] px-1.5 h-4 flex items-center justify-center">{pendingPortfoliosCount}</Badge>}
+                   <ArrowUpRight className="w-4 h-4 text-slate-200 group-hover:text-purple-600 transition-all transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                </div>
+              </div>
+            </Card>
+          </Link>
+          
+          <Link href="/admin/submissions">
+            <Card className="p-4 border-none shadow-premium bg-white hover:bg-slate-50 transition-all cursor-pointer group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <ClipboardCheck className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Pédagogique</p>
+                    <p className="text-sm font-bold text-slate-900">Correction des Copies</p>
+                  </div>
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-slate-200 group-hover:text-emerald-600 transition-all transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              </div>
+            </Card>
+          </Link>
+      </div>
+
       {/* Main Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           { title: "Inscriptions", val: usersStats?.total || 0, icon: UserPlus, color: "bg-blue-500", shadow: "shadow-blue-200" },
-          { title: "Attestations", val: stats?.total || 0, icon: FileText, color: "bg-emerald-500", shadow: "shadow-emerald-200" },
+          { title: "Portfolios", val: pendingPortfoliosCount || 0, icon: Trophy, color: "bg-purple-500", shadow: "shadow-purple-200" },
           { title: "Validations", val: stats?.validated || 0, icon: CheckCircle, color: "bg-amber-500", shadow: "shadow-amber-200" },
           { title: "Signalements", val: newReports || 0, icon: AlertCircle, color: "bg-rose-500", shadow: "shadow-rose-200" },
         ].map((stat) => (

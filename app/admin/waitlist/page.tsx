@@ -214,120 +214,170 @@ export default function WaitlistAdminPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          {loading ? (
-             <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
-                <p className="font-black text-slate-400 uppercase text-[10px] tracking-widest">Chargement des données...</p>
-             </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-200">
-                    <Users className="w-8 h-8" />
+        {/* Vue Bureau (Tableau) */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left">
+              <thead>
+              <tr className="bg-slate-50/50 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+                  <th className="px-8 py-4">Utilisateur</th>
+                  <th className="px-8 py-4">Statut</th>
+                  <th className="px-8 py-4">Détails</th>
+                  <th className="px-8 py-4">Date</th>
+                  <th className="px-8 py-4 text-right">Actions</th>
+              </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+              {filtered.map((entry) => (
+                  <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-8 py-6">
+                      <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-black shadow-sm group-hover:scale-105 transition-transform uppercase border border-slate-200">
+                              {entry.email.charAt(0)}
+                          </div>
+                          <div className="flex flex-col">
+                              <span className="font-black text-slate-900 tracking-tight">{entry.name || "Candidat Anonyme"}</span>
+                              <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">{entry.email}</span>
+                          </div>
+                      </div>
+                  </td>
+                  <td className="px-8 py-6">
+                      <Badge className={cn(
+                      "font-black text-[10px] uppercase border-none px-3 py-1 tracking-widest",
+                      entry.status === "PENDING" ? "bg-amber-100 text-amber-700 shadow-lg shadow-amber-100/50" :
+                      entry.status === "CONTACTED" ? "bg-blue-100 text-blue-700 shadow-lg shadow-blue-100/50" :
+                      entry.status === "CONVERTED" ? "bg-emerald-100 text-emerald-700 shadow-lg shadow-emerald-100/50" :
+                      "bg-slate-100 text-slate-500"
+                      )}>
+                      {entry.status === 'PENDING' ? 'En attente' : entry.status === 'CONTACTED' ? 'Contacté' : 'Converti'}
+                      </Badge>
+                  </td>
+                  <td className="px-8 py-6">
+                      <div className="flex flex-col max-w-[250px]">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                              <Filter className="w-3 h-3" /> Origine: {entry.source}
+                          </span>
+                          <span className="text-xs text-slate-600 font-medium line-clamp-2 italic">
+                              {entry.message ? `"${entry.message}"` : "-- Pas de message --"}
+                          </span>
+                      </div>
+                  </td>
+                  <td className="px-8 py-6">
+                      <div className="flex flex-col">
+                      <span className="text-sm font-black text-slate-700">{new Date(entry.createdAt).toLocaleDateString("fr-FR", { day: '2-digit', month: 'long' })}</span>
+                      <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1 uppercase tracking-widest">
+                          <Clock className="w-3 h-3" />
+                          {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      </div>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                      <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-md rounded-xl transition-all">
+                              <MoreVertical className="w-5 h-5" />
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-slate-100 shadow-2xl bg-white/95 backdrop-blur-xl">
+                          <div className="px-3 py-2 text-[10px] font-black uppercase text-slate-400 tracking-widest">Changer le statut</div>
+                          <DropdownMenuItem 
+                              className="rounded-xl font-bold text-xs flex gap-2 cursor-pointer h-10"
+                              onClick={() => updateStatus(entry.id, "CONTACTED")}
+                          >
+                              <Mail className="w-4 h-4 text-blue-500" />
+                              Marquer comme Contacté
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                              className="rounded-xl font-bold text-xs flex gap-2 cursor-pointer h-10"
+                              onClick={() => updateStatus(entry.id, "CONVERTED")}
+                          >
+                              <CheckCircle className="w-4 h-4 text-emerald-500" />
+                              Marquer comme Converti
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                              className="rounded-xl font-bold text-xs flex gap-2 cursor-pointer h-10"
+                              onClick={() => updateStatus(entry.id, "PENDING")}
+                          >
+                              <Clock className="w-4 h-4 text-amber-500" />
+                              Remettre en Attente
+                          </DropdownMenuItem>
+                          <div className="h-px bg-slate-50 my-1" />
+                          <DropdownMenuItem 
+                              className="rounded-xl font-bold text-xs flex gap-2 text-rose-600 cursor-pointer h-10"
+                              onClick={() => handleDelete(entry.id)}
+                          >
+                              <Trash2 className="w-4 h-4" />
+                              Supprimer le prospect
+                          </DropdownMenuItem>
+                      </DropdownMenuContent>
+                      </DropdownMenu>
+                  </td>
+                  </tr>
+              ))}
+              </tbody>
+          </table>
+        </div>
+
+        {/* Vue Mobile (Cartes) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filtered.map((entry) => (
+            <div key={entry.id} className="p-5 space-y-4 bg-white hover:bg-slate-50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black border border-slate-200 uppercase">
+                    {entry.email.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-black text-slate-900 tracking-tight truncate">{entry.name || "Anonyme"}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">{entry.email}</p>
+                  </div>
                 </div>
-                <p className="font-bold text-slate-400">Aucun résultat trouvé.</p>
+                <div className="shrink-0">
+                  <Badge className={cn(
+                    "font-black text-[9px] uppercase border-none px-2 py-0.5 tracking-widest",
+                    entry.status === "PENDING" ? "bg-amber-100 text-amber-700" :
+                    entry.status === "CONTACTED" ? "bg-blue-100 text-blue-700" :
+                    entry.status === "CONVERTED" ? "bg-emerald-100 text-emerald-700" :
+                    "bg-slate-100 text-slate-500"
+                  )}>
+                    {entry.status === 'PENDING' ? 'Attente' : entry.status === 'CONTACTED' ? 'Contact' : 'Converti'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                 <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <span className="flex items-center gap-1"><Filter className="w-3 h-3" /> {entry.source}</span>
+                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(entry.createdAt).toLocaleDateString()}</span>
+                 </div>
+                 {entry.message && (
+                   <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic line-clamp-2">
+                     "{entry.message}"
+                   </p>
+                 )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="rounded-lg font-bold gap-2 text-[10px] uppercase h-8 px-4">
+                      Actions <MoreVertical className="w-3.5 h-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-2xl">
+                    <DropdownMenuItem onClick={() => updateStatus(entry.id, "CONTACTED")} className="font-bold text-xs h-10 rounded-lg">
+                      <Mail className="w-4 h-4 mr-2 text-blue-500" /> Marquer Contacté
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateStatus(entry.id, "CONVERTED")} className="font-bold text-xs h-10 rounded-lg">
+                      <CheckCircle className="w-4 h-4 mr-2 text-emerald-500" /> Marquer Converti
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(entry.id)} className="font-bold text-xs h-10 rounded-lg text-rose-600">
+                      <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          ) : (
-            <table className="w-full text-left">
-                <thead>
-                <tr className="bg-slate-50/50 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
-                    <th className="px-8 py-4">Utilisateur</th>
-                    <th className="px-8 py-4">Statut</th>
-                    <th className="px-8 py-4">Détails</th>
-                    <th className="px-8 py-4">Date</th>
-                    <th className="px-8 py-4 text-right">Actions</th>
-                </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                {filtered.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-black shadow-sm group-hover:scale-105 transition-transform uppercase">
-                                {entry.email.charAt(0)}
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-black text-slate-900 tracking-tight">{entry.name || "Candidat Anonyme"}</span>
-                                <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">{entry.email}</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td className="px-8 py-6">
-                        <Badge className={cn(
-                        "font-black text-[10px] uppercase border-none px-3 py-1 tracking-widest",
-                        entry.status === "PENDING" ? "bg-amber-100 text-amber-700 shadow-lg shadow-amber-100/50" :
-                        entry.status === "CONTACTED" ? "bg-blue-100 text-blue-700 shadow-lg shadow-blue-100/50" :
-                        entry.status === "CONVERTED" ? "bg-emerald-100 text-emerald-700 shadow-lg shadow-emerald-100/50" :
-                        "bg-slate-100 text-slate-500"
-                        )}>
-                        {entry.status === 'PENDING' ? 'En attente' : entry.status === 'CONTACTED' ? 'Contacté' : 'Converti'}
-                        </Badge>
-                    </td>
-                    <td className="px-8 py-6">
-                        <div className="flex flex-col max-w-[250px]">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                <Filter className="w-3 h-3" /> Origine: {entry.source}
-                            </span>
-                            <span className="text-xs text-slate-600 font-medium line-clamp-2 italic">
-                                {entry.message ? `"${entry.message}"` : "-- Pas de message --"}
-                            </span>
-                        </div>
-                    </td>
-                    <td className="px-8 py-6">
-                        <div className="flex flex-col">
-                        <span className="text-sm font-black text-slate-700">{new Date(entry.createdAt).toLocaleDateString("fr-FR", { day: '2-digit', month: 'long' })}</span>
-                        <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1 uppercase tracking-widest">
-                            <Clock className="w-3 h-3" />
-                            {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        </div>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-md rounded-xl transition-all">
-                                <MoreVertical className="w-5 h-5" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-slate-100 shadow-2xl bg-white/95 backdrop-blur-xl">
-                            <div className="px-3 py-2 text-[10px] font-black uppercase text-slate-400 tracking-widest">Changer le statut</div>
-                            <DropdownMenuItem 
-                                className="rounded-xl font-bold text-xs flex gap-2 cursor-pointer h-10"
-                                onClick={() => updateStatus(entry.id, "CONTACTED")}
-                            >
-                                <Mail className="w-4 h-4 text-blue-500" />
-                                Marquer comme Contacté
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                className="rounded-xl font-bold text-xs flex gap-2 cursor-pointer h-10"
-                                onClick={() => updateStatus(entry.id, "CONVERTED")}
-                            >
-                                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                                Marquer comme Converti
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                className="rounded-xl font-bold text-xs flex gap-2 cursor-pointer h-10"
-                                onClick={() => updateStatus(entry.id, "PENDING")}
-                            >
-                                <Clock className="w-4 h-4 text-amber-500" />
-                                Remettre en Attente
-                            </DropdownMenuItem>
-                            <div className="h-px bg-slate-50 my-1" />
-                            <DropdownMenuItem 
-                                className="rounded-xl font-bold text-xs flex gap-2 text-rose-600 cursor-pointer h-10"
-                                onClick={() => handleDelete(entry.id)}
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                Supprimer le prospect
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-          )}
+          ))}
         </div>
       </Card>
       

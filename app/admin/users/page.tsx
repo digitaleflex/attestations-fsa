@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -391,14 +392,15 @@ export default function AdminUsersPage() {
         </div>
       </Card>
 
-      <Card className="bg-white">
+      {/* Vue Bureau (Tableau) */}
+      <Card className="bg-white hidden md:block">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nom</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Téléphone</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead>Rôle</TableHead>
                 <TableHead>Vérifié</TableHead>
                 <TableHead>Créé le</TableHead>
@@ -492,6 +494,75 @@ export default function AdminUsersPage() {
           </Table>
         </div>
       </Card>
+
+      {/* Vue Mobile (Cartes) */}
+      <div className="md:hidden space-y-4">
+        {loading ? (
+          <div className="text-center py-8">
+            <Loader2 className="animate-spin w-6 h-6 mx-auto text-slate-400" />
+            <p className="text-sm text-slate-500 mt-2">Chargement...</p>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-xl border border-slate-100 text-slate-500">
+            {search ? "Aucun utilisateur trouvé" : "Aucun utilisateur"}
+          </div>
+        ) : (
+          filteredUsers.map((u) => (
+            <Card key={u.id} className="p-4 bg-white shadow-sm border-slate-100 space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-slate-800">{u.name || "-"}</h3>
+                  <p className="text-sm text-slate-500">{u.email || "-"}</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => handleViewDetails(u)}>
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
+                    <Edit className="w-4 h-4 text-slate-600" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setDeleteId(u.id)} className="text-rose-600">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-50">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Rôle</p>
+                  <Badge variant="secondary" className="text-[10px] px-2 py-0">
+                    {u.role === "admin" ? "Admin" : "Élève"}
+                  </Badge>
+                </div>
+                <div className="space-y-1 text-right">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Statut</p>
+                  <div className="flex justify-end">
+                    <span
+                      className={`text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest ${
+                        u.status === "ACTIVE"
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                          : "bg-rose-50 text-rose-600 border border-rose-100"
+                      }`}
+                    >
+                      {u.status === "ACTIVE" ? "Actif" : "Bloqué"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-50">
+                 <div className="flex items-center gap-1">
+                   <Users className="w-3 h-3" />
+                   {u.phone || "Pas de tel"}
+                 </div>
+                 <div>
+                   {new Date(u.createdAt).toLocaleDateString("fr-FR")}
+                 </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
 
       <AlertDialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <AlertDialogContent className="max-w-2xl bg-slate-900 text-white border border-white/10 rounded-[2.5rem] shadow-2xl backdrop-blur-xl">

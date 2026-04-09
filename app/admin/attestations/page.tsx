@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -394,53 +395,63 @@ export default function AdminAttestationsPage() {
               {filteredAttestations.map((a) => {
                 const TypeIcon = getTypeIcon(a.type);
                 return (
-                  <div key={a.id} className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                      <TypeIcon className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-800 truncate">{a.fullName}</p>
-                      <p className="text-sm text-slate-500 truncate">{a.formation?.name || "-"} • {a.type === "FORMATION" ? "Formation" : a.type === "STAGE" ? "Stage" : "Certification"}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Badge className={getStatusBadgeColor(a.status)}>
-                        {getStatusLabel(a.status)}
-                      </Badge>
-                      <div className="flex items-center gap-2 text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                        <span className="text-slate-600">{a.code.slice(-8)}</span>
-                        <button
-                          onClick={() => handleCopyCode(a.code, a.id)}
-                          className="p-1 rounded hover:bg-slate-200 transition-colors"
-                        >
-                          {copiedId === a.id ? (
-                            <Check className="w-3 h-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="w-3 h-3 text-slate-400" />
-                          )}
-                        </button>
+                  <div key={a.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50 transition-colors border-b last:border-0">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                        <TypeIcon className="w-5 h-5 text-white" />
                       </div>
-                      <span className="text-sm text-slate-500 w-24 text-right">
-                        {isMounted && a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}
-                      </span>
-                      <div className="flex gap-1">
-                        <Link href={`/admin/attestations/${a.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-800 truncate">{a.fullName}</p>
+                        <p className="text-xs text-slate-500 truncate">
+                          {a.formation?.name || "-"} • <span className="uppercase font-bold">{a.type}</span>
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 md:gap-6">
+                      <div className="flex items-center gap-3">
+                        <Badge className={cn("text-[10px] font-bold px-2.5 py-0.5", getStatusBadgeColor(a.status))}>
+                          {getStatusLabel(a.status)}
+                        </Badge>
+                        <div className="flex items-center gap-2 text-xs font-mono bg-slate-100 px-2 py-1 rounded">
+                          <span className="text-slate-600">{a.code.slice(-8)}</span>
+                          <button
+                            onClick={() => handleCopyCode(a.code, a.id)}
+                            className="p-0.5 rounded hover:bg-slate-200 transition-colors"
+                          >
+                            {copiedId === a.id ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-slate-400" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline-block">
+                          {isMounted && a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}
+                        </span>
+                        <div className="flex gap-1">
+                          <Link href={`/admin/attestations/${a.id}`}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                          <Link href={`/admin/attestations/${a.id}/edit`}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteId(a.id)}
+                            className="text-rose-600 hover:text-rose-700 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </Button>
-                        </Link>
-                        <Link href={`/admin/attestations/${a.id}/edit`}>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteId(a.id)}
-                          className="text-rose-600 hover:text-rose-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

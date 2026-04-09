@@ -69,6 +69,7 @@ function SubmissionsList() {
 
   const getStatusBadgeStyle = (status: string) => {
     switch (status) {
+      case "GRADED":
       case "COMPLETED": return "bg-emerald-100 text-emerald-700 shadow-md shadow-emerald-100/50";
       case "IN_PROGRESS": return "bg-blue-100 text-blue-700 shadow-md shadow-blue-100/50";
       case "PENDING_REVIEW": return "bg-amber-100 text-amber-700 shadow-md shadow-amber-100/50 animate-pulse";
@@ -78,6 +79,7 @@ function SubmissionsList() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
+      case "GRADED":
       case "COMPLETED": return "Corrigé";
       case "IN_PROGRESS": return "En cours";
       case "PENDING_REVIEW": return "À corriger";
@@ -91,7 +93,7 @@ function SubmissionsList() {
       return;
     }
 
-    const headers = ["Candidat", "Email", "Examen", "Type", "Status", "Score", "Date"];
+    const headers = ["Candidat", "Email", "Examen", "Type", "Status", "Score Examen", "Note Stage", "Note Globale", "Date"];
     const csvContent = filteredSubmissions.map((sub: any) => [
       sub.candidate?.name || "N/A",
       sub.candidate?.email || "N/A",
@@ -99,6 +101,8 @@ function SubmissionsList() {
       sub.exam?.type || "N/A",
       sub.status,
       sub.score !== null ? `${sub.score}%` : "Non noté",
+      sub.internshipScore !== null ? `${sub.internshipScore}%` : "N/A",
+      sub.finalScore !== null ? `${sub.finalScore}%` : "N/A",
       sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("fr-FR") : "N/A"
     ].join(",")).join("\n");
 
@@ -247,7 +251,7 @@ function SubmissionsList() {
                     <SelectItem value="all" className="rounded-xl">Tous les Statuts</SelectItem>
                     <SelectItem value="PENDING_REVIEW" className="rounded-xl">À corriger</SelectItem>
                     <SelectItem value="IN_PROGRESS" className="rounded-xl">En cours</SelectItem>
-                    <SelectItem value="COMPLETED" className="rounded-xl">Corrigé</SelectItem>
+                    <SelectItem value="GRADED" className="rounded-xl">Corrigé</SelectItem>
                 </SelectContent>
                 </Select>
                 <Select value={examFilter} onValueChange={setExamFilter}>
@@ -307,13 +311,23 @@ function SubmissionsList() {
                   </div>
                   
                   <div className="flex flex-col items-center gap-4">
-                    {sub.status === "COMPLETED" ? (
-                       <div className="text-center bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-inner group-hover:bg-emerald-500 transition-colors">
-                          <p className="text-[9px] font-black uppercase text-emerald-600 group-hover:text-white transition-colors">Score</p>
-                          <p className="text-2xl font-black text-emerald-700 group-hover:text-white transition-colors">{sub.score}%</p>
+                    {sub.status === "GRADED" || sub.status === "COMPLETED" ? (
+                       <div className="flex flex-col gap-2">
+                          <div className="text-center bg-emerald-50 p-2 rounded-xl border border-emerald-100 shadow-inner group-hover:bg-emerald-500 transition-colors w-24">
+                              <p className="text-[8px] font-black uppercase text-emerald-600 group-hover:text-white transition-colors">Examen</p>
+                              <p className="text-sm font-black text-emerald-700 group-hover:text-white transition-colors">{sub.score}%</p>
+                          </div>
+                          <div className="text-center bg-blue-50 p-2 rounded-xl border border-blue-100 shadow-inner group-hover:bg-blue-600 transition-colors w-24">
+                              <p className="text-[8px] font-black uppercase text-blue-600 group-hover:text-white transition-colors">Stage</p>
+                              <p className="text-sm font-black text-blue-700 group-hover:text-white transition-colors">{sub.internshipScore}%</p>
+                          </div>
+                          <div className="text-center bg-indigo-600 p-2 rounded-xl border border-indigo-700 shadow-lg w-24">
+                              <p className="text-[8px] font-black uppercase text-indigo-100">Global</p>
+                              <p className="text-base font-black text-white">{Math.round(sub.finalScore)}%</p>
+                          </div>
                        </div>
                     ) : (
-                        <div className="w-16 h-16 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center group-hover:border-indigo-200 transition-colors">
+                        <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center group-hover:border-indigo-200 transition-colors">
                             <span className="text-[10px] font-black text-slate-300">N/A</span>
                         </div>
                     )}

@@ -21,6 +21,7 @@ import {
   HelpCircle,
   ArrowRight
 } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import CertificateTemplate from "@/components/CertificateTemplate";
@@ -257,8 +258,13 @@ export default function SettingsPage() {
                             className="bg-slate-50 border-none h-14 rounded-2xl font-medium px-5 flex-1 shadow-inner"
                             />
                             {formData.institutionLogo && (
-                                <div className="w-14 h-14 rounded-xl bg-slate-50 flex items-center justify-center p-1 shadow-inner border border-slate-100 flex-shrink-0">
-                                    <img src={formData.institutionLogo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                <div className="w-14 h-14 rounded-xl bg-slate-50 flex items-center justify-center p-1 shadow-inner border border-slate-100 flex-shrink-0 relative">
+                                    <Image 
+                                      src={formData.institutionLogo} 
+                                      alt="Logo" 
+                                      fill
+                                      className="object-contain p-1" 
+                                    />
                                 </div>
                             )}
                         </div>
@@ -315,8 +321,14 @@ export default function SettingsPage() {
                         className="bg-slate-50 border-none h-14 rounded-2xl px-6 shadow-inner"
                     />
                     {formData.signatureUrl && (
-                        <div className="mt-4 p-6 bg-slate-50 border-2 border-dashed border-slate-100 rounded-[2rem] flex items-center justify-center relative overflow-hidden group/sign">
-                             <img src={formData.signatureUrl} alt="Signature Preview" className="max-h-24 filter contrast-125" />
+                        <div className="mt-4 p-6 bg-slate-50 border-2 border-dashed border-slate-100 rounded-[2rem] flex items-center justify-center relative overflow-hidden group/sign min-h-[120px]">
+                             <Image 
+                               src={formData.signatureUrl} 
+                               alt="Signature Preview" 
+                               width={300}
+                               height={100}
+                               className="max-h-24 object-contain filter contrast-125" 
+                             />
                         </div>
                     )}
                 </div>
