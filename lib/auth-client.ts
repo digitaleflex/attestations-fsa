@@ -1,12 +1,17 @@
 import { createAuthClient } from "better-auth/react"
-import { adminClient, emailOTPClient } from "better-auth/client/plugins"
+import { adminClient, emailOTPClient, twoFactorClient } from "better-auth/client/plugins"
 
 export const authClient = createAuthClient({
     baseURL: process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"),
     plugins: [
         adminClient(),
-        emailOTPClient()
-    ]
+        emailOTPClient(),
+        twoFactorClient({
+            onTwoFactorRedirect() {
+                window.location.href = "/admin/2fa/verify";
+            },
+        }),
+    ],
 })
 
 // ✅ FIX: Define explicit types for auth methods to avoid 'any' in page components

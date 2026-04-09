@@ -184,6 +184,7 @@ export default function AttestationPreviewPage() {
                 <OfficialDocument 
                     id={`cert-template-${att.id}`}
                     isPrinting={isPrinting}
+                    hideStepper={isPrinting}
                     data={{
                         id: att.id,
                         code: att.code,

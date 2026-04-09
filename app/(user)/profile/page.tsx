@@ -36,17 +36,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, User, Mail, Phone, MapPin, Calendar, Lock, Save } from "lucide-react";
+import { AlertCircle, User, Mail, Phone, MapPin, Calendar, Lock, Save, Share2, Copy, ExternalLink, Globe, Check, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { CorrectionModal } from "@/components/CorrectionModal";
+
+import { Switch } from "@/components/ui/switch";
 
 export default function UserProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // États de Correction
   const [correctionField, setCorrectionField] = useState<{ field: string, label: string } | null>(null);
@@ -73,9 +77,11 @@ export default function UserProfilePage() {
     address: "",
     birthDate: "",
     birthPlace: "",
-    oldPassword: "",
     newPassword: "",
     confirmPassword: "",
+    oldPassword: "",
+    portfolioEnabled: false,
+    portfolioSlug: "",
   });
 
   useEffect(() => {
@@ -90,6 +96,8 @@ export default function UserProfilePage() {
         oldPassword: "",
         newPassword: "",
         confirmPassword: "",
+        portfolioEnabled: user.portfolioEnabled || false,
+        portfolioSlug: user.portfolioSlug || "",
       });
     }
   }, [user]);
@@ -139,9 +147,18 @@ export default function UserProfilePage() {
     } else {
       updateMutation.mutate({
         name: form.name, email: form.email, phone: form.phone,
-        address: form.address, birthDate: form.birthDate, birthPlace: form.birthPlace
+        address: form.address, birthDate: form.birthDate, birthPlace: form.birthPlace,
+        portfolioEnabled: form.portfolioEnabled
       });
     }
+  };
+
+  const copyLink = () => {
+    const url = `${window.location.protocol}//${window.location.host}/p/${form.portfolioSlug}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    toast.success("Lien copié !");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (isLoading) return <div className="p-8 text-center">Chargement...</div>;
@@ -256,6 +273,76 @@ export default function UserProfilePage() {
             <Lock className="w-5 h-5 text-slate-400" /> Vos accès sont protégés de bout en bout.
           </div>
         )}
+      </Card>
+      
+      {/* Section Portfolio */}
+      <Card className="p-8 bg-white shadow-md border-slate-100 overflow-hidden relative group">
+         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+         <div className="relative z-10">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <Globe className="w-6 h-6 text-emerald-600" /> Portfolio Professionnel Verifié
+              </h3>
+              <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Public</span>
+                 <Switch 
+                   checked={form.portfolioEnabled} 
+                   onCheckedChange={(checked) => {
+                     setForm({...form, portfolioEnabled: checked});
+                     updateMutation.mutate({ portfolioEnabled: checked });
+                   }} 
+                 />
+              </div>
+            </div>
+
+            {form.portfolioEnabled ? (
+              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                 <div className="p-6 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex flex-col md:flex-row items-center gap-6">
+                    <div className="flex-1">
+                       <p className="text-sm font-bold text-slate-700 mb-1 tracking-tight">Votre lien de vitrine professionnelle</p>
+                       <p className="text-xs text-slate-400 font-medium italic">Partagez ce lien sur votre CV ou LinkedIn pour prouver vos diplômes.</p>
+                       <div className="mt-4 flex items-center gap-2 bg-white p-2 rounded-xl border border-emerald-200 shadow-sm overflow-hidden">
+                          <code className="text-[10px] md:text-xs font-mono text-emerald-700 flex-1 truncate px-2">
+                             {typeof window !== 'undefined' ? `${window.location.host}/p/${form.portfolioSlug}` : `.../p/${form.portfolioSlug}`}
+                          </code>
+                          <Button variant="ghost" size="sm" onClick={copyLink} className="h-8 gap-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-emerald-600 hover:bg-emerald-100 shrink-0">
+                             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                             {copied ? "Copié" : "Copier"}
+                          </Button>
+                       </div>
+                    </div>
+                    <div className="flex gap-2">
+                       <Link href={`/p/${form.portfolioSlug}`} target="_blank">
+                          <Button className="h-12 px-6 rounded-xl bg-slate-900 shadow-lg shadow-slate-200 gap-2">
+                             <ExternalLink className="w-4 h-4" /> Voir ma vitrine
+                          </Button>
+                       </Link>
+                    </div>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 bg-white border border-slate-100 rounded-2xl text-center space-y-2">
+                       <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
+                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Certifié</p>
+                    </div>
+                    <div className="p-4 bg-white border border-slate-100 rounded-2xl text-center space-y-2">
+                       <Share2 className="w-6 h-6 text-blue-500 mx-auto" />
+                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Partageable</p>
+                    </div>
+                    <div className="p-4 bg-white border border-slate-100 rounded-2xl text-center space-y-2">
+                       <ShieldCheck className="w-6 h-6 text-indigo-500 mx-auto" />
+                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Authentique</p>
+                    </div>
+                 </div>
+              </div>
+            ) : (
+              <div className="p-10 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                 <Globe className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                 <h4 className="text-slate-800 font-bold mb-1">Votre visibilité est désactivée</h4>
+                 <p className="text-sm text-slate-400 max-w-sm mx-auto">Activez votre portfolio pour permettre l'affichage public de vos attestations et booster votre employabilité.</p>
+              </div>
+            )}
+         </div>
       </Card>
 
       <CorrectionModal

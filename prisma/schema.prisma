@@ -81,6 +81,8 @@ model User {
   lastBlockedAt         DateTime?
   resetPasswordRequired Boolean             @default(false)
   status                UserStatus          @default(ACTIVE)
+  portfolioStatus       PortfolioStatus     @default(DRAFT)
+  portfolioMissions     UserPortfolioMission[]
   accounts              Account[]
   attestations          Attestation[]
   auditLogs             AuditLog[]
@@ -89,6 +91,7 @@ model User {
   examSessions          ExamSession[]
   internships           InternshipRequest[]
   notifications         Notification[]
+  reclamations          Reclamation[]
   sessions              Session[]
   exam                  Exam?               @relation(fields: [examId], references: [id])
   formation             Formation?          @relation(fields: [formationId], references: [id])
@@ -112,6 +115,7 @@ model Formation {
   attestations Attestation[]
   exams        Exam[]
   users        User[]
+  portfolioMissions PortfolioMission[]
 }
 
 model Attestation {
@@ -277,6 +281,8 @@ model ExamSession {
   scorePart2  Float             @default(0)
   scorePart3  Float             @default(0)
   score       Float             @default(0)
+  internshipScore Float         @default(0)
+  finalScore  Float             @default(0)
   totalScore  Float             @default(0)
   gradedBy    String?
   gradedAt    DateTime?
@@ -285,6 +291,7 @@ model ExamSession {
   updatedAt   DateTime          @updatedAt
   answers     Json?             @default("{}")
   scans       CompositionScan[]
+  reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)
   exam        Exam              @relation(fields: [examId], references: [id])
   candidate   User              @relation(fields: [userId], references: [id])
@@ -436,6 +443,21 @@ model Admin {
   phone         String?
 }
 
+model Reclamation {
+  id            String           @id @default(uuid())
+  userId        String
+  submissionId  String
+  subject       String
+  message       String
+  status        String           @default("PENDING")
+  adminReply    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User             @relation(fields: [userId], references: [id])
+  submission    ExamSession      @relation(fields: [submissionId], references: [id])
+}
+
+
 enum AttestationStatus {
   PENDING
   VALIDATED
@@ -517,4 +539,36 @@ enum NotificationType {
   CORRECTION_REJECTED
   SUPPORT_REPLY
   GENERAL
+}
+
+enum PortfolioStatus {
+  DRAFT
+  PENDING_VALIDATION
+  PUBLISHED
+  REJECTED
+}
+
+model PortfolioMission {
+  id           String                 @id @default(uuid())
+  title        String
+  description  String
+  order        Int                    @default(0)
+  createdAt    DateTime               @default(now())
+  formationId  String?
+  formation    Formation?             @relation(fields: [formationId], references: [id])
+  userMissions UserPortfolioMission[]
+}
+
+model UserPortfolioMission {
+  id              String           @id @default(uuid())
+  userId          String
+  missionId       String
+  status          String           @default("PENDING")
+  submissionProof String?
+  adminComment    String?
+  completedAt     DateTime?
+  user            User             @relation(fields: [userId], references: [id])
+  mission         PortfolioMission @relation(fields: [missionId], references: [id])
+
+  @@unique([userId, missionId])
 }

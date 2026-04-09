@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { pusherServer } from '@/lib/pusher';
-import { getCurrentUser, isAdminAuthenticated } from '@/lib/auth';
+import { getCurrentUser, getAdminUser } from '@/lib/auth';
 
 // GET /api/user/notifications - Récupérer les notifications de l'utilisateur
 export async function GET(request: Request) {
@@ -80,8 +80,8 @@ export async function PATCH(request: Request) {
 export async function POST(request: Request) {
   try {
     // 🔒 SECURITÉ: Seul un administrateur peut créer des notifications pour d'autres
-    const isAdmin = await isAdminAuthenticated();
-    if (!isAdmin) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 

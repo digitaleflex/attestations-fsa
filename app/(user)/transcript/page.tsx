@@ -11,11 +11,55 @@ import { toast } from "sonner";
 import dynImport from "next/dynamic";
 import TranscriptTemplate from "@/components/TranscriptTemplate";
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Loader2, MessageSquare, Send } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 
 export default function TranscriptPage() {
   const [downloading, setDownloading] = useState(false);
+  const [isReclamationOpen, setIsReclamationOpen] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [reclamationSubject, setReclamationSubject] = useState("");
+  const [reclamationMessage, setReclamationMessage] = useState("");
+  const queryClient = useQueryClient();
+
+  const reclamationMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/user/reclamations", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Erreur");
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsReclamationOpen(false);
+      setReclamationSubject("");
+      setReclamationMessage("");
+      toast.success("Votre réclamation a été envoyée");
+    },
+  });
+
+  const handleReclamationSubmit = () => {
+    if (!selectedSubmissionId || !reclamationSubject || !reclamationMessage) return;
+    reclamationMutation.mutate({
+      submissionId: selectedSubmissionId,
+      subject: reclamationSubject,
+      message: reclamationMessage,
+    });
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["user-transcript"],
@@ -40,12 +84,18 @@ export default function TranscriptPage() {
         if (!element) throw new Error("Template non trouvé");
 
         const opt = {
-          margin: 0,
+          margin: 10, // Small margin for page numbers/spacing
           filename: `Releve_Notes_${data.user.fullName.replace(/\s+/g, '_')}.pdf`,
-          image: { type: 'jpeg', quality: 1.0 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true, 
+            logging: false,
+            width: 794 // Force A4 width DPI-equivalent
+          },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: 'avoid-all' }
+          pagebreak: { mode: ['css', 'legacy'] }
         };
 
         await html2pdfFn().set(opt).from(element).save();
@@ -177,39 +227,60 @@ export default function TranscriptPage() {
             <thead>
               <tr className="border-b-2 border-slate-200">
                 <th className="text-left py-3 font-bold text-slate-700">Examen</th>
-                <th className="text-center py-3 font-bold text-slate-700">Score</th>
-                <th className="text-center py-3 font-bold text-slate-700">Partie 1</th>
-                <th className="text-center py-3 font-bold text-slate-700">Partie 2</th>
-                <th className="text-center py-3 font-bold text-slate-700">Partie 3</th>
+                <th className="text-center py-3 font-bold text-slate-700">Exam Note</th>
+                <th className="text-center py-3 font-bold text-slate-700">Stage Note</th>
+                <th className="text-center py-3 font-bold text-slate-700">Moyenne</th>
                 <th className="text-center py-3 font-bold text-slate-700">Statut</th>
+                <th className="text-center py-3 font-bold text-slate-700">Action</th>
                 <th className="text-right py-3 font-bold text-slate-700">Date</th>
               </tr>
             </thead>
             <tbody>
-              {data.examResults.map((exam: any, idx: number) => {
-                const percentage = Math.round((exam.score / exam.totalPoints) * 100);
-                const passed = percentage >= 60;
-                return (
-                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-3 font-medium text-slate-800">
-                      <div className="flex flex-col">
-                        <span>{exam.examName}</span>
-                        {exam.type === 'MOCK' && (
-                          <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Examen Blanc</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 text-center font-bold" style={{ color: passed ? "#059669" : "#dc2626" }}>
-                      {percentage}%
-                    </td>
-                    <td className="py-3 text-center text-slate-600">{exam.part1Score ?? "-"}</td>
-                    <td className="py-3 text-center text-slate-600">{exam.part2Score ?? "-"}</td>
-                    <td className="py-3 text-center text-slate-600">{exam.part3Score ?? "-"}</td>
-                    <td className="py-3 text-center">
-                      <Badge className={passed ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}>
-                        {passed ? "ADMIS" : "NON ADMIS"}
-                      </Badge>
-                    </td>
+                {data.examResults.map((exam: any, idx: number) => {
+                  const examPct = Math.round((exam.score / exam.totalPoints) * 100);
+                  const finalPct = exam.finalScore ? Math.round(exam.finalScore) : examPct;
+                  const internshipPct = exam.internshipScore ? Math.round(exam.internshipScore) : null;
+                  const passed = finalPct >= 65;
+                  
+                  return (
+                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="py-3 font-medium text-slate-800">
+                        <div className="flex flex-col">
+                          <span>{exam.examName}</span>
+                          {exam.type === 'MOCK' && (
+                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Examen Blanc</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 text-center text-slate-600 font-bold">
+                        {examPct}%
+                      </td>
+                      <td className="py-3 text-center text-slate-600">
+                        {internshipPct !== null ? `${internshipPct}%` : "–"}
+                      </td>
+                      <td className="py-3 text-center font-black text-indigo-600">
+                        {finalPct}%
+                      </td>
+                      <td className="py-3 text-center">
+                        <Badge className={passed ? "bg-emerald-100 text-emerald-700 border-none" : "bg-rose-100 text-rose-700 border-none"}>
+                          {passed ? "ADMIS" : "NON ADMIS"}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedSubmissionId(exam.id);
+                            setReclamationSubject(`Contestation note - ${exam.examName}`);
+                            setIsReclamationOpen(true);
+                          }}
+                          className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg gap-2"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          Contester
+                        </Button>
+                      </td>
                     <td className="py-3 text-right text-slate-600">
                       {new Date(exam.date).toLocaleDateString("fr-FR")}
                     </td>
@@ -238,7 +309,7 @@ export default function TranscriptPage() {
                   <p className="font-bold text-slate-800">{att.formationName}</p>
                   <p className="text-xs text-slate-500">
                     {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
-                    {att.score ? ` • Score: ${att.score}/100` : ""}
+                    {att.score ? ` • Score Global: ${Math.round(att.score)}/100` : ""}
                   </p>
                 </div>
                 <div className="text-right">
@@ -276,6 +347,59 @@ export default function TranscriptPage() {
           }}
         />
       </div>
+
+      {/* Reclamation Dialog */}
+      <Dialog open={isReclamationOpen} onOpenChange={setIsReclamationOpen}>
+        <DialogContent className="sm:max-w-md bg-white rounded-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-rose-500" />
+              Soumettre une réclamation
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium">
+              Expliquez pourquoi vous contestez votre résultat. L'administration examinera votre demande.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Sujet</Label>
+              <Input
+                id="subject"
+                value={reclamationSubject}
+                onChange={(e) => setReclamationSubject(e.target.value)}
+                className="rounded-xl bg-slate-50 border-none h-12 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Votre message / Justification</Label>
+              <Textarea
+                id="message"
+                placeholder="Détaillez votre demande ici..."
+                className="rounded-2xl bg-slate-50 border-none min-h-[120px] font-medium"
+                value={reclamationMessage}
+                onChange={(e) => setReclamationMessage(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => setIsReclamationOpen(false)}
+              className="rounded-xl font-bold border"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleReclamationSubmit}
+              disabled={!reclamationMessage || reclamationMutation.isPending}
+              className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold gap-2 px-6 shadow-xl"
+            >
+              {reclamationMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <Send className="w-4 h-4" />}
+              Envoyer la réclamation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

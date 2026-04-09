@@ -1,34 +1,27 @@
-/**
- * Configuration multi-usage pour Pusher.
- * Note: Simulacre (Mock) temporaire pour permettre les tests sans erreurs de module.
- */
+import PusherServer from "pusher";
+import PusherClient from "pusher-js";
 
-export const pusherServer = {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  trigger: async (channel: string, event: string, _: unknown) => {
-    console.log(`[REAL-TIME MOCK] Trigger on ${channel}: ${event}`);
-  }
-};
+/**
+ * Configuration Pusher pour le serveur
+ */
+export const pusherServer = new PusherServer({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.PUSHER_CLUSTER!,
+  useTLS: true,
+});
+
+/**
+ * Configuration Pusher pour le client
+ */
+let pusherClientInstance: any = null;
 
 export const getPusherClient = () => {
-    // try {
-    //     const Pusher = require('pusher-js');
-    //     ...
-    // } catch (e) {}
-
-    return {
-        subscribe: (channel: string) => {
-            console.log(`[REAL-TIME MOCK] Subscribed to ${channel}`);
-            return {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                bind: (event: string, _: unknown) => {
-                    console.log(`[REAL-TIME MOCK] Bound to ${event}`);
-                },
-                unbind: () => {}
-            };
-        },
-        unsubscribe: (channel: string) => {
-            console.log(`[REAL-TIME MOCK] Unsubscribed from ${channel}`);
-        }
-    };
+  if (!pusherClientInstance && typeof window !== 'undefined') {
+    pusherClientInstance = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+  }
+  return pusherClientInstance;
 };

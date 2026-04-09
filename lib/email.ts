@@ -37,7 +37,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #10b981; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -77,14 +77,14 @@ export const emailService = {
       const isMock = examType === 'MOCK';
       
       const statusText = isSuccess
-        ? (isMock ? "OBJECTIF ATTEINT ! Bel entraînement." : "FÉLICITATIONS ! Vous avez réussi.")
-        : (isMock ? "Entraînement terminé." : "Résultats de votre examen.");
+        ? (isMock ? "OBJECTIF ATTEINT ! Bel entraînement." : "ADMIS - FÉLICITATIONS !")
+        : (isMock ? "ENTRAÎNEMENT À POURSUIVRE." : "REFUSÉ - SCORE INSUFFISANT.");
       
-      const statusColor = isSuccess ? "#10b981" : "#475569";
+      const statusColor = isSuccess ? "#10b981" : "#ef4444";
       
       const subject = isSuccess
-        ? (isMock ? `Résultat Auto-évaluation : ${examTitle}` : "Félicitations ! Votre attestation est prête")
-        : (isMock ? `Score Entraînement : ${examTitle}` : "Résultats de votre examen - Ferme St André");
+        ? (isMock ? `🏆 Objectif Atteint : ${examTitle}` : `🎓 ADMIS ! Votre attestation est prête - ${examTitle}`)
+        : (isMock ? `📝 Score Entraînement : ${examTitle}` : `📉 Résultat Examen : REFUSÉ - ${examTitle}`);
 
       await resend.emails.send({
         from: fromEmail,
@@ -93,7 +93,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid ${statusColor}; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -101,11 +101,14 @@ export const emailService = {
 
               <div style="margin: 32px 0; padding: 32px; text-align: center; background-color: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 14px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Note Finale</p>
-                <p style="margin: 8px 0; font-size: 48px; font-weight: 900; color: ${statusColor};">
-                   ${score.toFixed(2)} <span style="font-size: 18px; color: #cbd5e1;">/ 20</span>
-                </p>
-                <p style="margin: 0; font-weight: bold; color: ${statusColor};">${statusText}</p>
-                ${isMock ? '<p style="margin: 8px 0 0 0; font-size: 11px; color: #6366f1; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Mode Entraînement</p>' : ''}
+                 <p style="margin: 8px 0; font-size: 48px; font-weight: 900; color: ${statusColor};">
+                    ${Math.round(score)} <span style="font-size: 18px; color: #cbd5e1;">/ 100</span>
+                 </p>
+                 <p style="margin: -10px 0 16px 0; font-size: 16px; color: #94a3b8; font-weight: 600;">
+                    Soit <span style="color: ${statusColor};">${(score / 5).toFixed(2)} / 20</span>
+                 </p>
+                 <p style="margin: 0; font-weight: bold; color: ${statusColor}; text-transform: uppercase;">${statusText}</p>
+                 ${isMock ? '<p style="margin: 8px 0 0 0; font-size: 11px; color: #6366f1; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Mode Entraînement</p>' : ''}
               </div>
 
               ${
@@ -128,7 +131,7 @@ export const emailService = {
                     </div>
                   `
                   : `
-                <p>Le seuil de réussite est fixé à <strong>12/20</strong>. ${isMock ? "Utilisez ce résultat pour identifier vos points d'amélioration et retentez l'expérience." : "Ne vous découragez pas, la persévérance est la clé du succès. Contactez votre formateur pour les modalités de rattrapage."}</p>
+                <p>Le seuil de réussite est fixé à <strong>13/20</strong> (65%). ${isMock ? "Utilisez ce résultat pour identifier vos points d'amélioration et retentez l'entraînement pour atteindre l'excellence." : "Ne vous découragez pas, la persévérance est la clé du succès. Contactez votre formateur pour les modalités de rattrapage."}</p>
                 <div style="text-align: center; margin-top: 32px;">
                   <a href="${APP_URL}/${isMock ? 'mock-exams' : 'exams'}" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
                     ${isMock ? "Retenter l'entraînement" : "Retour au centre d'examens"}
@@ -167,7 +170,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #6366f1; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -214,7 +217,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Félicitations !</h2>
@@ -283,7 +286,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #f59e0b; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -350,7 +353,7 @@ export const emailService = {
                     <tr>
                       <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
                         <div style="margin-bottom: 16px;">
-                          <img src="${APP_URL}/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
                         </div>
                         <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
                           🔐 Réinitialisation du mot de passe
@@ -515,7 +518,7 @@ export const emailService = {
                     <tr>
                       <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
                         <div style="margin-bottom: 16px;">
-                          <img src="${APP_URL}/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
                         </div>
                         <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
                           ✅ Vérification d'email
@@ -631,7 +634,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #ef4444; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 120px;" />
+              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>

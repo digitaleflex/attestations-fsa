@@ -11,10 +11,55 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
 import { apiFetch } from "@/lib/api-client";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Loader2, MessageSquare, Send } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export default function UserResultsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isReclamationOpen, setIsReclamationOpen] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [reclamationSubject, setReclamationSubject] = useState("");
+  const [reclamationMessage, setReclamationMessage] = useState("");
+
+  const reclamationMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/user/reclamations", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Erreur");
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsReclamationOpen(false);
+      setReclamationSubject("");
+      setReclamationMessage("");
+      toast.success("Votre réclamation a été envoyée");
+    },
+  });
+
+  const handleReclamationSubmit = () => {
+    if (!selectedSubmissionId || !reclamationSubject || !reclamationMessage) return;
+    reclamationMutation.mutate({
+      submissionId: selectedSubmissionId,
+      subject: reclamationSubject,
+      message: reclamationMessage,
+    });
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["user-results"],
@@ -135,33 +180,101 @@ export default function UserResultsPage() {
                       </div>
                     </div>
                   </div>
-                  <Link href={`/results/${result.id}`}>
+                  <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      onMouseEnter={() => {
-                        queryClient.prefetchQuery({
-                          queryKey: ["user-result", result.id],
-                          queryFn: async () => {
-                            const res = await fetch(`/api/user/results/${result.id}`);
-                            if (!res.ok) throw new Error("Erreur");
-                            return res.json();
-                          },
-                          staleTime: 5 * 60 * 1000,
-                        });
+                      onClick={() => {
+                        setSelectedSubmissionId(result.id);
+                        setReclamationSubject(`Contestation note - ${result.examName}`);
+                        setIsReclamationOpen(true);
                       }}
-                      className="bg-slate-50 hover:bg-white border-slate-200 text-slate-600 hover:text-emerald-600 font-semibold group transition-all"
+                      className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg gap-2"
                     >
-                      Voir le détail
-                      <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
+                      <MessageSquare className="w-4 h-4" />
+                      Contester
                     </Button>
-                  </Link>
+                    <Link href={`/results/${result.id}`}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onMouseEnter={() => {
+                          queryClient.prefetchQuery({
+                            queryKey: ["user-result", result.id],
+                            queryFn: async () => {
+                              const res = await fetch(`/api/user/results/${result.id}`);
+                              if (!res.ok) throw new Error("Erreur");
+                              return res.json();
+                            },
+                            staleTime: 5 * 60 * 1000,
+                          });
+                        }}
+                        className="bg-slate-50 hover:bg-white border-slate-200 text-slate-600 hover:text-emerald-600 font-semibold group transition-all"
+                      >
+                        Voir le détail
+                        <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Reclamation Dialog */}
+      <Dialog open={isReclamationOpen} onOpenChange={setIsReclamationOpen}>
+        <DialogContent className="sm:max-w-md bg-white rounded-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-rose-500" />
+              Soumettre une réclamation
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium">
+              Expliquez pourquoi vous contestez votre résultat. L'administration examinera votre demande.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Sujet</Label>
+              <Input
+                id="subject"
+                value={reclamationSubject}
+                onChange={(e) => setReclamationSubject(e.target.value)}
+                className="rounded-xl bg-slate-50 border-none h-12 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Votre message / Justification</Label>
+              <Textarea
+                id="message"
+                placeholder="Détaillez votre demande ici..."
+                className="rounded-2xl bg-slate-50 border-none min-h-[120px] font-medium"
+                value={reclamationMessage}
+                onChange={(e) => setReclamationMessage(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => setIsReclamationOpen(false)}
+              className="rounded-xl font-bold border"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleReclamationSubmit}
+              disabled={!reclamationMessage || reclamationMutation.isPending}
+              className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold gap-2 px-6 shadow-xl"
+            >
+              {reclamationMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <Send className="w-4 h-4" />}
+              Envoyer la réclamation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

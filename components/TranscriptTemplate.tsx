@@ -14,9 +14,8 @@ interface TranscriptTemplateProps {
       totalPoints: number;
       status: string;
       date: string;
-      part1Score?: number;
-      part2Score?: number;
-      part3Score?: number;
+      internshipScore?: number;
+      finalScore?: number;
       type?: string;
     }[];
     attestations: {
@@ -45,7 +44,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
   };
 
   const getStatusBadge = (score: number) => {
-    const passed = score >= 60;
+    const passed = score >= 65;
     return {
       label: passed ? "ADMIS" : "NON ADMIS",
       color: passed ? "#059669" : "#dc2626",
@@ -68,41 +67,42 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
       id={id}
       style={{
         width: "794px",
-        height: "1122px",
+        minHeight: "1122px",
         fontFamily: "'Georgia', 'Times New Roman', serif",
         backgroundColor: "#ffffff",
         boxSizing: "border-box",
-        overflow: "hidden",
         position: "relative",
+        padding: "40px" // Unified padding for the whole document
       }}
     >
-      {/* Outer border frame */}
+      {/* Dynamic border that grows with content */}
       <div
         style={{
           position: "absolute",
-          inset: "10px",
+          inset: "15px",
           border: "2px solid #1e3a5f",
-          boxSizing: "border-box",
+          pointerEvents: "none",
+          zIndex: 0
         }}
       />
       <div
         style={{
           position: "absolute",
-          inset: "14px",
+          inset: "19px",
           border: "0.5px solid #93c5fd",
-          boxSizing: "border-box",
+          pointerEvents: "none",
+          zIndex: 0
         }}
       />
 
-      {/* Content wrapper */}
+      {/* Content wrapper - Standard layout flow */}
       <div
         style={{
-          position: "absolute",
-          inset: "22px",
+          position: "relative",
+          zIndex: 10,
           display: "flex",
           flexDirection: "column",
-          gap: "0px",
-          padding: "12px 24px 10px",
+          gap: "20px",
           boxSizing: "border-box",
         }}
       >
@@ -151,10 +151,10 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
             <thead>
               <tr style={{ borderBottom: "1.5px solid #1e3a5f" }}>
                 <th style={{ textAlign: "left", padding: "4px 4px 4px 0", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Examen</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Score</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Partie 1</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Partie 2</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Partie 3</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Session Code</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Note Exam</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Note Stage</th>
+                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Moyenne</th>
                 <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Statut</th>
                 <th style={{ textAlign: "right", padding: "4px 0 4px 4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</th>
               </tr>
@@ -170,12 +170,14 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
                         <span style={{ fontSize: "7px", color: "#6366f1", fontWeight: 800, marginLeft: "4px" }}>(BLANC)</span>
                       )}
                     </td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", fontWeight: 800, color: badge.color }}>
-                      {exam.score}/{exam.totalPoints}
+                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>#{idx + 101}</td>
+                    <td style={{ textAlign: "center", padding: "5px 4px", fontWeight: 600, color: "#1e293b" }}>
+                      {Math.round((exam.score / exam.totalPoints) * 100)}/100
                     </td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.part1Score ?? "–"}</td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.part2Score ?? "–"}</td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.part3Score ?? "–"}</td>
+                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.internshipScore ? `${Math.round(exam.internshipScore)}/100` : "–"}</td>
+                    <td style={{ textAlign: "center", padding: "5px 4px", fontWeight: 800, color: badge.color }}>
+                      {exam.finalScore ? `${Math.round(exam.finalScore)}/100` : `${Math.round((exam.score / exam.totalPoints) * 100)}/100`}
+                    </td>
                     <td style={{ textAlign: "center", padding: "5px 4px" }}>
                       <span style={{
                         display: "inline-block",

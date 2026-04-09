@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, isAdminAuthenticated } from "@/lib/auth";
+import { getCurrentUser, getAdminUser } from "@/lib/auth";
 import { pusherServer } from "@/lib/pusher";
 
 // GET /api/chat - Récupérer l'historique
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser(req);
-    const isAdmin = await isAdminAuthenticated();
+    const adminUser = await getAdminUser(req);
+    const isAdmin = !!adminUser;
 
     const { searchParams } = new URL(req.url);
     const targetUserId = searchParams.get("userId");
@@ -75,7 +76,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser(req);
-    const isAdmin = await isAdminAuthenticated();
+    const adminUser = await getAdminUser(req);
+    const isAdmin = !!adminUser;
     const body = await req.json();
     const { content, userId: targetUserId, attachments } = body;
 

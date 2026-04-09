@@ -42,12 +42,20 @@ export default function InternshipApplicationPage() {
       // Prepare payload, converting CV file to base64 if present
       const payload = { ...formData } as any;
       if (formData.cvFile) {
+        // Validation de la taille (Max 3Mo pour éviter l'erreur 413 sur Vercel/Proxy avec Base64)
+        if (formData.cvFile.size > 3 * 1024 * 1024) {
+          toast.error("Le fichier est trop lourd (max 3 Mo)");
+          setLoading(false);
+          return;
+        }
+
         const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.readAsDataURL(file);
           reader.onload = () => resolve(reader.result as string);
           reader.onerror = error => reject(error);
         });
+        
         try {
           const base64 = await toBase64(formData.cvFile);
           payload.cvUrl = base64; // store as base64 string
