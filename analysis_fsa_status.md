@@ -14,6 +14,26 @@ Cette analyse détaille l'état de complétion des fonctionnalités clés du por
 *   **État** : La logique de séparation (En attente de correction) est là (Examens Blancs & Officiels), mais l'interface admin de correction pourrait être optimisée.
 *   **Manquant** : Support complet pour l'upload et la visualisation des **compositions scannées** (modèle `CompositionScan` présent en base mais peu exploité en UI).
 
+### 🛠️ État d'avancement du Refactoring (Typage Strict)
+
+| Module | Fichier(s) | Statut | 'any' supprimés |
+| :--- | :--- | :--- | :--- |
+| **Global Types** | `types/index.ts` | ✅ Terminé | Centralisation |
+| **Session Examen** | `app/(user)/exams/[id]/page.tsx` | ✅ Terminé | 11 |
+| **Monitoring** | `app/admin/monitoring/page.tsx` | ✅ Terminé | 8 |
+| **Admin Dashboard** | `app/admin/dashboard/page.tsx` | ✅ Terminé | ~15 |
+| **User Dashboard** | `app/(user)/dashboard/page.tsx` | ✅ Terminé | 8 |
+| **Submissions** | `app/admin/submissions/page.tsx` | ✅ Terminé | 7 |
+| **Grading** | `app/admin/submissions/[id]/page.tsx` | ✅ Terminé | 6 |
+| **Audit Logs** | `app/admin/logs/page.tsx` | ✅ Terminé | 6 |
+| **User Stats API** | `app/api/user/statistics/route.ts` | ✅ Terminé | 6 |
+| **Édition Attestation**| `app/admin/attestations/[id]/edit/page.tsx` | 🟧 En cours | 12 |
+| **API Chat** | `app/api/chat/route.ts` | ❌ À faire | - |
+| **Profil Utilisateur** | `app/(user)/profile/page.tsx` | ❌ À faire | - |
+
+**Score Actuel :** ~80 instances supprimées sur les modules critiques. 
+**Estimation Restante :** ~280 instances (dont beaucoup dans les types auto-générés ou les librairies tierces sans types).
+
 ### 2. Bibliothèque de Ressources
 *   **État** : Modèle `Resource` et pages publiques/admin existants.
 *   **Manquant** : Filtres avancés par catégorie et intégration de visionneuses PDF/Vidéo directement dans le dashboard candidat pour éviter les sorties de plateforme.

@@ -24,6 +24,21 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
+
+interface Scan {
+  id: string;
+  url: string;
+  pageNumber: number;
+  fileName: string;
+}
+
+interface ExamPart {
+  id: string;
+  title: string;
+  type: string;
+  scenario?: string;
+  questions: Array<{ id: string; text: string }>;
+}
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,18 +59,19 @@ type Submission = {
   scorePart2: number;
   scorePart3: number;
   totalScore: number;
-  answers: any;
+  internshipScore?: number;
+  answers: Record<string, string>;
   submittedAt: string;
-  scans: any[];
-  candidate: { name: string, email: string };
+  scans: Scan[];
+  candidate: { name: string; email: string };
   exam: {
     title: string;
-    parts: any[];
+    parts: ExamPart[];
     part1Points: number;
     part2Points: number;
     part3Points: number;
     totalPoints: number;
-  }
+  };
 };
 
 export default function GradeSubmissionPage() {
@@ -289,7 +305,7 @@ export default function GradeSubmissionPage() {
                  <h4 className="font-black text-slate-900 uppercase">Documents numérisés</h4>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {submission.scans.map((scan: any) => (
+                 {submission.scans.map((scan: Scan) => (
                    <div key={scan.id} className="group relative overflow-hidden rounded-2xl border-4 border-white shadow-xl bg-slate-200 aspect-[3/4] transition-all hover:shadow-2xl">
                      <Image 
                        src={scan.url} 
@@ -313,7 +329,7 @@ export default function GradeSubmissionPage() {
            )}
 
            {/* REPONSES OUVERTES */}
-           {submission.exam.parts.filter(p => p.type !== "QCM").map((part: any, pIdx: number) => (
+           {submission.exam.parts.filter(p => p.type !== "QCM").map((part: ExamPart, pIdx: number) => (
              <div key={part.id} className="space-y-6">
                 <div className="flex items-center gap-3">
                   <Badge className="bg-slate-800 text-white">Partie {pIdx + 2}</Badge>
@@ -327,7 +343,7 @@ export default function GradeSubmissionPage() {
                   </Card>
                 )}
 
-                {part.questions.map((question: any, qIdx: number) => (
+                {part.questions.map((question: { id: string; text: string }, qIdx: number) => (
                   <Card key={question.id} className="p-8 border-slate-100 shadow-sm space-y-4">
                     <div className="flex gap-4">
                       <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 font-bold text-sm">

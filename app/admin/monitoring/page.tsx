@@ -47,9 +47,20 @@ type SecurityLog = {
   action?: string;
   status: string;
   severity: string;
-  details: any;
+  details: Record<string, unknown>;
   timestamp: string;
 };
+
+interface MonitoringStats {
+  highSeverityCount: number;
+  submissionFlags: number;
+  totalExamsCompleted: number;
+  totalCandidates: number;
+  tabSwitchEvents: number;
+  cheatingDetections: number;
+  criticalEvents: number;
+  pendingReviewCount: number;
+}
 
 type AuditLog = {
   id: string;
@@ -58,8 +69,8 @@ type AuditLog = {
   action: string;
   resource: string;
   resourceId: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
   ipAddress?: string;
   timestamp: string;
 };
@@ -81,8 +92,9 @@ export default function MonitoringDashboard() {
       if (!res.ok) throw new Error("Erreur lors de la récupération des journaux");
       const json = await res.json();
       setData(json);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Une erreur est survenue";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -323,15 +335,23 @@ export default function MonitoringDashboard() {
   );
 }
 
-function StatsCard({ title, value, icon: Icon, color, description }: any) {
-  const colors: any = {
+interface StatsCardProps {
+  title: string;
+  value: number | string | undefined;
+  icon: React.ElementType;
+  color: 'rose' | 'amber' | 'blue' | 'indigo';
+  description: string;
+}
+
+function StatsCard({ title, value, icon: Icon, color, description }: StatsCardProps) {
+  const colors: Record<string, string> = {
     rose: "from-rose-500 to-rose-600 shadow-rose-100/50 text-white",
     amber: "from-amber-500 to-amber-600 shadow-amber-100/50 text-white",
     blue: "from-blue-500 to-blue-600 shadow-blue-100/50 text-white",
     indigo: "from-indigo-500 to-indigo-600 shadow-indigo-100/50 text-white"
   };
 
-  const bgLight: any = {
+  const bgLight: Record<string, string> = {
     rose: "bg-rose-50",
     amber: "bg-amber-50",
     blue: "bg-blue-50",

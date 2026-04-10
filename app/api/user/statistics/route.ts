@@ -35,7 +35,7 @@ export async function GET(request: Request) {
             where: { id: userId },
             select: { email: true },
           })
-          .then((u: any) =>
+          .then((u: { email: string | null } | null) =>
             u?.email
               ? prisma.internshipRequest.findMany({
                   where: { email: u.email },
@@ -74,11 +74,18 @@ export async function GET(request: Request) {
     );
     const attestationsCount = validAttestations.length;
 
-    const officialExams = examSubmissions.filter((s: any) => s.exam?.type === 'OFFICIAL' || s.type === 'OFFICIAL');
-    const mockExams = examSubmissions.filter((s: any) => s.exam?.type === 'MOCK' || s.type === 'MOCK');
+    interface SubmissionWithExam {
+        totalScore: number;
+        type?: string | null;
+        submittedAt: Date | null;
+        exam: { passingScore: number; totalPoints: number; type?: string | null } | null;
+    }
+
+    const officialExams = (examSubmissions as unknown as SubmissionWithExam[]).filter((s) => s.exam?.type === 'OFFICIAL' || s.type === 'OFFICIAL');
+    const mockExams = (examSubmissions as unknown as SubmissionWithExam[]).filter((s) => s.exam?.type === 'MOCK' || s.type === 'MOCK');
 
     const examsCompleted = officialExams.length;
-    const examsPassed = officialExams.filter((sub: any) => {
+    const examsPassed = officialExams.filter((sub) => {
       const maxPoints = sub.exam?.totalPoints || 100;
       const scorePercent =
         maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
@@ -87,7 +94,7 @@ export async function GET(request: Request) {
     }).length;
 
     const mockExamsCompleted = mockExams.length;
-    const mockExamsPassed = mockExams.filter((sub: any) => {
+    const mockExamsPassed = mockExams.filter((sub) => {
       const maxPoints = sub.exam?.totalPoints || 100;
       const scorePercent =
         maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
@@ -98,7 +105,7 @@ export async function GET(request: Request) {
     const averageScore =
       examsCompleted > 0
         ? Math.round(
-            officialExams.reduce((sum: number, sub: any) => {
+            officialExams.reduce((sum, sub) => {
               const maxPoints = sub.exam?.totalPoints || 100;
               return (
                 sum +

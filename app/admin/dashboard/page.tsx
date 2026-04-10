@@ -34,6 +34,33 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
+import { User, Attestation } from "@/types";
+
+interface DashboardStats {
+  total: number;
+  validated: number;
+}
+
+interface UserSummary {
+  total: number;
+  newThisMonth: number;
+  admins: number;
+  candidates: number;
+}
+
+interface V4Stats {
+  labels: string[];
+  series: {
+    registrations: number[];
+    attestations: number[];
+  };
+  distribution: Array<{ type: string; count: number }>;
+  targets: {
+    inscriptions: number;
+    attestations: number;
+    validations: number;
+  };
+}
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,7 +108,7 @@ export default function AdminDashboardPage() {
   // 1. Fetch statistics (Global)
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => apiFetch("/api/public/stats") as any,
+    queryFn: () => apiFetch<DashboardStats>("/api/public/stats"),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -89,17 +116,17 @@ export default function AdminDashboardPage() {
   const { data: usersStats } = useQuery({
     queryKey: ["users-stats"],
     queryFn: async () => {
-      const users = await apiFetch("/api/users") as any;
+      const users = await apiFetch<User[]>("/api/users");
       const now = new Date();
       return {
         total: users.length,
-        newThisMonth: users.filter((u: any) => {
+        newThisMonth: users.filter((u: User) => {
           const date = new Date(u.createdAt);
           return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
         }).length,
-        admins: users.filter((u: any) => u.role === "admin").length,
-        candidates: users.filter((u: any) => u.role === "user").length,
-      };
+        admins: users.filter((u: User) => u.role === "admin").length,
+        candidates: users.filter((u: User) => u.role === "user").length,
+      } as UserSummary;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -107,7 +134,7 @@ export default function AdminDashboardPage() {
   // 3. Fetch Dash V4 Stats (Monthly & Targets)
   const { data: v4Stats, isLoading: v4Loading } = useQuery({
     queryKey: ["v4-stats"],
-    queryFn: () => apiFetch("/api/admin/dashboard/stats") as any,
+    queryFn: () => apiFetch<V4Stats>("/api/admin/dashboard/stats"),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -115,7 +142,7 @@ export default function AdminDashboardPage() {
   const { data: recentAttestations } = useQuery({
     queryKey: ["recent-attestations"],
     queryFn: async () => {
-      const data = await apiFetch("/api/attestations?limit=5") as any;
+      const data = await apiFetch<Attestation[] | { attestations: Attestation[] }>("/api/attestations?limit=5");
       return Array.isArray(data) ? data : data.attestations || [];
     },
     staleTime: 2 * 60 * 1000,
@@ -125,8 +152,8 @@ export default function AdminDashboardPage() {
   const { data: newReports } = useQuery({
     queryKey: ["new-reports-count"],
     queryFn: async () => {
-      const reports = await apiFetch("/api/signalement");
-      return Array.isArray(reports) ? reports.filter((r: any) => r.status === "NOUVEAU").length : 0;
+      const reports = await apiFetch<Array<{ status: string }>>("/api/signalement");
+      return Array.isArray(reports) ? reports.filter((r) => r.status === "NOUVEAU").length : 0;
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -135,8 +162,8 @@ export default function AdminDashboardPage() {
   const { data: pendingPortfoliosCount } = useQuery({
     queryKey: ["pending-portfolios-count"],
     queryFn: async () => {
-      const users = await apiFetch("/api/users") as any;
-      return Array.isArray(users) ? users.filter((u: any) => u.portfolioStatus === "PENDING_VALIDATION").length : 0;
+      const users = await apiFetch<User[]>("/api/users");
+      return Array.isArray(users) ? users.filter((u: User) => u.portfolioStatus === "PENDING_VALIDATION").length : 0;
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -166,9 +193,9 @@ export default function AdminDashboardPage() {
 
   // Chart Data: Distribution by Type
   const donutData = {
-    labels: v4Stats?.distribution?.map((d: any) => d.type) || ['FORMATION', 'STAGE', 'CERTIFICATION'],
+    labels: v4Stats?.distribution?.map((d: { type: string }) => d.type) || ['FORMATION', 'STAGE', 'CERTIFICATION'],
     datasets: [{
-      data: v4Stats?.distribution?.map((d: any) => d.count) || [0, 0, 0],
+      data: v4Stats?.distribution?.map((d: { count: number }) => d.count) || [0, 0, 0],
       backgroundColor: [
         'rgba(59, 130, 246, 0.8)',
         'rgba(168, 85, 247, 0.8)',
@@ -395,12 +422,12 @@ export default function AdminDashboardPage() {
              <div className="h-64 relative flex items-center justify-center">
                 {v4Loading ? <Loader2 className="animate-spin text-slate-300" /> : <Doughnut data={donutData} options={{ ...chartOptions, cutout: '75%' }} />}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-3xl font-black text-slate-900">{stats?.total || 0}</p>
+                    <p className="text-3xl font-black text-slate-900">{(stats as DashboardStats)?.total || 0}</p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
                 </div>
              </div>
              <div className="mt-8 space-y-4">
-                 {v4Stats?.distribution?.map((d: any, i: number) => (
+                 {(v4Stats as V4Stats)?.distribution?.map((d: { type: string; count: number }, i: number) => (
                      <div key={d.type} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all cursor-default">
                          <div className="flex items-center gap-3">
                              <div className={`w-3 h-3 rounded-full ${['bg-blue-500', 'bg-purple-500', 'bg-amber-500'][i]}`} />
@@ -438,7 +465,7 @@ export default function AdminDashboardPage() {
                 </Link>
             </div>
             <div className="space-y-4">
-                {recentAttestations?.map((a: any) => (
+                {recentAttestations?.map((a: Attestation) => (
                     <div key={a.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-slate-100 group">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center font-black text-blue-600">

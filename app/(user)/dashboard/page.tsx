@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Clock, CheckCircle, Award, LogOut, User, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon, Play, Rocket } from "lucide-react";
+import { FileText, Download, Clock, CheckCircle, Award, LogOut, User as UserIcon, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon, Play, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,6 +27,33 @@ import {
 import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+import { User, Attestation, Notification } from "@/types";
+
+interface UserStatistics {
+  overview: {
+    totalAttestations: number;
+    examsPassed: number;
+    totalExams: number;
+    totalMockExams: number;
+    mockExamsPassed: number;
+    averageScore: number;
+  };
+  portfolio: {
+    completedMissions: number;
+    totalMissions: number;
+  };
+  recentExams: Array<{
+    id: string;
+    totalScore: number;
+    status: string;
+    submittedAt: string;
+    exam: {
+      title: string;
+      totalPoints: number;
+    };
+  }>;
+}
 
 // Import dynamique pour éviter SSR
 const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
@@ -71,8 +98,9 @@ export default function UserDashboardPage() {
       toast.success("Succès ! Votre dossier a été lié et votre profil a été mis à jour.");
       // On rafraîchit les data query au lieu de recharger toute la page si possible
       window.location.reload();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur de liaison";
+      toast.error(message);
     } finally {
       setIsClaiming(false);
     }
@@ -94,8 +122,9 @@ export default function UserDashboardPage() {
       toast.success("Succès !", {
         description: "Un email de vérification vous a été envoyé.",
       });
-    } catch (error: any) {
-      toast.error(error.message || "Impossible d'envoyer l'email");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur d'envoi";
+      toast.error(message || "Impossible d'envoyer l'email");
     } finally {
       setIsSendingVerification(false);
     }
@@ -110,7 +139,7 @@ export default function UserDashboardPage() {
         if (res.status === 401) router.push("/auth");
         throw new Error("Non autorisé");
       }
-      return res.json();
+      return res.json() as Promise<User & { correctionRequests: any[] }>;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -120,7 +149,7 @@ export default function UserDashboardPage() {
     queryKey: ["user-attestations"],
     queryFn: async () => {
       const res = await fetch("/api/user/attestations?limit=5");
-      return res.json();
+      return res.json() as Promise<{ attestations: Attestation[] }>;
     }
   });
 
@@ -136,7 +165,7 @@ export default function UserDashboardPage() {
     queryKey: ["user-notifications"],
     queryFn: async () => {
       const res = await fetch("/api/user/notifications?limit=3");
-      return res.json();
+      return res.json() as Promise<{ notifications: Notification[], unreadCount: number }>;
     }
   });
 
@@ -155,11 +184,11 @@ export default function UserDashboardPage() {
     queryKey: ["user-statistics"],
     queryFn: async () => {
       const res = await fetch("/api/user/statistics");
-      return res.json();
+      return res.json() as Promise<UserStatistics>;
     }
   });
 
-  const handleDownload = async (att: any) => {
+  const handleDownload = async (att: Attestation) => {
     if (att.status === "REJECTED") {
       toast.error("Cette attestation a été révoquée par l'administration.");
       return;
@@ -221,7 +250,7 @@ export default function UserDashboardPage() {
     </div>
   );
 
-  const hasPendingCorrection = user?.correctionRequests?.length > 0;
+  const hasPendingCorrection = (user?.correctionRequests?.length || 0) > 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -261,17 +290,17 @@ export default function UserDashboardPage() {
               </div>
               
               {/* Badge Display */}
-              {statsData?.portfolio?.completedMissions > 0 && (
+              {(statsData?.portfolio?.completedMissions || 0) > 0 && (
                 <div className={cn(
                   "px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm border animate-in zoom-in duration-500",
-                  statsData.portfolio.completedMissions >= 6 ? "bg-amber-400 border-amber-500 text-amber-950" :
-                  statsData.portfolio.completedMissions >= 3 ? "bg-slate-200 border-slate-300 text-slate-800" :
+                  (statsData?.portfolio?.completedMissions || 0) >= 6 ? "bg-amber-400 border-amber-500 text-amber-950" :
+                  (statsData?.portfolio?.completedMissions || 0) >= 3 ? "bg-slate-200 border-slate-300 text-slate-800" :
                   "bg-orange-200 border-orange-300 text-orange-950"
                 )}>
                    <Trophy className="w-4 h-4" />
                    <span className="text-[10px] font-black uppercase">
-                     {statsData.portfolio.completedMissions >= 6 ? "Rang Or" :
-                      statsData.portfolio.completedMissions >= 3 ? "Rang Argent" :
+                     { (statsData?.portfolio?.completedMissions || 0) >= 6 ? "Rang Or" :
+                      (statsData?.portfolio?.completedMissions || 0) >= 3 ? "Rang Argent" :
                       "Rang Bronze"}
                    </span>
                 </div>
@@ -281,13 +310,13 @@ export default function UserDashboardPage() {
                  <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-black text-indigo-600">PROGRESSION</span>
                     <span className="text-[10px] font-black text-indigo-600">
-                      {statsData?.portfolio?.totalMissions ? Math.round((statsData.portfolio.completedMissions / statsData.portfolio.totalMissions) * 100) : 0}%
+                      {statsData?.portfolio?.totalMissions ? Math.round(((statsData?.portfolio?.completedMissions || 0) / statsData.portfolio.totalMissions) * 100) : 0}%
                     </span>
                  </div>
                  <div className="h-2 bg-indigo-50 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-1000" 
-                      style={{ width: `${statsData?.portfolio?.totalMissions ? Math.round((statsData.portfolio.completedMissions / statsData.portfolio.totalMissions) * 100) : 0}%` }} 
+                      style={{ width: `${statsData?.portfolio?.totalMissions ? Math.round(((statsData?.portfolio?.completedMissions || 0) / statsData.portfolio.totalMissions) * 100) : 0}%` }} 
                     />
                  </div>
               </div>
@@ -300,20 +329,20 @@ export default function UserDashboardPage() {
         </Card>
 
         {/* 📢 Nouvelles de la Direction */}
-        {notificationsData?.notifications?.length > 0 && (
+        {notificationsData?.notifications && notificationsData.notifications.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Megaphone className="w-4 h-4 text-rose-500" /> Annonces de la Direction
               </h3>
-              {notificationsData?.unreadCount > 0 && (
+              {(notificationsData?.unreadCount || 0) > 0 && (
                 <Badge className="bg-rose-500 text-white border-none animate-pulse">
                   {notificationsData?.unreadCount} nouvelle(s)
                 </Badge>
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {notificationsData.notifications.map((notif: any) => (
+              {notificationsData.notifications.map((notif: Notification) => (
                 <Card key={notif.id} className={cn(
                   "p-5 border-none shadow-premium relative overflow-hidden transition-all",
                   notif.isRead ? "bg-white/60 opacity-80" : "bg-white border-l-4 border-l-rose-500"
@@ -348,7 +377,7 @@ export default function UserDashboardPage() {
             hasPendingCorrection ? 'bg-slate-100 grayscale-[0.3]' : 'bg-white'
         }`}>
           <div className="absolute top-0 right-0 p-8 opacity-5">
-             <User size={120} />
+             <UserIcon size={120} />
           </div>
           <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
               <div className={`flex-1 space-y-4 ${hasPendingCorrection ? 'opacity-60' : ''}`}>
@@ -442,24 +471,24 @@ export default function UserDashboardPage() {
 
         {/* Dossier Linking Section (Refined) */}
         <Card className={`p-8 border-none shadow-premium relative overflow-hidden transition-all duration-500 ${
-            attestationsData?.attestations?.length > 0 ? "bg-emerald-50/50" : "bg-emerald-50"
+            (attestationsData?.attestations?.length || 0) > 0 ? "bg-emerald-50/50" : "bg-emerald-50"
         }`}>
             <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
                 <div className="flex-1 space-y-4">
                     <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${
-                            attestationsData?.attestations?.length > 0 ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-600"
+                            (attestationsData?.attestations?.length || 0) > 0 ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-600"
                         }`}>
-                            {attestationsData?.attestations?.length > 0 ? <CheckCircle className="w-5 h-5" /> : <LinkIcon className="w-5 h-5" />}
+                            {(attestationsData?.attestations?.length || 0) > 0 ? <CheckCircle className="w-5 h-5" /> : <LinkIcon className="w-5 h-5" />}
                         </div>
                         <h3 className={`text-xl font-black tracking-tight ${
-                            attestationsData?.attestations?.length > 0 ? "text-emerald-800" : "text-emerald-900"
+                            (attestationsData?.attestations?.length || 0) > 0 ? "text-emerald-800" : "text-emerald-900"
                         }`}>
-                            {attestationsData?.attestations?.length > 0 ? "Félicitations ! Votre dossier est lié." : "Récupérer mon dossier FSA"}
+                            {(attestationsData?.attestations?.length || 0) > 0 ? "Félicitations ! Votre dossier est lié." : "Récupérer mon dossier FSA"}
                         </h3>
                     </div>
 
-                    {attestationsData?.attestations?.length > 0 ? (
+                    {(attestationsData?.attestations?.length || 0) > 0 ? (
                         <div className="space-y-3">
                             <p className="text-emerald-700/80 text-sm font-medium">
                                 Vos informations officielles ont été synchronisées avec succès. Vous pouvez maintenant télécharger vos documents ci-dessous.
@@ -489,8 +518,8 @@ export default function UserDashboardPage() {
                     )}
                 </div>
 
-                <div className={`hidden lg:block w-32 h-32 transition-transform duration-700 ${attestationsData?.attestations?.length > 0 ? "scale-110 rotate-12" : "opacity-20"}`}>
-                    <Award className={`w-full h-full ${attestationsData?.attestations?.length > 0 ? "text-emerald-500" : "text-emerald-900"}`} />
+                <div className={`hidden lg:block w-32 h-32 transition-transform duration-700 ${(attestationsData?.attestations?.length || 0) > 0 ? "scale-110 rotate-12" : "opacity-20"}`}>
+                    <Award className={`w-full h-full ${(attestationsData?.attestations?.length || 0) > 0 ? "text-emerald-500" : "text-emerald-900"}`} />
                 </div>
             </div>
         </Card>
@@ -594,8 +623,8 @@ export default function UserDashboardPage() {
                                 <FileText className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                                 <p className="text-slate-400 font-bold">Aucune attestation disponible pour le moment.</p>
                              </div>
-                        ) : (
-                                attestationsData.attestations.map((att: any) => (
+                         ) : (
+                                attestationsData.attestations.map((att: Attestation) => (
                                 <div key={att.id} className="p-5 bg-slate-50 rounded-2xl group hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
@@ -610,7 +639,7 @@ export default function UserDashboardPage() {
                                             </div>
                                         </div>
                                          <div className="flex items-center gap-2">
-                                             {att.status === 'VALIDATED' && (att.type === 'FORMATION' ? att.certificationScore > 0 : (att.certificationScore > 0 && att.stageScore > 0)) ? (
+                                             {att.status === 'VALIDATED' && (att.type === 'FORMATION' ? (att.certificationScore || 0) > 0 : ((att.certificationScore || 0) > 0 && (att.stageScore || 0) > 0)) ? (
                                                  <Button
                                                      variant="ghost"
                                                      size="icon"
@@ -641,22 +670,22 @@ export default function UserDashboardPage() {
                                          <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                              <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" /> État du Parcours FSA</span>
                                              <div className="flex items-center gap-2">
-                                                 <span className={att.certificationScore >= 60 ? "text-blue-500" : "text-slate-300"}>Théorie {att.certificationScore >= 60 ? "✓" : "○"}</span>
+                                                 <span className={(att.certificationScore || 0) >= 60 ? "text-blue-500" : "text-slate-300"}>Théorie {(att.certificationScore || 0) >= 60 ? "✓" : "○"}</span>
                                                  <span className="text-slate-200">|</span>
-                                                 <span className={att.stageScore >= 60 ? "text-emerald-500" : "text-slate-300"}>Pratique {att.stageScore >= 60 ? "✓" : "○"}</span>
+                                                 <span className={(att.stageScore || 0) >= 60 ? "text-emerald-500" : "text-slate-300"}>Pratique {(att.stageScore || 0) >= 60 ? "✓" : "○"}</span>
                                              </div>
                                          </div>
                                          <div className="grid grid-cols-2 gap-3">
                                              <div className={cn(
                                                 "p-2.5 rounded-xl border flex items-center justify-between transition-all",
-                                                att.certificationScore >= 60 ? "bg-blue-50 border-blue-100" : "bg-white border-slate-100 opacity-60"
+                                                (att.certificationScore || 0) >= 60 ? "bg-blue-50 border-blue-100" : "bg-white border-slate-100 opacity-60"
                                              )}>
                                                  <span className="text-[9px] font-bold text-slate-500 uppercase">Théorie</span>
                                                  <span className="text-sm font-black text-blue-700">{( (att.certificationScore || 0) / 5 ).toFixed(2)}/20</span>
                                              </div>
                                              
-                                             {att.certificationScore >= 60 ? (
-                                                 att.stageScore > 0 ? (
+                                             {(att.certificationScore || 0) >= 60 ? (
+                                                 (att.stageScore || 0) > 0 ? (
                                                     <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 flex items-center justify-between">
                                                         <span className="text-[9px] font-bold text-emerald-600 uppercase">Stage</span>
                                                         <span className="text-sm font-black text-emerald-700">{( (att.stageScore || 0) / 5 ).toFixed(2)}/20</span>
@@ -715,7 +744,7 @@ export default function UserDashboardPage() {
                     </div>
                     <div className="mt-6 flex justify-center">
                         <Badge className="bg-emerald-100 text-emerald-700 border-none font-bold">
-                            Taux de réussite : {statsData?.overview?.totalExams ? Math.round((statsData.overview.examsPassed / statsData.overview.totalExams) * 100) : 0}%
+                            Taux de réussite : {statsData?.overview?.totalExams ? Math.round(((statsData?.overview?.examsPassed || 0) / statsData.overview.totalExams) * 100) : 0}%
                         </Badge>
                     </div>
                 </Card>
@@ -726,7 +755,7 @@ export default function UserDashboardPage() {
                       <Activity className="w-4 h-4 text-emerald-500" /> Vos Dernières Notes
                    </h3>
                    <div className="space-y-4">
-                      {statsData?.recentExams?.length > 0 ? (
+                      {statsData?.recentExams && statsData.recentExams.length > 0 ? (
                         statsData.recentExams.map((ex: any) => (
                           <div key={ex.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                              <div className="min-w-0">
@@ -753,14 +782,14 @@ export default function UserDashboardPage() {
                 </Card>
 
                 {/* Portfolio Public Preview (New) */}
-                {statsData?.portfolio?.completedMissions > 0 && (
+                {(statsData?.portfolio?.completedMissions || 0) > 0 && (
                    <Card className="p-6 bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-none shadow-xl relative overflow-hidden">
                       <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
                       <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-3">Votre Vitrine est active</h4>
                       <p className="text-[11px] text-indigo-100/80 mb-4 leading-relaxed font-medium">
                         Partagez votre portfolio officiel avec des recruteurs pour booster votre carrière.
                       </p>
-                      <Link href={`/p/${user?.email.split('@')[0]}`}>
+                      <Link href={`/p/${user?.email?.split('@')[0] || 'anonymous'}`}>
                         <Button className="w-full bg-white text-indigo-600 hover:bg-indigo-50 font-black text-[10px] uppercase h-10 rounded-xl shadow-lg border-none">
                            Voir mon site public
                         </Button>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getAdminUser } from "@/lib/auth";
 import { pusherServer } from "@/lib/pusher";
+import { ChatMessage } from "@/types";
 
 // GET /api/chat - Récupérer l'historique
 export async function GET(req: Request) {
@@ -15,7 +16,12 @@ export async function GET(req: Request) {
     const unreadOnly = searchParams.get("unread") === "true";
     const missionId = searchParams.get("missionId"); // Nouveau: Filtrer par projet
 
-    const where: any = {};
+    const where: {
+      senderRole?: string;
+      isRead?: boolean;
+      userId?: string;
+      userPortfolioMissionId?: string | null;
+    } = {};
     if (isAdmin) {
       if (unreadOnly) {
         where.senderRole = "user";
@@ -38,8 +44,8 @@ export async function GET(req: Request) {
        // Ou tout ? Habituellement tout. Laisons le choix à l'UI.
     }
 
-    // @ts-ignore - Accès dynamique au cas où le client n'a pas encore fini de se synchroniser
-    const chatModel = (prisma as any).chatMessage;
+    // Accès direct au modèle Prisma ChatMessage
+    const chatModel = prisma.chatMessage;
 
     if (!chatModel) {
         return NextResponse.json({
@@ -55,7 +61,7 @@ export async function GET(req: Request) {
     });
 
     if (!unreadOnly && messages.length > 0) {
-        const lastMessages = messages.filter((m: any) =>
+        const lastMessages = messages.filter((m: ChatMessage) =>
             (isAdmin && m.senderRole === "user") || (!isAdmin && m.senderRole === "admin")
         );
 
@@ -63,7 +69,7 @@ export async function GET(req: Request) {
             try {
                 await chatModel.updateMany({
                     where: {
-                        id: { in: lastMessages.map((m: any) => m.id) },
+                        id: { in: lastMessages.map((m: ChatMessage) => m.id) },
                         isRead: false
                     },
                     data: { isRead: true }
@@ -75,9 +81,10 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json(messages || []);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("DEBUG CHAT GET ERROR:", error);
-    return NextResponse.json({ error: "Erreur serveur", details: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return NextResponse.json({ error: "Erreur serveur", details: message }, { status: 500 });
   }
 }
 
@@ -141,8 +148,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(message);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("DEBUG CHAT POST ERROR:", error);
-    return NextResponse.json({ error: "Erreur lors de l'envoi", details: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return NextResponse.json({ error: "Erreur lors de l'envoi", details: message }, { status: 500 });
   }
 }

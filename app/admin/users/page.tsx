@@ -31,11 +31,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Edit, Trash2, UserPlus, Eye } from "lucide-react";
-import { toast } from "sonner";
-import { UserExamResults } from "@/components/exams/user-exam-results";
-import { UserAuditLogs } from "@/components/admin/user-audit-logs";
-import {
+import { 
+  Loader2, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  UserPlus, 
+  Eye,
   ShieldAlert,
   Unlock,
   KeyRound,
@@ -46,23 +48,11 @@ import {
   AlertTriangle,
   Users
 } from "lucide-react";
+import { toast } from "sonner";
+import { UserExamResults } from "@/components/exams/user-exam-results";
+import { UserAuditLogs } from "@/components/admin/user-audit-logs";
+import { User, UserStatus } from "@/types";
 
-type User = {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: string;
-  emailVerified: string | null;
-  birthDate: string | null;
-  birthPlace: string | null;
-  phone: string | null;
-  address: string | null;
-  status: "ACTIVE" | "BLOCKED" | "SUSPENDED";
-  resetPasswordRequired: boolean;
-  blockedReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
 
 type UserForm = {
   name: string;
@@ -146,6 +136,17 @@ export default function AdminUsersPage() {
     setViewDialogOpen(true);
   };
 
+  interface UserApiPayload {
+    name: string;
+    email: string;
+    role: string;
+    password?: string;
+    birthDate?: Date;
+    birthPlace?: string;
+    phone?: string;
+    address?: string;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -154,7 +155,7 @@ export default function AdminUsersPage() {
       const url = editingUser ? `/api/users/${editingUser.id}` : "/api/users";
       const method = editingUser ? "PATCH" : "POST";
 
-      const body: any = {
+      const body: UserApiPayload = {
         name: form.name,
         email: form.email,
         role: form.role,
@@ -185,8 +186,9 @@ export default function AdminUsersPage() {
       toast.success(editingUser ? "Utilisateur modifié !" : "Utilisateur créé !");
       setDialogOpen(false);
       fetchUsers();
-    } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -200,15 +202,16 @@ export default function AdminUsersPage() {
       if (!res.ok) throw new Error("Erreur lors de la suppression");
       setUsers((prev) => prev.filter((u) => u.id !== deleteId));
       toast.success("Utilisateur supprimé !");
-    } catch (err: any) {
-      toast.error(err.message || "Erreur inconnue");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(message);
     } finally {
       setIsDeleting(false);
       setDeleteId(null);
     }
   };
 
-  const handleUpdateStatus = async (userId: string, status: string) => {
+  const handleUpdateStatus = async (userId: string, status: UserStatus) => {
     try {
       const res = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
@@ -218,7 +221,7 @@ export default function AdminUsersPage() {
       if (!res.ok) throw new Error("Erreur");
       toast.success(status === 'ACTIVE' ? "Utilisateur débloqué !" : "Utilisateur bloqué !");
       fetchUsers();
-      if (viewingUser) setViewingUser(prev => prev ? { ...prev, status: status as any } : null);
+      if (viewingUser) setViewingUser(prev => prev ? { ...prev, status } : null);
     } catch (err) {
       toast.error("Échec de la mise à jour du statut");
     }

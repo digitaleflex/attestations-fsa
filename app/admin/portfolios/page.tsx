@@ -20,6 +20,16 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { PortfolioStatus } from "@/types";
+
+interface PortfolioSummary {
+  id: string;
+  name: string;
+  email: string;
+  portfolioStatus: PortfolioStatus;
+  portfolioSlug: string | null;
+  updatedAt: string;
+}
 
 export default function AdminPortfoliosPage() {
   const [search, setSearch] = useState("");
@@ -29,11 +39,11 @@ export default function AdminPortfoliosPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/portfolios");
       if (!res.ok) throw new Error("Erreur");
-      return res.json();
+      return res.json() as Promise<PortfolioSummary[]>;
     }
   });
 
-  const filtered = portfolios?.filter((p: any) => 
+  const filtered = portfolios?.filter((p: PortfolioSummary) => 
     p.name?.toLowerCase().includes(search.toLowerCase()) || 
     p.email?.toLowerCase().includes(search.toLowerCase())
   );
@@ -66,7 +76,7 @@ export default function AdminPortfoliosPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered?.length > 0 ? filtered.map((p: any) => (
+        {filtered && filtered.length > 0 ? filtered.map((p: PortfolioSummary) => (
            <Card key={p.id} className="p-6 border-none shadow-premium bg-white group hover:translate-y-[-4px] transition-all duration-300 relative overflow-hidden">
               {p.portfolioStatus === 'PENDING_VALIDATION' && (
                  <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/10 rounded-bl-full flex items-start justify-end p-4">
@@ -121,8 +131,8 @@ export default function AdminPortfoliosPage() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const configs: any = {
+function StatusBadge({ status }: { status: PortfolioStatus }) {
+  const configs: Record<PortfolioStatus, { label: string; color: string; icon: any }> = {
     DRAFT: { label: "En cours", color: "bg-slate-100 text-slate-600", icon: Clock },
     PENDING_VALIDATION: { label: "À Valider", color: "bg-rose-100 text-rose-700", icon: AlertCircle },
     PUBLISHED: { label: "Publié", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },

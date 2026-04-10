@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher";
 import { toast } from "sonner";
+import { Notification } from "@/types";
 
 export default function NotificationBell() {
   const router = useRouter();
@@ -43,13 +44,13 @@ export default function NotificationBell() {
             const pusher = getPusherClient();
             const channel = pusher.subscribe(`user-${profil.id}`);
 
-            channel.bind("notification", (newNotif: any) => {
+            channel.bind("notification", (newNotif: Notification) => {
                 queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
                 toast.success(newNotif.message, {
                     description: newNotif.title,
                     action: newNotif.link ? {
                         label: "Voir",
-                        onClick: () => router.push(newNotif.link)
+                        onClick: () => router.push(newNotif.link!)
                     } : undefined
                 });
             });
@@ -117,8 +118,8 @@ export default function NotificationBell() {
     }
   };
 
-  const formatRelativeTime = (dateStr: string) => {
-    const date = new Date(dateStr);
+  const formatRelativeTime = (dateInput: string | Date) => {
+    const date = new Date(dateInput);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMin = Math.floor(diffMs / 60000);
@@ -132,7 +133,7 @@ export default function NotificationBell() {
     return date.toLocaleDateString("fr-FR");
   };
 
-  const handleNotificationClick = async (notif: any) => {
+  const handleNotificationClick = async (notif: Notification) => {
     if (!notif.isRead) {
       await markReadMutation.mutateAsync(notif.id);
     }
@@ -181,7 +182,7 @@ export default function NotificationBell() {
                 <p className="text-sm text-slate-400 font-medium">Aucune notification</p>
               </div>
             ) : (
-              notifData.notifications.map((notif: any) => (
+              notifData.notifications.map((notif: Notification) => (
                 <button
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}

@@ -22,6 +22,17 @@ import { fr } from "date-fns/locale";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { User } from "@/types";
+
+interface SecurityLog {
+  id: string;
+  userId: string;
+  action: string;
+  resource: string;
+  resourceId: string;
+  timestamp: string;
+  user: User;
+}
 
 export default function AuditLogsPage() {
   const [search, setSearch] = useState("");
@@ -31,11 +42,11 @@ export default function AuditLogsPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/logs");
       if (!res.ok) throw new Error("Erreur");
-      return res.json();
+      return res.json() as Promise<SecurityLog[]>;
     }
   });
 
-  const filteredLogs = logs?.filter((log: any) => 
+  const filteredLogs = logs?.filter((log: SecurityLog) => 
     log.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
     log.action?.toLowerCase().includes(search.toLowerCase()) ||
     log.resource?.toLowerCase().includes(search.toLowerCase())
@@ -109,7 +120,7 @@ export default function AuditLogsPage() {
             />
             <StatCard 
               label="Admins Actifs" 
-              value={new Set(logs?.map((l: any) => l.userId)).size} 
+              value={new Set(logs?.map((l: SecurityLog) => l.userId)).size} 
               icon={UserIcon} 
               color="blue" 
             />
@@ -146,7 +157,7 @@ export default function AuditLogsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredLogs?.map((log: any) => (
+                {filteredLogs?.map((log: SecurityLog) => (
                   <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -185,7 +196,7 @@ export default function AuditLogsPage() {
 
           {/* Vue Mobile (Cartes) */}
           <div className="md:hidden divide-y divide-slate-100">
-            {filteredLogs?.map((log: any) => (
+            {filteredLogs?.map((log: SecurityLog) => (
               <div key={log.id} className="p-4 space-y-3 bg-white hover:bg-slate-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -235,8 +246,15 @@ export default function AuditLogsPage() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color }: any) {
-  const colors: any = {
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  icon: any;
+  color: "indigo" | "emerald" | "blue";
+}
+
+function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
+  const colors: Record<string, string> = {
     indigo: "bg-indigo-50 text-indigo-600",
     emerald: "bg-emerald-50 text-emerald-600",
     blue: "bg-blue-50 text-blue-600",

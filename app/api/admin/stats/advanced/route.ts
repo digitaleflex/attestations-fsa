@@ -19,12 +19,22 @@ export async function GET(request: Request) {
       },
       _count: true,
     });
+ 
+    interface GroupedResult {
+      createdAt: Date;
+      _count: number;
+    }
+ 
+    interface DailyStat {
+      date: string;
+      count: number;
+    }
 
     // Formatter pour le graphique
-    const dailyUsers = Array.from({ length: 30 }).map((_, i) => {
+    const dailyUsers: DailyStat[] = Array.from({ length: 30 }).map((_, i) => {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'yyyy-MM-dd');
-      const count = (usersByDay as any[]).filter((u: any) => format(u.createdAt, 'yyyy-MM-dd') === dateStr).reduce((acc: number, curr: any) => acc + (curr._count as number), 0);
+      const count = (usersByDay as unknown as GroupedResult[]).filter((u) => format(u.createdAt, 'yyyy-MM-dd') === dateStr).reduce((acc, curr) => acc + curr._count, 0);
       return { date: format(date, 'dd/MM'), count };
     }).reverse();
 
@@ -39,7 +49,7 @@ export async function GET(request: Request) {
       }
     });
 
-    const formationStats = formations.map((f: any) => ({
+    const formationStats = formations.map((f: { name: string; _count: { attestations: number } }) => ({
       name: f.name.length > 20 ? f.name.slice(0, 20) + '...' : f.name,
       attestations: f._count.attestations
     }));
@@ -50,7 +60,7 @@ export async function GET(request: Request) {
       _count: true
     });
 
-    const sessionStats = (examSessions as any[]).map((s: any) => ({
+    const sessionStats = (examSessions as { status: string; _count: number }[]).map((s) => ({
       name: s.status === 'COMPLETED' ? 'Admis' : s.status === 'PENDING_REVIEW' ? 'En correction' : 'En cours',
       value: s._count
     }));

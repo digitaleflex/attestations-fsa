@@ -33,6 +33,17 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ExamSession, User, Exam } from "@/types";
+
+interface SubmissionsResponse {
+  submissions: Array<ExamSession & { candidate: User; exam: Exam }>;
+  stats: {
+    pendingReview: number;
+    completed: number;
+    inProgress: number;
+    passed: number;
+  };
+}
 
 function SubmissionsList() {
   const router = useRouter();
@@ -52,17 +63,17 @@ function SubmissionsList() {
     queryFn: async () => {
       const res = await fetch("/api/admin/submissions");
       if (!res.ok) throw new Error("Erreur");
-      return res.json();
+      return res.json() as Promise<SubmissionsResponse>;
     },
     staleTime: 2 * 60 * 1000,
   });
 
-  const filteredSubmissions = data?.submissions?.filter((sub: any) => {
+  const filteredSubmissions = data?.submissions?.filter((sub) => {
     const matchSearch = (sub.candidate?.name?.toLowerCase().includes(search.toLowerCase()) ||
                         sub.candidate?.email?.toLowerCase().includes(search.toLowerCase()) ||
                         sub.exam?.name?.toLowerCase().includes(search.toLowerCase()));
     const matchStatus = statusFilter === "all" || sub.status === statusFilter;
-    const matchType = typeFilter === "all" || sub.exam?.type === typeFilter || sub.type === typeFilter;
+    const matchType = typeFilter === "all" || sub.exam?.type === typeFilter || (sub as any).type === typeFilter;
     const matchExam = examFilter === "all" || sub.examId === examFilter;
     return matchSearch && matchStatus && matchType && matchExam;
   }) || [];
@@ -94,15 +105,15 @@ function SubmissionsList() {
     }
 
     const headers = ["Candidat", "Email", "Examen", "Type", "Status", "Score Examen", "Note Stage", "Note Globale", "Date"];
-    const csvContent = filteredSubmissions.map((sub: any) => [
+    const csvContent = filteredSubmissions.map((sub) => [
       sub.candidate?.name || "N/A",
       sub.candidate?.email || "N/A",
       sub.exam?.name || "N/A",
       sub.exam?.type || "N/A",
       sub.status,
       sub.score !== null ? `${sub.score}%` : "Non noté",
-      sub.internshipScore !== null ? `${sub.internshipScore}%` : "N/A",
-      sub.finalScore !== null ? `${sub.finalScore}%` : "N/A",
+      (sub as any).internshipScore !== null ? `${(sub as any).internshipScore}%` : "N/A",
+      (sub as any).finalScore !== null ? `${(sub as any).finalScore}%` : "N/A",
       sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("fr-FR") : "N/A"
     ].join(",")).join("\n");
 
@@ -115,7 +126,7 @@ function SubmissionsList() {
     toast.success("Exportation terminée");
   };
 
-  const uniqueExams = Array.from(new Map(data?.submissions?.map((s: any) => [s.examId, s.exam])).values());
+  const uniqueExams = Array.from(new Map(data?.submissions?.map((s) => [s.examId, s.exam])).values());
 
   if (isLoading) {
     return (
@@ -260,8 +271,8 @@ function SubmissionsList() {
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl border-slate-100 shadow-2xl p-2 font-bold max-h-[300px]">
                     <SelectItem value="all" className="rounded-xl">Tous les Examens</SelectItem>
-                    {uniqueExams.map((exam: any) => (
-                    <SelectItem key={exam.id} value={exam.id} className="rounded-xl">{exam.name}</SelectItem>
+                    {uniqueExams.map((exam) => (
+                    <SelectItem key={exam?.id} value={exam?.id || ""} className="rounded-xl">{exam?.name}</SelectItem>
                     ))}
                 </SelectContent>
                 </Select>
@@ -274,13 +285,13 @@ function SubmissionsList() {
           <EmptyState />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredSubmissions.map((sub: any) => (
+            {filteredSubmissions.map((sub) => (
               <Card key={sub.id} className="group p-6 border-none shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-500 rounded-3xl bg-white relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-2 h-full transition-all group-hover:w-4 bg-slate-50 group-hover:bg-indigo-500" />
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
                     <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0 group-hover:scale-95 transition-transform group-hover:bg-white group-hover:shadow-md">
-                        <UserIcon className="w-7 h-7 text-slate-300 group-hover:text-indigo-500" name={sub.candidate?.name} />
+                        <UserIcon className="w-7 h-7 text-slate-300 group-hover:text-indigo-500" name={sub.candidate?.name || undefined} />
                     </div>
                     <div className="flex-1 min-w-0 pt-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -302,7 +313,7 @@ function SubmissionsList() {
                         </span>
                         <Badge variant="outline" className={cn(
                             "border-none px-2.5 py-1 rounded-lg text-slate-400 bg-slate-50 font-black",
-                            (sub.exam?.type === 'MOCK' || sub.type === 'MOCK') && "bg-indigo-50 text-indigo-500"
+                            (sub.exam?.type === 'MOCK' || (sub as any).type === 'MOCK') && "bg-indigo-50 text-indigo-500"
                         )}>
                           {sub.exam?.type === 'MOCK' || sub.type === 'MOCK' ? "EXAM BLANC" : "OFFICIEL"}
                         </Badge>
@@ -347,7 +358,7 @@ function SubmissionsList() {
   );
 }
 
-function UserIcon({ name, className }: { name?: string, className?: string }) {
+function UserIcon({ name, className }: { name?: string | null, className?: string }) {
     return (
         <span className={className}>
             {name ? name.charAt(0).toUpperCase() : "?"}
@@ -355,8 +366,16 @@ function UserIcon({ name, className }: { name?: string, className?: string }) {
     )
 }
 
-function StatsCard({ title, value, icon: Icon, color, description }: any) {
-    const colors: any = {
+interface StatsCardProps {
+  title: string;
+  value: string | number;
+  icon: LucideIcon;
+  color: "amber" | "emerald" | "blue" | "indigo";
+  description: string;
+}
+
+function StatsCard({ title, value, icon: Icon, color, description }: StatsCardProps) {
+    const colors: Record<string, string> = {
       amber: "bg-amber-50 text-amber-600 shadow-amber-100/50",
       emerald: "bg-emerald-50 text-emerald-600 shadow-emerald-100/50",
       blue: "bg-blue-50 text-blue-600 shadow-blue-100/50",

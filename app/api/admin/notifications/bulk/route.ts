@@ -24,8 +24,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Le titre et le message sont obligatoires" }, { status: 400 });
     }
 
+    interface TargetUser {
+      id: string;
+      email: string;
+      name: string | null;
+    }
+
     // Trouver les utilisateurs cibles
-    const where: any = {};
+    const where: {
+      formationId?: string;
+    } = {};
     if (formationId && formationId !== 'all') {
       where.formationId = formationId;
     }
@@ -33,14 +41,14 @@ export async function POST(request: Request) {
     const users = await prisma.user.findMany({
       where,
       select: { id: true, email: true, name: true }
-    });
+    }) as TargetUser[];
 
     if (users.length === 0) {
       return NextResponse.json({ error: "Aucun candidat trouvé pour cette sélection" }, { status: 404 });
     }
 
     // Notifications en base
-    const notificationPromises = users.map((user: any) => 
+    const notificationPromises = users.map((user: TargetUser) => 
       createNotification({
         userId: user.id,
         type: 'GENERAL',
@@ -51,7 +59,7 @@ export async function POST(request: Request) {
     );
 
     // Emails (optionnel)
-    const emailPromises = sendEmail ? users.map((user: any) => 
+    const emailPromises = sendEmail ? users.map((user: TargetUser) => 
       emailService.sendGeneralNotification(
         user.email,
         user.name || "Candidat",
@@ -68,7 +76,7 @@ export async function POST(request: Request) {
         message: `Notification envoyée avec succès à ${users.length} candidats.` 
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Bulk Notification Error:", error);
     return NextResponse.json({ error: "Erreur lors de l'envoi groupé" }, { status: 500 });
   }

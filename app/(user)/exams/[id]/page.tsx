@@ -35,6 +35,60 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { useExamMonitoring, reportMonitoringEvents, MonitoringEvent, MonitoringState } from "@/lib/useExamMonitoring";
 
+interface QuestionOption {
+  id: string;
+  text: string;
+}
+
+interface Question {
+  id: string;
+  text: string;
+  options?: QuestionOption[];
+}
+
+interface ExamPart {
+  id: string;
+  order: number;
+  type: string;
+  questions: Question[];
+}
+
+interface ExamData {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  part1Enabled: boolean;
+  part2Enabled: boolean;
+  part3Enabled: boolean;
+  part1Points: number;
+  part2Points: number;
+  part3Points: number;
+  part1Questions: number;
+  part2Questions: number;
+  part3Mode: string;
+  part3Subject: string | null;
+  passingScore: number;
+  randomizeQuestions: boolean;
+  showResults: boolean;
+  status: string;
+  totalPoints: number;
+  parts: ExamPart[];
+}
+
+interface ExamSessionResponse {
+  id: string;
+  duration: number;
+}
+
+interface ScanData {
+  id: string;
+  url: string;
+  fileName: string;
+  fileSize: number;
+  pageNumber: number;
+}
+
 export default function ExamSessionPage() {
   const router = useRouter();
   const params = useParams();
@@ -44,14 +98,14 @@ export default function ExamSessionPage() {
   // États de navigation
   const [currentPart, setCurrentPart] = useState(1);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<any>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(3600); // 60 minutes par défaut
   const [showInstructions, setShowInstructions] = useState(true);
   const [agreedToRules, setAgreedToRules] = useState(false);
   const [showPart3Subject, setShowPart3Subject] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
-  const [scans, setScans] = useState<any[]>([]);
+  const [scans, setScans] = useState<ScanData[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -77,54 +131,28 @@ export default function ExamSessionPage() {
   // Fetch exam data
   const { data: exam, isLoading: examLoading } = useQuery({
     queryKey: ["exam", id],
-    queryFn: () => apiFetch(`/api/exams/${id}`) as Promise<{
-      id: string;
-      name: string;
-      description: string;
-      duration: number;
-      part1Enabled: boolean;
-      part2Enabled: boolean;
-      part3Enabled: boolean;
-      part1Points: number;
-      part2Points: number;
-      part3Points: number;
-      part1Questions: number;
-      part2Questions: number;
-      part3Mode: string;
-      part3Subject: string | null;
-      passingScore: number;
-      randomizeQuestions: boolean;
-      showResults: boolean;
-      status: string;
-      totalPoints: number;
-      parts: Array<{
-        id: string;
-        order: number;
-        type: string;
-        questions?: Array<any>;
-      }>;
-    }>,
+    queryFn: () => apiFetch(`/api/exams/${id}`) as Promise<ExamData>,
     staleTime: 5 * 60 * 1000,
   });
 
   // Start exam session
-  const startMutation = useMutation({
-    mutationFn: () => apiFetch(`/api/exams/${id}/start`, { method: "POST" }),
-    onSuccess: (data: any) => {
+  const startMutation = useMutation<ExamSessionResponse, Error, void>({
+    mutationFn: () => apiFetch<ExamSessionResponse>(`/api/exams/${id}/start`, { method: "POST" }),
+    onSuccess: (data: ExamSessionResponse) => {
       setTimeRemaining(data.duration || 3600);
       setSessionId(data.id); // Guardar el ID de session para los scans
       startTimer();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Impossible de démarrer l'examen");
       router.push("/exams");
     }
   });
 
   // Submit exam
-  const submitMutation = useMutation({
-    mutationFn: (finalAnswers: any) => 
-      apiFetch(`/api/exams/${id}/submit`, {
+  const submitMutation = useMutation<void, Error, Record<string, string>>({
+    mutationFn: (finalAnswers: Record<string, string>) => 
+      apiFetch<void>(`/api/exams/${id}/submit`, {
         method: "POST",
         body: JSON.stringify({ answers: finalAnswers }),
       }),
@@ -135,7 +163,7 @@ export default function ExamSessionPage() {
       }
       router.push("/results");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Erreur lors de la soumission. Vos réponses sont sauvegardées localement.");
       setIsSubmitting(false);
     },
@@ -168,8 +196,8 @@ export default function ExamSessionPage() {
   };
 
   // Handle answer change
-  const handleAnswerChange = (questionId: string, value: any) => {
-    setAnswers((prev: any) => ({
+  const handleAnswerChange = (questionId: string, value: string) => {
+    setAnswers((prev: Record<string, string>) => ({
       ...prev,
       [questionId]: value,
     }));
@@ -177,7 +205,7 @@ export default function ExamSessionPage() {
 
   // Handle Part 3 text change
   const handlePart3Change = (value: string) => {
-    setAnswers((prev: any) => ({
+    setAnswers((prev: Record<string, string>) => ({
       ...prev,
       part3: value,
     }));
@@ -460,8 +488,8 @@ export default function ExamSessionPage() {
 
   // Exam Interface - Extraction des questions depuis les parties
   const parts = exam?.parts || [];
-  const part1Questions = parts.find((p: any) => p.order === 1 || p.type === "QCM")?.questions || [];
-  const part2Questions = parts.find((p: any) => p.order === 2 || p.type === "OPEN")?.questions || [];
+  const part1Questions = parts.find((p: ExamPart) => p.order === 1 || p.type === "QCM")?.questions || [];
+  const part2Questions = parts.find((p: ExamPart) => p.order === 2 || p.type === "OPEN")?.questions || [];
   const hasPart3 = exam?.part3Enabled ?? true;
   const part3Mode = exam?.part3Mode || "digital"; 
 
@@ -566,7 +594,7 @@ export default function ExamSessionPage() {
                     }
                     className="space-y-3"
                   >
-                    {part1Questions[currentQuestion]?.options?.map((option: any, idx: number) => (
+                    {part1Questions[currentQuestion]?.options?.map((option: QuestionOption, idx: number) => (
                       <div
                         key={option.id}
                         className="flex items-center space-x-3 p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
@@ -644,7 +672,7 @@ export default function ExamSessionPage() {
             </Alert>
 
             <div className="space-y-6">
-              {part2Questions.map((question: any, idx: number) => (
+              {part2Questions.map((question: Question, idx: number) => (
                 <div key={question.id} className="p-4 bg-slate-50 rounded-lg">
                   <p className="text-sm font-semibold text-slate-700 mb-3">
                     Question {idx + 1}

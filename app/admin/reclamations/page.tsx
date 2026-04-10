@@ -10,7 +10,7 @@ import {
   Clock, 
   CheckCircle, 
   XCircle, 
-  User, 
+  User as UserIcon, 
   BookOpen, 
   Send,
   Loader2,
@@ -19,6 +19,26 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { User } from "@/types";
+
+interface Reclamation {
+  id: string;
+  userId: string;
+  submissionId: string | null;
+  subject: string;
+  message: string;
+  status: "PENDING" | "RESOLVED";
+  adminReply: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: User;
+  submission?: {
+    id: string;
+    exam?: {
+      title: string;
+    };
+  };
+}
 
 export default function AdminReclamationsPage() {
   const queryClient = useQueryClient();
@@ -30,12 +50,12 @@ export default function AdminReclamationsPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/reclamations");
       if (!res.ok) throw new Error("Erreur");
-      return res.json();
+      return res.json() as Promise<Reclamation[]>;
     },
   });
 
   const replyMutation = useMutation({
-    mutationFn: async ({ id, status, adminReply }: any) => {
+    mutationFn: async ({ id, status, adminReply }: { id: string; status: "PENDING" | "RESOLVED"; adminReply: string | null }) => {
       const res = await fetch(`/api/admin/reclamations/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ status, adminReply }),
@@ -52,7 +72,7 @@ export default function AdminReclamationsPage() {
     }
   });
 
-  const filtered = reclamations?.filter((r: any) => filter === "all" || r.status === filter) || [];
+  const filtered = reclamations?.filter((r: Reclamation) => filter === "all" || r.status === filter) || [];
 
   if (isLoading) {
     return (
@@ -104,7 +124,7 @@ export default function AdminReclamationsPage() {
              <h3 className="text-xl font-bold text-slate-400">Aucune réclamation dans cette catégorie</h3>
           </Card>
         ) : (
-          filtered.map((reclamation: any) => (
+          filtered.map((reclamation: Reclamation) => (
             <Card key={reclamation.id} className="p-8 border-none shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all rounded-[32px] bg-white group overflow-hidden relative">
               <div className={cn(
                 "absolute top-0 left-0 w-2 h-full",
@@ -130,7 +150,7 @@ export default function AdminReclamationsPage() {
 
                   <div className="flex items-center gap-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                      <User className="w-6 h-6 text-slate-400" />
+                      <UserIcon className="w-6 h-6 text-slate-400" />
                     </div>
                     <div>
                       <p className="text-sm font-black text-slate-900 uppercase">{reclamation.user?.name}</p>

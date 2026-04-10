@@ -1,6 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { ExamType, ExamSession, Attestation } from "@/types";
+
+interface ExamResult {
+  examName: string;
+  score: number;
+  totalPoints: number;
+  internshipScore: number;
+  finalScore: number;
+  status: string;
+  type: ExamType;
+  date: Date | string;
+  part1Score?: number;
+  part2Score?: number;
+  part3Score?: number;
+}
+
+interface AttestationData {
+  formationName: string;
+  type: string;
+  code: string;
+  issuedAt: Date | string;
+  score?: number;
+}
 
 export async function GET(request: Request) {
   try {
@@ -46,7 +69,7 @@ export async function GET(request: Request) {
       orderBy: { submittedAt: "desc" },
     });
 
-    const examResults = examSessions.map((session: any) => ({
+    const examResults: ExamResult[] = examSessions.map((session: any) => ({
       examName: session.exam.title || session.exam.name,
       score: session.score,
       totalPoints: session.exam.totalPoints || 20,
@@ -55,9 +78,9 @@ export async function GET(request: Request) {
       status: session.status,
       type: session.exam.type,
       date: session.submittedAt || session.startedAt,
-      part1Score: session.scorePart1,
-      part2Score: session.scorePart2,
-      part3Score: session.scorePart3,
+      part1Score: (session as any).scorePart1,
+      part2Score: (session as any).scorePart2,
+      part3Score: (session as any).scorePart3,
     }));
 
     // Récupérer les attestations
@@ -71,7 +94,7 @@ export async function GET(request: Request) {
       orderBy: { issuedAt: "desc" },
     });
 
-    const attestationData = attestations.map((att: any) => ({
+    const attestationData: AttestationData[] = attestations.map((att: any) => ({
       formationName: att.formation?.name || "Formation",
       type: att.type,
       code: att.code,
@@ -83,7 +106,8 @@ export async function GET(request: Request) {
     const totalExams = examSessions.length;
     const passedExams = examSessions.filter((s: any) => {
       // On utilise le finalScore (moyenne exam+stage) si disponible
-      const percentage = s.finalScore || (s.score / (s.exam.totalPoints || 20)) * 100;
+      const maxPoints = (s.exam as any).totalPoints || 20;
+      const percentage = s.finalScore || (s.score / maxPoints) * 100;
       return percentage >= 65; // Seuil FSA à 65%
     }).length;
     
@@ -94,7 +118,8 @@ export async function GET(request: Request) {
     const globalAverage =
       examSessions.length > 0
         ? examSessions.reduce((acc: number, session: any) => {
-            const percentage = session.finalScore || (session.score / (session.exam.totalPoints || 20)) * 100;
+            const maxPoints = (session.exam as any).totalPoints || 20;
+            const percentage = session.finalScore || (session.score / maxPoints) * 100;
             return acc + percentage;
           }, 0) / examSessions.length
         : 0;

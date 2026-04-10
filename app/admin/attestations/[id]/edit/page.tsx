@@ -17,6 +17,13 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Attestation, Formation } from "@/types";
+
+const formatDate = (date: any): string => {
+  if (!date) return "";
+  const d = typeof date === 'string' ? date : date.toISOString();
+  return d.slice(0, 10);
+};
 
 const ATTESTATION_TYPES = [
   { value: "FORMATION", label: "Formation" },
@@ -33,22 +40,22 @@ export default function EditAttestationPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  const [form, setForm] = useState<any>(null);
+  const [form, setForm] = useState<any>(null); // Keeping any for form state as it's a dynamic form mixed with strings
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formations, setFormations] = useState<string[]>([]);
-  const [fieldErrors, setFieldErrors] = useState<any>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const { data: attData, isLoading: attLoading } = useQuery({
     queryKey: ["attestation", id],
-    queryFn: () => apiFetch(`/api/attestations/${id}`) as any,
+    queryFn: () => apiFetch<Attestation>(`/api/attestations/${id}`),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: formationsData } = useQuery({
     queryKey: ["formations"],
-    queryFn: () => apiFetch("/api/formations") as any,
+    queryFn: () => apiFetch<Formation[]>("/api/formations"),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -57,11 +64,11 @@ export default function EditAttestationPage() {
       setForm({
         fullName: attData.fullName || "",
         gender: attData.gender || "",
-        birthDate: attData.birthDate?.slice(0, 10) || "",
+        birthDate: formatDate(attData.birthDate),
         birthPlace: attData.birthPlace || "",
         formation: attData.formation?.name || "",
-        startDate: attData.startDate?.slice(0, 10) || "",
-        endDate: attData.endDate?.slice(0, 10) || "",
+        startDate: formatDate(attData.startDate),
+        endDate: formatDate(attData.endDate),
         location: attData.location || "",
         instructor: attData.instructor || "",
         issuingCompany: attData.issuingCompany || "",
@@ -76,7 +83,7 @@ export default function EditAttestationPage() {
       });
     }
     if (formationsData) {
-      setFormations(Array.isArray(formationsData) ? formationsData.map((f: any) => f.name) : []);
+      setFormations(Array.isArray(formationsData) ? formationsData.map((f: Formation) => f.name) : []);
     }
   }, [attData, formationsData]);
 
@@ -109,7 +116,7 @@ export default function EditAttestationPage() {
   };
 
   const validate = (data: any) => {
-    const errors: any = {};
+    const errors: Record<string, string> = {};
     if (!data.fullName) errors.fullName = "Le nom est requis";
     if (!data.birthDate) errors.birthDate = "La date de naissance est requise";
     if (!data.birthPlace) errors.birthPlace = "Le lieu de naissance est requis";
@@ -170,8 +177,8 @@ export default function EditAttestationPage() {
       
       // Si on a des détails d'erreur (ex: Zod), on les affiche par champ
       if (err instanceof ApiError && err.details && Array.isArray(err.details)) {
-        const errors: any = {};
-        err.details.forEach((detail: any) => {
+        const errors: Record<string, string> = {};
+        err.details.forEach((detail: { path: string[], message: string }) => {
           if (detail.path && detail.path.length > 0) {
             const fieldName = detail.path[0];
             errors[fieldName] = detail.message;
