@@ -107,7 +107,7 @@ export default function UserDashboardPage() {
     queryFn: async () => {
       const res = await fetch("/api/user/profile");
       if (!res.ok) {
-        if (res.status === 401) router.push("/admin/login");
+        if (res.status === 401) router.push("/auth");
         throw new Error("Non autorisé");
       }
       return res.json();
@@ -259,6 +259,24 @@ export default function UserDashboardPage() {
                     </p>
                  </div>
               </div>
+              
+              {/* Badge Display */}
+              {statsData?.portfolio?.completedMissions > 0 && (
+                <div className={cn(
+                  "px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm border animate-in zoom-in duration-500",
+                  statsData.portfolio.completedMissions >= 6 ? "bg-amber-400 border-amber-500 text-amber-950" :
+                  statsData.portfolio.completedMissions >= 3 ? "bg-slate-200 border-slate-300 text-slate-800" :
+                  "bg-orange-200 border-orange-300 text-orange-950"
+                )}>
+                   <Trophy className="w-4 h-4" />
+                   <span className="text-[10px] font-black uppercase">
+                     {statsData.portfolio.completedMissions >= 6 ? "Rang Or" :
+                      statsData.portfolio.completedMissions >= 3 ? "Rang Argent" :
+                      "Rang Bronze"}
+                   </span>
+                </div>
+              )}
+
               <div className="flex-1 max-w-md w-full">
                  <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-black text-indigo-600">PROGRESSION</span>

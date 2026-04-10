@@ -50,7 +50,7 @@ export default function UserInternshipsPage() {
     queryFn: async () => {
       const res = await fetch("/api/user/internships");
       if (!res.ok) {
-        if (res.status === 401) router.push("/admin/login");
+        if (res.status === 401) router.push("/auth");
         throw new Error("Non autorisé");
       }
       return res.json();
