@@ -392,7 +392,9 @@ model ChatMessage {
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
   attachments Json?
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userPortfolioMissionId String?
+  userPortfolioMission   UserPortfolioMission? @relation(fields: [userPortfolioMissionId], references: [id])
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
@@ -548,27 +550,56 @@ enum PortfolioStatus {
   REJECTED
 }
 
+enum MissionType {
+  EXERCISE
+  PROJECT
+  FIELD_SUPPORT
+}
+
+enum ProjectLevel {
+  STANDARD
+  ADVANCED
+}
+
 model PortfolioMission {
-  id           String                 @id @default(uuid())
-  title        String
-  description  String
-  order        Int                    @default(0)
-  createdAt    DateTime               @default(now())
-  formationId  String?
-  formation    Formation?             @relation(fields: [formationId], references: [id])
-  userMissions UserPortfolioMission[]
+  id                 String                 @id @default(uuid())
+  title              String
+  description        String
+  type               MissionType            @default(EXERCISE)
+  guideMarkdown      String?
+  requiredExamId     String?
+  minScoreRequired   Float?                 @default(13)
+  order              Int                    @default(0)
+  dueDate            DateTime?
+  createdAt          DateTime               @default(now())
+  formationId        String?
+  formation          Formation?             @relation(fields: [formationId], references: [id])
+  userMissions       UserPortfolioMission[]
 }
 
 model UserPortfolioMission {
-  id              String           @id @default(uuid())
+  id              String               @id @default(uuid())
   userId          String
   missionId       String
-  status          String           @default("PENDING")
+  status          String               @default("PENDING")
+  unlockedLevel   ProjectLevel?
   submissionProof String?
   adminComment    String?
   completedAt     DateTime?
-  user            User             @relation(fields: [userId], references: [id])
-  mission         PortfolioMission @relation(fields: [missionId], references: [id])
+  user            User                 @relation(fields: [userId], references: [id])
+  mission         PortfolioMission     @relation(fields: [missionId], references: [id])
+  proofs          PortfolioProof[]
+  messages        ChatMessage[]
 
   @@unique([userId, missionId])
+}
+
+model PortfolioProof {
+  id              String               @id @default(uuid())
+  userMissionId   String
+  url             String
+  label           String
+  type            String               @default("LINK")
+  createdAt       DateTime             @default(now())
+  userMission     UserPortfolioMission @relation(fields: [userMissionId], references: [id], onDelete: Cascade)
 }
