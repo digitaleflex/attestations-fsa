@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const dailyUsers = Array.from({ length: 30 }).map((_, i) => {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'yyyy-MM-dd');
-      const count = usersByDay.filter(u => format(u.createdAt, 'yyyy-MM-dd') === dateStr).reduce((acc, curr) => acc + curr._count, 0);
+      const count = (usersByDay as any[]).filter((u: any) => format(u.createdAt, 'yyyy-MM-dd') === dateStr).reduce((acc: number, curr: any) => acc + (curr._count as number), 0);
       return { date: format(date, 'dd/MM'), count };
     }).reverse();
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       }
     });
 
-    const formationStats = formations.map(f => ({
+    const formationStats = formations.map((f: any) => ({
       name: f.name.length > 20 ? f.name.slice(0, 20) + '...' : f.name,
       attestations: f._count.attestations
     }));
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       _count: true
     });
 
-    const sessionStats = examSessions.map(s => ({
+    const sessionStats = (examSessions as any[]).map((s: any) => ({
       name: s.status === 'COMPLETED' ? 'Admis' : s.status === 'PENDING_REVIEW' ? 'En correction' : 'En cours',
       value: s._count
     }));
