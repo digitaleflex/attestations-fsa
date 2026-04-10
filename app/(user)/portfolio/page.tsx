@@ -20,10 +20,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import ProjectWorkspace from "@/components/portfolio/ProjectWorkspace";
+import { Lock } from "lucide-react";
 
 export default function PortfolioMissionsPage() {
   const queryClient = useQueryClient();
   const [selectedMission, setSelectedMission] = useState<any>(null);
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [submission, setSubmission] = useState("");
 
   const { data, isLoading } = useQuery({
@@ -73,6 +76,28 @@ export default function PortfolioMissionsPage() {
   const totalCount = missions.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+  const getBadge = (count: number) => {
+    if (count >= 6) return { label: "OR", color: "bg-amber-400 text-amber-900 shadow-amber-200", icon: Trophy };
+    if (count >= 3) return { label: "ARGENT", color: "bg-slate-300 text-slate-800 shadow-slate-100", icon: Trophy };
+    if (count >= 1) return { label: "BRONZE", color: "bg-orange-300 text-orange-900 shadow-orange-100", icon: Trophy };
+    return null;
+  };
+
+  const badge = getBadge(completedCount);
+
+  if (isWorkspaceOpen && selectedMission) {
+    return (
+      <ProjectWorkspace 
+        mission={selectedMission} 
+        onBack={() => {
+            setIsWorkspaceOpen(false);
+            setSelectedMission(null);
+        }} 
+        onUpdate={() => queryClient.invalidateQueries({ queryKey: ["portfolio-status"] })}
+      />
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
       {/* Header Statistique */}
@@ -121,21 +146,38 @@ export default function PortfolioMissionsPage() {
             {missions.map((mission: any, idx: number) => (
                <Card 
                   key={mission.id} 
-                  className={`p-6 border-none shadow-premium transition-all cursor-pointer group ${selectedMission?.id === mission.id ? 'ring-2 ring-indigo-500 scale-[1.02]' : 'hover:scale-[1.01] bg-white'}`}
-                  onClick={() => setSelectedMission(mission)}
+                  className={`p-6 border-none shadow-premium transition-all cursor-pointer group ${
+                    selectedMission?.id === mission.id ? 'ring-2 ring-indigo-500 scale-[1.02]' : 'hover:scale-[1.01] bg-white'
+                  } ${mission.userStatus === 'LOCKED' ? 'opacity-60 grayscale' : ''}`}
+                  onClick={() => {
+                    if (mission.userStatus === 'LOCKED') {
+                        toast.error(mission.lockReason || "Cette mission est verrouillée.");
+                        return;
+                    }
+                    setSelectedMission(mission);
+                    if (mission.type === 'PROJECT') {
+                        setIsWorkspaceOpen(true);
+                    }
+                  }}
                >
                   <div className="flex items-center gap-6">
-                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${mission.userStatus === 'COMPLETED' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                        {mission.userStatus === 'COMPLETED' ? <CheckCircle2 className="w-6 h-6" /> : (idx + 1)}
+                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${
+                        mission.userStatus === 'COMPLETED' ? 'bg-emerald-100 text-emerald-600' : 
+                        mission.userStatus === 'LOCKED' ? 'bg-slate-50 text-slate-300' : 'bg-slate-100 text-slate-400'
+                     }`}>
+                        {mission.userStatus === 'COMPLETED' ? <CheckCircle2 className="w-6 h-6" /> : 
+                         mission.userStatus === 'LOCKED' ? <Lock className="w-5 h-5" /> : (idx + 1)}
                      </div>
                      <div className="flex-1">
                         <div className="flex items-center gap-2">
                            <h3 className="font-bold text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors">{mission.title}</h3>
+                           {mission.type === 'PROJECT' && <Badge className="bg-amber-100 text-amber-700 border-none px-2 py-0 h-4 text-[8px] uppercase tracking-tighter">Projet</Badge>}
                            {mission.formationName && <Badge className="bg-slate-50 text-slate-400 border-none px-2 py-0 h-4 text-[8px] uppercase tracking-tighter">{mission.formationName}</Badge>}
                         </div>
                         <p className="text-xs text-slate-400 mt-1 line-clamp-1">{mission.description}</p>
+                        {mission.userStatus === 'LOCKED' && <p className="text-[10px] text-rose-500 font-bold uppercase mt-1">Verrouillé : {mission.lockReason}</p>}
                      </div>
-                     <ChevronRight className="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform" />
+                     {mission.userStatus !== 'LOCKED' && <ChevronRight className="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform" />}
                   </div>
                </Card>
             ))}

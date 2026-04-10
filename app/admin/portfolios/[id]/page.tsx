@@ -14,11 +14,19 @@ import {
   ShieldCheck,
   FileText,
   User as UserIcon,
-  Clock
+  Clock,
+  Send,
+  Loader2,
+  Info,
+  Trophy,
+  BookOpen
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import ProjectChat from "@/components/admin/ProjectChat";
 
 export default function AdminPortfolioDetail() {
   const { id } = useParams();
@@ -63,7 +71,8 @@ export default function AdminPortfolioDetail() {
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-6xl mx-auto">
+    <div className="p-8 space-y-8 max-w-6xl mx-auto animate-in fade-in duration-700">
+
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={() => router.back()} className="gap-2 rounded-xl">
            <ArrowLeft className="w-4 h-4" /> Retour
@@ -129,39 +138,83 @@ export default function AdminPortfolioDetail() {
                      </Badge>
                   </div>
 
-                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group">
-                     <div>
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Preuve de réalisation</p>
-                        <p className="text-sm font-medium text-slate-700">{um.submissionProof || "Aucune preuve fournie"}</p>
+                  {/* Proofs Section */}
+                  <div className="space-y-4">
+                     <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-indigo-400" /> Livrables & Preuves (Drive)
+                     </h5>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {um.proofs && um.proofs.length > 0 ? (
+                           um.proofs.map((proof: any) => (
+                              <a 
+                                 key={proof.id} 
+                                 href={proof.url} 
+                                 target="_blank" 
+                                 rel="noopener noreferrer"
+                                 className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white transition-all group/proof"
+                              >
+                                 <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-indigo-600">
+                                       <ExternalLink className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-700 truncate">{proof.label}</span>
+                                 </div>
+                                 <ArrowLeft className="w-4 h-4 text-slate-300 rotate-180 transition-transform group-hover/proof:translate-x-1" />
+                              </a>
+                           ))
+                        ) : (
+                           <div className="col-span-2 p-6 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-center">
+                              <p className="text-xs font-medium text-slate-400 italic">
+                                 {um.submissionProof || "Aucune preuve numérique déposée."}
+                              </p>
+                           </div>
+                        )}
                      </div>
-                     <Button variant="ghost" size="icon" className="text-slate-300 opacity-0 group-hover:opacity-100">
-                        <ExternalLink className="w-4 h-4" />
-                     </Button>
                   </div>
 
-                  <div className="space-y-3">
-                     <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Commentaire admin</p>
-                     <Textarea 
-                        placeholder="Raison du refus ou encouragement..."
-                        className="rounded-2xl border-slate-100 bg-slate-50/50 text-xs min-h-[80px]"
-                        value={comments[um.id] || um.adminComment || ""}
-                        onChange={(e) => setComments({...comments, [um.id]: e.target.value})}
-                     />
-                     <div className="flex gap-2">
-                        <Button 
-                          size="sm" variant="outline" 
-                          onClick={() => handleUpdateMission(um.id, "REJECTED")}
-                          className="flex-1 rounded-xl h-10 border-rose-200 text-rose-600 font-bold"
-                        >
-                           Refuser Mission
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleUpdateMission(um.id, "COMPLETED")}
-                          className="flex-1 rounded-xl h-10 bg-slate-900 font-bold"
-                        >
-                           Valider Mission
-                        </Button>
+                  {/* Action & Feedback Section */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6 border-t border-slate-50">
+                     <div className="space-y-4">
+                        <div className="space-y-1">
+                           <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Feed-back Mentorat</p>
+                           <Textarea 
+                              placeholder="Partagez vos corrections pédagogiques ici..."
+                              className="rounded-2xl border-slate-100 bg-slate-50/50 text-xs min-h-[120px] focus:bg-white transition-all"
+                              value={comments[um.id] || um.adminComment || ""}
+                              onChange={(e) => setComments({...comments, [um.id]: e.target.value})}
+                           />
+                        </div>
+                        <div className="flex gap-2">
+                           <Button 
+                              size="sm" variant="outline" 
+                              onClick={() => handleUpdateMission(um.id, "REJECTED")}
+                              className="flex-1 rounded-xl h-11 border-rose-200 text-rose-600 font-bold hover:bg-rose-50"
+                           >
+                              Demander Correction
+                           </Button>
+                           <Button 
+                              size="sm" 
+                              onClick={() => handleUpdateMission(um.id, "COMPLETED")}
+                              className={`flex-1 rounded-xl h-11 font-bold ${um.status === 'COMPLETED' ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white shadow-lg shadow-slate-200'}`}
+                              disabled={um.status === 'COMPLETED'}
+                           >
+                              Valider l'Étape
+                           </Button>
+                        </div>
+                     </div>
+
+                     {/* Project Chat Integration */}
+                     <div className="bg-slate-50/50 rounded-3xl border border-slate-100 flex flex-col h-[300px] overflow-hidden">
+                        <div className="p-3 bg-white/50 border-b border-slate-100 flex items-center justify-between">
+                           <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Discussion Projet</span>
+                           <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-[9px] font-bold text-slate-500">En direct</span>
+                           </div>
+                        </div>
+                        <div className="flex-1 p-4 space-y-3 overflow-y-auto scrollbar-hide">
+                            <ProjectChat missionId={um.id} studentId={user.id} />
+                        </div>
                      </div>
                   </div>
                </Card>

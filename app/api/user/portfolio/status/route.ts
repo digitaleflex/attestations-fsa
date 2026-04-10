@@ -34,30 +34,70 @@ export async function GET(request: Request) {
       where: {
         OR: [
           { formationId: dbUser?.formationId },
-          { formationId: null } // Missions communes éventuelles
+          { formationId: null }
         ]
       },
       orderBy: { order: "asc" },
       include: {
         formation: { select: { name: true } },
         userMissions: {
-          where: { userId: user.id }
+          where: { userId: user.id },
+          include: { 
+            proofs: true 
+          }
         }
+      }
+    });
+
+    // Récupérer les scores des examens pour les prérequis
+    const userExamSessions = await prisma.examSession.findMany({
+      where: { userId: user.id, status: "GRADED" },
+      select: {
+        examId: true,
+        finalScore: true,
+        exam: { select: { totalPoints: true } }
       }
     });
 
     const missionsWithStatus = currentMissions.map((m: any) => {
       const userMission = m.userMissions[0];
+      let status = userMission?.status || "PENDING";
+      let unlockedLevel = "STANDARD";
+      let lockReason = null;
+
+      // Logique de déblocage pour les projets
+      if (m.type === "PROJECT" && m.requiredExamId) {
+        const session = userExamSessions.find((s: any) => s.examId === m.requiredExamId);
+        if (!session) {
+          status = "LOCKED";
+          lockReason = "Examen prérequis non complété";
+        } else {
+          const normalizedScore = (session.finalScore / (session.exam.totalPoints || 100)) * 20;
+          if (normalizedScore < (m.minScoreRequired || 13)) {
+            status = "LOCKED";
+            lockReason = `Score insuffisant (${normalizedScore.toFixed(1)}/20). Minimum: ${m.minScoreRequired || 13}/20`;
+          } else if (normalizedScore >= 16) {
+            unlockedLevel = "ADVANCED";
+          }
+        }
+      }
+
       return {
         id: m.id,
         title: m.title,
         description: m.description,
+        type: m.type,
+        guideMarkdown: m.guideMarkdown,
         order: m.order,
+        dueDate: m.dueDate,
         formationName: m.formation?.name || null,
-        userStatus: userMission?.status || "PENDING",
+        userStatus: status,
+        unlockedLevel: userMission?.unlockedLevel || unlockedLevel,
         submissionProof: userMission?.submissionProof || null,
         adminComment: userMission?.adminComment || null,
-        completedAt: userMission?.completedAt || null
+        completedAt: userMission?.completedAt || null,
+        proofs: userMission?.proofs || [],
+        lockReason
       };
     });
 
