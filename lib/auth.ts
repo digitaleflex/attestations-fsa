@@ -213,12 +213,13 @@ export async function getAdminUser(request: Request): Promise<SessionUser | null
     // 1. Essai avec Better Auth
     const session = await auth.api.getSession({ headers: request.headers });
 
-    if (session?.user && getUserRole(session.user)?.toLowerCase() === "admin") {
+    if (session?.user) {
+      const role = getUserRole(session.user)?.toUpperCase() || "ADMIN";
       return {
         id: session.user.id as string,
         email: session.user.email as string,
         name: (session.user.name as string | null | undefined) || null,
-        role: getUserRole(session.user) || "ADMIN",
+        role,
         emailVerified: !!session.user.emailVerified,
       };
     }
@@ -277,11 +278,12 @@ export async function getCurrentUser(
       : await auth.api.getSession({ headers: await headers() });
 
     if (session?.user) {
+      const role = getUserRole(session.user)?.toUpperCase() || "USER";
       return {
         id: session.user.id as string,
         email: session.user.email as string,
         name: session.user.name as string | null | undefined,
-        role: getUserRole(session.user) || "USER",
+        role,
         emailVerified: !!session.user.emailVerified,
       } as SessionUser;
     }
