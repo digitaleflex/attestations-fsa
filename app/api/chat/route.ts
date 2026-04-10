@@ -13,6 +13,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const targetUserId = searchParams.get("userId");
     const unreadOnly = searchParams.get("unread") === "true";
+    const missionId = searchParams.get("missionId"); // Nouveau: Filtrer par projet
 
     const where: any = {};
     if (isAdmin) {
@@ -27,6 +28,14 @@ export async function GET(req: Request) {
     } else {
       if (!user) return NextResponse.json({ error: "Non connecté" }, { status: 401 });
       where.userId = user.id;
+    }
+
+    if (missionId) {
+      where.userPortfolioMissionId = missionId;
+    } else if (!isAdmin) {
+       // Si on est pas admin et qu'on ne demande pas un projet précis, 
+       // on ne montre que le chat général (sans missionId) ?
+       // Ou tout ? Habituellement tout. Laisons le choix à l'UI.
     }
 
     // @ts-ignore - Accès dynamique au cas où le client n'a pas encore fini de se synchroniser
@@ -79,7 +88,7 @@ export async function POST(req: Request) {
     const adminUser = await getAdminUser(req);
     const isAdmin = !!adminUser;
     const body = await req.json();
-    const { content, userId: targetUserId, attachments } = body;
+    const { content, userId: targetUserId, attachments, missionId } = body;
 
     console.log(`[CHAT POST] User: ${user?.id}, Admin: ${isAdmin}, Target: ${targetUserId}`);
 
@@ -107,7 +116,8 @@ export async function POST(req: Request) {
         senderId,
         senderRole,
         userId: finalUserId,
-        attachments: attachments || []
+        attachments: attachments || [],
+        userPortfolioMissionId: missionId || null
       }
     });
 

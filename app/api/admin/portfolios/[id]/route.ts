@@ -19,7 +19,8 @@ export async function GET(
       include: {
         portfolioMissions: {
           include: {
-            mission: true
+            mission: true,
+            proofs: true
           },
           orderBy: {
             mission: { order: "asc" }
