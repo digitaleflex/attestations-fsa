@@ -114,21 +114,12 @@ export default function ExamSessionPage() {
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ ANTI-CHEAT: Exam monitoring
+  // ✅ ANTI-CHEAT: Exam monitoring (DISABLED by request)
+  /*
   const monitoring = useExamMonitoring({
-    examId: id as string,
-    userId: undefined, // Will be set when exam starts
-    maxTabSwitches: 3,
-    onViolation: (event: MonitoringEvent, state: MonitoringState) => {
-      // Show warning to user
-      if (state.tabSwitches >= 3) {
-        toast.warning(
-          `⚠️ Attention: Vous avez quitté l'examen ${state.tabSwitches} fois. Cet incident sera signalé.`,
-          { duration: 5000 }
-        );
-      }
-    },
+// ...
   });
+  */
 
   // Fetch exam data
   const { data: exam, isLoading: examLoading } = useQuery({
@@ -154,7 +145,7 @@ export default function ExamSessionPage() {
   // Submit exam
   const submitMutation = useMutation<void, Error, Record<string, string>>({
     mutationFn: (finalAnswers: Record<string, string>) => 
-      apiFetch<void>(`/api/exams/${id}/submit`, {
+      apiFetch<void>(`/api/exams/${id}/submit?v=${Date.now()}`, {
         method: "POST",
         body: JSON.stringify({ answers: finalAnswers }),
       }),
@@ -225,20 +216,7 @@ export default function ExamSessionPage() {
 
     setIsSubmitting(true);
 
-    // ✅ ANTI-CHEAT: Report monitoring events before submission
-    if (monitoring.totalSuspiciousEvents > 0) {
-      try {
-        await reportMonitoringEvents(
-          monitoring.events,
-          id as string,
-          'user-id' // Will be replaced with actual userId from session
-        );
-      } catch (error) {
-        console.error('Failed to report monitoring events:', error);
-      }
-    }
-
-    submitMutation.mutate(answers);
+    // ANTI-CHEAT: Report monitoring events DISABLED
 
     submitMutation.mutate(answers);
 
@@ -285,23 +263,44 @@ export default function ExamSessionPage() {
     }
   };
 
-  // Auto-save (every 30 seconds)
+  // 💾 SAUVEGARDE INSTANTANÉE & AUTOMATIQUE
   useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
-      if (Object.keys(answers).length > 0 && !showInstructions) {
-        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-          localStorage.setItem(`exam-${id}-draft`, JSON.stringify({
-            answers,
-            timeRemaining,
-            currentPart,
-          }));
-          console.log('💾 Brouillon sauvegardé automatiquement');
-        }
+    if (showInstructions || !id) return;
+    
+    const saveDraft = () => {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem(`exam-${id}-draft`, JSON.stringify({
+          answers,
+          timeRemaining,
+          currentPart,
+          lastSync: new Date().toISOString()
+        }));
       }
-    }, 30000);
+    };
 
-    return () => clearInterval(autoSaveInterval);
-  }, [answers, timeRemaining, currentPart, id]);
+    // Sauvegarde immédiate lors des changements importants
+    saveDraft();
+  }, [answers, currentPart, id, showInstructions]);
+
+  // Sauvegarde du temps toutes les 10 secondes (plus fréquent pour mobile)
+  useEffect(() => {
+    if (showInstructions) return;
+
+    const timeInterval = setInterval(() => {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const draft = localStorage.getItem(`exam-${id}-draft`);
+        const currentDraft = draft ? JSON.parse(draft) : { answers: {} };
+        
+        localStorage.setItem(`exam-${id}-draft`, JSON.stringify({
+          ...currentDraft,
+          timeRemaining,
+          currentPart
+        }));
+      }
+    }, 10000);
+
+    return () => clearInterval(timeInterval);
+  }, [timeRemaining, currentPart, id, showInstructions]);
 
   // Load draft on mount
   useEffect(() => {
@@ -504,20 +503,14 @@ export default function ExamSessionPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header with Timer */}
       <header className="bg-white border-b shadow-sm sticky top-0 z-10">
-        {/* ✅ ANTI-CHEAT: Warning banner if suspicious activity detected */}
+        {/* ✅ ANTI-CHEAT: Warning banner DISABLED */}
+        {/*
         {monitoring.totalSuspiciousEvents > 0 && (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3">
-            <div className="max-w-7xl mx-auto flex items-center gap-3 text-sm">
-              <AlertCircle className="w-4 h-4 text-amber-600" />
-              <p className="text-amber-800 font-medium">
-                ⚠️ {monitoring.tabSwitches} changement(s) d'onglet détecté(s) | {monitoring.blurCount} perte(s) de focus
-              </p>
-              <Badge variant="outline" className="text-xs">
-                {monitoring.totalSuspiciousEvents} événement(s) suspect(s)
-              </Badge>
-            </div>
+// ...
           </div>
         )}
+        */}
 
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -525,7 +518,10 @@ export default function ExamSessionPage() {
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-slate-800">{exam?.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-slate-800">{exam?.name}</h1>
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" title="Mode Sécurisé - Anti-triche désactivé" />
+              </div>
               <p className="text-xs text-slate-500">
                 Partie {currentPart} sur {hasPart3 ? 3 : 2}
               </p>
