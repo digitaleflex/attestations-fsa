@@ -357,13 +357,98 @@ export default function GradeSubmissionPage() {
         <div className="lg:col-span-2 space-y-8">
            {/* PARTIE 1 - QCM (Récupérée auto) */}
            <Card className="p-8 border-emerald-100 bg-emerald-50/20">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <Badge className="bg-emerald-500 text-white">Partie 1</Badge>
-                  <h4 className="font-black text-slate-900 uppercase">Correction Automatique (QCM)</h4>
-                </div>
-                <p className="text-2xl font-black text-emerald-600">{submission.scorePart1} <span className="text-sm text-slate-400">/ {submission.exam.part1Points || 20}</span></p>
+            {/* Partie 1 */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs">P1</span>
+                  Partie 1 : QCM
+                </h3>
+                <Badge variant="outline" className="w-fit">Corrigé Automatiquement</Badge>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note Obtenue</label>
+                  <Input 
+                    type="number" 
+                    value={score1} 
+                    onChange={(e) => setScore1(parseFloat(e.target.value) || 0)}
+                    className="h-11 font-bold text-blue-600"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note Maximale (Barème)</label>
+                  <Input 
+                    type="number" 
+                    value={maxP1} 
+                    onChange={(e) => setMaxP1(parseFloat(e.target.value) || 1)}
+                    className="h-11 bg-slate-50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Partie 2 */}
+            <div className="space-y-4 pt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded bg-purple-100 text-purple-600 flex items-center justify-center text-xs">P2</span>
+                  Partie 2 : Questions Ouvertes
+                </h3>
+                <Badge variant="outline" className="w-fit bg-purple-50">Correction Manuelle</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note Obtenue</label>
+                  <Input 
+                    type="number" 
+                    value={score2} 
+                    onChange={(e) => setScore2(parseFloat(e.target.value) || 0)}
+                    className="h-11 font-bold text-purple-600"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note Maximale (Barème)</label>
+                  <Input 
+                    type="number" 
+                    value={maxP2} 
+                    onChange={(e) => setMaxP2(parseFloat(e.target.value) || 1)}
+                    className="h-11 bg-slate-50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Partie 3 */}
+            <div className="space-y-4 pt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center text-xs">P3</span>
+                  Partie 3 : Étude de Cas
+                </h3>
+                <Badge variant="outline" className="w-fit bg-amber-50">Correction Manuelle</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note Obtenue</label>
+                  <Input 
+                    type="number" 
+                    value={score3} 
+                    onChange={(e) => setScore3(parseFloat(e.target.value) || 0)}
+                    className="h-11 font-bold text-amber-600"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note Maximale (Barème)</label>
+                  <Input 
+                    type="number" 
+                    value={maxP3} 
+                    onChange={(e) => setMaxP3(parseFloat(e.target.value) || 1)}
+                    className="h-11 bg-slate-50"
+                  />
+                </div>
+              </div>
+            </div>
               
               <div className="space-y-4 mt-4">
                 {submission.exam.parts.find(p => p.type === "QCM")?.questions.map((q, idx) => {

@@ -228,34 +228,47 @@ export default function UserAttestationsPage() {
             </div>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-6">
             {filteredAttestations.map((att: any) => (
-              <Card key={att.id} className="p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+              <Card key={att.id} className="p-5 sm:p-6 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+                  {/* Informations Principales */}
+                  <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                       <FileText className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-slate-800">{att.fullName}</h3>
-                        <Badge className={getStatusBadgeColor(att.status)}>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="font-bold text-slate-800 text-lg sm:text-base leading-tight truncate max-w-[200px] sm:max-w-none" title={att.fullName}>
+                          {att.fullName}
+                        </h3>
+                        <Badge className={`${getStatusBadgeColor(att.status)} text-[10px] sm:text-xs font-semibold px-2 py-0.5`}>
                           {getStatusLabel(att.status)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-slate-600 mb-1">
-                        {att.formation?.name || "-"} •{" "}
-                        {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
+                      <p className="text-sm text-slate-600 mb-2 leading-relaxed">
+                        {att.formation?.name || "-"} <span className="text-slate-300 mx-1">•</span> 
+                        <span className="font-medium text-blue-600">
+                          {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
+                        </span>
                       </p>
-                      <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <span>Code: <span className="font-mono">{att.code}</span></span>
-                        <span>•</span>
-                        <span>{new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-slate-500 bg-slate-50 p-2 sm:p-0 sm:bg-transparent rounded-lg sm:rounded-none">
+                        <div className="flex items-center gap-2">
+                          <QrCode className="w-3 h-3 text-slate-400" />
+                          <span>Code: <span className="font-mono bg-white sm:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 sm:border-transparent">{att.code}</span></span>
+                        </div>
+                        <span className="hidden sm:inline text-slate-300">•</span>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>Obtenue le {new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <Link href={`/attestations/${att.id}`}>
+
+                  {/* Boutons d'Action */}
+                  <div className="flex items-center gap-2 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <Link href={`/attestations/${att.id}`} className="flex-1 sm:flex-none">
                       <Button
                         variant="outline"
                         size="sm"
@@ -269,40 +282,43 @@ export default function UserAttestationsPage() {
                             staleTime: 5 * 60 * 1000,
                           });
                         }}
-                        className="gap-2 group shadow-sm hover:border-emerald-200 transition-all"
+                        className="w-full gap-2 group shadow-sm hover:border-emerald-200 transition-all h-10 sm:h-9"
                         disabled={att.status !== "VALIDATED"}
                       >
                         <Eye className="w-4 h-4 text-slate-400 group-hover:text-emerald-500" />
-                        <span className="group-hover:text-emerald-600">Voir l'aperçu</span>
+                        <span className="group-hover:text-emerald-600 text-xs sm:text-sm whitespace-nowrap">Voir l'aperçu</span>
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedAttestation(att);
-                        setQrDialogOpen(true);
-                      }}
-                      title="Partager le QR Code"
-                      aria-label={`Partager le QR Code de l'attestation ${att.code}`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(att)}
-                      disabled={att.status !== "VALIDATED" || downloading === att.code}
-                      className="gap-2"
-                      title="Télécharger en PDF"
-                      aria-label={`Télécharger l'attestation ${att.code} au format PDF`}
-                    >
-                      {downloading === att.code ? (
-                        <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
-                      ) : (
-                        <Download className="w-4 h-4" />
-                      )}
-                    </Button>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 sm:h-9 sm:w-9"
+                        onClick={() => {
+                          setSelectedAttestation(att);
+                          setQrDialogOpen(true);
+                        }}
+                        title="Partager le QR Code"
+                      >
+                        <QrCode className="w-4 h-4 text-slate-500" />
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className={`h-10 w-10 sm:h-9 sm:w-9 ${downloading === att.code ? 'border-emerald-200 bg-emerald-50' : ''}`}
+                        onClick={() => handleDownload(att)}
+                        disabled={att.status !== "VALIDATED" || downloading === att.code}
+                        title="Télécharger en PDF"
+                      >
+                        {downloading === att.code ? (
+                          <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                        ) : (
+                          <Download className="w-4 h-4 text-slate-500" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>

@@ -207,20 +207,7 @@ export default function UserLayout({
           </div>
         </main>
 
-        {/* Floating Help Button - Premium Glassmorphism */}
-        <div className="fixed bottom-24 lg:bottom-10 right-6 lg:right-10 z-30 group">
-          <Link href="/support">
-            <button className="flex items-center gap-3 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <LifeBuoy className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
-                <span className="font-bold text-sm tracking-tight">Assistance</span>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full ring-4 ring-white animate-pulse" />
-            </button>
-          </Link>
-        </div>
 
-        {/* Real-time Messaging System */}
-        <ChatBubble />
       </div>
 
       {/* Mobile Menu Overlay */}

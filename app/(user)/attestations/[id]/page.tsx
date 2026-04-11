@@ -213,22 +213,26 @@ export default function AttestationPreviewPage() {
             </div>
         </Card>
         
-        <Card className="p-6 bg-white border border-slate-100 text-sm flex items-center justify-between">
+        <Card className="p-4 sm:p-6 bg-white border border-slate-100 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-                <QrCode className="w-6 h-6 text-blue-500" />
-                <div>
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <QrCode className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="min-w-0">
                    <p className="font-bold text-slate-800">Partageable</p>
-                   <p className="text-slate-500">Un recruteur peut scanner ce diplôme.</p>
+                   <p className="text-slate-500 text-xs sm:text-sm">Un recruteur peut scanner ce diplôme.</p>
                 </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:justify-end">
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50">
+                        <Button variant="ghost" size="sm" className="flex-1 sm:flex-none gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2 sm:px-3 h-10 sm:h-9">
                             <AlertTriangle className="w-4 h-4" />
-                            Signaler une erreur
+                            <span className="sm:hidden lg:inline text-xs sm:text-sm">Signaler</span>
+                            <span className="hidden sm:inline lg:hidden">Signaler</span>
                         </Button>
                     </DialogTrigger>
+                    {/* ... (DialogContent reste inchangé) */}
                     <DialogContent className="sm:max-w-md">
                         <form onSubmit={handleCorrectionSubmit}>
                             <DialogHeader>
@@ -270,7 +274,7 @@ export default function AttestationPreviewPage() {
                                         placeholder="Pourquoi souhaitez-vous cette correction ?"
                                         value={reason}
                                         onChange={(e) => setReason(e.target.value)}
-                                    />
+                                      />
                                 </div>
                             </div>
                             <DialogFooter>
@@ -281,12 +285,13 @@ export default function AttestationPreviewPage() {
                         </form>
                     </DialogContent>
                 </Dialog>
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/verifier/${att.code}`);
+                
+                <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 h-10 sm:h-9 px-2 sm:px-3" onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.host}/verifier/${att.code}`);
                     toast.success("Lien de vérification copié !");
                 }}>
                     <Share2 className="w-4 h-4" />
-                    Copier le lien
+                    <span className="text-xs sm:text-sm whitespace-nowrap">Copier</span>
                 </Button>
             </div>
         </Card>

@@ -58,23 +58,23 @@ export default function ResultDetailsPage() {
   const scorePercent = Math.round((result.totalScore / totalMax) * 100);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <Link href="/results">
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="icon" className="h-9 w-9 rounded-full sm:w-auto sm:h-auto sm:px-4 sm:py-2 sm:rounded-lg sm:gap-2">
               <ArrowLeft className="w-4 h-4" />
-              Retour
+              <span className="hidden sm:inline">Retour</span>
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Détails de l'examen</h1>
-            <p className="text-sm text-slate-500">{result.exam.name}</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 truncate">Détails de l'examen</h1>
+            <p className="text-xs sm:text-sm text-slate-500 truncate">{result.exam.name}</p>
           </div>
         </div>
         {isGraded ? (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 sm:self-auto self-end">
             <Button 
                 onClick={async () => {
                     if (transcriptData) {
@@ -94,23 +94,26 @@ export default function ResultDetailsPage() {
                     }
                 }}
                 disabled={isFetchingTranscript || isPrinting}
-                className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100"
+                size="sm"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9"
             >
                 {isFetchingTranscript ? (
                     <Clock className="w-4 h-4 animate-spin" />
                 ) : (
                     <Download className="w-4 h-4" />
                 )}
-                Mon Relevé (PDF)
+                <span className="text-xs sm:text-sm">Relevé (PDF)</span>
             </Button>
-            <Badge className={`px-4 py-1.5 text-sm ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+            <Badge className={`px-3 py-1 sm:px-4 sm:py-1.5 text-xs sm:text-sm shadow-sm ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                 {passed ? "Succès" : "Échec"}
             </Badge>
           </div>
         ) : (
-          <Badge className="px-4 py-1.5 text-sm bg-amber-100 text-amber-700 border border-amber-200">
-            Correction en cours
-          </Badge>
+          <div className="self-end sm:self-auto">
+            <Badge className="px-4 py-1.5 text-sm bg-amber-100 text-amber-700 border border-amber-200">
+              Correction en cours
+            </Badge>
+          </div>
         )}
       </div>
 

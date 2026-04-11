@@ -165,12 +165,12 @@ export default function UserResultsPage() {
                 <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-100">
                   <div className="flex-1">
                     <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-2">Aperçu rapide</p>
-                    <div className="flex gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <p className="text-[10px] text-slate-400">Partie 1 (QCM)</p>
                         <p className="text-sm font-bold text-slate-700">{result.scorePart1}/{result.maxPart1 || 20}</p>
                       </div>
-                      <div className="border-l border-slate-100 pl-4">
+                      <div className="md:border-l md:border-slate-100 md:pl-4">
                         <p className="text-[10px] text-slate-400">Parties 2 & 3</p>
                         {result.status === 'PENDING_REVIEW' ? (
                           <p className="text-sm font-bold text-amber-500 animate-pulse italic">À corriger</p>
@@ -180,11 +180,11 @@ export default function UserResultsPage() {
                       </div>
                       {result.type !== 'MOCK' && result.status === 'GRADED' && (
                         <>
-                          <div className="border-l border-slate-100 pl-4">
+                          <div className="md:border-l md:border-slate-100 md:pl-4">
                             <p className="text-[10px] text-slate-400">Note Stage</p>
                             <p className="text-sm font-bold text-blue-600">{result.internshipScore ? (result.internshipScore / 5).toFixed(1) : "0"}/20</p>
                           </div>
-                          <div className="border-l border-slate-100 pl-4">
+                          <div className="md:border-l md:border-slate-100 md:pl-4">
                             <p className="text-[10px] text-emerald-500 font-bold">Moyenne Finale</p>
                             <p className="text-sm font-black text-emerald-600">{result.scorePercent?.toFixed(1)}%</p>
                           </div>
