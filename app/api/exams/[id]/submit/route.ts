@@ -15,7 +15,7 @@ import { pusherServer } from '@/lib/pusher';
 
 // In-memory idempotency cache (key -> timestamp)
 // Prevents duplicate processing of the same request
-const idempotencyCache = new Map<string, { response: any; timestamp: number }>();
+const idempotencyCache = new Map<string, { response: Record<string, unknown>; timestamp: number }>();
 const IDEMPOTENCY_TTL = 60_000; // 1 minute
 
 /**
@@ -92,7 +92,7 @@ export async function POST(
               elapsedSeconds,
               examId,
               answerCount: Object.keys(answers).length,
-            } as any,
+            } as Record<string, unknown>,
           },
         });
 
@@ -152,12 +152,20 @@ export async function POST(
     let scorePart1 = 0;
     if (qcmPart) {
       let correctAnswersCount = 0;
-      const qcm = qcmPart as any; // Cast to access included relations
+
+      interface ExamPartWithQuestions {
+        questions: {
+          id: string;
+          options: { id: string; isCorrect: boolean }[];
+        }[];
+      }
+
+      const qcm = qcmPart as unknown as ExamPartWithQuestions; // Cast to access included relations
       const totalQuestions = qcm.questions.length;
 
       for (const q of qcm.questions) {
         const userAnswerId = answers[q.id];
-        const correctOption = q.options.find((o: any) => o.isCorrect);
+        const correctOption = q.options.find((o: { id: string; isCorrect: boolean }) => o.isCorrect);
         if (correctOption && userAnswerId === correctOption.id) {
           correctAnswersCount++;
         }
@@ -281,8 +289,8 @@ export async function POST(
 
     return NextResponse.json(response, { status: 201 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[EXAM_SUBMIT_ERROR]', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur serveur', details: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }

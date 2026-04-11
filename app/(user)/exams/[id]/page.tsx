@@ -50,6 +50,8 @@ interface ExamPart {
   id: string;
   order: number;
   type: string;
+  scenario?: string;
+  mode?: string;
   questions: Question[];
 }
 
@@ -488,10 +490,15 @@ export default function ExamSessionPage() {
 
   // Exam Interface - Extraction des questions depuis les parties
   const parts = exam?.parts || [];
-  const part1Questions = parts.find((p: ExamPart) => p.order === 1 || p.type === "QCM")?.questions || [];
-  const part2Questions = parts.find((p: ExamPart) => p.order === 2 || p.type === "OPEN")?.questions || [];
-  const hasPart3 = exam?.part3Enabled ?? true;
-  const part3Mode = exam?.part3Mode || "digital"; 
+  const part1Questions = parts.find((p: ExamPart) => (p.order === 1 && p.type === "QCM") || p.type === "QCM")?.questions || [];
+  const part2Questions = parts.find((p: ExamPart) => (p.order === 2 && p.type === "OPEN") || p.type === "OPEN")?.questions || [];
+  
+  const part3 = parts.find((p: ExamPart) => p.type === "CASE_STUDY");
+  const part3Questions = part3?.questions || [];
+  const part3Subject = part3?.scenario || exam?.part3Subject || "Sujet non disponible";
+  
+  const hasPart3 = exam?.part3Enabled ?? (!!part3);
+  const part3Mode = part3?.mode || exam?.part3Mode || "digital"; 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -852,11 +859,33 @@ export default function ExamSessionPage() {
                     </Alert>
 
                     <div className="p-4 bg-slate-50 rounded-lg">
-                      <h3 className="font-bold text-slate-800 mb-4">Sujet :</h3>
-                      <p className="text-base text-slate-700">
-                        {exam?.part3Subject || "Sujet non disponible"}
-                      </p>
+                      <h3 className="font-bold text-slate-800 mb-4 uppercase tracking-wider text-xs flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        Énoncé du Cas / Sujet :
+                      </h3>
+                      <div className="prose prose-slate max-w-none">
+                        <p className="text-base text-slate-700 whitespace-pre-wrap leading-relaxed">
+                            {part3Subject}
+                        </p>
+                      </div>
                     </div>
+
+                    {part3Questions.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-800 uppercase tracking-wider text-xs flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Questions à traiter :
+                            </h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                {part3Questions.map((q, idx) => (
+                                    <div key={q.id} className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
+                                        <p className="font-bold text-blue-900 text-sm mb-1">Question {idx + 1}</p>
+                                        <p className="text-slate-700 font-medium">{q.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="space-y-4">
                         <Label className="text-sm font-bold text-slate-700 uppercase tracking-widest">
@@ -930,11 +959,33 @@ export default function ExamSessionPage() {
                     </Alert>
 
                     <div className="p-4 bg-slate-50 rounded-lg">
-                      <h3 className="font-bold text-slate-800 mb-4">Sujet :</h3>
-                      <p className="text-base text-slate-700">
-                        {exam?.part3Subject || "Sujet non disponible"}
-                      </p>
+                      <h3 className="font-bold text-slate-800 mb-4 uppercase tracking-wider text-xs flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        Énoncé du Cas / Sujet :
+                      </h3>
+                      <div className="prose prose-slate max-w-none">
+                        <p className="text-base text-slate-700 whitespace-pre-wrap leading-relaxed">
+                            {part3Subject}
+                        </p>
+                      </div>
                     </div>
+
+                    {part3Questions.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-800 uppercase tracking-wider text-xs flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Questions à traiter :
+                            </h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                {part3Questions.map((q, idx) => (
+                                    <div key={q.id} className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
+                                        <p className="font-bold text-blue-900 text-sm mb-1">Question {idx + 1}</p>
+                                        <p className="text-slate-700 font-medium">{q.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                       <Label htmlFor="part3" className="text-sm font-semibold text-slate-700 mb-2 block">

@@ -4,6 +4,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
+import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
+
+interface OptionPayload {
+  text: string;
+  isCorrect: boolean;
+  feedback?: string;
+}
+
+interface QuestionPayload {
+  text: string;
+  type: string;
+  points: number;
+  order?: number;
+  options?: OptionPayload[];
+}
 
 const ExamSchema = z.object({
   name: z.string().min(1),
@@ -29,6 +44,7 @@ const ExamSchema = z.object({
         enabled: z.boolean().default(true),
         subject: z.string().optional(),
         scenario: z.string().optional(),
+        mode: z.string().optional(),
         questions: z
           .array(
             z.object({
@@ -133,8 +149,8 @@ export async function POST(request: Request) {
         totalPoints: Math.round(totalPoints),
         randomizeQuestions,
         showResults,
-        status: status as any,
-        type: (body.type as any) || "OFFICIAL",
+        status: status as ExamStatus,
+        type: (body.type as ExamType) || "OFFICIAL",
         scheduledAt: (scheduledAt && !isNaN(new Date(scheduledAt).getTime())) ? new Date(scheduledAt) : null,
         
         // Legacy summary fields
@@ -146,24 +162,26 @@ export async function POST(request: Request) {
         part1Points: Math.round(enabledParts.find((p) => p.type === "QCM")?.points || 0),
         part2Points: Math.round(enabledParts.find((p) => p.type === "OPEN")?.points || 0),
         part3Points: Math.round(enabledParts.find((p) => p.type === "CASE_STUDY")?.points || 0),
+        part3Mode: enabledParts.find((p) => p.type === "CASE_STUDY")?.mode as string || "digital",
+        part3Subject: enabledParts.find((p) => p.type === "CASE_STUDY")?.scenario || enabledParts.find((p) => p.type === "CASE_STUDY")?.subject,
 
         // Nested creation of parts and questions
         parts: {
           create: enabledParts.map((p, pIdx) => ({
             title: p.title,
-            type: p.type as any,
+            type: p.type,
             duration: p.duration || 30,
             points: Math.round(p.points),
             order: p.order ?? pIdx + 1,
             scenario: p.scenario || p.subject,
             questions: {
-              create: (p.questions || []).map((q: any, qIdx: number) => ({
+              create: (p.questions || []).map((q: QuestionPayload, qIdx: number) => ({
                 text: q.text,
-                type: q.type as any,
+                type: q.type as QuestionType,
                 points: q.points, // Question.points is Float
                 order: q.order ?? qIdx + 1,
                 options: (q.options?.length || 0) > 0 ? {
-                  create: q.options.map((o: any) => ({
+                  create: q.options!.map((o: OptionPayload) => ({
                     text: o.text,
                     isCorrect: o.isCorrect,
                     feedback: o.feedback || "",
@@ -190,7 +208,7 @@ export async function POST(request: Request) {
           resourceId: newExam.id,
           newValue: { title: newExam.title, type: newExam.type, status: newExam.status },
         }
-      }).catch((err: any) => console.error("Audit log failed:", err));
+      }).catch((err: unknown) => console.error("Audit log failed:", err));
     }
 
     return NextResponse.json(

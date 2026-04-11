@@ -4,6 +4,33 @@ import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
+
+interface OptionPayload {
+  text: string;
+  isCorrect: boolean | string;
+  feedback?: string;
+}
+
+interface QuestionPayload {
+  text: string;
+  type: string;
+  points: number | string;
+  order?: number | string;
+  options?: OptionPayload[];
+}
+
+interface ExamPartPayload {
+  title: string;
+  type: string;
+  enabled?: boolean;
+  points?: number | string;
+  duration?: number | string;
+  order?: number | string;
+  scenario?: string;
+  mode?: string;
+  questions?: QuestionPayload[];
+}
 
 export async function GET(
   request: NextRequest,
@@ -86,8 +113,8 @@ export async function PATCH(
     const isValidDate = scheduledAtDate === null || !isNaN(scheduledAtDate.getTime());
     
     // Calculate totals for summary fields
-    const enabledParts = (parts && Array.isArray(parts)) ? parts.filter(p => p.enabled) : [];
-    const totalPoints = enabledParts.reduce((sum: number, p: any) => sum + (parseFloat(p.points?.toString() || "0")), 0);
+    const enabledParts = (parts && Array.isArray(parts)) ? parts.filter((p: ExamPartPayload) => p.enabled) : [];
+    const totalPoints = enabledParts.reduce((sum: number, p: ExamPartPayload) => sum + (parseFloat(p.points?.toString() || "0")), 0);
 
     // 🏆 ATOMIC UPDATE (Single DB roundtrip for the entire exam structure)
     const exam = await prisma.exam.update({
@@ -106,34 +133,36 @@ export async function PATCH(
         showResults: showResults === true,
         type: type || undefined,
         totalPoints: Math.round(totalPoints),
-        part1Enabled: enabledParts.some(p => p.type === "QCM"),
-        part2Enabled: enabledParts.some(p => p.type === "OPEN"),
-        part3Enabled: enabledParts.some(p => p.type === "CASE_STUDY"),
-        part1Questions: enabledParts.find(p => p.type === "QCM")?.questions?.length || 0,
-        part2Questions: enabledParts.find(p => p.type === "OPEN")?.questions?.length || 0,
-        part1Points: Math.round(parseFloat(enabledParts.find(p => p.type === "QCM")?.points?.toString() || "0")),
-        part2Points: Math.round(parseFloat(enabledParts.find(p => p.type === "OPEN")?.points?.toString() || "0")),
-        part3Points: Math.round(parseFloat(enabledParts.find(p => p.type === "CASE_STUDY")?.points?.toString() || "0")),
+        part1Enabled: enabledParts.some((p: ExamPartPayload) => p.type === "QCM"),
+        part2Enabled: enabledParts.some((p: ExamPartPayload) => p.type === "OPEN"),
+        part3Enabled: enabledParts.some((p: ExamPartPayload) => p.type === "CASE_STUDY"),
+        part1Questions: enabledParts.find((p: ExamPartPayload) => p.type === "QCM")?.questions?.length || 0,
+        part2Questions: enabledParts.find((p: ExamPartPayload) => p.type === "OPEN")?.questions?.length || 0,
+        part1Points: Math.round(parseFloat(enabledParts.find((p: ExamPartPayload) => p.type === "QCM")?.points?.toString() || "0")),
+        part2Points: Math.round(parseFloat(enabledParts.find((p: ExamPartPayload) => p.type === "OPEN")?.points?.toString() || "0")),
+        part3Points: Math.round(parseFloat(enabledParts.find((p: ExamPartPayload) => p.type === "CASE_STUDY")?.points?.toString() || "0")),
+        part3Mode: (enabledParts.find((p: ExamPartPayload) => p.type === "CASE_STUDY")?.mode as string) || "digital",
+        part3Subject: enabledParts.find((p: ExamPartPayload) => p.type === "CASE_STUDY")?.scenario,
         
         // 🔄 Replace parts and questions in one go if provided
         ...(parts && Array.isArray(parts) ? {
           parts: {
             deleteMany: {},
-            create: parts.map((p, pIdx) => ({
+            create: parts.map((p: ExamPartPayload, pIdx: number) => ({
               title: p.title,
-              type: p.type as any,
+              type: p.type,
               duration: p.duration ? parseInt(p.duration.toString()) : 30,
               points: p.points ? parseInt(p.points.toString()) : 0,
               order: p.order ? parseInt(p.order.toString()) : pIdx + 1,
               scenario: p.scenario,
               questions: {
-                create: (p.questions || []).map((q: any, qIdx: number) => ({
+                create: (p.questions || []).map((q: QuestionPayload, qIdx: number) => ({
                   text: q.text,
-                  type: q.type as any,
+                  type: q.type as QuestionType,
                   points: q.points ? parseFloat(q.points.toString()) : 0,
                   order: q.order ? parseInt(q.order.toString()) : qIdx + 1,
                   options: (q.options || []).length > 0 ? {
-                    create: q.options.map((o: any) => ({
+                    create: q.options!.map((o: OptionPayload) => ({
                       text: o.text,
                       isCorrect: o.isCorrect === true || o.isCorrect === "true",
                       feedback: o.feedback || "",
