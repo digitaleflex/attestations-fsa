@@ -75,6 +75,7 @@ export async function GET(request: Request) {
           totalScore: true,
           submittedAt: true,
           status: true,
+          answers: true,
           exam: {
             select: {
               title: true,
@@ -110,6 +111,14 @@ export async function GET(request: Request) {
       const exam = sub.exam;
       const qCount =
         exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0);
+      
+      // Récupérer le barème personnalisé s'il existe
+      const customBareme = sub.answers && typeof sub.answers === 'object' 
+        ? (sub.answers as any)._customBareme 
+        : null;
+      
+      const maxScore = customBareme?.totalMax ?? (exam.totalPoints || 100);
+
       return {
         id: sub.examId,
         submissionId: sub.id,
@@ -117,7 +126,7 @@ export async function GET(request: Request) {
         examDescription: exam.description,
         status: sub.status === "GRADED" ? "COMPLETED" : "IN_PROGRESS",
         score: sub.totalScore,
-        maxScore: exam.totalPoints || 100,
+        maxScore: maxScore,
         passingScore: exam.passingScore || 65,
         startedAt: sub.submittedAt,
         completedAt: sub.submittedAt,
@@ -160,7 +169,7 @@ export async function GET(request: Request) {
       passed: examsResult.filter(
         (e) =>
           e.status === "COMPLETED" &&
-          e.score >= e.maxScore * (e.passingScore / 100),
+          (e.maxScore > 0 ? (e.score / e.maxScore) * 100 : 0) >= (e.passingScore || 65),
       ).length,
     };
 

@@ -31,22 +31,17 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log('🚀 [SUBMISSION_API] New submission request received - Anti-cheat is DISABLED');
-  // ✅ ANTI-CHEAT: Logic fully removed
-
   try {
     const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    // ✅ ANTI-CHEAT: Per-user rate limiting (DISABLED by request)
-    /*
+    // ✅ ANTI-CHEAT: Per-user rate limiting (Re-enabled)
     const rateLimit = await applyRateLimitByUser(request, user.id, 'submission');
     if (!rateLimit.allowed) {
       return rateLimit.response;
     }
-    */
 
     const { id: examId } = await params;
     const body = await request.json();
@@ -56,12 +51,21 @@ export async function POST(
       return NextResponse.json({ error: 'Réponses manquantes ou invalides' }, { status: 400 });
     }
 
-    // ✅ ANTI-CHEAT: Time-based detection (DISABLED by request)
-    /*
+    // ✅ ANTI-CHEAT: Time-based detection (Re-enabled)
     if (startedAt) {
-// ...
+      const timeTakenMinutes = (Date.now() - startedAt) / 60000;
+      if (timeTakenMinutes < 1) { // Moins d'une minute pour un examen complet
+        await logCheatingDetection(user.id, examId, request.headers.get('x-forwarded-for') || 'unknown', request.headers.get('user-agent') || 'unknown', {
+          isSuspicious: true,
+          confidence: 'HIGH',
+          flags: [{
+            type: 'RAPID_SUBMISSION',
+            severity: 'HIGH',
+            details: `Soumission extrêmement rapide : ${timeTakenMinutes.toFixed(2)} minutes`
+          }]
+        });
+      }
     }
-    */
 
     // ✅ Idempotency check: return cached response if same key seen recently
     if (idempotencyKey) {
@@ -176,17 +180,22 @@ export async function POST(
       ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
-    // ✅ ANTI-CHEAT: Analyze answer patterns (DISABLED by request)
-    /*
+    // ✅ ANTI-CHEAT: Analyze answer patterns (Re-enabled)
     try {
       const detection = await analyzeAnswerPattern(answers, examId, user.id);
       
       if (detection.isSuspicious) {
-// ...
+        await logCheatingDetection(
+          user.id,
+          examId,
+          request.headers.get('x-forwarded-for') || 'unknown',
+          request.headers.get('user-agent') || 'unknown',
+          detection
+        );
+      }
     } catch (error) {
       console.error('[ANTI-CHEAT ERROR]', error);
     }
-    */
 
     // Fetch the updated session for the response
     const updatedSession = await prisma.examSession.findFirst({

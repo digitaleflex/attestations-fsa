@@ -512,44 +512,44 @@ export default function ExamSessionPage() {
         )}
         */}
 
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-slate-800">{exam?.name}</h1>
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" title="Mode Sécurisé - Anti-triche désactivé" />
+                <h1 className="font-bold text-slate-800 text-sm sm:text-base truncate">{exam?.name}</h1>
+                <div className="shrink-0 w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" title="Mode Sécurisé - Anti-triche désactivé" />
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-[10px] sm:text-xs text-slate-500">
                 Partie {currentPart} sur {hasPart3 ? 3 : 2}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 pt-3 sm:pt-0">
+            <div className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg ${
               timeRemaining < 300 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
             }`}>
-              <Clock className={`w-5 h-5 ${timeRemaining < 300 ? 'animate-pulse' : ''}`} />
-              <span className="font-mono font-bold text-lg">{formatTime(timeRemaining)}</span>
+              <Clock className={`w-4 h-4 sm:w-5 sm:h-5 ${timeRemaining < 300 ? 'animate-pulse' : ''}`} />
+              <span className="font-mono font-bold text-sm sm:text-lg">{formatTime(timeRemaining)}</span>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="gap-2"
+              className="gap-2 text-xs sm:text-sm h-8 sm:h-10"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-3 h-3 sm:w-4 sm:h-4" />
               Soumettre
             </Button>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="max-w-7xl mx-auto px-6 py-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2">
           <Progress 
             value={((currentPart - 1) / (hasPart3 ? 2 : 1)) * 100} 
             className="h-2"
@@ -558,7 +558,7 @@ export default function ExamSessionPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Part 1: QCM */}
         {currentPart === 1 && (
           <Card className="p-6 bg-white shadow-sm">
@@ -616,12 +616,12 @@ export default function ExamSessionPage() {
                   </RadioGroup>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t">
                   <Button
                     variant="outline"
                     onClick={() => setCurrentQuestion((prev) => Math.max(0, prev - 1))}
                     disabled={currentQuestion === 0}
-                    className="gap-2"
+                    className="gap-2 text-sm h-10"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     Précédent
@@ -630,7 +630,7 @@ export default function ExamSessionPage() {
                   {currentQuestion < part1Questions.length - 1 ? (
                     <Button
                       onClick={() => setCurrentQuestion((prev) => prev + 1)}
-                      className="gap-2"
+                      className="gap-2 text-sm h-10"
                     >
                       Suivant
                       <ChevronRight className="w-4 h-4" />
@@ -638,7 +638,7 @@ export default function ExamSessionPage() {
                   ) : (
                     <Button
                       onClick={() => setCurrentPart(2)}
-                      className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600"
+                      className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-sm h-10"
                     >
                       Partie 2
                       <ChevronRight className="w-4 h-4" />
@@ -696,37 +696,37 @@ export default function ExamSessionPage() {
                 </div>
               ))}
 
-              <div className="flex items-center justify-between pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPart(1)}
-                  className="gap-2"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Retour Partie 1
-                </Button>
-
-                {hasPart3 ? (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t">
                   <Button
-                    onClick={() => {
-                      setCurrentPart(3);
-                      setShowPart3Subject(false);
-                    }}
-                    className="gap-2 bg-gradient-to-r from-purple-600 to-amber-600"
+                    variant="outline"
+                    onClick={() => setCurrentPart(1)}
+                    className="gap-2 text-sm h-10"
                   >
-                    Partie 3 - Étude de cas
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4" />
+                    Retour Partie 1
                   </Button>
-                ) : (
-                  <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 shadow-lg shadow-emerald-200"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Terminer l'examen
-                      </Button>
-                    </AlertDialogTrigger>
+
+                  {hasPart3 ? (
+                    <Button
+                      onClick={() => {
+                        setCurrentPart(3);
+                        setShowPart3Subject(false);
+                      }}
+                      className="gap-2 bg-gradient-to-r from-purple-600 to-amber-600 text-sm h-10"
+                    >
+                      Partie 3 - Étude de cas
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 shadow-lg shadow-emerald-200 text-sm h-10"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Terminer l'examen
+                        </Button>
+                      </AlertDialogTrigger>
                     <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2 text-emerald-600 font-bold text-xl">
@@ -1002,14 +1002,14 @@ export default function ExamSessionPage() {
                   </>
                 )}
 
-                <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t">
                   <Button
                     variant="outline"
                     onClick={() => {
                       setCurrentPart(2);
                       setShowPart3Subject(false);
                     }}
-                    className="gap-2"
+                    className="gap-2 text-sm h-10"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     Retour Partie 2
@@ -1017,7 +1017,7 @@ export default function ExamSessionPage() {
 
                   <Button
                     onClick={handleSubmit}
-                    className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600"
+                    className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-sm h-10"
                     disabled={isSubmitting || (part3Mode === "digital" && !answers.part3)}
                   >
                     {isSubmitting ? (
@@ -1028,7 +1028,7 @@ export default function ExamSessionPage() {
                     ) : (
                       <>
                         <CheckCircle className="w-4 h-4" />
-                        {part3Mode === "physical" ? "J'ai terminé ma composition" : "Terminer et soumettre"}
+                        {part3Mode === "physical" ? "Terminer la composition" : "Terminer et soumettre"}
                       </>
                     )}
                   </Button>

@@ -25,9 +25,14 @@ export default async function middleware(request: NextRequest) {
 
     // 2. Récupérer la session via l'API officielle
     // Better Auth s'occupe de valider le token de session et le CSRF interne
-    const session = await auth.api.getSession({
-        headers: request.headers,
-    });
+    let session = null;
+    try {
+        session = await auth.api.getSession({
+            headers: request.headers,
+        });
+    } catch (e) {
+        console.error("⚠️ [MIDDLEWARE AUTH ERROR] Impossible de contacter la DB pour la session:", e);
+    }
 
     const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route));
     const isUserRoute = USER_ROUTES.some(route => pathname.startsWith(route));

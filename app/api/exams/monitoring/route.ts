@@ -23,8 +23,47 @@ const MonitoringPayloadSchema = z.object({
  * Receives monitoring events from client and logs them to SecurityLog
  */
 export async function POST(request: Request) {
-  // ✅ ANTI-CHEAT: DISABLED by request
-  return NextResponse.json({ received: 0, logged: 0, disabled: true });
+  try {
+    const user = await getCurrentUser(request);
+    const body = await request.json();
+    
+    // Validate payload
+    const payload = MonitoringPayloadSchema.parse(body);
+    
+    // Ensure user is reporting for themselves (unless admin)
+    if (!user || (user.id !== payload.userId && user.role !== 'ADMIN')) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
+    // Create logs for each event
+    const logs = await Promise.all(payload.events.map(event => 
+      prisma.securityLog.create({
+        data: {
+          userId: payload.userId,
+          eventType: 'EXAM_MONITORING',
+          severity: 'INFO',
+          action: event.type,
+          resourceId: payload.examId,
+          details: event.details || `Automatic event: ${event.type}`,
+          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          timestamp: new Date(event.timestamp),
+        }
+      })
+    ));
+
+    return NextResponse.json({ 
+      received: payload.events.length, 
+      logged: logs.length,
+      success: true 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Payload invalide', details: error.errors }, { status: 400 });
+    }
+    console.error('[EXAM MONITORING POST ERROR]', error);
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+  }
 }
 
 /**

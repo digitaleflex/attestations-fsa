@@ -6,23 +6,20 @@ import { Redis } from "@upstash/redis"
 import { NextResponse } from 'next/server'
 
 // Initialisation Redis
-// ✅ FORCE DISABLED: All rate limiting disabled by request to support concurrent exams
 let redis: Redis | null = null
 let ratelimitEnabled = false
 
-/*
 try {
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
     redis = new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
     })
-    // ratelimitEnabled = true
+    ratelimitEnabled = true
   }
 } catch (error) {
   console.error('[RATE LIMIT ERROR]', error);
 }
-*/
 
 // Rate limits par endpoint
 export const rateLimits = {

@@ -62,6 +62,7 @@ const menuGroups = [
     items: [
       { href: "/admin/exams", label: "Examens", icon: ClipboardCheck },
       { href: "/admin/corrections", label: "Corrections (Copies)", icon: ClipboardCheck },
+      { href: "/admin/attestations", label: "Attestations", icon: FileText },
       { href: "/admin/portfolios", label: "Suivi Portfolios", icon: Trophy, badgeKey: "pendingPortfolios" },
       { href: "/admin/portfolio/missions", label: "Config. Missions", icon: Target },
       { href: "/admin/formations", label: "Formations", icon: GraduationCap },

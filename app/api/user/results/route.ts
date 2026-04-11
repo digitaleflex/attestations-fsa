@@ -37,7 +37,19 @@ export async function GET(request: Request) {
       where: {
         userId,
       },
-      include: {
+      select: {
+        id: true,
+        examId: true,
+        totalScore: true,
+        scorePart1: true,
+        scorePart2: true,
+        scorePart3: true,
+        internshipScore: true,
+        finalScore: true,
+        status: true,
+        gradedAt: true,
+        submittedAt: true,
+        answers: true,
         exam: {
           select: {
             id: true,
@@ -56,10 +68,24 @@ export async function GET(request: Request) {
     });
 
     const results: ExamResult[] = submissions.map((sub: any) => {
-      const maxScore = sub.exam?.totalPoints || 100;
+      // Récupérer le barème personnalisé s'il existe
+      const customBareme = sub.answers && typeof sub.answers === 'object' 
+        ? (sub.answers as any)._customBareme 
+        : null;
+
+      const maxPart1 = customBareme?.maxPart1 ?? (sub.exam?.part1Points || 20);
+      const maxPart2 = customBareme?.maxPart2 ?? (sub.exam?.part2Points || 40);
+      const maxPart3 = customBareme?.maxPart3 ?? (sub.exam?.part3Points || 40);
+      const maxScore = customBareme?.totalMax ?? (sub.exam?.totalPoints || 100);
+
       const scorePercent =
         maxScore > 0 ? Math.round((sub.totalScore / maxScore) * 100) : 0;
-      const passingScore = sub.exam?.passingScore || 60;
+      const passingScore = sub.exam?.passingScore || 65;
+
+      // Note finale : on utilise finalScore s'il existe (moyenne exam + stage), sinon le % exam
+      const finalDisplayScore = sub.finalScore !== undefined && sub.finalScore !== null && sub.finalScore > 0
+        ? sub.finalScore 
+        : scorePercent;
 
       return {
         id: sub.id,
@@ -72,13 +98,15 @@ export async function GET(request: Request) {
         scorePart1: sub.scorePart1,
         scorePart2: sub.scorePart2,
         scorePart3: sub.scorePart3,
+        internshipScore: sub.internshipScore,
+        finalScore: sub.finalScore,
         totalScore: sub.totalScore,
         maxScore,
-        scorePercent,
-        maxPart1: sub.exam?.part1Points || 20,
-        maxPart2: sub.exam?.part2Points || 40,
-        maxPart3: sub.exam?.part3Points || 40,
-        passed: scorePercent >= passingScore,
+        scorePercent: finalDisplayScore,
+        maxPart1,
+        maxPart2,
+        maxPart3,
+        passed: finalDisplayScore >= passingScore,
         completedAt: sub.gradedAt || sub.submittedAt,
       };
     });

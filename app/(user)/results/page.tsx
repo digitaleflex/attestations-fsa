@@ -171,13 +171,25 @@ export default function UserResultsPage() {
                         <p className="text-sm font-bold text-slate-700">{result.scorePart1}/{result.maxPart1 || 20}</p>
                       </div>
                       <div className="border-l border-slate-100 pl-4">
-                        <p className="text-[10px] text-slate-400">Partie 2 & 3</p>
+                        <p className="text-[10px] text-slate-400">Parties 2 & 3</p>
                         {result.status === 'PENDING_REVIEW' ? (
                           <p className="text-sm font-bold text-amber-500 animate-pulse italic">À corriger</p>
                         ) : (
                           <p className="text-sm font-bold text-slate-700">{(result.scorePart2 || 0) + (result.scorePart3 || 0)}/{(result.maxPart2 || 40) + (result.maxPart3 || 40)}</p>
                         )}
                       </div>
+                      {result.type !== 'MOCK' && result.status === 'GRADED' && (
+                        <>
+                          <div className="border-l border-slate-100 pl-4">
+                            <p className="text-[10px] text-slate-400">Note Stage</p>
+                            <p className="text-sm font-bold text-blue-600">{result.internshipScore ? (result.internshipScore / 5).toFixed(1) : "0"}/20</p>
+                          </div>
+                          <div className="border-l border-slate-100 pl-4">
+                            <p className="text-[10px] text-emerald-500 font-bold">Moyenne Finale</p>
+                            <p className="text-sm font-black text-emerald-600">{result.scorePercent?.toFixed(1)}%</p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">

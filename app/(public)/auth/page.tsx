@@ -105,13 +105,22 @@ function AuthContent() {
         setIsRedirecting(true);
         router.push("/dashboard");
 
-      } catch (err: unknown) {
-        console.error("Erreur lors de l'inscription:", err);
-        const errorMessage = err instanceof Error 
-          ? translateAuthError(err.message) 
-          : "Une erreur inattendue est survenue";
-        setError(errorMessage);
-        toast.error(errorMessage);
+      } catch (err: any) {
+        console.error("DEBUG AUTH ERROR OBJECT:", JSON.stringify(err, null, 2));
+        let message = "Une erreur inattendue est survenue";
+
+        if (err instanceof Error) {
+          message = translateAuthError(err.message);
+        } else if (typeof err === "object" && err !== null) {
+          message = err.message || 
+                    err.error?.message || 
+                    err.body?.message || 
+                    err.error || 
+                    JSON.stringify(err);
+        }
+
+        setError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -143,13 +152,22 @@ function AuthContent() {
         } else {
           router.push("/dashboard");
         }
-      } catch (err: unknown) {
-        console.error("Erreur lors de la connexion:", err);
-        const errorMessage = err instanceof Error 
-          ? translateAuthError(err.message) 
-          : "Identifiants invalides";
-        setError(errorMessage);
-        toast.error(errorMessage);
+      } catch (err: any) {
+        console.error("DEBUG AUTH ERROR OBJECT:", JSON.stringify(err, null, 2));
+        let message = "Identifiants invalides";
+        
+        if (err instanceof Error) {
+          message = translateAuthError(err.message);
+        } else if (typeof err === "object" && err !== null) {
+          message = err.message || 
+                    err.error?.message || 
+                    err.body?.message || 
+                    err.error || 
+                    JSON.stringify(err);
+        }
+        
+        setError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }

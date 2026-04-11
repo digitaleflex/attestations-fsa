@@ -69,19 +69,27 @@ export async function GET(request: Request) {
       orderBy: { submittedAt: "desc" },
     });
 
-    const examResults: ExamResult[] = examSessions.map((session: any) => ({
-      examName: session.exam.title || session.exam.name,
-      score: session.score,
-      totalPoints: session.exam.totalPoints || 20,
-      internshipScore: session.internshipScore,
-      finalScore: session.finalScore,
-      status: session.status,
-      type: session.exam.type,
-      date: session.submittedAt || session.startedAt,
-      part1Score: (session as any).scorePart1,
-      part2Score: (session as any).scorePart2,
-      part3Score: (session as any).scorePart3,
-    }));
+    const examResults: ExamResult[] = examSessions.map((session: any) => {
+      const customBareme = session.answers && typeof session.answers === 'object' 
+        ? (session.answers as any)._customBareme 
+        : null;
+      
+      const totalPoints = customBareme?.totalMax ?? (session.exam.totalPoints || 100);
+
+      return {
+        examName: session.exam.title || session.exam.name,
+        score: session.score,
+        totalPoints,
+        internshipScore: session.internshipScore,
+        finalScore: session.finalScore,
+        status: session.status,
+        type: session.exam.type,
+        date: session.submittedAt || session.startedAt,
+        part1Score: (session as any).scorePart1,
+        part2Score: (session as any).scorePart2,
+        part3Score: (session as any).scorePart3,
+      };
+    });
 
     // Récupérer les attestations
     const attestations = await prisma.attestation.findMany({
@@ -106,7 +114,10 @@ export async function GET(request: Request) {
     const totalExams = examSessions.length;
     const passedExams = examSessions.filter((s: any) => {
       // On utilise le finalScore (moyenne exam+stage) si disponible
-      const maxPoints = (s.exam as any).totalPoints || 20;
+      const customBareme = s.answers && typeof s.answers === 'object' 
+        ? (s.answers as any)._customBareme 
+        : null;
+      const maxPoints = customBareme?.totalMax ?? ((s.exam as any).totalPoints || 100);
       const percentage = s.finalScore || (s.score / maxPoints) * 100;
       return percentage >= 65; // Seuil FSA à 65%
     }).length;
@@ -118,7 +129,10 @@ export async function GET(request: Request) {
     const globalAverage =
       examSessions.length > 0
         ? examSessions.reduce((acc: number, session: any) => {
-            const maxPoints = (session.exam as any).totalPoints || 20;
+            const customBareme = session.answers && typeof session.answers === 'object' 
+              ? (session.answers as any)._customBareme 
+              : null;
+            const maxPoints = customBareme?.totalMax ?? ((session.exam as any).totalPoints || 100);
             const percentage = session.finalScore || (session.score / maxPoints) * 100;
             return acc + percentage;
           }, 0) / examSessions.length

@@ -2,6 +2,7 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
 import * as React from "react";
+import Script from "next/script";
 import { TopLoader } from "@/components/TopLoader";
 import { BotIdClient } from "botid/client";
 
@@ -26,7 +27,11 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#16a34a" />
         <BotIdClient protect={[{ path: "/api/exams/*/submit", method: "POST" }]} />
-        <script
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
+        <Script
+          id="sw-cleanup"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
           // Force unregister all service workers to clear old cache issues
@@ -41,8 +46,6 @@ export default function RootLayout({
         `,
           }}
         />
-      </head>
-      <body className={inter.className} suppressHydrationWarning>
         <TopLoader />
         <Providers>{children}</Providers>
       </body>

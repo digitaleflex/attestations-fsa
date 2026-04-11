@@ -10,8 +10,27 @@ declare global {
   var rawPrisma: PrismaClient | undefined;
 }
 
+// Configuration du client Prisma avec support pour la connexion directe en Dev
+const isDev = process.env.NODE_ENV === 'development';
+const directUrl = process.env.DIRECT_DATABASE_URL;
+const pooledUrl = process.env.DATABASE_URL;
+
+// On n'utilise DIRECT_DATABASE_URL que s'il est défini ET qu'il ne s'agit pas du placeholder
+const isValidDirectUrl = directUrl && !directUrl.includes('votre_url_');
+const databaseUrl = isDev ? (isValidDirectUrl ? directUrl : pooledUrl) : pooledUrl;
+
+if (isDev) {
+  console.log(`🔌 [PRISMA] Engine: ${process.env.DIRECT_DATABASE_URL ? 'DIRECT' : 'POOLED'}`);
+  console.log(`🔗 [PRISMA] Protocol: ${databaseUrl?.split('://')[0]}`);
+}
+
 const baseClient = new PrismaClient({
   log: ['error'],
+  datasources: {
+    db: {
+      url: databaseUrl
+    }
+  }
 }).$extends({
   query: {
     user: {
@@ -49,6 +68,10 @@ const baseClient = new PrismaClient({
 });
 
 function createPrismaClient(base: any) {
+  // ✅ FIX: Disable Accelerate in development to avoid P5000 errors on local network
+  if (process.env.NODE_ENV === 'development') {
+    return base;
+  }
   return base.$extends(withAccelerate());
 }
 

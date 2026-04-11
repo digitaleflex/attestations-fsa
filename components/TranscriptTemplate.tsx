@@ -43,8 +43,9 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
     });
   };
 
-  const getStatusBadge = (score: number) => {
-    const passed = score >= 65;
+  const getStatusBadge = (score: number, totalPoints: number) => {
+    const percentage = (score / totalPoints) * 100;
+    const passed = percentage >= 65;
     return {
       label: passed ? "ADMIS" : "NON ADMIS",
       color: passed ? "#059669" : "#dc2626",
@@ -161,7 +162,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
             </thead>
             <tbody>
               {data.examResults.map((exam, idx) => {
-                const badge = getStatusBadge(exam.score);
+                const badge = getStatusBadge(exam.score, exam.totalPoints);
                 return (
                   <tr key={idx} style={{ borderBottom: "0.5px solid #e2e8f0", backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
                     <td style={{ padding: "5px 4px 5px 0", color: "#1e293b", fontWeight: 500, maxWidth: "220px" }}>

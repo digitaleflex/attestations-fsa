@@ -20,7 +20,15 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { part2Score, part3Score, internshipScore = 0 } = body;
+    const { 
+      part1Score, 
+      part2Score, 
+      part3Score, 
+      internshipScore = 0,
+      maxPart1,
+      maxPart2,
+      maxPart3
+    } = body;
 
     // Récupérer la soumission avec l'examen
     const submission = await prisma.examSession.findUnique({
@@ -37,26 +45,35 @@ export async function POST(
 
     const { exam } = submission;
 
-    // Validation
+    // Utiliser les points max fournis ou ceux de l'examen par défaut
+    const mP1 = maxPart1 !== undefined ? maxPart1 : (exam.part1Points || 20);
+    const mP2 = maxPart2 !== undefined ? maxPart2 : (exam.part2Points || 40);
+    const mP3 = maxPart3 !== undefined ? maxPart3 : (exam.part3Points || 40);
+    const totalMaxPossible = mP1 + mP2 + mP3;
+
+    // Validation des scores
     if (part2Score === undefined || part3Score === undefined) {
       throw new ApiErrorImpl('VALIDATION', 'Les scores Partie 2 et Partie 3 sont requis');
     }
 
-    if (part2Score < 0 || part2Score > (exam.part2Points || 40)) {
-      throw new ApiErrorImpl('VALIDATION', `Le score Partie 2 doit être entre 0 et ${exam.part2Points || 40}`);
+    if (part1Score !== undefined && (part1Score < 0 || part1Score > mP1)) {
+      throw new ApiErrorImpl('VALIDATION', `Le score Partie 1 doit être entre 0 et ${mP1}`);
     }
 
-    if (part3Score < 0 || part3Score > (exam.part3Points || 40)) {
-      throw new ApiErrorImpl('VALIDATION', `Le score Partie 3 doit être entre 0 et ${exam.part3Points || 40}`);
+    if (part2Score < 0 || part2Score > mP2) {
+      throw new ApiErrorImpl('VALIDATION', `Le score Partie 2 doit être entre 0 et ${mP2}`);
+    }
+
+    if (part3Score < 0 || part3Score > mP3) {
+      throw new ApiErrorImpl('VALIDATION', `Le score Partie 3 doit être entre 0 et ${mP3}`);
     }
 
     // Calculer le score total de l'examen
-    const qcmScore = submission.scorePart1 || 0;
+    const qcmScore = part1Score !== undefined ? part1Score : (submission.scorePart1 || 0);
     const examTotalPoints = qcmScore + part2Score + part3Score;
-    const maxPoints = exam.totalPoints || 100;
     
-    // Conversion sur 100 pour la logique de réussite
-    const examPercentage = (examTotalPoints / maxPoints) * 100;
+    // Conversion sur 100 pour la logique de réussite basée sur le barème AJUSTÉ
+    const examPercentage = (examTotalPoints / totalMaxPossible) * 100;
     
     // Calcul de la note finale combinée (Évaluation Global = [Note Exam % + Note Stage %] / 2)
     // On suppose ici que internshipScore est fourni sur 100 (ou on le normalise s'il est sur 20)
@@ -73,6 +90,18 @@ export async function POST(
     const isPassing = finalPercentage >= passingThreshold;
 
     // Mettre à jour la soumission
+    // On stocke le barème personnalisé dans le champ answers pour qu'il soit récupérable par le candidat
+    const currentAnswers = (submission.answers as any) || {};
+    const updatedAnswers = {
+      ...currentAnswers,
+      _customBareme: {
+        maxPart1: mP1,
+        maxPart2: mP2,
+        maxPart3: mP3,
+        totalMax: totalMaxPossible
+      }
+    };
+
     const updatedSubmission = await prisma.examSession.update({
       where: { id },
       data: {
@@ -82,9 +111,11 @@ export async function POST(
         internshipScore: normalizedInternshipScore,
         finalScore: finalPercentage,
         gradedAt: new Date(),
+        scorePart1: qcmScore,
         scorePart2: part2Score,
         scorePart3: part3Score,
-        gradedBy: adminUser?.id
+        gradedBy: adminUser?.id,
+        answers: updatedAnswers
       },
       include: {
         candidate: true,
@@ -114,6 +145,7 @@ export async function POST(
     });
 
     // Si réussi (≥ 65%), générer automatiquement l'attestation si ce n'est pas un examen blanc
+    let attestationError = null;
     if (isPassing && submission.exam.type !== 'MOCK') {
       try {
         const { customAlphabet } = await import('nanoid');
@@ -136,22 +168,35 @@ export async function POST(
         const hash = customNanoid();
         const code = `FSA-${year}-${month}-${seq}-${hash}`;
 
+        // ✅ SECURITÉ : Vérifier si formationId est valide
+        let formationId = submission.exam.formationId;
+        if (!formationId) {
+            // Tentative de récupération d'une formation par défaut si aucune n'est liée à l'examen
+            const defaultFormation = await prisma.formation.findFirst();
+            formationId = defaultFormation?.id || "";
+            console.warn(`[ATTESTATION] Exam ${exam.id} has no formationId. Using default: ${formationId}`);
+        }
+
+        if (!formationId) {
+            throw new Error("Impossible de générer l'attestation : Aucune formation n'est définie dans le système.");
+        }
+
         // Créer l'attestation
         await prisma.attestation.create({
           data: {
             code,
-            fullName: submission.candidate.name || '',
+            fullName: submission.candidate.name || 'Candidat Anonyme',
             birthDate: submission.candidate.birthDate || new Date(),
-            birthPlace: submission.candidate.birthPlace || '',
-            formationId: submission.exam.formationId || '',
+            birthPlace: submission.candidate.birthPlace || 'Non renseigné',
+            formationId: formationId,
             type: 'CERTIFICATION',
             status: 'VALIDATED',
             startDate: submission.startedAt,
             endDate: submission.submittedAt || new Date(),
-            location: 'En ligne',
-            userId: submission.userId, // ✅ Lie à l'utilisateur si possible
-            instructor: 'Système automatique',
-            issuingCompany: 'Ferme St André',
+            location: 'En ligne (Plateforme FSA)',
+            userId: submission.userId,
+            instructor: 'Direction Technique FSA',
+            issuingCompany: 'FSA - Ferme Agro-Piscicole Cité St André',
             certificationScore: finalPercentage,
             stageScore: normalizedInternshipScore,
             certificationMention: finalPercentage >= 90 ? 'EXCELLENCE' :
@@ -163,6 +208,7 @@ export async function POST(
 
       } catch (error: any) {
         console.error('Erreur génération attestation:', error);
+        attestationError = error.message;
       }
     }
 
@@ -189,7 +235,7 @@ export async function POST(
               : 'Correction disponible',
             message: isPassing
               ? (isMock 
-                  ? `Votre auto-évaluation "${submission.exam.title}" a été corrigée. Score: ${examTotalPoints}/${maxPoints}.`
+                  ? `Votre auto-évaluation "${submission.exam.title}" a été corrigée. Score: ${examTotalPoints}/${totalMaxPossible}.`
                   : `Félicitations ! Votre examen "${submission.exam.title}" a été corrigé avec une moyenne globale de ${finalPercentage.toFixed(2)}/100.${isPassing && submission.exam.type !== 'MOCK' ? ' Votre attestation est prête.' : ''}`)
               : `La correction de "${submission.exam.title}" est terminée. Moyenne: ${finalPercentage.toFixed(2)}/100.`,
             link: isMock ? '/transcript' : (isPassing ? '/attestations' : '/results'),
@@ -206,7 +252,8 @@ export async function POST(
     return NextResponse.json({
       message: 'Correction enregistrée avec succès',
       success: true,
-      attestationGenerated: isPassing && submission.exam.type !== 'MOCK',
+      attestationGenerated: isPassing && submission.exam.type !== 'MOCK' && !attestationError,
+      attestationError: attestationError
     });
 
   } catch (error: any) {

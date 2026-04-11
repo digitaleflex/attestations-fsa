@@ -19,7 +19,8 @@ import {
   ClipboardList,
   Eye,
   CheckCircle,
-  XCircle
+  XCircle,
+  PenTool
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -36,8 +37,13 @@ interface ExamPart {
   id: string;
   title: string;
   type: string;
+  order?: number;
   scenario?: string;
-  questions: Array<{ id: string; text: string }>;
+  questions: Array<{ 
+    id: string; 
+    text: string;
+    options: Array<{ id: string; text: string; isCorrect: boolean }>;
+  }>;
 }
 import {
   AlertDialog,
@@ -81,8 +87,12 @@ export default function GradeSubmissionPage() {
   
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
+  const [score1, setScore1] = useState<number>(0);
   const [score2, setScore2] = useState<number>(0);
   const [score3, setScore3] = useState<number>(0);
+  const [maxP1, setMaxP1] = useState<number>(20);
+  const [maxP2, setMaxP2] = useState<number>(40);
+  const [maxP3, setMaxP3] = useState<number>(40);
   const [internshipScore, setInternshipScore] = useState<number>(10); // Par défaut 10/20
   const [obs, setObs] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -93,8 +103,20 @@ export default function GradeSubmissionPage() {
       .then(res => res.json())
       .then(data => {
         setSubmission(data);
+        setScore1(data.scorePart1 || 0);
         setScore2(data.scorePart2 || 0);
         setScore3(data.scorePart3 || 0);
+        
+        // Barème par défaut : 5 / 10 / 5 pour les examens officiels, sinon les points de l'examen
+        if (data.exam.type === 'OFFICIAL') {
+          setMaxP1(5);
+          setMaxP2(10);
+          setMaxP3(5);
+        } else {
+          setMaxP1(data.exam.part1Points || 20);
+          setMaxP2(data.exam.part2Points || 40);
+          setMaxP3(data.exam.part3Points || 40);
+        }
         // Note de stage stockée sur 100, on affiche sur 20
         if (data.internshipScore) {
           setInternshipScore(data.internshipScore / 5);
@@ -120,8 +142,12 @@ export default function GradeSubmissionPage() {
       await apiFetch(`/api/admin/submissions/${id}/correct`, {
         method: "POST",
         body: JSON.stringify({
+          part1Score: parseFloat(score1.toString()),
           part2Score: parseFloat(score2.toString()),
           part3Score: parseFloat(score3.toString()),
+          maxPart1: parseFloat(maxP1.toString()),
+          maxPart2: parseFloat(maxP2.toString()),
+          maxPart3: parseFloat(maxP3.toString()),
           internshipScore: parseFloat(internshipScore.toString()),
           observations: obs
         })
@@ -147,10 +173,10 @@ export default function GradeSubmissionPage() {
 
   if (!submission) return null;
 
-  const totalRaw = submission.scorePart1 + score2 + score3;
-  const maxTotal = submission.exam.totalPoints || 100;
+  const totalRaw = score1 + score2 + score3;
+  const totalMax = maxP1 + maxP2 + maxP3;
   
-  const examScoreOn20 = (totalRaw / maxTotal) * 20;
+  const examScoreOn20 = (totalRaw / totalMax) * 20;
   const internshipOn20 = internshipScore; // Déjà sur 20
   const finalScoreOn20 = (examScoreOn20 + internshipOn20) / 2;
 
@@ -232,10 +258,43 @@ export default function GradeSubmissionPage() {
             </h3>
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-slate-400">Partie 2 (Max {submission.exam.part2Points || 40})</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold uppercase text-slate-400">Partie 1</label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase">Barème:</span>
+                    <input 
+                      type="number" 
+                      className="w-10 bg-transparent border-b border-slate-700 text-[10px] text-emerald-400 font-bold text-center focus:outline-none"
+                      value={maxP1}
+                      onChange={(e) => setMaxP1(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
                 <Input 
                   type="number" 
-                  max={submission.exam.part2Points || 40}
+                  max={maxP1}
+                  step="0.5"
+                  className="bg-slate-800 border-slate-700 text-emerald-400 text-lg h-12 font-black"
+                  value={score1}
+                  onChange={(e) => setScore1(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold uppercase text-slate-400">Partie 2</label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase">Barème:</span>
+                    <input 
+                      type="number" 
+                      className="w-10 bg-transparent border-b border-slate-700 text-[10px] text-slate-400 font-bold text-center focus:outline-none"
+                      value={maxP2}
+                      onChange={(e) => setMaxP2(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <Input 
+                  type="number" 
+                  max={maxP2}
                   step="0.5"
                   className="bg-slate-800 border-slate-700 text-white text-lg h-12"
                   value={score2}
@@ -243,11 +302,22 @@ export default function GradeSubmissionPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-slate-400">Partie 3 (Max {submission.exam.part3Points || 40})</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold uppercase text-slate-400">Partie 3</label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase">Barème:</span>
+                    <input 
+                      type="number" 
+                      className="w-10 bg-transparent border-b border-slate-700 text-[10px] text-slate-400 font-bold text-center focus:outline-none"
+                      value={maxP3}
+                      onChange={(e) => setMaxP3(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
                 <Input 
                   type="number" 
-                  max={submission.exam.part3Points || 40}
-                   step="0.5"
+                  max={maxP3}
+                  step="0.5"
                   className="bg-slate-800 border-slate-700 text-white text-lg h-12"
                   value={score3}
                   onChange={(e) => setScore3(Number(e.target.value))}
@@ -294,7 +364,25 @@ export default function GradeSubmissionPage() {
                 </div>
                 <p className="text-2xl font-black text-emerald-600">{submission.scorePart1} <span className="text-sm text-slate-400">/ {submission.exam.part1Points || 20}</span></p>
               </div>
-              <p className="text-sm text-slate-500 italic">Cette partie a été notée par le système lors de la soumission candidate.</p>
+              
+              <div className="space-y-4 mt-4">
+                {submission.exam.parts.find(p => p.type === "QCM")?.questions.map((q, idx) => {
+                  const selectedOptionId = submission.answers?.[q.id];
+                  const selectedOption = q.options?.find((o: { id: string; text: string }) => o.id === selectedOptionId);
+                  const correctOption = q.options?.find((o: { id: string; isCorrect: boolean }) => o.isCorrect);
+                  const isCorrect = selectedOptionId === correctOption?.id;
+
+                  return (
+                    <div key={q.id} className="text-xs border-l-2 border-slate-200 pl-4 py-1">
+                      <p className="font-bold text-slate-700">{idx + 1}. {q.text}</p>
+                      <p className={cn("mt-1", isCorrect ? "text-emerald-600" : "text-red-600")}>
+                        Réponse : {selectedOption?.text || "Non répondu"} 
+                        {!isCorrect && <span className="text-slate-400 ml-2">(Correct : {correctOption?.text})</span>}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
            </Card>
 
            {/* SCANS (Si présents) */}
@@ -328,39 +416,77 @@ export default function GradeSubmissionPage() {
              </div>
            )}
 
-           {/* REPONSES OUVERTES */}
-           {submission.exam.parts.filter(p => p.type !== "QCM").map((part: ExamPart, pIdx: number) => (
-             <div key={part.id} className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <Badge className="bg-slate-800 text-white">Partie {pIdx + 2}</Badge>
-                  <h4 className="font-black text-slate-900 uppercase">{part.title}</h4>
-                </div>
-                
-                {part.scenario && (
-                  <Card className="p-6 bg-amber-50 border-amber-100 text-sm italic text-amber-900 shadow-inner">
-                    <p className="font-black mb-2 uppercase tracking-widest text-[10px]">Scénario d'examen :</p>
-                    {part.scenario}
-                  </Card>
-                )}
+           {/* REPONSES OUVERTES & ÉTUDES DE CAS */}
+           {submission.exam.parts.filter(p => p.type !== "QCM").map((part: ExamPart, pIdx: number) => {
+             const partKey = part.type === "CASE_STUDY" ? "part3" : (part.order === 2 ? "part2" : null);
+             const generalAnswer = partKey ? submission.answers[partKey] : null;
+             
+             return (
+               <div key={part.id} className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-slate-800 text-white shadow-sm px-3 py-1 font-black">Partie {part.order || pIdx + 2}</Badge>
+                    <h4 className="font-black text-slate-900 uppercase tracking-tight">{part.title}</h4>
+                  </div>
+                  
+                  {part.scenario && (
+                    <Card className="p-6 bg-amber-50/50 border-amber-100/50 text-sm italic text-amber-900 shadow-sm rounded-2xl">
+                      <p className="font-black mb-2 uppercase tracking-widest text-[10px] text-amber-600">Contexte / Scénario :</p>
+                      <div className="whitespace-pre-wrap leading-relaxed">{part.scenario}</div>
+                    </Card>
+                  )}
 
-                {part.questions.map((question: { id: string; text: string }, qIdx: number) => (
-                  <Card key={question.id} className="p-8 border-slate-100 shadow-sm space-y-4">
-                    <div className="flex gap-4">
-                      <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 font-bold text-sm">
-                        {qIdx + 1}
-                      </span>
-                      <p className="text-lg font-bold text-slate-800">{question.text}</p>
-                    </div>
-                    <div className="pl-12">
-                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Réponse du candidat :</p>
-                       <div className="p-4 bg-slate-50 rounded-xl text-slate-700 leading-relaxed border border-slate-100 whitespace-pre-wrap">
-                          {submission.answers[question.id] || "Aucune réponse fournie."}
-                       </div>
-                    </div>
-                  </Card>
-                ))}
-             </div>
-           ))}
+                  {/* REPONSE GENERALE (Cas de l'étude de cas ou texte libre global) */}
+                  {generalAnswer && (
+                    <Card className="p-8 border-indigo-100 bg-indigo-50/10 shadow-sm rounded-3xl">
+                      <div className="flex items-center gap-2 mb-4">
+                         <PenTool className="w-4 h-4 text-indigo-500" />
+                         <p className="text-xs font-black text-indigo-400 uppercase tracking-widest">Réponse Générale / Développement :</p>
+                      </div>
+                      <div className="p-6 bg-white rounded-2xl text-slate-700 leading-relaxed border border-indigo-50 shadow-inner whitespace-pre-wrap font-serif text-lg">
+                        {generalAnswer}
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* QUESTIONS SPECIFIQUES */}
+                  <div className="space-y-4">
+                    {part.questions.map((question: { id: string; text: string }, qIdx: number) => {
+                      const questionAnswer = submission.answers[question.id];
+                      // Si la réponse est identique à la réponse générale, on ne la répète pas sauf si c'est la seule
+                      const shouldShow = questionAnswer && questionAnswer !== generalAnswer;
+                      
+                      if (!shouldShow && !question.text) return null;
+
+                      return (
+                        <Card key={question.id} className="p-8 border-slate-100 shadow-sm space-y-4 rounded-3xl transition-all hover:shadow-md">
+                          <div className="flex gap-4">
+                            <span className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 font-black text-sm shadow-inner">
+                              {qIdx + 1}
+                            </span>
+                            <p className="text-lg font-bold text-slate-800 leading-tight">{question.text}</p>
+                          </div>
+                          
+                          {questionAnswer ? (
+                            <div className="pl-14">
+                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                 <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Réponse spécifique :
+                               </p>
+                               <div className="p-5 bg-slate-50 rounded-2xl text-slate-700 leading-relaxed border border-slate-100 whitespace-pre-wrap">
+                                  {questionAnswer}
+                               </div>
+                            </div>
+                          ) : !generalAnswer && (
+                            <div className="pl-14 italic text-slate-400 text-sm">
+                               Aucune réponse pour cette question.
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </div>
+               </div>
+             );
+           })}
         </div>
       </div>
 

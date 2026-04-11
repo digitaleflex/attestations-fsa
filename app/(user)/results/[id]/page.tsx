@@ -43,8 +43,19 @@ export default function ResultDetailsPage() {
   if (!result) return <div className="p-8 text-center">Résultat non trouvé</div>;
 
   const isGraded = result.status === "GRADED";
-  const passed = result.totalScore >= (result.exam.passingScore / 100) * result.exam.totalPoints;
-  const scorePercent = Math.round((result.totalScore / result.exam.totalPoints) * 100);
+  
+  // Extraire le barème personnalisé s'il existe
+  const customBareme = result.answers && typeof result.answers === 'object' 
+    ? (result.answers as any)._customBareme 
+    : null;
+
+  const mP1 = customBareme?.maxPart1 ?? (result.exam?.part1Points || 20);
+  const mP2 = customBareme?.maxPart2 ?? (result.exam?.part2Points || 40);
+  const mP3 = customBareme?.maxPart3 ?? (result.exam?.part3Points || 40);
+  const totalMax = customBareme?.totalMax ?? (result.exam?.totalPoints || 100);
+
+  const passed = result.totalScore >= (result.exam.passingScore / 100) * totalMax;
+  const scorePercent = Math.round((result.totalScore / totalMax) * 100);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -121,7 +132,7 @@ export default function ResultDetailsPage() {
         <Card className="p-6 bg-white shadow-sm flex flex-col items-center justify-center border-b-4 border-b-blue-500">
           <p className="text-sm font-medium text-slate-500 mb-1">Score Global</p>
           <p className={`text-4xl font-bold ${!isGraded ? 'text-amber-600' : passed ? 'text-emerald-600' : 'text-rose-600'}`}>{scorePercent}%</p>
-          <p className="text-xs text-slate-400 mt-1">{result.totalScore} / {result.exam.totalPoints} points</p>
+          <p className="text-xs text-slate-400 mt-1">{result.totalScore} / {totalMax} points</p>
         </Card>
 
         <Card className="p-6 bg-white shadow-sm flex flex-col items-center justify-center border-b-4 border-b-purple-500">
@@ -177,10 +188,10 @@ export default function ResultDetailsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold text-slate-800">{result.scorePart1}</span>
-                  <span className="text-xs text-slate-400 ml-1">/ {result.exam.part1Points}</span>
+                  <span className="text-xs text-slate-400 ml-1">/ {mP1}</span>
                 </div>
               </div>
-              <Progress value={(result.scorePart1 / result.exam.part1Points) * 100} className="h-2 bg-slate-100" />
+              <Progress value={(result.scorePart1 / mP1) * 100} className="h-2 bg-slate-100" />
             </div>
 
             {/* Partie 2 */}
@@ -197,10 +208,10 @@ export default function ResultDetailsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold text-slate-800">{result.scorePart2}</span>
-                  <span className="text-xs text-slate-400 ml-1">/ {result.exam.part2Points}</span>
+                  <span className="text-xs text-slate-400 ml-1">/ {mP2}</span>
                 </div>
               </div>
-              <Progress value={(result.scorePart2 / result.exam.part2Points) * 100} className="h-2 bg-slate-100" />
+              <Progress value={(result.scorePart2 / mP2) * 100} className="h-2 bg-slate-100" />
             </div>
 
             {/* Partie 3 */}
@@ -217,11 +228,33 @@ export default function ResultDetailsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold text-slate-800">{result.scorePart3}</span>
-                  <span className="text-xs text-slate-400 ml-1">/ {result.exam.part3Points}</span>
+                  <span className="text-xs text-slate-400 ml-1">/ {mP3}</span>
                 </div>
               </div>
-              <Progress value={(result.scorePart3 / result.exam.part3Points) * 100} className="h-2 bg-slate-100" />
+              <Progress value={(result.scorePart3 / mP3) * 100} className="h-2 bg-slate-100" />
             </div>
+
+            {/* Note de Stage (pour les officiels) */}
+            {result.exam.type !== 'MOCK' && result.status === 'GRADED' && (
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <CheckCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm">Évaluation du Stage</h4>
+                      <p className="text-xs text-slate-500">Note pratique sur le terrain</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-emerald-600">{result.internshipScore ? (result.internshipScore / 5).toFixed(1) : "0"}</span>
+                    <span className="text-xs text-slate-400 ml-1">/ 20</span>
+                  </div>
+                </div>
+                <Progress value={result.internshipScore || 0} className="h-2 bg-slate-100" />
+              </div>
+            )}
           </Card>
 
           {/* Observations Administrateur */}

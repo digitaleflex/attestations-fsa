@@ -48,22 +48,19 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   secret: authSecret || "dev-fallback-secret-do-not-use-in-prod",
-  baseURL:
-    process.env.BETTER_AUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (typeof window !== "undefined"
-      ? window.location.origin
-      : "http://localhost:3000"),
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"),
   trustedOrigins: [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.1.*", // Variant IP locale commune
+    "http://192.168.0.*", // Autre variant IP locale commune
+    "https://*.ngrok-free.app",
+    "https://*.loca.lt",
     "https://fsa.eurinhash.com",
     "https://verifier.fermestandre.com",
     "https://attestations-fsa.vercel.app",
-    "https://*.vercel.app" // ✅ Allow all vercel preview deployments
+    "https://*.vercel.app"
   ],
-  session: {
-    expiresIn: 60 * 60 * 24 * 30, // 30 jours
-    updateAge: 60 * 60 * 24 * 1, // 1 jour
-  },
   user: {
     // No additionalFields - Better Auth sign-up endpoint doesn't handle them properly
     // All additional fields (phone, birthPlace, address, birthDate, formationId)
@@ -72,7 +69,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
-    requireEmailVerification: false, // ✅ Disable mandatory OTP for registration (fixes current UI flow)
+    requireEmailVerification: true, // ✅ Mandatory OTP for registration (Re-enabled protection)
   },
   databaseHooks: {
     user: {
@@ -166,6 +163,11 @@ export const auth = betterAuth({
   ],
   advanced: {
     cookiePrefix: "better-auth",
+    useSecureCookies: process.env.NODE_ENV === "production",
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 30, // 30 jours
+    updateAge: 60 * 60 * 24 * 1, // 1 jour
   },
   pages: {
     signIn: "/admin/login",
@@ -300,8 +302,15 @@ export async function getCurrentUser(
     }
 
     return null;
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("[AUTH ERROR] getCurrentUser:", error);
+    // On log l'erreur spécifique pour diagnostiquer "Failed to get session"
+    if (error.message?.includes('session')) {
+        console.error("DEBUG SESSION DATA:", {
+            headers: request?.headers?.get('cookie') ? 'PRESENT' : 'MISSING',
+            env: process.env.NODE_ENV
+        });
+    }
     return null;
   }
 }

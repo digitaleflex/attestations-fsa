@@ -279,8 +279,8 @@ export default function UserExamsPage() {
                           <CheckCircle className="w-5 h-5 text-emerald-600" />
                           <span className="text-sm font-medium text-slate-700">Score obtenu</span>
                         </div>
-                        <span className={`text-2xl font-bold ${exam.score >= 70 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {exam.score}%
+                        <span className={`text-2xl font-bold ${ (exam.maxScore > 0 ? (exam.score / exam.maxScore) * 100 : 0) >= 70 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {exam.maxScore > 0 ? Math.round((exam.score / exam.maxScore) * 100) : 0}%
                         </span>
                       </div>
                     </div>
