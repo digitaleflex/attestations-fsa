@@ -149,7 +149,7 @@ const CertificateTemplate = ({
                   className="text-[10px] uppercase font-black leading-tight px-1"
                   style={{ color: "#991b1b" }}
                 >
-                  {settings?.institutionName || "Ferme Agro Piscicole"}
+                  {settings?.institutionName || "Ferme Agro-Piscicole St André"}
                 </div>
                 <div
                   className="w-10 h-6 border-y my-1 flex items-center justify-center"
@@ -216,7 +216,7 @@ const CertificateTemplate = ({
                   className="text-[10px] uppercase font-black leading-tight px-1"
                   style={{ color: "#991b1b" }}
                 >
-                  {settings?.institutionName || "Ferme Agro Piscicole"}
+                  {settings?.institutionName || "Ferme Agro-Piscicole St André"}
                 </div>
                 <div
                   className="w-10 h-6 border-y my-1 flex items-center justify-center"
@@ -238,7 +238,7 @@ const CertificateTemplate = ({
         {/* Corps du texte */}
         <div className="z-10 text-center mt-12 space-y-6 px-24">
           <p className="text-2xl" style={{ color: "#1e293b" }}>
-            {settings?.institutionName || "La Ferme Agro-piscicole St Andre"}{" "}
+            {settings?.institutionName || "La Ferme Agro-Piscicole St André"}{" "}
             certifie que {prefix}
           </p>
 

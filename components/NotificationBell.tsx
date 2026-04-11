@@ -159,67 +159,80 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-12 w-[380px] max-h-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-800 text-sm">Notifications</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => markAllReadMutation.mutate()}
-                className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                Tout marquer
-              </button>
-            )}
-          </div>
+        <>
+          {/* Mobile Overlay */}
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9998] lg:hidden animate-in fade-in duration-300"
+            onClick={() => setIsOpen(false)}
+          />
 
-          {/* List */}
-          <div className="overflow-y-auto max-h-[400px]">
-            {!notifData?.notifications?.length ? (
-              <div className="p-8 text-center">
-                <Bell className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                <p className="text-sm text-slate-400 font-medium">Aucune notification</p>
+          <div className="fixed sm:absolute right-4 sm:right-0 top-20 sm:top-12 w-[calc(100vw-2rem)] sm:w-[420px] max-h-[calc(100vh-120px)] sm:max-h-[550px] bg-white rounded-[2rem] shadow-[0_30px_90px_-15px_rgba(0,0,0,0.3)] border border-slate-200 overflow-hidden z-[9999] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between px-7 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
+              <div>
+                <h3 className="font-black text-slate-900 text-sm tracking-tight">Notifications</h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Alertes & Mises à jour</p>
               </div>
-            ) : (
-              notifData.notifications.map((notif: Notification) => (
+              {unreadCount > 0 && (
                 <button
-                  key={notif.id}
-                  onClick={() => handleNotificationClick(notif)}
-                  className={`w-full text-left px-5 py-3.5 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-3 items-start group ${
-                    !notif.isRead ? "bg-emerald-50/30" : ""
-                  }`}
+                  onClick={() => markAllReadMutation.mutate()}
+                  className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
                 >
-                  <span className="text-xl flex-shrink-0 mt-0.5">{getTypeIcon(notif.type)}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] leading-snug ${!notif.isRead ? "font-bold text-slate-800" : "text-slate-600"}`}>
-                      {notif.title}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1 truncate">{notif.message}</p>
-                    <p className="text-[10px] text-slate-300 font-medium mt-1">{formatRelativeTime(notif.createdAt)}</p>
-                  </div>
-                  {notif.link && (
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-500 flex-shrink-0 mt-1 transition-colors" />
-                  )}
-                  {!notif.isRead && (
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 mt-2" />
-                  )}
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Tout marquer
                 </button>
-              ))
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Footer */}
-          <div className="border-t border-slate-100 bg-slate-50/50">
-            <Link
-              href="/notifications"
-              onClick={() => setIsOpen(false)}
-              className="block text-center text-xs font-semibold text-emerald-600 hover:text-emerald-700 py-3 transition-colors"
-            >
-              Voir toutes les notifications →
-            </Link>
+            {/* List */}
+            <div className="overflow-y-auto max-h-[350px] sm:max-h-[400px] scrollbar-hide">
+              {!notifData?.notifications?.length ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-4">
+                    <Bell className="w-8 h-8 text-slate-200" />
+                  </div>
+                  <p className="text-sm text-slate-400 font-black uppercase tracking-widest text-[10px]">Aucune notification</p>
+                </div>
+              ) : (
+                notifData.notifications.map((notif: Notification) => (
+                  <button
+                    key={notif.id}
+                    onClick={() => handleNotificationClick(notif)}
+                    className={`w-full text-left px-5 py-4 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-4 items-start group ${
+                      !notif.isRead ? "bg-emerald-50/30" : ""
+                    }`}
+                  >
+                    <span className="text-2xl flex-shrink-0 mt-0.5">{getTypeIcon(notif.type)}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] leading-snug tracking-tight ${!notif.isRead ? "font-black text-slate-900" : "text-slate-600 font-medium"}`}>
+                        {notif.title}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">{notif.message}</p>
+                      <p className="text-[10px] text-slate-300 font-black uppercase mt-2 tracking-widest">{formatRelativeTime(notif.createdAt)}</p>
+                    </div>
+                    {notif.link && (
+                      <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 flex-shrink-0 mt-1 transition-colors" />
+                    )}
+                    {!notif.isRead && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0 mt-2 shadow-lg shadow-emerald-200" />
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-slate-100 bg-slate-50/50 p-2">
+              <Link
+                href="/notifications"
+                onClick={() => setIsOpen(false)}
+                className="block text-center text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-white hover:shadow-sm py-3 rounded-xl transition-all"
+              >
+                Voir toutes les notifications →
+              </Link>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

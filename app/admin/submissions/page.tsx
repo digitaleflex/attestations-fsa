@@ -294,14 +294,22 @@ function SubmissionsList() {
                         <UserIcon className="w-7 h-7 text-slate-300 group-hover:text-indigo-500" name={sub.candidate?.name || undefined} />
                     </div>
                     <div className="flex-1 min-w-0 pt-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h3 className="font-black text-slate-900 tracking-tight text-lg group-hover:text-indigo-600 transition-colors uppercase">
-                            {sub.candidate?.name || "Candidat Anonyme"}
-                        </h3>
-                        <Badge className={cn("font-black text-[10px] uppercase px-3 py-1 border-none tracking-widest", getStatusBadgeStyle(sub.status))}>
-                          {getStatusLabel(sub.status)}
-                        </Badge>
-                      </div>
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <h3 className="font-black text-slate-900 tracking-tight text-lg group-hover:text-indigo-600 transition-colors uppercase">
+                              {sub.candidate?.name || "Candidat Anonyme"}
+                          </h3>
+                          <Badge className={cn(
+                            "font-black text-[10px] uppercase px-3 py-1 border-none tracking-widest flex items-center justify-center", 
+                            sub.status === "GRADED" || sub.status === "COMPLETED" 
+                              ? (Math.round(sub.finalScore) >= 65 ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200" : "bg-rose-500 text-white shadow-lg shadow-rose-200")
+                              : getStatusBadgeStyle(sub.status)
+                          )}>
+                            {sub.status === "GRADED" || sub.status === "COMPLETED" 
+                              ? (Math.round(sub.finalScore) >= 65 ? "ADMIS" : "NON ADMIS")
+                              : getStatusLabel(sub.status)
+                            }
+                          </Badge>
+                        </div>
                       <p className="text-sm font-bold text-slate-500 mb-1 flex items-center gap-2">
                         <BookOpen className="w-4 h-4 text-slate-300" />
                         {sub.exam?.name}

@@ -38,7 +38,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
     if (!d) return "--/--/----";
     return new Date(d).toLocaleDateString("fr-FR", {
       day: "2-digit",
-      month: "2-digit",
+      month: "long",
       year: "numeric",
     });
   };
@@ -47,192 +47,196 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
     const percentage = (score / totalPoints) * 100;
     const passed = percentage >= 65;
     return {
-      label: passed ? "ADMIS" : "NON ADMIS",
-      color: passed ? "#059669" : "#dc2626",
-      bg: passed ? "#ecfdf5" : "#fef2f2",
+      label: passed ? "ADMIS" : "ÉCHEC",
+      color: passed ? "#047857" : "#b91c1c",
+      bg: passed ? "#f0fdf4" : "#fef2f2",
     };
   };
 
   const getMention = (average: number) => {
-    if (average >= 90) return { label: "EXCELLENCE", color: "#7c3aed" };
-    if (average >= 80) return { label: "TRÈS BIEN", color: "#059669" };
-    if (average >= 70) return { label: "BIEN", color: "#2563eb" };
-    if (average >= 60) return { label: "ASSEZ BIEN", color: "#0891b2" };
-    return { label: "PASSABLE", color: "#d97706" };
+    if (average >= 16) return { label: "TRÈS BIEN", color: "#6d28d9" };
+    if (average >= 14) return { label: "BIEN", color: "#0369a1" };
+    if (average >= 12) return { label: "ASSEZ BIEN", color: "#0e7490" };
+    if (average >= 10) return { label: "PASSABLE", color: "#1e293b" };
+    return { label: "INSUFFISANT", color: "#991b1b" };
   };
 
-  const mention = getMention(data.globalAverage);
+  // Récupérer le code de la première attestation disponible ou un placeholder
+  const studentCode = data.attestations && data.attestations.length > 0 
+    ? data.attestations[0].code 
+    : "EN ATTENTE";
+
+  const avg20 = (data.globalAverage / 100) * 20;
+  const mention = getMention(avg20);
 
   return (
     <div
       id={id}
       style={{
         width: "794px",
-        minHeight: "1122px",
-        fontFamily: "'Georgia', 'Times New Roman', serif",
+        minHeight: "1123px",
+        fontFamily: "'Segoe UI', Roboto, Helvetica, sans-serif",
         backgroundColor: "#ffffff",
         boxSizing: "border-box",
+        padding: "60px 50px",
         position: "relative",
-        padding: "40px" // Unified padding for the whole document
+        color: "#1e293b"
       }}
     >
-      {/* Dynamic border that grows with content */}
-      <div
-        style={{
+      <div style={{ position: "absolute", inset: "25px", border: "1px solid #cbd5e1", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", inset: "30px", border: "2px solid #1e3a8a", pointerEvents: "none" }} />
+
+      <div style={{
           position: "absolute",
-          inset: "15px",
-          border: "2px solid #1e3a5f",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%) rotate(-45deg)",
+          fontSize: "100px",
+          fontWeight: 900,
+          color: "rgba(30, 58, 138, 0.02)",
           pointerEvents: "none",
-          zIndex: 0
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "19px",
-          border: "0.5px solid #93c5fd",
-          pointerEvents: "none",
-          zIndex: 0
-        }}
-      />
+          zIndex: 0,
+          whiteSpace: "nowrap"
+      }}>
+          ST ANDRE FSA
+      </div>
 
-      {/* Content wrapper - Standard layout flow */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          boxSizing: "border-box",
-        }}
-      >
-        {/* ── HEADER ── */}
-        <div style={{ textAlign: "center", borderBottom: "1.5px solid #1e3a5f", paddingBottom: "10px", marginBottom: "10px" }}>
-          <p style={{ fontSize: "9px", letterSpacing: "0.35em", fontWeight: 700, color: "#2563eb", marginBottom: "4px", textTransform: "uppercase", fontFamily: "Arial, sans-serif" }}>
-            Ferme Agro-Piscicole Cité St André
-          </p>
-          <h1 style={{ fontSize: "26px", fontWeight: 900, letterSpacing: "-0.5px", color: "#0f172a", margin: "0 0 6px", textTransform: "uppercase" }}>
-            Relevé de <span style={{ textDecoration: "underline", textUnderlineOffset: "3px" }}>Notes</span> Officiel
-          </h1>
-          <div style={{ width: "60px", height: "2px", background: "linear-gradient(to right, #2563eb, #059669)", margin: "0 auto" }} />
-        </div>
-
-        {/* ── INFORMATIONS CANDIDAT ── */}
-        <div style={{ marginBottom: "10px" }}>
-          <p style={{ fontSize: "9px", fontWeight: 800, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "5px", fontFamily: "Arial, sans-serif" }}>
-            Informations du candidat
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 20px", fontSize: "10px", color: "#334155" }}>
-            <div>
-              <span style={{ color: "#64748b" }}>Nom complet : </span>
-              <span style={{ fontWeight: 700, color: "#0f172a" }}>{data.fullName}</span>
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
+        
+        {/* ── EN-TÊTE ── */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "35px", borderBottom: "2px solid #1e3a8a", paddingBottom: "20px" }}>
+            <div style={{ textAlign: "center", width: "180px" }}>
+                <p style={{ fontSize: "10px", fontWeight: 800, margin: 0, textTransform: "uppercase" }}>République du Bénin</p>
+                <div style={{ width: "30px", height: "1px", background: "#cbd5e1", margin: "4px auto" }} />
+                <p style={{ fontSize: "8px", fontWeight: 700, margin: 0, color: "#1e3a8a" }}>Fraternité - Justice - Travail</p>
             </div>
-            <div>
-              <span style={{ color: "#64748b" }}>Email : </span>
-              <span style={{ fontWeight: 700, color: "#0f172a" }}>{data.email}</span>
+
+            <div style={{ textAlign: "center", flex: 1, padding: "0 20px" }}>
+                <div style={{ height: "60px", marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                    <img src="/logo-fsa.png" alt="Logo FSA" style={{ height: "100%", objectFit: "contain" }} />
+                </div>
+                <h1 style={{ fontSize: "24px", fontWeight: 900, margin: "0 0 5px", color: "#101b3d", letterSpacing: "1px" }}>RELEVÉ DE NOTES</h1>
+                <p style={{ fontSize: "10px", fontWeight: 700, margin: 0, color: "#64748b", textTransform: "uppercase", letterSpacing: "2px" }}>Ferme Agro-Piscicole St André</p>
             </div>
-            <div>
-              <span style={{ color: "#64748b" }}>Date de naissance : </span>
-              <span style={{ fontWeight: 700, color: "#0f172a" }}>{formatDate(data.birthDate)}</span>
+
+            <div style={{ width: "180px", textAlign: "right", fontSize: "10px", color: "#000" }}>
+                <p style={{ margin: 0, fontWeight: 700 }}>Version Electronique</p>
+                <p style={{ margin: "2px 0", color: "#64748b", fontSize: "9px" }}>Authenticité Certifiée</p>
+                <p style={{ margin: 0, fontWeight: 800, color: "#1e3a8a", fontSize: "11px", marginTop: "5px" }}>N° {studentCode.split('-').pop()}</p>
             </div>
-            <div>
-              <span style={{ color: "#64748b" }}>Lieu de naissance : </span>
-              <span style={{ fontWeight: 700, color: "#0f172a" }}>{data.birthPlace}</span>
-            </div>
-          </div>
         </div>
 
-        {/* ── RÉSULTATS D'EXAMENS ── */}
-        <div style={{ marginBottom: "10px", flex: "1" }}>
-          <p style={{ fontSize: "9px", fontWeight: 800, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "6px", fontFamily: "Arial, sans-serif" }}>
-            Résultats d&apos;examens
-          </p>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9.5px" }}>
-            <thead>
-              <tr style={{ borderBottom: "1.5px solid #1e3a5f" }}>
-                <th style={{ textAlign: "left", padding: "4px 4px 4px 0", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Examen</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Session Code</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Note Exam</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Note Stage</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Moyenne</th>
-                <th style={{ textAlign: "center", padding: "4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Statut</th>
-                <th style={{ textAlign: "right", padding: "4px 0 4px 4px", fontWeight: 700, color: "#475569", fontFamily: "Arial, sans-serif", fontSize: "8.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.examResults.map((exam, idx) => {
-                const badge = getStatusBadge(exam.score, exam.totalPoints);
-                return (
-                  <tr key={idx} style={{ borderBottom: "0.5px solid #e2e8f0", backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
-                    <td style={{ padding: "5px 4px 5px 0", color: "#1e293b", fontWeight: 500, maxWidth: "220px" }}>
-                      {exam.examName}
-                      {exam.type === "MOCK" && (
-                        <span style={{ fontSize: "7px", color: "#6366f1", fontWeight: 800, marginLeft: "4px" }}>(BLANC)</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>#{idx + 101}</td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", fontWeight: 600, color: "#1e293b" }}>
-                      {Math.round((exam.score / exam.totalPoints) * 100)}/100
-                    </td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", color: "#64748b" }}>{exam.internshipScore ? `${Math.round(exam.internshipScore)}/100` : "–"}</td>
-                    <td style={{ textAlign: "center", padding: "5px 4px", fontWeight: 800, color: badge.color }}>
-                      {exam.finalScore ? `${Math.round(exam.finalScore)}/100` : `${Math.round((exam.score / exam.totalPoints) * 100)}/100`}
-                    </td>
-                    <td style={{ textAlign: "center", padding: "5px 4px" }}>
-                      <span style={{
-                        display: "inline-block",
-                        padding: "1px 7px",
-                        borderRadius: "3px",
-                        fontSize: "8px",
-                        fontWeight: 800,
-                        fontFamily: "Arial, sans-serif",
-                        backgroundColor: badge.bg,
-                        color: badge.color,
-                        letterSpacing: "0.05em",
-                      }}>
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "right", padding: "5px 0 5px 4px", color: "#64748b" }}>
-                      {formatDate(exam.date)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* ── IDENTIFICATION ── */}
+        <div style={{ marginBottom: "35px", backgroundColor: "#fcfdfe", padding: "20px 25px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+            <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#1e3a8a", margin: "0 0 15px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Profil de l&apos;Étudiant</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px 40px", fontSize: "11px" }}>
+                <div>
+                    <span style={{ color: "#64748b", textTransform: "uppercase", fontSize: "8px", fontWeight: 800 }}>Nom & Prénoms :</span>
+                    <p style={{ margin: "2px 0", fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>{data.fullName.toUpperCase()}</p>
+                </div>
+                <div>
+                    <span style={{ color: "#64748b", textTransform: "uppercase", fontSize: "8px", fontWeight: 800 }}>Code de Dossier :</span>
+                    <p style={{ margin: "2px 0", fontWeight: 800, color: "#1e3a8a", fontSize: "12px" }}>{studentCode}</p>
+                </div>
+                <div>
+                    <span style={{ color: "#64748b", textTransform: "uppercase", fontSize: "8px", fontWeight: 800 }}>Date & Lieu de naissance :</span>
+                    <p style={{ margin: "2px 0", fontWeight: 700 }}>{formatDate(data.birthDate)} à {data.birthPlace}</p>
+                </div>
+                <div>
+                    <span style={{ color: "#64748b", textTransform: "uppercase", fontSize: "8px", fontWeight: 800 }}>Adresse e-mail :</span>
+                    <p style={{ margin: "2px 0", fontWeight: 700 }}>{data.email}</p>
+                </div>
+            </div>
         </div>
 
-        {/* ── RÉSUMÉ GLOBAL ── */}
-        <div style={{ marginBottom: "10px" }}>
-          <p style={{ fontSize: "9px", fontWeight: 800, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "6px", fontFamily: "Arial, sans-serif" }}>
-            Résumé global
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "8px" }}>
-            {[
-              { label: "Examens passés", value: String(data.totalExams), color: "#1e293b" },
-              { label: "Examens réussis", value: String(data.passedExams), color: "#059669" },
-              { label: "Taux de réussite", value: `${data.successRate}%`, color: "#2563eb" },
-              { label: "Mention globale", value: mention.label, color: mention.color },
-            ].map((item, i) => (
-              <div key={i} style={{ border: "0.5px solid #e2e8f0", borderRadius: "4px", padding: "8px 10px", backgroundColor: "#f8fafc" }}>
-                <p style={{ fontSize: "8px", color: "#94a3b8", marginBottom: "4px", fontFamily: "Arial, sans-serif", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</p>
-                <p style={{ fontSize: "18px", fontWeight: 900, color: item.color, lineHeight: 1 }}>{item.value}</p>
-              </div>
-            ))}
-          </div>
+        {/* ── TABLEAU DES RÉSULTATS ── */}
+        <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: "11px", fontWeight: 900, color: "#1e3a8a", marginBottom: "15px", textTransform: "uppercase", letterSpacing: "1px" }}>
+                ÉTAT RÉCAPITULATIF DES NOTES
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "40px" }}>
+                <thead>
+                    <tr style={{ backgroundColor: "#1e3a8a", color: "#ffffff" }}>
+                        <th style={{ textAlign: "left", padding: "12px 15px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Unités de Formation</th>
+                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Note Exam</th>
+                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Note Stage</th>
+                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Moyenne / 20</th>
+                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase", width: "100px" }}>Verdict</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {data.examResults.map((exam, idx) => {
+                        const scorePct = Math.round((exam.score / exam.totalPoints) * 100);
+                        const final20 = exam.finalScore ? (exam.finalScore / 100) * 20 : (scorePct / 100) * 20;
+                        const badge = getStatusBadge(exam.score, exam.totalPoints);
+                        
+                        return (
+                            <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                <td style={{ padding: "14px 15px", fontSize: "10px" }}>
+                                    <p style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>{exam.examName}</p>
+                                    <p style={{ margin: "2px 0 0", fontSize: "7px", color: "#64748b", textTransform: "uppercase" }}>Session du {formatDate(exam.date)}</p>
+                                </td>
+                                <td style={{ textAlign: "center", padding: "12px", fontSize: "11px", fontWeight: 600 }}>{scorePct}%</td>
+                                <td style={{ textAlign: "center", padding: "12px", fontSize: "11px", color: "#64748b" }}>{exam.internshipScore ? `${Math.round(exam.internshipScore)}%` : "N/A"}</td>
+                                <td style={{ textAlign: "center", padding: "12px", fontSize: "12px", fontWeight: 900, color: "#1e3a8a" }}>{final20.toFixed(2)}</td>
+                                <td style={{ textAlign: "center", padding: "12px" }}>
+                                    <span style={{ 
+                                        fontSize: "8px", 
+                                        fontWeight: 900, 
+                                        color: badge.color, 
+                                        backgroundColor: badge.bg, 
+                                        padding: "3px 8px", 
+                                        borderRadius: "4px",
+                                        border: `1px solid ${badge.color}`,
+                                        display: "inline-block",
+                                        minWidth: "60px",
+                                        textAlign: "center"
+                                    }}>
+                                        {badge.label}
+                                    </span>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+
+            {/* ── RÉSULTAT FINAL ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "50px" }}>
+                <div style={{ backgroundColor: "#1e3a8a", padding: "25px", borderRadius: "8px", color: "#fff", boxShadow: "0 10px 15px -3px rgba(30, 58, 138, 0.2)" }}>
+                    <h4 style={{ margin: "0 0 15px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "5px" }}>Résulat Global</h4>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                        <span style={{ fontSize: "10px", opacity: 0.85 }}>Moyenne Générale :</span>
+                        <span style={{ fontSize: "18px", fontWeight: 900 }}>{avg20.toFixed(2)} / 20</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: "10px", opacity: 0.85 }}>Mention :</span>
+                        <span style={{ fontSize: "14px", fontWeight: 800, color: "#fbbf24" }}>{mention.label}</span>
+                    </div>
+                </div>
+
+                <div style={{ textAlign: "center", paddingTop: "15px" }}>
+                   <p style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 50px" }}>Le Responsable de la Formation,</p>
+                   <div style={{ width: "130px", height: "1px", background: "#1e293b", margin: "0 auto 10px" }} />
+                   <p style={{ fontSize: "11px", fontWeight: 700, margin: 0 }}>FSA - St André</p>
+                   <p style={{ fontSize: "8px", color: "#64748b", fontStyle: "italic" }}>(Validé électroniquement)</p>
+                </div>
+            </div>
         </div>
 
-        {/* ── FOOTER ── */}
-        <div style={{ borderTop: "0.5px solid #cbd5e1", paddingTop: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <p style={{ fontSize: "8px", color: "#94a3b8", fontFamily: "Arial, sans-serif" }}>
-            Document généré le {new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-          </p>
-          <p style={{ fontSize: "8.5px", fontWeight: 800, color: "#1e293b", letterSpacing: "0.2em", textTransform: "uppercase", fontFamily: "Arial, sans-serif" }}>
-            © Ferme Saint André
-          </p>
+        {/* ── BAS DE PAGE ── */}
+        <div style={{ marginTop: "auto", borderTop: "1px solid #e2e8f0", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div style={{ fontSize: "8px", color: "#94a3b8", lineHeight: 1.6 }}>
+                <p style={{ margin: 0 }}>Authenticité vérifiable sur : <strong>fsa-benin.com/verifier</strong></p>
+                <p style={{ margin: 0 }}>Code Doc : {studentCode.split('-').pop()}-{id.slice(-4)}</p>
+                <p style={{ margin: 0 }}>Généré le {new Date().toLocaleString('fr-FR')}</p>
+            </div>
+            <div style={{ textAlign: "right" }}>
+                <p style={{ fontSize: "10px", fontWeight: 900, color: "#1e3a8a", margin: 0 }}>FERME AGRO-PISCICOLE ST ANDRÉ</p>
+                <p style={{ fontSize: "8px", color: "#64748b", margin: 0 }}>Le Bénin qui produit, l'avenir qui se construit.</p>
+            </div>
         </div>
+
       </div>
     </div>
   );

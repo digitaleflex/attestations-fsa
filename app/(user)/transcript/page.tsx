@@ -216,13 +216,15 @@ export default function TranscriptPage() {
         </Card>
       </div>
 
-      {/* Exam Results Table */}
-      <Card className="p-6 bg-white shadow-sm">
+      {/* Exam Results Table & Mobile Cards */}
+      <Card className="p-4 sm:p-6 bg-white shadow-sm overflow-hidden">
         <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
           <FileText className="w-5 h-5 text-blue-500" />
           Résultats détaillés
         </h3>
-        <div className="overflow-x-auto">
+
+        {/* Version DESKTOP : Tableau */}
+        <div className="hidden md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-slate-200">
@@ -243,30 +245,30 @@ export default function TranscriptPage() {
                   const passed = finalPct >= 65;
                   
                   return (
-                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="py-3 font-medium text-slate-800">
+                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="py-4 font-medium text-slate-800">
                         <div className="flex flex-col">
-                          <span>{exam.examName}</span>
+                          <span className="font-bold">{exam.examName}</span>
                           {exam.type === 'MOCK' && (
                             <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Examen Blanc</span>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 text-center text-slate-600 font-bold">
+                      <td className="py-4 text-center text-slate-600 font-bold">
                         {examPct}%
                       </td>
-                      <td className="py-3 text-center text-slate-600">
+                      <td className="py-4 text-center text-slate-600">
                         {internshipPct !== null ? `${internshipPct}%` : "–"}
                       </td>
-                      <td className="py-3 text-center font-black text-indigo-600">
+                      <td className="py-4 text-center font-black text-indigo-600">
                         {finalPct}%
                       </td>
-                      <td className="py-3 text-center">
-                        <Badge className={passed ? "bg-emerald-100 text-emerald-700 border-none" : "bg-rose-100 text-rose-700 border-none"}>
+                      <td className="py-4 text-center">
+                        <Badge className={passed ? "bg-emerald-100 text-emerald-700 border-none px-3 py-1" : "bg-rose-100 text-rose-700 border-none px-3 py-1"}>
                           {passed ? "ADMIS" : "NON ADMIS"}
                         </Badge>
                       </td>
-                      <td className="py-3 text-center">
+                      <td className="py-4 text-center">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -281,7 +283,7 @@ export default function TranscriptPage() {
                           Contester
                         </Button>
                       </td>
-                    <td className="py-3 text-right text-slate-600">
+                    <td className="py-4 text-right text-slate-500 text-xs font-medium">
                       {new Date(exam.date).toLocaleDateString("fr-FR")}
                     </td>
                   </tr>
@@ -289,6 +291,62 @@ export default function TranscriptPage() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Version MOBILE : Cartes */}
+        <div className="md:hidden space-y-4">
+          {data.examResults.map((exam: any, idx: number) => {
+            const examPct = Math.round((exam.score / exam.totalPoints) * 100);
+            const finalPct = exam.finalScore ? Math.round(exam.finalScore) : examPct;
+            const internshipPct = exam.internshipScore ? Math.round(exam.internshipScore) : null;
+            const passed = finalPct >= 65;
+
+            return (
+              <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 leading-tight mb-1">{exam.examName}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{new Date(exam.date).toLocaleDateString("fr-FR")}</p>
+                    {exam.type === 'MOCK' && (
+                      <Badge variant="secondary" className="mt-2 text-[9px] font-black uppercase tracking-widest bg-white border-slate-200">Examen Blanc</Badge>
+                    )}
+                  </div>
+                  <Badge className={passed ? "bg-emerald-100 text-emerald-700 border-none shrink-0" : "bg-rose-100 text-rose-700 border-none shrink-0"}>
+                    {passed ? "ADMIS" : "NON ADMIS"}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white p-2 rounded-xl text-center shadow-sm">
+                    <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter">Exam</p>
+                    <p className="font-bold text-slate-700">{examPct}%</p>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl text-center shadow-sm">
+                    <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter">Stage</p>
+                    <p className="font-bold text-slate-700">{internshipPct !== null ? `${internshipPct}%` : "–"}</p>
+                  </div>
+                  <div className="bg-blue-600 p-2 rounded-xl text-center shadow-lg shadow-blue-100">
+                    <p className="text-[8px] text-blue-100 font-black uppercase tracking-tighter">Moyenne</p>
+                    <p className="font-black text-white">{finalPct}%</p>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedSubmissionId(exam.id);
+                    setReclamationSubject(`Contestation note - ${exam.examName}`);
+                    setIsReclamationOpen(true);
+                  }}
+                  className="w-full h-10 gap-2 font-bold text-xs text-slate-600 bg-white border-slate-200"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Contester ce résultat
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </Card>
 
