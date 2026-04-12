@@ -20,16 +20,16 @@ export async function GET(
       where: { id },
       include: {
         exam: {
-          include: {
-            parts: {
-              include: {
-                questions: {
-                  include: {
-                    options: true
-                  }
-                }
-              }
-            }
+          select: {
+            id: true,
+            title: true,
+            part1Points: true,
+            part2Points: true,
+            part3Points: true,
+            totalPoints: true,
+            passingScore: true,
+            type: true,
+            name: true, // legacy field probably
           }
         }
       }

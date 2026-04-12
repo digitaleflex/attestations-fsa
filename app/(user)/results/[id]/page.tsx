@@ -26,6 +26,8 @@ export default function ResultDetailsPage() {
   const { data: result, isLoading } = useQuery({
     queryKey: ["user-result", id],
     queryFn: () => apiFetch(`/api/user/results/${id}`) as any,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const [isPrinting, setIsPrinting] = useState(false);
@@ -117,8 +119,8 @@ export default function ResultDetailsPage() {
         )}
       </div>
 
-      {/* Instance cachée pour l'impression */}
-      <div className="hidden">
+      {/* Instance cachée pour l'impression (invisible mais présente dans le DOM pour html2canvas) */}
+      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 pointer-events-none overflow-hidden" style={{ width: '1120px' }}>
         {transcriptData && (
             <div id="transcript-download-area">
                 <TranscriptDocumentComponent 
@@ -311,9 +313,20 @@ export default function ResultDetailsPage() {
                   <p className="text-sm text-emerald-700 mb-4">
                     Vous avez brillamment réussi cet examen. Votre attestation est maintenant prête à être téléchargée.
                   </p>
-                  <Link href="/attestations">
-                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 shadow-md">
-                      Voir mon attestation
+                  <Link href={result.exam?.showResults ? "/attestations" : "#"}>
+                    <Button 
+                        className={`w-full shadow-md ${result.exam?.showResults ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-200 text-slate-500 hover:bg-slate-200 shadow-none cursor-not-allowed'}`}
+                        onClick={(e) => {
+                            if (!result.exam?.showResults) {
+                                e.preventDefault();
+                                toast.info("Vous obtiendrez votre attestation lors de la cérémonie de remise de diplôme.", {
+                                    icon: <Award className="w-5 h-5 text-amber-500" />,
+                                    duration: 5000
+                                });
+                            }
+                        }}
+                    >
+                      {result.exam?.showResults ? "Voir mon attestation" : "Attestation disponible à la cérémonie"}
                     </Button>
                   </Link>
                 </Card>

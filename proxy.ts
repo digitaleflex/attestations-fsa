@@ -23,8 +23,15 @@ export default async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // 2. Récupérer la session via l'API officielle
-    // Better Auth s'occupe de valider le token de session et le CSRF interne
+    const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route));
+    const isUserRoute = USER_ROUTES.some(route => pathname.startsWith(route));
+
+    // Si c'est une route publique, on peut passer directement sans session (économie de DB)
+    if (!isAdminRoute && !isUserRoute) {
+        return NextResponse.next();
+    }
+
+    // 2. Récupérer la session via l'API officielle uniquement pour les routes protégées
     let session = null;
     try {
         session = await auth.api.getSession({
@@ -33,9 +40,6 @@ export default async function middleware(request: NextRequest) {
     } catch (e) {
         console.error("⚠️ [MIDDLEWARE AUTH ERROR] Impossible de contacter la DB pour la session:", e);
     }
-
-    const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route));
-    const isUserRoute = USER_ROUTES.some(route => pathname.startsWith(route));
 
     // 3. Logique de protection Admin
     if (isAdminRoute) {

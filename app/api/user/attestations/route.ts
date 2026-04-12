@@ -75,38 +75,43 @@ export async function GET(request: Request) {
       ...(limit ? { take: limit } : {}),
     });
 
-    // Pour chaque attestation, vérifier si l'examen associé est déjà délibéré (showResults)
-    const enhancedAttestations = await Promise.all(
-      attestations.map(async (att: any) => {
-        // Trouver la session d'examen correspondante à cette formation
-        const session = await prisma.examSession.findFirst({
-          where: {
-            userId: userId,
-            exam: {
-              formationId: att.formationId,
-              type: "OFFICIAL",
-            },
+    // Optimisation : Récupérer toutes les sessions d'examen officielles de l'utilisateur en une seule requête
+    const sessions = await prisma.examSession.findMany({
+      where: {
+        userId: userId,
+        exam: {
+          formationId: {
+            in: attestations.map((a: any) => a.formationId).filter(Boolean),
           },
-          include: {
-            exam: {
-              select: {
-                showResults: true,
-              },
-            },
+          type: "OFFICIAL",
+        },
+      },
+      include: {
+        exam: {
+          select: {
+            formationId: true,
+            showResults: true,
           },
-          orderBy: { startedAt: "desc" },
-        });
+        },
+      },
+      orderBy: { startedAt: "desc" },
+    });
 
-        // Si showResults est false, l'attestation est verrouillée (en attente de délibération)
-        // Note: Si aucune session n'est trouvée, on déverrouille par défaut (cas des attestations manuelles)
-        const isLocked = session ? !session.exam.showResults : false;
+    // Mapper les attestations avec l'état de verrouillage calculé en mémoire
+    const enhancedAttestations = attestations.map((att: any) => {
+      // Trouver la session la plus récente pour cette formation
+      const session = sessions.find(
+        (s: any) => s.exam.formationId === att.formationId,
+      );
 
-        return {
-          ...att,
-          isLocked,
-        };
-      }),
-    );
+      // Si showResults est false, l'attestation est verrouillée
+      const isLocked = session ? !session.exam.showResults : false;
+
+      return {
+        ...att,
+        isLocked,
+      };
+    });
 
     // Calcul des statistiques (en mémoire) - Type Safe
     const stats: AttestationStats = {
@@ -115,11 +120,11 @@ export async function GET(request: Request) {
         (a: any) => a.status === "VALIDATED" && !a.isLocked,
       ).length,
       pending: enhancedAttestations.filter(
-        (a: any) => a.status === "PENDING" || (a.status === "VALIDATED" && a.isLocked),
+        (a: any) =>
+          a.status === "PENDING" || (a.status === "VALIDATED" && a.isLocked),
       ).length,
-      rejected: enhancedAttestations.filter(
-        (a: any) => a.status === "REJECTED",
-      ).length,
+      rejected: enhancedAttestations.filter((a: any) => a.status === "REJECTED")
+        .length,
     };
 
     return NextResponse.json({

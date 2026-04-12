@@ -88,14 +88,6 @@ export default function UserLayout({
   // Mode Focus pour les examens (Pas de sidebar, pas de header)
   const isExamPage = pathname ? pathname.startsWith("/exams/") && pathname !== "/exams" : false;
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
-      </div>
-    );
-  }
-
   if (isExamPage) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -103,6 +95,15 @@ export default function UserLayout({
       </div>
     );
   }
+
+  // Note: On retire le spinner bloquant pour éviter les "gels" d'interface en cas de latence réseau
+  /* if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+      </div>
+    );
+  } */
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">

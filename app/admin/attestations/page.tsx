@@ -13,6 +13,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import TranscriptDocument from "@/components/TranscriptDocument";
+import { useState as useReactState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +34,7 @@ type Attestation = {
   type: string;
   status: string;
   issuedAt: string;
+  userId?: string;
 };
 
 export default function AdminAttestationsPage() {
@@ -45,6 +48,11 @@ export default function AdminAttestationsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  
+  // États pour le téléchargement du relevé
+  const [transcriptData, setTranscriptData] = useState<any>(null);
+  const [isPrintingTranscript, setIsPrintingTranscript] = useState(false);
+  const [isFetchingTranscript, setIsFetchingTranscript] = useState<string | null>(null);
 
   // Statistiques
   const stats = {
@@ -106,6 +114,53 @@ export default function AdminAttestationsPage() {
   const handleExport = () => {
     window.open("/api/admin/attestations/export", "_blank");
     toast.success("Préparation de l'exportation complète...");
+  };
+
+  const handleDownloadTranscript = async (att: Attestation) => {
+    if (!att.userId) {
+      toast.error("Cette attestation n'est pas liée à un compte utilisateur.");
+      return;
+    }
+
+    setIsFetchingTranscript(att.id);
+    try {
+      const data = await apiFetch(`/api/admin/transcript/${att.userId}`);
+      if (!data) throw new Error("Données non trouvées");
+
+      setTranscriptData(data);
+      
+      // Petit délai pour le rendu du template
+      setTimeout(async () => {
+        try {
+          setIsPrintingTranscript(true);
+          const html2pdf = (await import("html2pdf.js")).default;
+          const element = document.getElementById("admin-transcript-template");
+          
+          if (!element) throw new Error("Template non trouvé");
+
+          const opt = {
+            margin: 0,
+            filename: `Releve_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, width: 1120, windowWidth: 1120 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          };
+
+          await html2pdf().set(opt).from(element).save();
+          toast.success("Relevé téléchargé !");
+        } catch (err) {
+          toast.error("Erreur lors de la génération du PDF");
+        } finally {
+          setIsPrintingTranscript(false);
+          setTranscriptData(null);
+        }
+      }, 500);
+
+    } catch (err) {
+      toast.error("Impossible de récupérer le relevé de notes.");
+    } finally {
+      setIsFetchingTranscript(null);
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -373,15 +428,30 @@ export default function AdminAttestationsPage() {
                         Modifier
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteId(a.id)}
-                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteId(a.id)}
+                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadTranscript(a)}
+                        disabled={isFetchingTranscript === a.id || !a.userId}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        title="Télécharger le relevé de notes"
+                      >
+                        {isFetchingTranscript === a.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Download className="w-3 h-3" />
+                        )}
+                        <span className="sr-only">Relevé</span>
+                      </Button>
+                    </div>
                 </Card>
               );
             })}
@@ -451,6 +521,20 @@ export default function AdminAttestationsPage() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadTranscript(a)}
+                            disabled={isFetchingTranscript === a.id || !a.userId}
+                            className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0"
+                            title="Télécharger le relevé"
+                          >
+                             {isFetchingTranscript === a.id ? (
+                               <Loader2 className="w-4 h-4 animate-spin" />
+                             ) : (
+                               <Download className="w-4 h-4" />
+                             )}
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -502,6 +586,17 @@ export default function AdminAttestationsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Template de Relevé Invisible mais présent pour html2canvas */}
+      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
+        {transcriptData && (
+          <TranscriptDocument 
+            data={transcriptData}
+            id="admin-transcript-template"
+            isPrinting={isPrintingTranscript}
+          />
+        )}
+      </div>
     </div>
   );
 }

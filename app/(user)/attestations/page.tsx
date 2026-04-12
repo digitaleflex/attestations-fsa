@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock, Lock } from "lucide-react";
+import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock, Lock, AlertCircle, Send, CheckCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -42,6 +42,10 @@ export default function UserAttestationsPage() {
   const [selectedAttestation, setSelectedAttestation] = useState<any>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [reportLostOpen, setReportLostOpen] = useState(false);
+  const [reportingAtt, setReportingAtt] = useState<any>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["user-attestations"],
@@ -88,6 +92,14 @@ export default function UserAttestationsPage() {
 
       await html2pdf().set(opt).from(element).save();
       toast.success("✅ Attestation téléchargée !");
+
+      // Marquer comme récupérée (CLAIMED)
+      try {
+        await fetch(`/api/user/attestations/${att.id}/claim`, { method: "POST" });
+        queryClient.invalidateQueries({ queryKey: ["user-attestations"] });
+      } catch (e) {
+        console.error("Error claiming:", e);
+      }
     } catch (error) {
       console.error("PDF Error:", error);
       toast.error("Erreur lors de la génération du PDF");
@@ -108,6 +120,7 @@ export default function UserAttestationsPage() {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "VALIDATED": return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "CLAIMED": return "bg-blue-100 text-blue-700 border-blue-200";
       case "REJECTED": return "bg-rose-100 text-rose-700 border-rose-200";
       default: return "bg-amber-100 text-amber-700 border-amber-200";
     }
@@ -116,6 +129,7 @@ export default function UserAttestationsPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "VALIDATED": return "Validée";
+      case "CLAIMED": return "Récupérée";
       case "REJECTED": return "Rejetée";
       default: return "En attente";
     }
@@ -247,7 +261,12 @@ export default function UserAttestationsPage() {
                             <span className="flex items-center gap-1">
                               <Lock className="w-3 h-3" /> Délibération en cours
                             </span>
-                          ) : getStatusLabel(att.status)}
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              {att.status === "CLAIMED" && <CheckCircle className="w-3 h-3" />}
+                              {getStatusLabel(att.status)}
+                            </span>
+                          )}
                         </Badge>
                       </div>
                       <p className="text-sm text-slate-600 mb-2 leading-relaxed">
@@ -267,6 +286,22 @@ export default function UserAttestationsPage() {
                           <span>Obtenue le {new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
                         </div>
                       </div>
+                      
+                      {/* Option 'J'ai perdu mon attestation' si déjà récupérée ou validée */}
+                      {(att.status === "CLAIMED" || (att.status === "VALIDATED" && !att.isLocked)) && (
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="h-auto p-0 text-amber-600 text-xs mt-2 hover:text-amber-700 flex items-center gap-1"
+                          onClick={() => {
+                            setReportingAtt(att);
+                            setReportLostOpen(true);
+                          }}
+                        >
+                          <AlertCircle className="w-3 h-3" />
+                          J'ai perdu mon attestation ou besoin d'un duplicata
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -294,10 +329,12 @@ export default function UserAttestationsPage() {
                           }
                         }}
                         className="w-full gap-2 group shadow-sm hover:border-emerald-200 transition-all h-10 sm:h-9"
-                        disabled={att.status !== "VALIDATED" || att.isLocked}
+                        disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || att.isLocked}
                       >
                         <Eye className="w-4 h-4 text-slate-400 group-hover:text-emerald-500" />
-                        <span className="group-hover:text-emerald-600 text-xs sm:text-sm whitespace-nowrap">Voir l'aperçu</span>
+                        <span className="group-hover:text-emerald-600 text-xs sm:text-sm whitespace-nowrap">
+                          {att.status === "CLAIMED" ? "Revoir" : "Voir l'aperçu"}
+                        </span>
                       </Button>
                     </Link>
                     
@@ -315,7 +352,7 @@ export default function UserAttestationsPage() {
                           setQrDialogOpen(true);
                         }}
                         title={att.isLocked ? "Verrouillé" : "Partager le QR Code"}
-                        disabled={att.isLocked}
+                        disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED")}
                       >
                         <QrCode className="w-4 h-4 text-slate-500" />
                       </Button>
@@ -323,21 +360,24 @@ export default function UserAttestationsPage() {
                       <Button
                         variant="outline"
                         size="icon"
-                        className={`h-10 w-10 sm:h-9 sm:w-9 ${downloading === att.code ? 'border-emerald-200 bg-emerald-50' : ''}`}
+                        className={`h-10 w-10 sm:h-9 sm:w-9 ${downloading === att.code ? 'border-emerald-200 bg-emerald-50' : ''} ${att.status === "CLAIMED" ? "border-blue-200 bg-blue-50" : ""}`}
                         onClick={() => {
                           if (att.isLocked) {
                             toast.warning("🔒 Le téléchargement sera disponible après la délibération.");
                             return;
                           }
+                          if (att.status === "CLAIMED") {
+                             toast.info("Vous avez déjà téléchargé cette attestation. Un nouveau téléchargement est possible.");
+                          }
                           handleDownload(att);
                         }}
-                        disabled={att.status !== "VALIDATED" || downloading === att.code || att.isLocked}
-                        title={att.isLocked ? "Verrouillé" : "Télécharger en PDF"}
+                        disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || downloading === att.code || att.isLocked}
+                        title={att.isLocked ? "Verrouillé" : (att.status === "CLAIMED" ? "Télécharger à nouveau" : "Télécharger en PDF")}
                       >
                         {downloading === att.code ? (
                           <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
                         ) : (
-                          <Download className="w-4 h-4 text-slate-500" />
+                          <Download className={`w-4 h-4 ${att.status === "CLAIMED" ? "text-blue-500" : "text-slate-500"}`} />
                         )}
                       </Button>
                     </div>
@@ -375,9 +415,76 @@ export default function UserAttestationsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Lost Attestation Dialog */}
+      <Dialog open={reportLostOpen} onOpenChange={setReportLostOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-500" />
+              Signaler un problème / Perte
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-slate-500">
+              Vous avez besoin d'un duplicata ou vous rencontrez un problème avec l'attestation 
+              <span className="font-bold text-slate-800 ml-1">
+                {reportingAtt?.fullName}
+              </span> ?
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Expliquez votre situation :</label>
+              <textarea 
+                className="w-full min-h-[100px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                placeholder="Ex: J'ai perdu mon fichier PDF, j'aimerais qu'on me le renvoie par email..."
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+              />
+            </div>
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 italic text-[10px] text-slate-500">
+              Note : L'administration recevra votre demande et vous contactera par email sous 48h.
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setReportLostOpen(false)}>Annuler</Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 gap-2"
+              onClick={async () => {
+                if (!reportReason.trim()) {
+                  toast.error("Veuillez expliquer votre problème.");
+                  return;
+                }
+                setSubmittingReport(true);
+                try {
+                  const res = await fetch("/api/signalement", {
+                    method: "POST",
+                    body: JSON.stringify({
+                      code: reportingAtt?.code,
+                      motif: "PERTE_OU_DUPLICATA",
+                      message: reportReason
+                    })
+                  });
+                  if (!res.ok) throw new Error();
+                  toast.success("Demande envoyée avec succès !");
+                  setReportLostOpen(false);
+                  setReportReason("");
+                } catch (e) {
+                  toast.error("Erreur lors de l'envoi du signalement.");
+                } finally {
+                  setSubmittingReport(false);
+                }
+              }}
+              disabled={submittingReport}
+            >
+              {submittingReport ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Envoyer la demande
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Templates cachés pour la génération PDF */}
       <div className="hidden">
-        {data?.attestations?.filter((a: any) => a.status === "VALIDATED" && !a.isLocked).map((att: any) => (
+        {data?.attestations?.filter((a: any) => (a.status === "VALIDATED" || a.status === "CLAIMED") && !a.isLocked).map((att: any) => (
           <CertificateTemplate
             key={att.id}
             id={`cert-template-${att.id}`}
@@ -400,3 +507,4 @@ export default function UserAttestationsPage() {
     </div>
   );
 }
+
