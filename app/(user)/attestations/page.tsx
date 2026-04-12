@@ -164,6 +164,22 @@ export default function UserAttestationsPage() {
 
           await html2pdf().set(opt).from(element).save();
           toast.success("✅ Relevé téléchargé !");
+
+          // Signaler le téléchargement au serveur (compteur admin)
+          try {
+            // Trouver le sessionId (id de l'examen résultat)
+            const resData = await fetch(`/api/user/transcript`);
+            const all = await resData.json();
+            const session = all.examResults.find((r: any) => 
+                r.examName.toLowerCase().includes(att.formation?.name.toLowerCase())
+            ) || all.examResults[0];
+            
+            if (session?.id) {
+               await fetch(`/api/user/transcript/${session.id}/claim`, { method: "POST" });
+            }
+          } catch (e) {
+            console.error("Erreur claim relevé:", e);
+          }
         } catch (err) {
           toast.error("Erreur génération PDF");
         } finally {

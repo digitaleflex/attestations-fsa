@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import TranscriptDocument from "@/components/TranscriptDocument";
-import { useState as useReactState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +34,9 @@ type Attestation = {
   status: string;
   issuedAt: string;
   userId?: string;
+  user?: {
+    examSessions?: Array<{ transcriptDownloadedAt: string | null }>;
+  };
 };
 
 export default function AdminAttestationsPage() {
@@ -116,48 +118,75 @@ export default function AdminAttestationsPage() {
     toast.success("Préparation de l'exportation complète...");
   };
 
-  const handleDownloadTranscript = async (att: Attestation) => {
+  const handleDownloadTranscript = async (att: any) => {
     if (!att.userId) {
       toast.error("Cette attestation n'est pas liée à un compte utilisateur.");
       return;
     }
 
     setIsFetchingTranscript(att.id);
+    toast.info(`Récupération du relevé de ${att.fullName}...`);
+
     try {
-      const data = await apiFetch(`/api/admin/transcript/${att.userId}`);
-      if (!data) throw new Error("Données non trouvées");
-
-      setTranscriptData(data);
+      const transcript = await apiFetch(`/api/admin/transcript/${att.userId}`, {}, false);
+      setTranscriptData(transcript);
       
-      // Petit délai pour le rendu du template
-      setTimeout(async () => {
-        try {
-          setIsPrintingTranscript(true);
-          const html2pdf = (await import("html2pdf.js")).default;
-          const element = document.getElementById("admin-transcript-template");
-          
-          if (!element) throw new Error("Template non trouvé");
+      toast.promise(
+        (async () => {
+          try {
+            setIsPrintingTranscript(true);
+            
+            // Fonction utilitaire pour attendre que l'élément soit présent
+            const waitForElement = (id: string, timeout = 2500): Promise<HTMLElement> => {
+              return new Promise((resolve, reject) => {
+                const start = Date.now();
+                const check = () => {
+                  const el = document.getElementById(id);
+                  if (el) resolve(el);
+                  else if (Date.now() - start > timeout) reject(new Error("Délai d'attente dépassé pour la génération"));
+                  else setTimeout(check, 100);
+                };
+                check();
+              });
+            };
 
-          const opt = {
-            margin: 0,
-            filename: `Releve_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, width: 1120, windowWidth: 1120 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-          };
+            // Attendre que le composant soit prêt
+            const element = await waitForElement("admin-transcript-template");
+            
+            // Délai technique pour le rendu
+            await new Promise(resolve => setTimeout(resolve, 600));
+            
+            const html2pdf = (await import("html2pdf.js")).default;
+            const opt = {
+              margin: 0,
+              filename: `Releve_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { 
+                scale: 2, 
+                useCORS: true, 
+                width: 1120, 
+                windowWidth: 1120 
+              },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
 
-          await html2pdf().set(opt).from(element).save();
-          toast.success("Relevé téléchargé !");
-        } catch (err) {
-          toast.error("Erreur lors de la génération du PDF");
-        } finally {
-          setIsPrintingTranscript(false);
-          setTranscriptData(null);
+            await html2pdf().set(opt).from(element).save();
+          } catch (err) {
+            console.error("Admin PDF Generation Error:", err);
+            throw err;
+          } finally {
+            setIsPrintingTranscript(false);
+            setTranscriptData(null);
+          }
+        })(),
+        {
+          loading: 'Génération du PDF...',
+          success: 'Relevé téléchargé !',
+          error: (err) => `Échec : ${err.message}`,
         }
-      }, 500);
-
-    } catch (err) {
-      toast.error("Impossible de récupérer le relevé de notes.");
+      );
+    } catch (error) {
+      toast.error("Impossible de récupérer les notes de ce candidat.");
     } finally {
       setIsFetchingTranscript(null);
     }
@@ -227,41 +256,62 @@ export default function AdminAttestationsPage() {
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-blue-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Total</p>
-                <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <Card className="p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <FileText className="w-5 h-5 text-blue-600" />
               </div>
-              <FileText className="w-8 h-8 text-blue-500 opacity-50" />
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Total</p>
+                <p className="text-xl font-black text-slate-900">{stats.total}</p>
+              </div>
             </div>
           </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-emerald-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Validées</p>
-                <p className="text-2xl font-bold text-emerald-600">{stats.validated}</p>
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-emerald-500 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 rounded-lg">
+                <Check className="w-5 h-5 text-emerald-600" />
               </div>
-              <Check className="w-8 h-8 text-emerald-500 opacity-50" />
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Validées</p>
+                <p className="text-xl font-black text-emerald-600">{stats.validated}</p>
+              </div>
             </div>
           </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-amber-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">En attente</p>
-                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-amber-500 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-50 rounded-lg">
+                <Loader2 className="w-5 h-5 text-amber-600" />
               </div>
-              <Calendar className="w-8 h-8 text-amber-500 opacity-50" />
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">En attente</p>
+                <p className="text-xl font-black text-amber-600">{stats.pending}</p>
+              </div>
             </div>
           </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-rose-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Révoquées</p>
-                <p className="text-2xl font-bold text-rose-600">{stats.rejected}</p>
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-rose-500 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-rose-50 rounded-lg">
+                <Trash2 className="w-5 h-5 text-rose-600" />
               </div>
-              <X className="w-8 h-8 text-rose-500 opacity-50" />
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Rejetées</p>
+                <p className="text-xl font-black text-rose-600">{stats.rejected}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-indigo-500 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-50 rounded-lg">
+                <Award className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Relevés vus</p>
+                <p className="text-xl font-black text-indigo-600">
+                  {attestations.filter(a => a.user?.examSessions?.[0]?.transcriptDownloadedAt).length}
+                </p>
+              </div>
             </div>
           </Card>
         </div>
@@ -368,21 +418,20 @@ export default function AdminAttestationsPage() {
             </div>
           </Card>
         ) : viewMode === "grid" ? (
-          <>
-            {/* Vue Grille */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredAttestations.map((a) => {
               const TypeIcon = getTypeIcon(a.type);
+              const isDownloaded = !!a.user?.examSessions?.[0]?.transcriptDownloadedAt;
               return (
-                <Card key={a.id} className="p-5 bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
+                <Card key={a.id} className="p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
                         <TypeIcon className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500">{a.type === "FORMATION" ? "Formation" : a.type === "STAGE" ? "Stage" : "Certification"}</p>
-                        <p className="font-semibold text-slate-800 truncate max-w-[150px]">{a.formation?.name || "-"}</p>
+                        <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">{a.type}</p>
+                        <p className="font-bold text-slate-800 truncate max-w-[150px]">{a.formation?.name || "-"}</p>
                       </div>
                     </div>
                     <Badge className={getStatusBadgeColor(a.status)}>
@@ -391,20 +440,20 @@ export default function AdminAttestationsPage() {
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
                       <User className="w-4 h-4 text-slate-400" />
-                      <span className="font-medium text-slate-700">{a.fullName}</span>
+                      <span className="font-bold">{a.fullName}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600">{isMounted && a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}</span>
+                      <span>{isMounted && a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm font-mono bg-slate-100 px-2 py-1 rounded">
+                    <div className="flex items-center gap-2 text-xs font-mono bg-slate-50 border border-slate-100 px-2 py-1.5 rounded-lg group">
                       <Copy className="w-3 h-3 text-slate-400" />
-                      <span className="text-slate-600">{a.code}</span>
+                      <span className="text-slate-600 flex-1 truncate">{a.code}</span>
                       <button
                         onClick={() => handleCopyCode(a.code, a.id)}
-                        className="ml-auto p-1 rounded hover:bg-slate-200 transition-colors"
+                        className="p-1 rounded hover:bg-white hover:shadow-sm transition-all"
                       >
                         {copiedId === a.id ? (
                           <Check className="w-3 h-3 text-emerald-500" />
@@ -417,123 +466,113 @@ export default function AdminAttestationsPage() {
 
                   <div className="flex gap-2 pt-3 border-t">
                     <Link href={`/admin/attestations/${a.id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full gap-2">
+                      <Button variant="outline" size="sm" className="w-full gap-2 text-xs h-9">
                         <Eye className="w-3 h-3" />
                         Voir
                       </Button>
                     </Link>
                     <Link href={`/admin/attestations/${a.id}/edit`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full gap-2">
+                      <Button variant="outline" size="sm" className="w-full gap-2 text-xs h-9">
                         <Edit className="w-3 h-3" />
-                        Modifier
+                        Modif.
                       </Button>
                     </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDeleteId(a.id)}
-                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadTranscript(a)}
-                        disabled={isFetchingTranscript === a.id || !a.userId}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        title="Télécharger le relevé de notes"
-                      >
-                        {isFetchingTranscript === a.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Download className="w-3 h-3" />
-                        )}
-                        <span className="sr-only">Relevé</span>
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadTranscript(a)}
+                      disabled={isFetchingTranscript === a.id || !a.userId}
+                      className={`h-9 w-10 p-0 relative flex items-center justify-center transition-all ${isDownloaded ? 'border-indigo-200 bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-blue-600'}`}
+                      title={isDownloaded ? `Téléchargé le ${new Date(a.user!.examSessions![0].transcriptDownloadedAt!).toLocaleDateString()}` : "Télécharger le relevé"}
+                    >
+                      {isFetchingTranscript === a.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {isDownloaded && (
+                        <div className="absolute -top-1 -right-1 bg-indigo-500 text-white rounded-full p-0.5 border-2 border-white shadow-sm">
+                          <Check className="w-2 h-2" />
+                        </div>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteId(a.id)}
+                      className="h-9 w-10 p-0 text-rose-400 hover:text-rose-600 hover:bg-rose-50 border-transparent hover:border-rose-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </Card>
               );
             })}
           </div>
-        </>
-      ) : (
-          <>
-            {/* Vue Liste */}
-            <Card className="bg-white shadow-sm overflow-hidden">
-            <div className="divide-y">
+        ) : (
+          <Card className="bg-white shadow-sm overflow-hidden border border-slate-100 rounded-xl">
+            <div className="divide-y divide-slate-50">
               {filteredAttestations.map((a) => {
                 const TypeIcon = getTypeIcon(a.type);
+                const isDownloaded = !!a.user?.examSessions?.[0]?.transcriptDownloadedAt;
                 return (
-                  <div key={a.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50 transition-colors border-b last:border-0">
+                  <div key={a.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 transition-colors group">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                        <TypeIcon className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <TypeIcon className="w-5 h-5 text-slate-500 group-hover:text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-slate-800 truncate">{a.fullName}</p>
-                        <p className="text-xs text-slate-500 truncate">
-                          {a.formation?.name || "-"} • <span className="uppercase font-bold">{a.type}</span>
+                        <p className="font-bold text-slate-800 truncate">{a.fullName}</p>
+                        <p className="text-xs text-slate-500 truncate mt-0.5">
+                          {a.formation?.name || "-"} • <span className="uppercase font-black text-[10px] tracking-widest">{a.type}</span>
                         </p>
                       </div>
                     </div>
                     
                     <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 md:gap-6">
                       <div className="flex items-center gap-3">
-                        <Badge className={cn("text-[10px] font-bold px-2.5 py-0.5", getStatusBadgeColor(a.status))}>
+                        <Badge className={cn("text-[10px] font-black px-2.5 py-0.5 uppercase tracking-tighter", getStatusBadgeColor(a.status))}>
                           {getStatusLabel(a.status)}
                         </Badge>
-                        <div className="flex items-center gap-2 text-xs font-mono bg-slate-100 px-2 py-1 rounded">
-                          <span className="text-slate-600">{a.code.slice(-8)}</span>
-                          <button
-                            onClick={() => handleCopyCode(a.code, a.id)}
-                            className="p-0.5 rounded hover:bg-slate-200 transition-colors"
-                          >
-                            {copiedId === a.id ? (
-                              <Check className="w-3 h-3 text-emerald-500" />
-                            ) : (
-                              <Copy className="w-3 h-3 text-slate-400" />
-                            )}
-                          </button>
+                        <div className="flex items-center gap-2 text-[10px] font-mono bg-slate-100 px-2 py-1 rounded-md text-slate-500">
+                          <span>{a.code.slice(-10)}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline-block">
-                          {isMounted && a.issuedAt ? new Date(a.issuedAt).toLocaleDateString("fr-FR") : "-"}
-                        </span>
+                      <div className="flex items-center gap-2">
                         <div className="flex gap-1">
                           <Link href={`/admin/attestations/${a.id}`}>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900">
                               <Eye className="w-4 h-4" />
                             </Button>
                           </Link>
                           <Link href={`/admin/attestations/${a.id}/edit`}>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600">
                               <Edit className="w-4 h-4" />
                             </Button>
                           </Link>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteId(a.id)}
-                            className="text-rose-600 hover:text-rose-700 h-8 w-8 p-0"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => handleDownloadTranscript(a)}
                             disabled={isFetchingTranscript === a.id || !a.userId}
-                            className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0"
-                            title="Télécharger le relevé"
+                            className={`h-8 w-8 relative ${isDownloaded ? 'text-indigo-600' : 'text-slate-400 hover:text-blue-600'}`}
+                            title={isDownloaded ? "Déjà téléchargé" : "Télécharger le relevé"}
                           >
                              {isFetchingTranscript === a.id ? (
                                <Loader2 className="w-4 h-4 animate-spin" />
                              ) : (
                                <Download className="w-4 h-4" />
                              )}
+                             {isDownloaded && <Check className="absolute -top-0.5 -right-0.5 w-2 h-2 text-indigo-500 font-bold" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(a.id)}
+                            className="text-slate-300 hover:text-rose-600 h-8 w-8"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -543,51 +582,43 @@ export default function AdminAttestationsPage() {
               })}
             </div>
           </Card>
-        </>
-      ) }
+        )}
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+      <AlertDialog open={!!deleteId} onOpenChange={(open: boolean) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
+            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-black text-xl">
               <Trash2 className="w-6 h-6" />
-              Confirmer la suppression
+              CONFIRMER LA SUPPRESSION
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-              Cette action est <span className="font-bold text-slate-900">irréversible</span>.
-              L&apos;attestation sera définitivement supprimée du système et ne pourra plus être vérifiée par QR Code.
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed font-medium">
+              Cette action est <span className="font-black text-slate-900 border-b-2 border-rose-500">irréversible</span>.
+              L&apos;attestation sera définitivement supprimée et ne pourra plus être vérifiée.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6 gap-3">
+          <AlertDialogFooter className="mt-8 gap-3">
             <AlertDialogCancel
               disabled={isDeleting}
-              className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+              className="border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl"
             >
-              Annuler
+              ANNULER
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.preventDefault();
                 handleDelete();
               }}
-              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+              className="bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-200 font-bold rounded-xl"
               disabled={isDeleting}
             >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Suppression en cours...
-                </>
-              ) : (
-                "Supprimer définitivement"
-              )}
+              {isDeleting ? "SUPPRESSION..." : "OUI, SUPPRIMER"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Template de Relevé Invisible mais présent pour html2canvas */}
+      {/* Template de Relevé Invisible */}
       <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
         {transcriptData && (
           <TranscriptDocument 

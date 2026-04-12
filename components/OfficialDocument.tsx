@@ -51,12 +51,12 @@ export default function OfficialDocument({ data, id = "official-document-content
     <div className="w-full flex flex-col items-center">
         {!hideStepper && (
             <div className="w-full max-w-sm mb-12 flex items-center justify-between relative no-pdf">
-                <div className="absolute top-4 left-0 w-full h-[1px] -z-0 bg-slate-100" />
+                <div className="absolute top-4 left-0 w-full h-[1px] -z-0" style={{ backgroundColor: '#f1f5f9' }} />
 
                 {/* Étape 1: Création */}
                 <div className="flex flex-col items-center gap-2 z-10">
-                    <div className="w-8 h-8 rounded-full text-white flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm bg-blue-600">1</div>
-                    <span className="text-[9px] font-bold uppercase tracking-tighter text-slate-400">Création</span>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm" style={{ backgroundColor: '#2563eb', color: '#ffffff' }}>1</div>
+                    <span className="text-[9px] font-bold uppercase tracking-tighter" style={{ color: '#94a3b8' }}>Création</span>
                 </div>
 
                 {/* Étape 2: Examen Jury */}
@@ -71,7 +71,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                     }}>
                         { (data.status === "VALIDATED" || data.status === "REJECTED") ? "✓" : "2" }
                     </div>
-                    <span className="text-[9px] font-bold uppercase tracking-tighter text-slate-400">Examen</span>
+                    <span className="text-[9px] font-bold uppercase tracking-tighter" style={{ color: '#94a3b8' }}>Examen</span>
                 </div>
 
                 {/* Étape 3: Décision */}
@@ -83,7 +83,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                     }}>
                         { data.status === "VALIDATED" ? "✓" : data.status === "REJECTED" ? "✕" : "3" }
                     </div>
-                    <span className="text-[9px] font-bold uppercase tracking-tighter text-slate-400">Décision</span>
+                    <span className="text-[9px] font-bold uppercase tracking-tighter" style={{ color: '#94a3b8' }}>Décision</span>
                 </div>
             </div>
         )}
@@ -92,22 +92,23 @@ export default function OfficialDocument({ data, id = "official-document-content
         <div
           id={id}
           className={cn(
-            "flex flex-col items-center p-8 md:p-14 rounded-[12px] relative bg-white overflow-hidden transition-all duration-300",
-            isPrinting ? "w-[1120px] min-w-[1120px]" : "w-full shadow-2xl"
+            "flex flex-col items-center p-8 md:p-14 rounded-[12px] relative overflow-hidden transition-all duration-300",
+            isPrinting ? "w-[1120px] min-w-[1120px]" : "w-full shadow-2xl shadow-slate-200"
           )}
           style={{ 
-              border: "8px solid white",
-              boxShadow: "0 0 0 1px #e2e8f0, 0 0 0 3px white, 0 0 0 4px #2563eb"
+              border: "8px solid #ffffff",
+              boxShadow: "0 0 0 1px #e2e8f0, 0 0 0 3px #ffffff, 0 0 0 4px #2563eb",
+              backgroundColor: "#ffffff"
           }}
         >
             {/* Accents de coins stylés */}
-            <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-blue-600 rounded-tl-lg opacity-20"></div>
-            <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-blue-600 rounded-tr-lg opacity-20"></div>
-            <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-blue-600 rounded-bl-lg opacity-20"></div>
-            <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-blue-600 rounded-br-lg opacity-20"></div>
+            <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 rounded-tl-lg" style={{ borderColor: '#2563eb', opacity: 0.2 }}></div>
+            <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 rounded-tr-lg" style={{ borderColor: '#2563eb', opacity: 0.2 }}></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 rounded-bl-lg" style={{ borderColor: '#2563eb', opacity: 0.2 }}></div>
+            <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 rounded-br-lg" style={{ borderColor: '#2563eb', opacity: 0.2 }}></div>
 
             {/* Filigrane discret */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.02] pointer-events-none" style={{ color: "#000000" }}>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#000000", opacity: 0.02 }}>
                 <Award size={400} />
             </div>
 
@@ -122,18 +123,15 @@ export default function OfficialDocument({ data, id = "official-document-content
 
             {/* 🛡️ SECURITY OVERLAY: REJECTED WATERMARK */}
             {data.status === "REJECTED" && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden">
-                    <div className="rotate-[-25deg] border-[12px] border-rose-600/30 px-12 py-6 rounded-3xl flex flex-col items-center gap-2 backdrop-blur-[2px] scale-150">
-                        <span className="text-6xl md:text-7xl font-black text-rose-600/50 uppercase tracking-[0.2em]">RÉVOQUÉ</span>
-                        <span className="text-xl md:text-2xl font-bold text-rose-600/40 uppercase tracking-[0.5em]">DOCUMENT INVALIDÉ</span>
+                <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)' }}>
+                    <div className="rotate-[-25deg] border-[12px] px-12 py-6 rounded-3xl flex flex-col items-center gap-2 scale-150" style={{ borderColor: 'rgba(225, 29, 72, 0.3)' }}>
+                        <span className="text-6xl md:text-7xl font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(225, 29, 72, 0.5)' }}>RÉVOQUÉ</span>
+                        <span className="text-xl md:text-2xl font-bold uppercase tracking-[0.5em]" style={{ color: 'rgba(225, 29, 72, 0.4)' }}>DOCUMENT INVALIDÉ</span>
                     </div>
                 </div>
             )}
 
-            <div className={cn(
-                "relative z-10 flex flex-col items-center w-full space-y-8 md:space-y-10",
-                data.status === "REJECTED" && "opacity-60 grayscale-[0.5]"
-            )}>
+            <div className="relative z-10 flex flex-col items-center w-full space-y-8 md:space-y-10" style={{ opacity: data.status === "REJECTED" ? 0.6 : 1 }}>
                     <div className="space-y-2 text-center">
                         <p className="text-[10px] uppercase tracking-[0.4em] font-black" style={{ color: "#2563eb" }}>Document Officiel</p>
                         <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-none" style={{ color: "#1e293b" }}>
@@ -156,14 +154,14 @@ export default function OfficialDocument({ data, id = "official-document-content
                     </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 w-full">
-                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
+                    <div className="p-5 rounded-3xl border flex flex-col justify-center" style={{ backgroundColor: "#f8fafc", borderColor: '#f1f5f9' }}>
                         <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Formation / Projet</p>
                         <p className="font-bold text-base leading-tight md:text-lg" style={{ color: "#0f172a" }}>
                             {data.formationName}
                         </p>
                     </div>
 
-                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center" style={{ backgroundColor: "#f8fafc" }}>
+                    <div className="p-5 rounded-3xl border flex flex-col justify-center" style={{ backgroundColor: "#f8fafc", borderColor: '#f1f5f9' }}>
                         <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Période d&apos;évaluation</p>
                         <p className="font-bold text-base md:text-lg" style={{ color: "#0f172a" }}>
                             {formatDate(data.startDate)} — {formatDate(data.endDate)}
@@ -171,7 +169,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                     </div>
 
                     {/* Évaluations */}
-                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
+                    <div className="p-5 rounded-3xl border flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc", borderColor: '#f1f5f9' }}>
                         <div className="space-y-4">
                             <div>
                                 <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Évaluation Théorique (Examen)</p>
@@ -191,7 +189,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                         </div>
                     </div>
 
-                    <div className="p-5 rounded-3xl border border-slate-100 flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc" }}>
+                    <div className="p-5 rounded-3xl border flex flex-col justify-center text-left" style={{ backgroundColor: "#f8fafc", borderColor: '#f1f5f9' }}>
                         <p className="text-[9px] uppercase font-black mb-1 tracking-widest" style={{ color: "#64748b" }}>Décision Finale du Jury</p>
                         <div className="flex flex-col gap-2">
                              <div className="flex items-center gap-3">
@@ -201,7 +199,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                                 {data.status === "VALIDATED" && <BadgeCheck className="w-6 h-6 md:w-7 md:h-7" style={{ color: "#059669" }} />}
                              </div>
                              {(data as any).stageScore > 0 && (
-                                <span className="text-[9px] font-bold text-emerald-600 px-2 py-0.5 bg-emerald-50 rounded-full w-fit">
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full w-fit" style={{ color: '#059669', backgroundColor: '#ecfdf5' }}>
                                     ✓ PARCOURS COMPLET TERMINÉ
                                 </span>
                              )}
@@ -210,7 +208,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                 </div>
 
                 {/* Footer de la fiche */}
-                <div className="mt-8 md:mt-10 pt-6 w-full flex flex-col md:flex-row items-center justify-between text-[9px] font-mono border-t border-slate-100 gap-3" style={{ color: "#64748b" }}>
+                <div className="mt-8 md:mt-10 pt-6 w-full flex flex-col md:flex-row items-center justify-between text-[9px] font-mono border-t gap-3" style={{ color: "#64748b", borderTopColor: '#f1f5f9' }}>
                     <div className="flex gap-4">
                         <span className="font-medium">ID: {data.id.slice(0, 8)}...</span>
                         <span className="font-bold" style={{ color: "#334155" }}>CODE: {data.code}</span>

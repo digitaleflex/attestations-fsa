@@ -120,9 +120,9 @@ export default function ResultDetailsPage() {
       </div>
 
       {/* Instance cachée pour l'impression (invisible mais présente dans le DOM pour html2canvas) */}
-      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 pointer-events-none overflow-hidden" style={{ width: '1120px' }}>
+      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
         {transcriptData && (
-            <div id="transcript-download-area">
+            <div id="transcript-capture-node">
                 <TranscriptDocumentComponent 
                     id="transcript-pdf-render"
                     isPrinting={isPrinting}
@@ -379,23 +379,53 @@ export default function ResultDetailsPage() {
     toast.promise(
       (async () => {
         try {
+          // Activer le mode impression
           setIsPrinting(true);
-          await new Promise(resolve => setTimeout(resolve, 800));
-          const html2pdf = (await import("html2pdf.js")).default;
-          const element = document.getElementById("transcript-pdf-render");
           
-          if (!element) throw new Error("Document non trouvé");
+          // Fonction utilitaire pour attendre que l'élément soit présent
+          const waitForElement = (id: string, timeout = 2000): Promise<HTMLElement> => {
+            return new Promise((resolve, reject) => {
+              const start = Date.now();
+              const check = () => {
+                const el = document.getElementById(id);
+                if (el) resolve(el);
+                else if (Date.now() - start > timeout) reject(new Error("Le document n'a pas pu être généré (timeout)"));
+                else setTimeout(check, 100);
+              };
+              check();
+            });
+          };
 
+          // Attendre que le composant soit monté dans le DOM
+          const element = await waitForElement("transcript-pdf-render");
+          
+          // Laisser un peu plus de temps pour le rendu des styles/images
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const html2pdf = (await import("html2pdf.js")).default;
           const opt = {
             margin: 0,
-            filename: `Releve_${data.fullName.replace(/\s+/g, '_')}.pdf`,
+            filename: `Releve_FSA_${data.fullName.replace(/\s+/g, '_')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, width: 1120, windowWidth: 1120 },
+            html2canvas: { 
+              scale: 2, 
+              useCORS: true, 
+              width: 1120, 
+              windowWidth: 1120 
+            },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
           };
 
           await html2pdf().set(opt).from(element).save();
+
+          // Signaler le téléchargement au serveur (compteur admin)
+          try {
+            await apiFetch(`/api/user/transcript/${id}/claim`, { method: "POST" }, false);
+          } catch (e) {
+            console.error("Erreur signalement téléchargement:", e);
+          }
         } catch (error: any) {
+          console.error("PDF Generation Error:", error);
           throw error;
         } finally {
           setIsPrinting(false);
@@ -404,7 +434,7 @@ export default function ResultDetailsPage() {
       {
         loading: 'Génération de votre relevé de notes...',
         success: 'Téléchargement réussi !',
-        error: 'Échec de la génération PDF.',
+        error: (err) => `Erreur : ${err.message || "Problème de génération PDF"}`,
       }
     );
   }

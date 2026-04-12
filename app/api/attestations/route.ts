@@ -73,7 +73,19 @@ export async function GET(request: Request) {
     const attestations = await prisma.attestation.findMany({
       where: where as import('@prisma/client').Prisma.AttestationWhereInput,
       orderBy: { issuedAt: (order === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc' },
-      include: { formation: { select: { name: true } } },
+      include: { 
+        formation: { select: { name: true } },
+        user: {
+          select: {
+            examSessions: {
+              where: { status: 'GRADED' },
+              select: { transcriptDownloadedAt: true },
+              orderBy: { updatedAt: 'desc' },
+              take: 1
+            }
+          }
+        }
+      },
       ...(limit ? { take: limit } : {}),
       skip: offset,
     });

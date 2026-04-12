@@ -293,6 +293,7 @@ model ExamSession {
   scans       CompositionScan[]
   reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)
+  transcriptDownloadedAt DateTime?
   exam        Exam              @relation(fields: [examId], references: [id])
   candidate   User              @relation(fields: [userId], references: [id])
 
