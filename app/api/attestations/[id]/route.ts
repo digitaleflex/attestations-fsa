@@ -62,6 +62,33 @@ export async function GET(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
+    // Sécurité supplémentaire: Vérifier si l'attestation est verrouillée par la délibération
+    if (!adminUser) {
+      const session = await prisma.examSession.findFirst({
+        where: {
+          userId: user!.id,
+          exam: {
+            formationId: attestation.formationId,
+            type: 'OFFICIAL'
+          }
+        },
+        include: {
+          exam: {
+            select: { showResults: true }
+          }
+        },
+        orderBy: { startedAt: 'desc' }
+      });
+
+      // Si deliberé/showResults est false, on bloque l'accès
+      if (session && !session.exam.showResults) {
+        return NextResponse.json(
+          { error: 'Cette attestation sera disponible après la délibération finale.' }, 
+          { status: 403 }
+        );
+      }
+    }
+
     return NextResponse.json(attestation);
   } catch (error) {
     console.error("Erreur lors de la récupération de l'attestation:", error);

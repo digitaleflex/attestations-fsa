@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock } from "lucide-react";
+import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock, Lock } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -242,8 +242,12 @@ export default function UserAttestationsPage() {
                         <h3 className="font-bold text-slate-800 text-lg sm:text-base leading-tight truncate max-w-[200px] sm:max-w-none" title={att.fullName}>
                           {att.fullName}
                         </h3>
-                        <Badge className={`${getStatusBadgeColor(att.status)} text-[10px] sm:text-xs font-semibold px-2 py-0.5`}>
-                          {getStatusLabel(att.status)}
+                        <Badge className={`${att.isLocked ? "bg-slate-100 text-slate-500 border-slate-200" : getStatusBadgeColor(att.status)} text-[10px] sm:text-xs font-semibold px-2 py-0.5`}>
+                          {att.isLocked ? (
+                            <span className="flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> Délibération en cours
+                            </span>
+                          ) : getStatusLabel(att.status)}
                         </Badge>
                       </div>
                       <p className="text-sm text-slate-600 mb-2 leading-relaxed">
@@ -255,7 +259,7 @@ export default function UserAttestationsPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-slate-500 bg-slate-50 p-2 sm:p-0 sm:bg-transparent rounded-lg sm:rounded-none">
                         <div className="flex items-center gap-2">
                           <QrCode className="w-3 h-3 text-slate-400" />
-                          <span>Code: <span className="font-mono bg-white sm:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 sm:border-transparent">{att.code}</span></span>
+                          <span>Code: <span className="font-mono bg-white sm:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 sm:border-transparent">{att.isLocked ? "••••-••••-••••" : att.code}</span></span>
                         </div>
                         <span className="hidden sm:inline text-slate-300">•</span>
                         <div className="flex items-center gap-2">
@@ -268,11 +272,12 @@ export default function UserAttestationsPage() {
 
                   {/* Boutons d'Action */}
                   <div className="flex items-center gap-2 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                    <Link href={`/attestations/${att.id}`} className="flex-1 sm:flex-none">
+                    <Link href={att.isLocked ? "#" : `/attestations/${att.id}`} className="flex-1 sm:flex-none">
                       <Button
                         variant="outline"
                         size="sm"
                         onMouseEnter={() => {
+                          if (att.isLocked) return;
                           queryClient.prefetchQuery({
                             queryKey: ["user-attestation", att.id],
                             queryFn: async () => {
@@ -282,8 +287,14 @@ export default function UserAttestationsPage() {
                             staleTime: 5 * 60 * 1000,
                           });
                         }}
+                        onClick={(e) => {
+                          if (att.isLocked) {
+                            e.preventDefault();
+                            toast.warning("🔒 Cette attestation sera disponible après la délibération finale.");
+                          }
+                        }}
                         className="w-full gap-2 group shadow-sm hover:border-emerald-200 transition-all h-10 sm:h-9"
-                        disabled={att.status !== "VALIDATED"}
+                        disabled={att.status !== "VALIDATED" || att.isLocked}
                       >
                         <Eye className="w-4 h-4 text-slate-400 group-hover:text-emerald-500" />
                         <span className="group-hover:text-emerald-600 text-xs sm:text-sm whitespace-nowrap">Voir l'aperçu</span>
@@ -296,10 +307,15 @@ export default function UserAttestationsPage() {
                         size="icon"
                         className="h-10 w-10 sm:h-9 sm:w-9"
                         onClick={() => {
+                          if (att.isLocked) {
+                            toast.warning("🔒 Le partage sera activé après la délibération.");
+                            return;
+                          }
                           setSelectedAttestation(att);
                           setQrDialogOpen(true);
                         }}
-                        title="Partager le QR Code"
+                        title={att.isLocked ? "Verrouillé" : "Partager le QR Code"}
+                        disabled={att.isLocked}
                       >
                         <QrCode className="w-4 h-4 text-slate-500" />
                       </Button>
@@ -308,9 +324,15 @@ export default function UserAttestationsPage() {
                         variant="outline"
                         size="icon"
                         className={`h-10 w-10 sm:h-9 sm:w-9 ${downloading === att.code ? 'border-emerald-200 bg-emerald-50' : ''}`}
-                        onClick={() => handleDownload(att)}
-                        disabled={att.status !== "VALIDATED" || downloading === att.code}
-                        title="Télécharger en PDF"
+                        onClick={() => {
+                          if (att.isLocked) {
+                            toast.warning("🔒 Le téléchargement sera disponible après la délibération.");
+                            return;
+                          }
+                          handleDownload(att);
+                        }}
+                        disabled={att.status !== "VALIDATED" || downloading === att.code || att.isLocked}
+                        title={att.isLocked ? "Verrouillé" : "Télécharger en PDF"}
                       >
                         {downloading === att.code ? (
                           <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
@@ -355,7 +377,7 @@ export default function UserAttestationsPage() {
 
       {/* Templates cachés pour la génération PDF */}
       <div className="hidden">
-        {data?.attestations?.filter((a: any) => a.status === "VALIDATED").map((att: any) => (
+        {data?.attestations?.filter((a: any) => a.status === "VALIDATED" && !a.isLocked).map((att: any) => (
           <CertificateTemplate
             key={att.id}
             id={`cert-template-${att.id}`}

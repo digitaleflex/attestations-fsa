@@ -75,22 +75,55 @@ export async function GET(request: Request) {
       ...(limit ? { take: limit } : {}),
     });
 
+    // Pour chaque attestation, vérifier si l'examen associé est déjà délibéré (showResults)
+    const enhancedAttestations = await Promise.all(
+      attestations.map(async (att: any) => {
+        // Trouver la session d'examen correspondante à cette formation
+        const session = await prisma.examSession.findFirst({
+          where: {
+            userId: userId,
+            exam: {
+              formationId: att.formationId,
+              type: "OFFICIAL",
+            },
+          },
+          include: {
+            exam: {
+              select: {
+                showResults: true,
+              },
+            },
+          },
+          orderBy: { startedAt: "desc" },
+        });
+
+        // Si showResults est false, l'attestation est verrouillée (en attente de délibération)
+        // Note: Si aucune session n'est trouvée, on déverrouille par défaut (cas des attestations manuelles)
+        const isLocked = session ? !session.exam.showResults : false;
+
+        return {
+          ...att,
+          isLocked,
+        };
+      }),
+    );
+
     // Calcul des statistiques (en mémoire) - Type Safe
     const stats: AttestationStats = {
       total: attestations.length,
-      validated: attestations.filter(
-        (a: { status: string }) => a.status === "VALIDATED",
+      validated: enhancedAttestations.filter(
+        (a: any) => a.status === "VALIDATED" && !a.isLocked,
       ).length,
-      pending: attestations.filter(
-        (a: { status: string }) => a.status === "PENDING",
+      pending: enhancedAttestations.filter(
+        (a: any) => a.status === "PENDING" || (a.status === "VALIDATED" && a.isLocked),
       ).length,
-      rejected: attestations.filter(
-        (a: { status: string }) => a.status === "REJECTED",
+      rejected: enhancedAttestations.filter(
+        (a: any) => a.status === "REJECTED",
       ).length,
     };
 
     return NextResponse.json({
-      attestations,
+      attestations: enhancedAttestations,
       stats,
     });
   } catch (error: unknown) {
