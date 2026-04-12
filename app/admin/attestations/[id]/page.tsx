@@ -24,8 +24,10 @@ import {
   QrCode, 
   ClipboardList,
   Send,
-  Trash2
+  Trash2,
+  History as HistoryIcon
 } from "lucide-react";
+import TranscriptTemplate from "@/components/TranscriptTemplate";
 import Link from "next/link";
 import { cn } from "@/lib/utils"; // Force import recognition
 import { apiFetch } from "@/lib/api-client";
@@ -96,7 +98,8 @@ export default function AttestationDetailsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [transcriptData, setTranscriptData] = useState<any>(null);
-  const [activeDoc, setActiveDoc] = useState<"ATTESTATION" | "TRANSCRIPT">("ATTESTATION");
+  const [globalTranscriptData, setGlobalTranscriptData] = useState<any>(null);
+  const [activeDoc, setActiveDoc] = useState<"ATTESTATION" | "TRANSCRIPT" | "GLOBAL_TRANSCRIPT">("ATTESTATION");
 
   // Fetch settings for dynamic branding
   const { data: settings } = useQuery({
@@ -122,6 +125,13 @@ export default function AttestationDetailsPage() {
             setTranscriptData(transcript);
           } catch (e) {
             console.log("Pas de relevé disponible pour ce candidat");
+          }
+
+          try {
+            const global = await apiFetch(`/api/admin/transcript/${attData.userId}/global`, {}, false) as any;
+            setGlobalTranscriptData(global);
+          } catch (e) {
+            console.log("Pas de relevé global disponible");
           }
         }
       })
@@ -210,12 +220,15 @@ export default function AttestationDetailsPage() {
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (docType?: "ATTESTATION" | "TRANSCRIPT" | "GLOBAL_TRANSCRIPT") => {
     if (!data) return;
-    const isTranscript = activeDoc === "TRANSCRIPT";
-    const fileName = isTranscript 
-        ? `Releve_${data.fullName.replace(/\s+/g, '_')}.pdf`
-        : `${data.code.slice(-5)}_${data.fullName.replace(/\s+/g, '_')}.pdf`;
+    const isTranscript = (docType || activeDoc) === "TRANSCRIPT";
+    const isGlobal = (docType || activeDoc) === "GLOBAL_TRANSCRIPT";
+    const fileName = isGlobal
+        ? `Recapitulatif_${data.fullName.replace(/\s+/g, '_')}.pdf`
+        : isTranscript 
+            ? `Releve_${data.fullName.replace(/\s+/g, '_')}.pdf`
+            : `${data.code.slice(-5)}_${data.fullName.replace(/\s+/g, '_')}.pdf`;
     
     toast.promise(
       (async () => {
@@ -229,7 +242,11 @@ export default function AttestationDetailsPage() {
           
           // 3. Importer dynamiquement
           const html2pdf = (await import("html2pdf.js")).default;
-          const elementId = isTranscript ? "transcript-preview-card" : "minimalist-preview-card";
+          const elementId = isGlobal 
+            ? "global-transcript-preview" 
+            : isTranscript 
+                ? "transcript-preview-card" 
+                : "minimalist-preview-card";
           const element = document.getElementById(elementId);
           
           if (!element) {
@@ -247,7 +264,11 @@ export default function AttestationDetailsPage() {
               width: 1120,
               windowWidth: 1120
             },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            jsPDF: { 
+              unit: 'mm', 
+              format: 'a4', 
+              orientation: isTranscript || isGlobal ? 'portrait' : 'landscape' 
+            }
           };
 
           // 4. Générer et sauvegarder le PDF
@@ -274,7 +295,7 @@ export default function AttestationDetailsPage() {
         }
       })(),
       {
-        loading: isTranscript ? 'Génération du relevé de notes...' : 'Génération du diplôme officiel...',
+       loading: isGlobal ? 'Génération du relevé global...' : isTranscript ? 'Génération du relevé de notes...' : 'Génération du diplôme officiel...',
         success: 'Téléchargement réussi !',
         error: (err) => `Erreur : ${err.message || "Problème technique"}`,
       }
@@ -394,7 +415,7 @@ export default function AttestationDetailsPage() {
                     className="gap-2"
                 >
                     <ClipboardList className="w-4 h-4" />
-                    {activeDoc === "ATTESTATION" ? "Voir Relevé" : "Voir Diplôme"}
+                    {activeDoc === "ATTESTATION" ? "Voir Relevé" : "Voir Attestation"}
                 </Button>
             )}
             <Link href={`/admin/attestations/${id}/edit`}>
@@ -403,7 +424,7 @@ export default function AttestationDetailsPage() {
                 Modifier
               </Button>
             </Link>
-            <Button onClick={handleDownload} variant="outline" className="gap-2 bg-blue-50 text-blue-600 border-blue-200">
+            <Button onClick={() => handleDownload("ATTESTATION")} variant="outline" className="gap-2 bg-blue-50 text-blue-600 border-blue-200">
               <Download className="w-4 h-4" />
               Télécharger PDF
             </Button>
@@ -412,10 +433,8 @@ export default function AttestationDetailsPage() {
                     onClick={async () => {
                         const current = activeDoc;
                         setActiveDoc("TRANSCRIPT");
-                        // Timeout pour laisser le DOM se mettre à jour
                         setTimeout(async () => {
-                            await handleDownload();
-                            setActiveDoc(current);
+                            await handleDownload("TRANSCRIPT");
                         }, 100);
                     }} 
                     variant="outline" 
@@ -423,6 +442,22 @@ export default function AttestationDetailsPage() {
                 >
                     <ClipboardList className="w-4 h-4" />
                     Télécharger Relevé
+                </Button>
+            )}
+            {globalTranscriptData && (
+                <Button 
+                    onClick={async () => {
+                        const current = activeDoc;
+                        setActiveDoc("GLOBAL_TRANSCRIPT");
+                        setTimeout(async () => {
+                            await handleDownload("GLOBAL_TRANSCRIPT");
+                        }, 100);
+                    }} 
+                    variant="outline" 
+                    className="gap-2 bg-emerald-50 text-emerald-600 border-emerald-200"
+                >
+                    <HistoryIcon className="w-4 h-4" />
+                    Télécharger Global
                 </Button>
             )}
           </div>
@@ -458,11 +493,11 @@ export default function AttestationDetailsPage() {
             <div className="bg-slate-50 border-b p-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                        {activeDoc === "ATTESTATION" ? <Award className="w-5 h-5" /> : <ClipboardList className="w-5 h-5" />}
+                        {activeDoc === "ATTESTATION" ? <Award className="w-5 h-5" /> : activeDoc === "TRANSCRIPT" ? <ClipboardList className="w-5 h-5" /> : <HistoryIcon className="w-5 h-5" />}
                     </div>
                     <div>
                         <span className="font-bold text-slate-700 block text-sm">
-                            {activeDoc === "ATTESTATION" ? "Diplôme Officiel" : "Relevé de Notes"}
+                            {activeDoc === "ATTESTATION" ? "Diplôme Officiel" : activeDoc === "TRANSCRIPT" ? "Relevé de Notes" : "Historique Académique Global"}
                         </span>
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                             Aperçu du contenu
@@ -493,12 +528,24 @@ export default function AttestationDetailsPage() {
                             issuedAt: data.issuedAt
                         }}
                     />
-                ) : (
+                ) : activeDoc === "TRANSCRIPT" ? (
                     <TranscriptDocumentComponent 
                         id="transcript-preview-card"
                         isPrinting={isPrintingTranscript}
                         data={transcriptData}
                     />
+                ) : (
+                    <div className="w-full scale-[0.7] origin-top">
+                      <TranscriptTemplate 
+                        id="global-transcript-preview"
+                        data={{
+                          ...globalTranscriptData.user,
+                          examResults: globalTranscriptData.examResults,
+                          attestations: globalTranscriptData.attestations,
+                          ...globalTranscriptData.stats
+                        }}
+                      />
+                    </div>
                 )}
             </div>
           </Card>

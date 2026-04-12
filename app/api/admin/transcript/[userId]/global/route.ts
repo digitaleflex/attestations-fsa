@@ -1,43 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
-import { ExamType, ExamSession, Attestation } from "@/types";
+import { getAdminUser } from "@/lib/auth";
 
-interface ExamResult {
-  id: string;
-  examName: string;
-  score: number;
-  totalPoints: number;
-  internshipScore: number;
-  finalScore: number;
-  status: string;
-  type: ExamType;
-  date: Date | string;
-  part1Score?: number;
-  part2Score?: number;
-  part3Score?: number;
-  maxPart1?: number;
-  maxPart2?: number;
-  maxPart3?: number;
-  transcriptDownloadedAt?: string | Date | null;
-}
-
-interface AttestationData {
-  formationName: string;
-  type: string;
-  code: string;
-  issuedAt: Date | string;
-  score?: number;
-}
-
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ userId: string }> }
+) {
   try {
-    const userSession = await getCurrentUser(request);
-    if (!userSession) {
+    const adminUser = await getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const userId = userSession.id;
+    const { userId } = await params;
 
     // Récupérer le profil utilisateur
     const user = await prisma.user.findUnique({
@@ -58,7 +33,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Récupérer les résultats d'examens
+    // Récupérer les résultats d'examens (Tous: Officiels + Blancs)
     const examSessions = await prisma.examSession.findMany({
       where: { userId },
       include: {
@@ -74,7 +49,7 @@ export async function GET(request: Request) {
       orderBy: { submittedAt: "desc" },
     });
 
-    const examResults: ExamResult[] = examSessions.map((session: any) => {
+    const examResults = examSessions.map((session: any) => {
       const customBareme = session.answers && typeof session.answers === 'object' 
         ? (session.answers as any)._customBareme 
         : null;
@@ -91,13 +66,12 @@ export async function GET(request: Request) {
         status: session.status,
         type: session.exam.type,
         date: session.submittedAt || session.startedAt,
-        part1Score: (session as any).scorePart1,
-        part2Score: (session as any).scorePart2,
-        part3Score: (session as any).scorePart3,
+        part1Score: session.scorePart1,
+        part2Score: session.scorePart2,
+        part3Score: session.scorePart3,
         maxPart1: customBareme?.maxPart1 || 20,
         maxPart2: customBareme?.maxPart2 || 40,
         maxPart3: customBareme?.maxPart3 || 40,
-        transcriptDownloadedAt: session.transcriptDownloadedAt,
       };
     });
 
@@ -112,7 +86,7 @@ export async function GET(request: Request) {
       orderBy: { issuedAt: "desc" },
     });
 
-    const attestationData: AttestationData[] = attestations.map((att: any) => ({
+    const attestationData = attestations.map((att: any) => ({
       formationName: att.formation?.name || "Formation",
       type: att.type,
       code: att.code,
@@ -125,21 +99,17 @@ export async function GET(request: Request) {
     
     const totalExams = officialSessions.length;
     const passedExams = officialSessions.filter((s: any) => {
-      // On utilise le finalScore (moyenne exam+stage) si disponible
       const customBareme = s.answers && typeof s.answers === 'object' 
         ? (s.answers as any)._customBareme 
         : null;
       const maxPoints = customBareme?.totalMax ?? ((s.exam as any).totalPoints || 100);
       const percentage = s.finalScore || (s.score / maxPoints) * 100;
-      return percentage >= 65; // Seuil FSA à 65%
+      return percentage >= 65;
     }).length;
     
-    const successRate =
-      totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
+    const successRate = totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
 
-    // Calculer la moyenne globale (sur 100) - UNIQUEMENT OFFICIELS
-    const globalAverage =
-      officialSessions.length > 0
+    const globalAverage = officialSessions.length > 0
         ? officialSessions.reduce((acc: number, session: any) => {
             const customBareme = session.answers && typeof session.answers === 'object' 
               ? (session.answers as any)._customBareme 
@@ -167,7 +137,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: unknown) {
-    console.error("Erreur transcript:", error);
+    console.error("Erreur Relevé Global Admin:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

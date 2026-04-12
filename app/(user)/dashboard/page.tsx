@@ -416,7 +416,7 @@ export default function UserDashboardPage() {
                  <p className="text-slate-500 text-sm leading-relaxed max-w-2xl">
                    {hasPendingCorrection
                      ? "Une demande de modification est actuellement entre les mains de nos administrateurs. Vos documents seront mis à jour dès validation."
-                     : "Avant que nous n'émettions vos documents officiels, assurez-vous que votre nom, date et lieu de naissance sont corrects. Ces informations apparaîtront telles quelles sur vos diplômes."
+                     : "Avant que nous n'émettions vos documents officiels, assurez-vous que votre nom, date et lieu de naissance sont corrects. Ces informations apparaîtront telles quelles sur vos attestations."
                    }
                  </p>
 

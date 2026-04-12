@@ -403,7 +403,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="flex items-center gap-4">
                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500" /><span className="text-[10px] font-black uppercase text-slate-400">Inscrits</span></div>
-                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-[10px] font-black uppercase text-slate-400">Diplômes</span></div>
+                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-[10px] font-black uppercase text-slate-400">Attestations</span></div>
                 </div>
             </div>
             <div className="h-80 w-full">

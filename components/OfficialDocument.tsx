@@ -141,8 +141,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                     <div className="space-y-2 text-center">
                         <p className="text-[10px] uppercase tracking-[0.4em] font-black" style={{ color: "#2563eb" }}>Document Officiel</p>
                         <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-none" style={{ color: "#1e293b" }}>
-                            {data.type === "FORMATION" ? "Attestation de Formation" :
-                             data.type === "STAGE" ? "Certificat de Stage" : "Diplôme de Réussite"}
+                            {data.type === "STAGE" ? "Certificat de Stage" : "Attestation de Fin de Formation"}
                         </h2>
                     </div>
 

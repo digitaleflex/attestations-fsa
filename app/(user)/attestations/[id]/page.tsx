@@ -220,7 +220,7 @@ export default function AttestationPreviewPage() {
                 </div>
                 <div className="min-w-0">
                    <p className="font-bold text-slate-800">Partageable</p>
-                   <p className="text-slate-500 text-xs sm:text-sm">Un recruteur peut scanner ce diplôme.</p>
+                   <p className="text-slate-500 text-xs sm:text-sm">Un recruteur peut scanner cette attestation.</p>
                 </div>
             </div>
             <div className="flex items-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:justify-end">

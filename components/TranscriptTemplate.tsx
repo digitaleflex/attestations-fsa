@@ -79,7 +79,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
         fontFamily: "'Segoe UI', Roboto, Helvetica, sans-serif",
         backgroundColor: "#ffffff",
         boxSizing: "border-box",
-        padding: "60px 50px",
+        padding: "40px 40px",
         position: "relative",
         color: "#1e293b"
       }}
@@ -107,11 +107,9 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
         
         {/* ── EN-TÊTE ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "35px", borderBottom: "2px solid #1e3a8a", paddingBottom: "20px" }}>
-            <div style={{ textAlign: "center", width: "180px" }}>
-                <p style={{ fontSize: "10px", fontWeight: 800, margin: 0, textTransform: "uppercase" }}>République du Bénin</p>
-                <div style={{ width: "30px", height: "1px", background: "#cbd5e1", margin: "4px auto" }} />
-                <p style={{ fontSize: "8px", fontWeight: 700, margin: 0, color: "#1e3a8a" }}>Fraternité - Justice - Travail</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "2px solid #1e3a8a", paddingBottom: "15px" }}>
+            <div style={{ width: "180px" }}>
+                {/* Espace vide pour équilibrer le logo central */}
             </div>
 
             <div style={{ textAlign: "center", flex: 1, padding: "0 20px" }}>
@@ -130,12 +128,12 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
         </div>
 
         {/* ── IDENTIFICATION ── */}
-        <div style={{ marginBottom: "35px", backgroundColor: "#fcfdfe", padding: "20px 25px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
-            <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#1e3a8a", margin: "0 0 15px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Profil de l&apos;Étudiant</h2>
+        <div style={{ marginBottom: "20px", backgroundColor: "#fcfdfe", padding: "15px 20px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+            <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#1e3a8a", margin: "0 0 15px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Profil</h2>
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px 40px", fontSize: "11px" }}>
                 <div>
                     <span style={{ color: "#64748b", textTransform: "uppercase", fontSize: "8px", fontWeight: 800 }}>Nom & Prénoms :</span>
-                    <p style={{ margin: "2px 0", fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>{data.fullName.toUpperCase()}</p>
+                    <p style={{ margin: "2px 0", fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>{(data.fullName || "Candidat").toUpperCase()}</p>
                 </div>
                 <div>
                     <span style={{ color: "#64748b", textTransform: "uppercase", fontSize: "8px", fontWeight: 800 }}>Code de Dossier :</span>
@@ -157,7 +155,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
             <h3 style={{ fontSize: "11px", fontWeight: 900, color: "#1e3a8a", marginBottom: "15px", textTransform: "uppercase", letterSpacing: "1px" }}>
                 ÉTAT RÉCAPITULATIF DES NOTES
             </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "40px" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "25px" }}>
                 <thead>
                     <tr style={{ backgroundColor: "#1e3a8a", color: "#ffffff" }}>
                         <th style={{ textAlign: "left", padding: "12px 15px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Unités de Formation</th>
@@ -205,8 +203,8 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
             </table>
 
             {/* ── RÉSULTAT FINAL ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "50px" }}>
-                <div style={{ backgroundColor: "#1e3a8a", padding: "25px", borderRadius: "8px", color: "#fff", boxShadow: "0 10px 15px -3px rgba(30, 58, 138, 0.2)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "30px" }}>
+                <div style={{ backgroundColor: "#1e3a8a", padding: "20px", borderRadius: "8px", color: "#fff", boxShadow: "0 10px 15px -3px rgba(30, 58, 138, 0.2)" }}>
                     <h4 style={{ margin: "0 0 15px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "5px" }}>Résulat Global</h4>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
                         <span style={{ fontSize: "10px", opacity: 0.85 }}>Moyenne Générale :</span>
@@ -219,7 +217,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
                 </div>
 
                 <div style={{ textAlign: "center", paddingTop: "15px" }}>
-                   <p style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 50px" }}>Le Responsable de la Formation,</p>
+                   <p style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 40px" }}>Le Responsable de la Formation,</p>
                    <div style={{ width: "130px", height: "1px", background: "#1e293b", margin: "0 auto 10px" }} />
                    <p style={{ fontSize: "11px", fontWeight: 700, margin: 0 }}>FSA - St André</p>
                    <p style={{ fontSize: "8px", color: "#64748b", fontStyle: "italic" }}>(Validé électroniquement)</p>
@@ -235,7 +233,6 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
             </div>
             <div style={{ textAlign: "right" }}>
                 <p style={{ fontSize: "10px", fontWeight: 900, color: "#1e3a8a", margin: 0 }}>FERME AGRO-PISCICOLE ST ANDRÉ</p>
-                <p style={{ fontSize: "8px", color: "#64748b", margin: 0 }}>Le Bénin qui produit, l'avenir qui se construit.</p>
             </div>
         </div>
 
