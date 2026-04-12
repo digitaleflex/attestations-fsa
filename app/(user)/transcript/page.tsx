@@ -27,6 +27,8 @@ import { Input } from "@/components/ui/input";
 import { Loader2, MessageSquare, Send, CheckCircle2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 
@@ -40,7 +42,11 @@ export default function TranscriptPage() {
   // Nouveaux états pour le téléchargement individuel
   const [isPrintingIndividual, setIsPrintingIndividual] = useState(false);
   const [selectedTranscriptData, setSelectedTranscriptData] = useState<any>(null);
+  const [isSignaling, setIsSignaling] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  
+  const searchParams = useSearchParams();
+  const [autoDownloadTriggered, setAutoDownloadTriggered] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -117,6 +123,17 @@ export default function TranscriptPage() {
     );
     setDownloading(false);
   };
+
+  useEffect(() => {
+    const shouldAutoDownload = searchParams.get('download') === 'true';
+    if (shouldAutoDownload && !isLoading && data && !autoDownloadTriggered) {
+      setAutoDownloadTriggered(true);
+      // Petite pause pour s'assurer que le DOM est prêt
+      setTimeout(() => {
+        handleDownload();
+      }, 1500); // Increased delay for better stability
+    }
+  }, [searchParams, isLoading, data, autoDownloadTriggered, handleDownload]);
 
   const waitForElement = (id: string): Promise<HTMLElement> => {
     return new Promise((resolve) => {
