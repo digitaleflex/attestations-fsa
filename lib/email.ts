@@ -760,4 +760,158 @@ export const emailService = {
       return { success: false, error };
     }
   },
+
+  /**
+   * Envoi d'une notification officielle de résultats avec instructions de retrait
+   */
+  async sendOfficialTranscriptNotification(
+    to: string,
+    fullName: string,
+    examTitle: string,
+    score: number,
+    isSuccess: boolean
+  ) {
+    try {
+      const resend = getResend();
+      const statusColor = isSuccess ? "#10b981" : "#ef4444";
+      const subject = isSuccess 
+        ? `🏆 Félicitations ! Votre relevé de notes officiel est disponible - Filtre FSA`
+        : `📝 Résultat de votre examen - Filtre FSA`;
+
+      const successContent = `
+        <p>Nous avons le plaisir de vous informer que vous avez <strong>réussi</strong> votre examen "<strong>${examTitle}</strong>" avec un score de <strong>${Math.round(score)}%</strong>.</p>
+        <p>Votre relevé de notes officiel est désormais disponible sur votre espace candidat.</p>
+        
+        <div style="margin: 24px 0; padding: 24px; background-color: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
+          <h3 style="color: #166534; margin-top: 0; font-size: 16px;">🚀 Comment récupérer mon attestation ?</h3>
+          <ol style="margin: 0; padding-left: 20px; color: #166534; font-size: 14px; line-height: 1.8;">
+            <li>Connectez-vous sur le portail : <a href="${APP_URL}/auth" style="color: #10b981; font-weight: bold;">Accéder au Portail</a></li>
+            <li>Dans le menu à gauche, allez dans la section "<strong>Relevé de notes</strong>".</li>
+            <li>Cliquez sur le bouton "<strong>Télécharger le relevé officiel</strong>".</li>
+          </ol>
+        </div>
+
+        <div style="margin-top: 24px; padding: 20px; background-color: #fffbeb; border-radius: 12px; border: 2px solid #fef3c7;">
+          <p style="margin: 0; color: #92400e; font-size: 14px;">
+            <strong>⚠️ Étape Finale importante :</strong><br />
+            Une fois votre relevé téléchargé, envoyez-le par email ou déposez-le au <strong>centre d'examen</strong> pour demander l'édition et le retrait de votre <strong>Attestation de fin de formation</strong>.
+          </p>
+        </div>
+      `;
+
+      const failureContent = `
+        <p>Votre examen "<strong>${examTitle}</strong>" a été corrigé. Vous avez obtenu un score de <strong>${Math.round(score)}%</strong>.</p>
+        <p>Malheureusement, ce score est inférieur au seuil de réussite de 65%.</p>
+        
+        <div style="margin: 24px 0; padding: 24px; background-color: #fef2f2; border-radius: 12px; border: 1px solid #fee2e2;">
+          <h3 style="color: #991b1b; margin-top: 0; font-size: 16px;">🌱 Prochaines étapes :</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #991b1b; font-size: 14px; line-height: 1.8;">
+            <li>Vous pouvez consulter le détail de vos notes dans la section "<strong>Relevé de notes</strong>" de votre espace candidat.</li>
+            <li>Contactez votre centre de formation pour connaître les modalités de rattrapage ou de renforcement de capacités.</li>
+          </ul>
+        </div>
+        
+        <p style="color: #64748b; font-style: italic;">Ne vous découragez pas, la persévérance est la clé du succès. L'équipe FSA est à votre disposition pour vous accompagner.</p>
+      `;
+
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f1f5f9; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    
+                    <!-- Header -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, ${isSuccess ? '#059669' : '#1e293b'} 0%, ${isSuccess ? '#10b981' : '#334155'} 100%); padding: 40px 32px; text-align: center;">
+                        <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA Logo" style="width: 80px; height: 80px; margin-bottom: 16px; border-radius: 12px; background: rgba(255,255,255,0.2); padding: 8px;" />
+                        <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;">
+                          Ferme Agro-Piscicole Cité St André
+                        </h1>
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">
+                          Service des Examens et Certification
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                      <td style="padding: 48px 32px;">
+                        <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #0f172a; tracking: -0.5px;">
+                          Bonjour ${fullName},
+                        </h2>
+                        
+                        <div style="font-size: 16px; color: #475569; line-height: 1.8;">
+                          ${isSuccess ? successContent : failureContent}
+                        </div>
+
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 40px;">
+                          <tr>
+                            <td align="center">
+                              <a href="${APP_URL}/dashboard" style="display: inline-block; padding: 18px 40px; background-color: #0f172a; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; border-radius: 16px; box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2);">
+                                Accéder à mon espace candidat →
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+
+                    <!-- Divider -->
+                    <tr>
+                      <td style="padding: 0 32px;">
+                        <div style="height: 1px; background-color: #f1f5f9;"></div>
+                      </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 40px 32px; background-color: #fafafa; text-align: center;">
+                        <p style="margin: 0 0 16px 0; font-size: 14px; font-weight: 700; color: #334155;">
+                          Besoin d'aide ?
+                        </p>
+                        <p style="margin: 0 0 24px 0; font-size: 13px; color: #64748b; line-height: 1.6;">
+                          Contactez le support technique au <br />
+                          <strong style="color: #0f172a;">support@fermestandre.com</strong> ou via votre application.
+                        </p>
+                        
+                        <div style="margin-bottom: 24px;">
+                          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #e2e8f0; margin: 0 4px;"></span>
+                          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #e2e8f0; margin: 0 4px;"></span>
+                          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #e2e8f0; margin: 0 4px;"></span>
+                        </div>
+
+                        <p style="margin: 0; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                          &copy; ${new Date().getFullYear()} Ferme Agro-Piscicole Cité St André
+                        </p>
+                        <p style="margin: 4px 0 0 0; font-size: 10px; color: #cbd5e1;">
+                          Abomey-Calavi. Tous droits réservés.
+                        </p>
+                      </td>
+                    </tr>
+
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `,
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("[EMAIL_ERROR] Transcript Notification:", error);
+      return { success: false, error };
+    }
+  },
 };

@@ -76,10 +76,15 @@ export default function TranscriptPage() {
     });
   };
 
+  const targetUserId = searchParams.get("userId");
+
   const { data, isLoading } = useQuery({
-    queryKey: ["user-transcript"],
+    queryKey: ["user-transcript", targetUserId],
     queryFn: async () => {
-      const res = await fetch("/api/user/transcript");
+      const url = targetUserId 
+        ? `/api/user/transcript?userId=${targetUserId}` 
+        : "/api/user/transcript";
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Non autorisé");
       return res.json();
     },
@@ -259,11 +264,17 @@ export default function TranscriptPage() {
               Votre parcours académique complet à la Ferme Saint André
             </p>
           </div>
-          <Button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20 rounded-xl px-6 font-bold gap-2"
-          >
+          <div className="flex gap-2">
+            {!data.isOwner && (
+              <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 text-[10px] uppercase font-black tracking-widest h-fit">
+                Vue Administrateur
+              </Badge>
+            )}
+            <Button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20 rounded-xl px-6 font-bold gap-2"
+            >
             {downloading ? (
               <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
             ) : (
@@ -272,7 +283,8 @@ export default function TranscriptPage() {
             Télécharger le relevé officiel
           </Button>
         </div>
-      </Card>
+      </div>
+    </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -390,19 +402,21 @@ export default function TranscriptPage() {
                                 )}
                                 {isDownloaded ? "Réimprimer" : "Relevé"}
                             </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    setSelectedSubmissionId(exam.id);
-                                    setReclamationSubject(`Contestation note - ${exam.examName}`);
-                                    setIsReclamationOpen(true);
-                                }}
-                                className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
-                                title="Contester"
-                            >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                            </Button>
+                            {data.isOwner && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        setSelectedSubmissionId(exam.id);
+                                        setReclamationSubject(`Contestation note - ${exam.examName}`);
+                                        setIsReclamationOpen(true);
+                                    }}
+                                    className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
+                                    title="Contester"
+                                >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                </Button>
+                            )}
                         </div>
                       </td>
                     <td className="py-4 text-right text-slate-500 text-xs font-medium">
@@ -478,18 +492,20 @@ export default function TranscriptPage() {
                         )}
                         {isDownloaded ? "Réimprimer le Relevé" : "Télécharger mon Relevé"}
                     </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                            setSelectedSubmissionId(exam.id);
-                            setReclamationSubject(`Contestation note - ${exam.examName}`);
-                            setIsReclamationOpen(true);
-                        }}
-                        className="h-11 w-11 rounded-xl border-slate-200 text-slate-400 bg-white"
-                    >
-                        <MessageSquare className="w-4 h-4" />
-                    </Button>
+                    {data.isOwner && (
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                                setSelectedSubmissionId(exam.id);
+                                setReclamationSubject(`Contestation note - ${exam.examName}`);
+                                setIsReclamationOpen(true);
+                            }}
+                            className="h-11 w-11 rounded-xl border-slate-200 text-slate-400 bg-white"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                        </Button>
+                    )}
                 </div>
               </div>
             );

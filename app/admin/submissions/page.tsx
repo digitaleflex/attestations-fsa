@@ -18,7 +18,8 @@ import {
   LucideIcon,
   BookOpen,
   Trophy,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -34,6 +35,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ExamSession, User, Exam } from "@/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SubmissionsResponse {
   submissions: Array<ExamSession & { candidate: User; exam: Exam }>;
@@ -52,6 +61,9 @@ function SubmissionsList() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [examFilter, setExamFilter] = useState(searchParams?.get("examId") || "all");
+  const [isNotifying, setIsNotifying] = useState(false);
+  const [showNotifyDialog, setShowNotifyDialog] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const eid = searchParams?.get("examId");
@@ -95,6 +107,61 @@ function SubmissionsList() {
       case "IN_PROGRESS": return "En cours";
       case "PENDING_REVIEW": return "À corriger";
       default: return status;
+    }
+  };
+
+  const handleNotifyResults = async (targetIds?: string[]) => {
+    setIsNotifying(true);
+    const id = toast.loading(targetIds ? "Envoi à la sélection..." : "Envoi des notifications en cours...");
+
+    try {
+      const res = await fetch("/api/admin/notifications/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          examId: examFilter,
+          submissionIds: targetIds 
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.error || "Erreur lors de l'envoi");
+
+      toast.success(result.message, { id });
+      setShowNotifyDialog(false);
+      setSelectedIds([]);
+    } catch (error: any) {
+      toast.error(error.message, { id });
+    } finally {
+      setIsNotifying(false);
+    }
+  };
+
+  const handleNotifySingleResult = async (submissionId: string, isTest = false) => {
+    const id = toast.loading(isTest ? "Envoi du test..." : "Envoi de la notification...");
+
+    try {
+      // Pour le test, on pourrait demander l'email de l'admin, mais ici on va tricher en récupérant l'email de l'admin connecté via une meta-donnée ou simplement en laissant le backend le gérer (si on implémente la détection automatique côté serveur).
+      // Dans notre cas, l'API accepte `testEmail`. Si on ne le passe pas, le backend pourrait utiliser l'email de session.
+      // Mais pour simplifier, on va demander à l'admin son email pour le test la première fois ou utiliser une valeur fixe.
+      
+      const res = await fetch("/api/admin/notifications/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          submissionId,
+          testEmail: isTest ? "admin@example.com" : undefined // TODO: Utiliser l'email admin réel ou demander via prompt
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.error || "Erreur lors de l'envoi");
+
+      toast.success(isTest ? "Test envoyé à votre adresse admin" : "Candidat notifié avec succès", { id });
+    } catch (error: any) {
+      toast.error(error.message, { id });
     }
   };
 
@@ -153,6 +220,13 @@ function SubmissionsList() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+             <Button 
+                onClick={() => setShowNotifyDialog(true)}
+                disabled={data?.stats?.completed === 0}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold h-11 px-6 shadow-xl shadow-indigo-200 gap-2"
+             >
+                <Trophy className="w-4 h-4" /> Notifier Résultats
+             </Button>
              <Button 
                 onClick={exportToCSV}
                 className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 px-6 shadow-xl shadow-slate-200 gap-2"
@@ -286,10 +360,22 @@ function SubmissionsList() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredSubmissions.map((sub) => (
-              <Card key={sub.id} className="group p-6 border-none shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-500 rounded-3xl bg-white relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-2 h-full transition-all group-hover:w-4 bg-slate-50 group-hover:bg-indigo-500" />
+              <Card key={sub.id} className={cn(
+                "group p-6 border-none shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-500 rounded-3xl bg-white relative overflow-hidden",
+                selectedIds.includes(sub.id) && "ring-2 ring-indigo-500 bg-indigo-50/10"
+              )}>
+                <div onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedIds(prev => prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]);
+                }} className={cn(
+                  "absolute top-4 left-4 w-5 h-5 rounded-md border-2 cursor-pointer z-20 flex items-center justify-center transition-all",
+                  selectedIds.includes(sub.id) ? "bg-indigo-600 border-indigo-600 shadow-md shadow-indigo-200" : "bg-white border-slate-200 group-hover:border-slate-300"
+                )}>
+                  {selectedIds.includes(sub.id) && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                </div>
+                <div className="absolute top-0 left-0 w-1.5 h-full transition-all group-hover:w-3 bg-slate-50 group-hover:bg-indigo-500" />
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1">
+                  <div className="flex items-start gap-4 flex-1 ml-6">
                     <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0 group-hover:scale-95 transition-transform group-hover:bg-white group-hover:shadow-md">
                         <UserIcon className="w-7 h-7 text-slate-300 group-hover:text-indigo-500" name={sub.candidate?.name || undefined} />
                     </div>
@@ -350,11 +436,31 @@ function SubmissionsList() {
                             <span className="text-[10px] font-black text-slate-300">N/A</span>
                         </div>
                     )}
-                    <Link href={`/admin/submissions/${sub.id}`}>
-                      <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl hover:bg-slate-900 hover:text-white group-hover:shadow-lg transition-all">
-                        <Eye className="w-5 h-5" />
+                    <div className="flex gap-2">
+                       <Button 
+                        variant="ghost" 
+                        onClick={() => handleNotifySingleResult(sub.id, true)}
+                        disabled={sub.status !== "GRADED"}
+                        className="h-10 w-10 p-0 rounded-xl hover:bg-emerald-100 hover:text-emerald-600 transition-all"
+                        title="Envoyer un test à l'admin"
+                      >
+                        <RefreshCcw className="w-4 h-4" />
                       </Button>
-                    </Link>
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => handleNotifySingleResult(sub.id)}
+                        disabled={sub.status !== "GRADED"}
+                        className="h-10 w-10 p-0 rounded-xl hover:bg-amber-100 hover:text-amber-600 transition-all"
+                        title="Délivrer officiellement au candidat"
+                      >
+                        <Bell className="w-5 h-5" />
+                      </Button>
+                      <Link href={`/admin/submissions/${sub.id}`}>
+                        <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl hover:bg-slate-900 hover:text-white group-hover:shadow-lg transition-all">
+                          <Eye className="w-5 h-5" />
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -362,6 +468,103 @@ function SubmissionsList() {
           </div>
         )}
       </main>
+
+      {/* Floating Selection Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 duration-500">
+          <div className="bg-slate-900 text-white px-8 py-4 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center gap-8 backdrop-blur-xl border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center font-black text-xs">
+                {selectedIds.length}
+              </div>
+              <p className="text-sm font-black uppercase tracking-widest text-slate-300">Sélectionnés</p>
+            </div>
+            
+            <div className="w-px h-8 bg-white/10" />
+
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => handleNotifyResults(selectedIds)}
+                className="bg-indigo-600 hover:bg-indigo-700 h-12 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20"
+              >
+                Notifier la sélection
+              </Button>
+              <Button 
+                variant="ghost"
+                onClick={() => setSelectedIds([])}
+                className="h-12 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5"
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog for Notifications */}
+      <Dialog open={showNotifyDialog} onOpenChange={setShowNotifyDialog}>
+        <DialogContent className="rounded-3xl border-none shadow-2xl p-0 overflow-hidden max-w-md">
+          <div className="bg-indigo-600 p-8 text-white">
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
+              <Trophy className="w-8 h-8 text-white" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-white mb-2">
+              Notifier les Résultats
+            </DialogTitle>
+            <DialogDescription className="text-indigo-100 text-sm font-medium">
+              Cette action va envoyer un email officiel et une notification in-app à tous les candidats des <strong>Examens Officiels</strong> dont la copie est corrigée (GRADED).
+            </DialogDescription>
+          </div>
+          
+          <div className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                <p className="text-[10px] font-black uppercase text-emerald-600 mb-1">Admis (Officiels)</p>
+                <p className="text-2xl font-black text-emerald-700">
+                  {filteredSubmissions.filter(s => s.status === "GRADED" && (s.exam?.type === 'OFFICIAL' || (s as any).type === 'OFFICIAL') && (s.finalScore || s.score || 0) >= 65).length}
+                </p>
+              </div>
+              <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100">
+                <p className="text-[10px] font-black uppercase text-rose-600 mb-1">Échecs (Officiels)</p>
+                <p className="text-2xl font-black text-rose-700">
+                  {filteredSubmissions.filter(s => s.status === "GRADED" && (s.exam?.type === 'OFFICIAL' || (s as any).type === 'OFFICIAL') && (s.finalScore || s.score || 0) < 65).length}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <p className="text-xs font-bold text-slate-500 mb-1">Périmètre de l'envoi :</p>
+              <p className="text-sm font-black text-slate-900 flex items-center gap-2">
+                 <Filter className="w-4 h-4 text-indigo-500" />
+                 {examFilter === "all" ? "Examens Officiels uniquement" : `Examen sélectionné : ${uniqueExams.find(e => e.id === examFilter)?.name}`}
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-400 font-medium leading-relaxed italic">
+              * Les candidats recevront un email détaillant la procédure pour télécharger leur relevé de notes officiel et retirer leur attestation finale.
+            </p>
+          </div>
+
+          <DialogFooter className="p-6 pt-0 flex gap-3">
+            <Button 
+                variant="ghost" 
+                onClick={() => setShowNotifyDialog(false)}
+                className="flex-1 h-12 rounded-xl font-bold"
+                disabled={isNotifying}
+            >
+              Annuler
+            </Button>
+            <Button 
+                onClick={() => handleNotifyResults()}
+                className="flex-1 h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
+                disabled={isNotifying}
+            >
+              {isNotifying && <RefreshCcw className="w-4 h-4 animate-spin mr-2" />}
+              Envoyer Maintenant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

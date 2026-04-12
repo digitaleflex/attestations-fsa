@@ -41,6 +41,7 @@ import {
   ChevronDown,
   ChevronRight,
   Target,
+  User,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -60,8 +61,9 @@ const menuGroups = [
   {
     label: "Pédagogique",
     items: [
-      { href: "/admin/exams", label: "Examens", icon: ClipboardCheck },
-      { href: "/admin/corrections", label: "Corrections (Copies)", icon: ClipboardCheck },
+      { href: "/admin/exams", label: "Examens", icon: GraduationCap },
+      { href: "/admin/submissions", label: "Gestion des Copies", icon: ClipboardCheck },
+      { href: "/admin/corrections", label: "Corrections Profil", icon: User },
       { href: "/admin/attestations", label: "Attestations", icon: FileText },
       { href: "/admin/portfolios", label: "Suivi Portfolios", icon: Trophy, badgeKey: "pendingPortfolios" },
       { href: "/admin/portfolio/missions", label: "Config. Missions", icon: Target },

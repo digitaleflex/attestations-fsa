@@ -13,7 +13,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import TranscriptDocument from "@/components/TranscriptDocument";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,10 +50,6 @@ export default function AdminAttestationsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
-  // États pour le téléchargement du relevé
-  const [transcriptData, setTranscriptData] = useState<any>(null);
-  const [isPrintingTranscript, setIsPrintingTranscript] = useState(false);
-  const [isFetchingTranscript, setIsFetchingTranscript] = useState<string | null>(null);
 
   // Statistiques
   const stats = {
@@ -118,79 +113,7 @@ export default function AdminAttestationsPage() {
     toast.success("Préparation de l'exportation complète...");
   };
 
-  const handleDownloadTranscript = async (att: any) => {
-    if (!att.userId) {
-      toast.error("Cette attestation n'est pas liée à un compte utilisateur.");
-      return;
-    }
-
-    setIsFetchingTranscript(att.id);
-    toast.info(`Récupération du relevé de ${att.fullName}...`);
-
-    try {
-      const transcript = await apiFetch(`/api/admin/transcript/${att.userId}`, {}, false);
-      setTranscriptData(transcript);
-      
-      toast.promise(
-        (async () => {
-          try {
-            setIsPrintingTranscript(true);
-            
-            // Fonction utilitaire pour attendre que l'élément soit présent
-            const waitForElement = (id: string, timeout = 2500): Promise<HTMLElement> => {
-              return new Promise((resolve, reject) => {
-                const start = Date.now();
-                const check = () => {
-                  const el = document.getElementById(id);
-                  if (el) resolve(el);
-                  else if (Date.now() - start > timeout) reject(new Error("Délai d'attente dépassé pour la génération"));
-                  else setTimeout(check, 100);
-                };
-                check();
-              });
-            };
-
-            // Attendre que le composant soit prêt
-            const element = await waitForElement("admin-transcript-template");
-            
-            // Délai technique pour le rendu
-            await new Promise(resolve => setTimeout(resolve, 600));
-            
-            const html2pdf = (await import("html2pdf.js")).default;
-            const opt = {
-              margin: 0,
-              filename: `Releve_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { 
-                scale: 2, 
-                useCORS: true, 
-                width: 1120, 
-                windowWidth: 1120 
-              },
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-            };
-
-            await html2pdf().set(opt).from(element).save();
-          } catch (err) {
-            console.error("Admin PDF Generation Error:", err);
-            throw err;
-          } finally {
-            setIsPrintingTranscript(false);
-            setTranscriptData(null);
-          }
-        })(),
-        {
-          loading: 'Génération du PDF...',
-          success: 'Relevé téléchargé !',
-          error: (err) => `Échec : ${err.message}`,
-        }
-      );
-    } catch (error) {
-      toast.error("Impossible de récupérer les notes de ce candidat.");
-    } finally {
-      setIsFetchingTranscript(null);
-    }
-  };
+  // handleDownloadTranscript was removed to use shared logic
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -477,25 +400,25 @@ export default function AdminAttestationsPage() {
                         Modif.
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadTranscript(a)}
-                      disabled={isFetchingTranscript === a.id || !a.userId}
-                      className={`h-9 w-10 p-0 relative flex items-center justify-center transition-all ${isDownloaded ? 'border-indigo-200 bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-blue-600'}`}
-                      title={isDownloaded ? `Téléchargé le ${new Date(a.user!.examSessions![0].transcriptDownloadedAt!).toLocaleDateString()}` : "Télécharger le relevé"}
-                    >
-                      {isFetchingTranscript === a.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
+                    <Link href={`/transcript?userId=${a.userId}&download=true`} target="_blank">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!a.userId}
+                        className={cn(
+                          "h-9 w-10 p-0 relative flex items-center justify-center transition-all",
+                          isDownloaded ? 'border-indigo-200 bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-blue-600'
+                        )}
+                        title={isDownloaded ? "Déjà téléchargé" : "Télécharger le relevé"}
+                      >
                         <Download className="w-4 h-4" />
-                      )}
-                      {isDownloaded && (
-                        <div className="absolute -top-1 -right-1 bg-indigo-500 text-white rounded-full p-0.5 border-2 border-white shadow-sm">
-                          <Check className="w-2 h-2" />
-                        </div>
-                      )}
-                    </Button>
+                        {isDownloaded && (
+                          <div className="absolute -top-1 -right-1 bg-indigo-500 text-white rounded-full p-0.5 border-2 border-white shadow-sm">
+                            <Check className="w-2 h-2" />
+                          </div>
+                        )}
+                      </Button>
+                    </Link>
                     <Button
                       variant="outline"
                       size="sm"
@@ -551,21 +474,18 @@ export default function AdminAttestationsPage() {
                               <Edit className="w-4 h-4" />
                             </Button>
                           </Link>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDownloadTranscript(a)}
-                            disabled={isFetchingTranscript === a.id || !a.userId}
-                            className={`h-8 w-8 relative ${isDownloaded ? 'text-indigo-600' : 'text-slate-400 hover:text-blue-600'}`}
-                            title={isDownloaded ? "Déjà téléchargé" : "Télécharger le relevé"}
-                          >
-                             {isFetchingTranscript === a.id ? (
-                               <Loader2 className="w-4 h-4 animate-spin" />
-                             ) : (
+                          <Link href={`/transcript?userId=${a.userId}&download=true`} target="_blank">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={!a.userId}
+                              className={cn("h-8 w-8 relative", isDownloaded ? 'text-indigo-600' : 'text-slate-400 hover:text-blue-600')}
+                              title={isDownloaded ? "Déjà téléchargé" : "Télécharger le relevé"}
+                            >
                                <Download className="w-4 h-4" />
-                             )}
-                             {isDownloaded && <Check className="absolute -top-0.5 -right-0.5 w-2 h-2 text-indigo-500 font-bold" />}
-                          </Button>
+                               {isDownloaded && <Check className="absolute -top-0.5 -right-0.5 w-2 h-2 text-indigo-500 font-bold" />}
+                            </Button>
+                          </Link>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -618,16 +538,7 @@ export default function AdminAttestationsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Template de Relevé Invisible */}
-      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
-        {transcriptData && (
-          <TranscriptDocument 
-            data={transcriptData}
-            id="admin-transcript-template"
-            isPrinting={isPrintingTranscript}
-          />
-        )}
-      </div>
+      {/* Removed duplicated template rendering */}
     </div>
   );
 }

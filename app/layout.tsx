@@ -26,9 +26,9 @@ export default function RootLayout({
     <html lang="fr" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#16a34a" />
-        <BotIdClient protect={[{ path: "/api/exams/*/submit", method: "POST" }]} />
       </head>
       <body className={inter.className} suppressHydrationWarning>
+        <BotIdClient protect={[{ path: "/api/exams/*/submit", method: "POST" }]} />
         <Script
           id="sw-cleanup"
           strategy="afterInteractive"
