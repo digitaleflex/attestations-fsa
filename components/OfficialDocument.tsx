@@ -121,7 +121,9 @@ export default function OfficialDocument({ data, id = "official-document-content
               attestationId={data.id}
               userId={data.id} // Will be replaced with actual userId
               code={data.code}
-              generatedAt={new Date(data.issuedAt).toISOString()}
+              generatedAt={data.issuedAt && !isNaN(new Date(data.issuedAt).getTime()) 
+                ? new Date(data.issuedAt).toISOString() 
+                : new Date().toISOString()}
               invisible={false}
             />
 
@@ -214,7 +216,7 @@ export default function OfficialDocument({ data, id = "official-document-content
                 {/* Footer de la fiche */}
                 <div className="mt-8 md:mt-10 pt-6 w-full flex flex-col md:flex-row items-center justify-between text-[9px] font-mono border-t gap-3" style={{ color: "#64748b", borderTopColor: '#f1f5f9' }}>
                     <div className="flex gap-4">
-                        <span className="font-medium">ID: {data.id.slice(0, 8)}...</span>
+                        <span className="font-medium">ID: {data.id?.slice(0, 8) || "--------"}...</span>
                         <span className="font-bold" style={{ color: "#334155" }}>CODE: {data.code}</span>
                     </div>
                     <span className="font-black tracking-[0.2em] uppercase" style={{ color: "#1e293b" }}>© FERME SAINT ANDRÉ • PORTAL</span>

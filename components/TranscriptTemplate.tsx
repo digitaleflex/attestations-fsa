@@ -230,7 +230,6 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
         {/* ── BAS DE PAGE ── */}
         <div style={{ marginTop: "auto", borderTop: "1px solid #e2e8f0", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ fontSize: "8px", color: "#94a3b8", lineHeight: 1.6 }}>
-                <p style={{ margin: 0 }}>Authenticité vérifiable sur : <strong>fsa-benin.com/verifier</strong></p>
                 <p style={{ margin: 0 }}>Code Doc : {studentCode.split('-').pop()}-{id.slice(-4)}</p>
                 <p style={{ margin: 0 }}>Généré le {new Date().toLocaleString('fr-FR')}</p>
             </div>

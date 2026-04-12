@@ -40,14 +40,19 @@ export async function GET(request: Request) {
     let attestation = await prisma.attestation.findFirst({
       where: {
         OR: [
-          { code: { equals: validCode } }, // Correspondance exacte (priorité)
-          { code: { endsWith: validCode } } // Suffixe (ex: les 6 derniers caractères)
+          { code: { equals: validCode, mode: 'insensitive' } }, // Correspondance exacte (priorité)
+          { code: { endsWith: validCode, mode: 'insensitive' } } // Suffixe (ex: les 6 derniers caractères)
         ]
       },
       select: {
+        id: true,
+        code: true,
         fullName: true,
         type: true,
         status: true,
+        certificationScore: true,
+        stageScore: true,
+        issuedAt: true,
         startDate: true,
         endDate: true,
         location: true,
@@ -68,7 +73,13 @@ export async function GET(request: Request) {
       }, { status: 404 })
     }
 
-    return NextResponse.json({ attestation })
+    // Mapper certificationScore vers score pour la compatibilité frontend
+    const responseData = {
+      ...attestation,
+      score: attestation.certificationScore || 0
+    };
+
+    return NextResponse.json({ attestation: responseData })
 
   } catch (error: unknown) {
     console.error('Erreur vérification attestation:', error);

@@ -162,8 +162,8 @@ function VerifierContent() {
                         <input
                             {...register("code")}
                             type="text"
-                            placeholder="Ex: FSA-2026... ou A3F7C"
-                            className="w-full h-16 md:h-24 pl-14 md:pl-20 pr-10 bg-transparent border-none rounded-3xl focus:ring-0 text-lg md:text-2xl font-black uppercase tracking-widest text-slate-900 placeholder:text-slate-300 placeholder:font-bold placeholder:normal-case transition-all placeholder:tracking-normal placeholder:text-[13px] md:placeholder:text-xl font-sans"
+                            placeholder="Entrez le code complet ou seulement la fin (ex: a3f7c)"
+                            className="w-full h-16 md:h-24 pl-14 md:pl-20 pr-10 bg-transparent border-none rounded-3xl focus:ring-0 text-lg md:text-2xl font-black tracking-widest text-slate-900 placeholder:text-slate-300 placeholder:font-bold placeholder:normal-case transition-all placeholder:tracking-normal placeholder:text-[13px] md:placeholder:text-xl font-sans"
                             autoComplete="off"
                             disabled={loading}
                         />
@@ -253,46 +253,6 @@ function VerifierContent() {
                       </div>
                   </div>
 
-                  {result.status === "VALIDATED" && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="space-y-8"
-                    >
-                      <div className="flex items-center justify-between px-6">
-                        <div className="flex items-center gap-3">
-                          <Sparkles className="w-5 h-5 text-emerald-500" />
-                          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-600">Aperçu du Certificat</h3>
-                        </div>
-                        <Button variant="ghost" className="gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-600">
-                          <Download className="w-4 h-4" /> Sauvegarder
-                        </Button>
-                      </div>
-
-                      <div className="relative group perspective-1000">
-                        <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 transition-transform duration-700 group-hover:scale-[1.01] origin-top">
-                          <div className="scale-[0.8] md:scale-[0.9] lg:scale-100 origin-top overflow-hidden">
-                            <OfficialDocument 
-                              data={{
-                                id: result.id,
-                                code: result.code,
-                                fullName: result.fullName,
-                                formationName: result.formation?.name || "Formation",
-                                type: result.type,
-                                startDate: result.startDate,
-                                endDate: result.endDate,
-                                score: result.score,
-                                status: result.status,
-                                issuedAt: result.issuedAt
-                              }}
-                              hideStepper={true}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
 
                   <div className="bg-slate-50 rounded-[2.5rem] p-10 md:p-14 flex flex-col md:flex-row items-center justify-between gap-8 border border-slate-100">
                     <div className="flex gap-6 items-center">
