@@ -75,11 +75,11 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
       id={id}
       style={{
         width: "794px",
-        minHeight: "1123px",
         fontFamily: "'Segoe UI', Roboto, Helvetica, sans-serif",
         backgroundColor: "#ffffff",
         boxSizing: "border-box",
-        padding: "40px 40px",
+        margin: "0 auto",
+        padding: "30px 40px",
         position: "relative",
         color: "#1e293b"
       }}
@@ -107,14 +107,14 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
         
         {/* ── EN-TÊTE ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "2px solid #1e3a8a", paddingBottom: "15px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px", borderBottom: "2px solid #1e3a8a", paddingBottom: "12px" }}>
             <div style={{ width: "180px" }}>
                 {/* Espace vide pour équilibrer le logo central */}
             </div>
 
             <div style={{ textAlign: "center", flex: 1, padding: "0 20px" }}>
                 <div style={{ height: "60px", marginBottom: "10px", display: "flex", justifyContent: "center" }}>
-                    <img src="/logo-fsa.png" alt="Logo FSA" style={{ height: "100%", objectFit: "contain" }} />
+                    <img src="/logo-fsa.png" alt="Logo FSA" style={{ width: "60px", height: "60px", objectFit: "contain", display: "block", margin: "0 auto 8px" }} />
                 </div>
                 <h1 style={{ fontSize: "24px", fontWeight: 900, margin: "0 0 5px", color: "#101b3d", letterSpacing: "1px" }}>RELEVÉ DE NOTES</h1>
                 <p style={{ fontSize: "10px", fontWeight: 700, margin: 0, color: "#64748b", textTransform: "uppercase", letterSpacing: "2px" }}>Ferme Agro-Piscicole St André</p>
@@ -128,7 +128,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
         </div>
 
         {/* ── IDENTIFICATION ── */}
-        <div style={{ marginBottom: "20px", backgroundColor: "#fcfdfe", padding: "15px 20px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+        <div style={{ marginBottom: "15px", backgroundColor: "#fcfdfe", padding: "10px 20px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
             <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#1e3a8a", margin: "0 0 15px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Profil</h2>
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px 40px", fontSize: "11px" }}>
                 <div>
@@ -155,7 +155,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
             <h3 style={{ fontSize: "11px", fontWeight: 900, color: "#1e3a8a", marginBottom: "15px", textTransform: "uppercase", letterSpacing: "1px" }}>
                 ÉTAT RÉCAPITULATIF DES NOTES
             </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "25px" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "15px" }}>
                 <thead>
                     <tr style={{ backgroundColor: "#1e3a8a", color: "#ffffff" }}>
                         <th style={{ textAlign: "left", padding: "12px 15px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Unités de Formation</th>
@@ -173,14 +173,14 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
                         
                         return (
                             <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                                <td style={{ padding: "14px 15px", fontSize: "10px" }}>
+                                <td style={{ padding: "10px 15px", fontSize: "10px" }}>
                                     <p style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>{exam.examName}</p>
                                     <p style={{ margin: "2px 0 0", fontSize: "7px", color: "#64748b", textTransform: "uppercase" }}>Session du {formatDate(exam.date)}</p>
                                 </td>
-                                <td style={{ textAlign: "center", padding: "12px", fontSize: "11px", fontWeight: 600 }}>{scorePct}%</td>
-                                <td style={{ textAlign: "center", padding: "12px", fontSize: "11px", color: "#64748b" }}>{exam.internshipScore ? `${Math.round(exam.internshipScore)}%` : "N/A"}</td>
-                                <td style={{ textAlign: "center", padding: "12px", fontSize: "12px", fontWeight: 900, color: "#1e3a8a" }}>{final20.toFixed(2)}</td>
-                                <td style={{ textAlign: "center", padding: "12px" }}>
+                                <td style={{ textAlign: "center", padding: "10px", fontSize: "11px", fontWeight: 600 }}>{scorePct}%</td>
+                                <td style={{ textAlign: "center", padding: "10px", fontSize: "11px", color: "#64748b" }}>{exam.internshipScore ? `${Math.round(exam.internshipScore)}%` : "N/A"}</td>
+                                <td style={{ textAlign: "center", padding: "10px", fontSize: "12px", fontWeight: 900, color: "#1e3a8a" }}>{final20.toFixed(2)}</td>
+                                <td style={{ textAlign: "center", padding: "10px" }}>
                                     <span style={{ 
                                         fontSize: "8px", 
                                         fontWeight: 900, 
@@ -217,7 +217,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
                 </div>
 
                 <div style={{ textAlign: "center", paddingTop: "15px" }}>
-                   <p style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 40px" }}>Le Responsable de la Formation,</p>
+                   <p style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 30px" }}>Le Responsable de la Formation,</p>
                    <div style={{ width: "130px", height: "1px", background: "#1e293b", margin: "0 auto 10px" }} />
                    <p style={{ fontSize: "11px", fontWeight: 700, margin: 0 }}>FSA - St André</p>
                    <p style={{ fontSize: "8px", color: "#64748b", fontStyle: "italic" }}>(Validé électroniquement)</p>
@@ -226,7 +226,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
         </div>
 
         {/* ── BAS DE PAGE ── */}
-        <div style={{ marginTop: "auto", borderTop: "1px solid #e2e8f0", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div style={{ marginTop: "15px", borderTop: "1px solid #e2e8f0", paddingTop: "15px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ fontSize: "8px", color: "#94a3b8", lineHeight: 1.6 }}>
                 <p style={{ margin: 0 }}>Code Doc : {studentCode.split('-').pop()}-{id.slice(-4)}</p>
                 <p style={{ margin: 0 }}>Généré le {new Date().toLocaleString('fr-FR')}</p>
