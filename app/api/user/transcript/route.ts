@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { ExamType, ExamSession, Attestation } from "@/types";
 
 interface ExamResult {
+  id: string;
   examName: string;
   score: number;
   totalPoints: number;
@@ -15,6 +16,10 @@ interface ExamResult {
   part1Score?: number;
   part2Score?: number;
   part3Score?: number;
+  maxPart1?: number;
+  maxPart2?: number;
+  maxPart3?: number;
+  transcriptDownloadedAt?: string | Date | null;
 }
 
 interface AttestationData {
@@ -77,6 +82,7 @@ export async function GET(request: Request) {
       const totalPoints = customBareme?.totalMax ?? (session.exam.totalPoints || 100);
 
       return {
+        id: session.id,
         examName: session.exam.title || session.exam.name,
         score: session.score,
         totalPoints,
@@ -88,6 +94,10 @@ export async function GET(request: Request) {
         part1Score: (session as any).scorePart1,
         part2Score: (session as any).scorePart2,
         part3Score: (session as any).scorePart3,
+        maxPart1: customBareme?.maxPart1 || 20,
+        maxPart2: customBareme?.maxPart2 || 40,
+        maxPart3: customBareme?.maxPart3 || 40,
+        transcriptDownloadedAt: session.transcriptDownloadedAt,
       };
     });
 

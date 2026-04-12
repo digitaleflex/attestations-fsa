@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Clock, CheckCircle, Award, LogOut, User as UserIcon, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon, Play, Rocket } from "lucide-react";
+import { FileText, Download, Clock, CheckCircle, Award, LogOut, User as UserIcon, Calendar, Mail, TrendingUp, BookOpen, Briefcase, Search, Link as LinkIcon, Activity, Trophy, GraduationCap, ArrowRight, ShieldCheck, ShieldAlert, Megaphone, Loader2 as LoaderIcon, Play, Rocket, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -327,6 +327,32 @@ export default function UserDashboardPage() {
               </Link>
            </div>
         </Card>
+        
+        {/* Section Relevé de Notes Prompt (New) */}
+        {(statsData?.overview?.totalExams || 0) > 0 && (
+          <Card className="p-6 border-none shadow-premium bg-gradient-to-r from-blue-700 to-indigo-800 text-white relative overflow-hidden group animate-in slide-in-from-right duration-700">
+             <div className="absolute top-[-50%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-1000" />
+             <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                <div className="flex items-center gap-4">
+                   <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white shadow-sm shrink-0 backdrop-blur-md border border-white/10">
+                      <FileText className="w-7 h-7" />
+                   </div>
+                   <div>
+                      <h3 className="font-black text-white tracking-tight text-lg mb-1 uppercase">Votre relevé de notes est prêt ! 📜</h3>
+                      <p className="text-blue-100/80 text-sm font-medium max-w-xl">
+                        Votre parcours académique a été validé. Vous pouvez dès maintenant télécharger votre relevé de notes officiel certifié par la direction.
+                      </p>
+                   </div>
+                </div>
+                <Link href="/transcript?download=true">
+                   <Button className="bg-white text-blue-700 hover:bg-blue-50 h-12 px-8 rounded-xl font-black text-sm uppercase tracking-wider shadow-2xl flex items-center gap-2 group/btn">
+                      Télécharger le relevé officiel
+                      <Download className="w-4 h-4 group-hover/btn:translate-y-1 transition-transform" />
+                   </Button>
+                </Link>
+             </div>
+          </Card>
+        )}
 
         {/* 📢 Nouvelles de la Direction */}
         {notificationsData?.notifications && notificationsData.notifications.length > 0 && (
@@ -342,11 +368,8 @@ export default function UserDashboardPage() {
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {notificationsData.notifications.map((notif: Notification) => (
-                <Card key={notif.id} className={cn(
-                  "p-5 border-none shadow-premium relative overflow-hidden transition-all",
-                  notif.isRead ? "bg-white/60 opacity-80" : "bg-white border-l-4 border-l-rose-500"
-                )}>
+              {notificationsData.notifications.filter((n: Notification) => !n.isRead).map((notif: Notification) => (
+                <Card key={notif.id} className="p-5 border-none shadow-premium relative overflow-hidden transition-all bg-white border-l-4 border-l-rose-500 group">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
                       <p className="font-bold text-slate-800 text-sm">{notif.title}</p>
@@ -355,16 +378,15 @@ export default function UserDashboardPage() {
                         Posté le {new Date(notif.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    {!notif.isRead && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => markAsRead(notif.id)}
-                        className="text-[10px] h-7 px-2 bg-slate-50 hover:bg-slate-100"
-                      >
-                        Lu
-                      </Button>
-                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => markAsRead(notif.id)}
+                      className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full h-8 w-8 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-4 h-4" />
+                      <span className="sr-only">Masquer</span>
+                    </Button>
                   </div>
                 </Card>
               ))}
@@ -643,8 +665,8 @@ export default function UserDashboardPage() {
                                                  <Button
                                                      variant="ghost"
                                                      size="icon"
-                                                     onClick={() => handleDownload(att)}
-                                                     className="rounded-full bg-white shadow-sm hover:scale-110 active:scale-95 transition-all text-emerald-600"
+                                                     disabled={true}
+                                                     className="rounded-full bg-slate-50 text-slate-300 cursor-not-allowed"
                                                  >
                                                      <Download className="w-5 h-5" />
                                                  </Button>
@@ -757,20 +779,24 @@ export default function UserDashboardPage() {
                     <div className="space-y-3">
                        {statsData?.recentExams && statsData.recentExams.length > 0 ? (
                          statsData.recentExams.map((ex: any) => {
-                           const scoreOn20 = ex.exam?.totalPoints > 0 ? (ex.totalScore / ex.exam.totalPoints) * 20 : 0;
-                           const isPassed = scoreOn20 >= 13; // 65% de 20 = 13
+                           const passingThreshold = ex.exam?.passingScore || 65;
+                           const scorePercent = ex.exam?.totalPoints > 0 ? (ex.totalScore / ex.exam.totalPoints) * 100 : 0;
+                           const scoreOn20 = (scorePercent / 100) * 20;
+                           const isPassed = scorePercent >= passingThreshold;
                            
                            return (
                              <div key={ex.id} className="group flex items-center justify-between p-4 bg-slate-50 hover:bg-white rounded-2xl transition-all border border-transparent hover:border-slate-100 hover:shadow-xl hover:shadow-slate-200/50">
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4 min-w-0 flex-1 mr-4">
                                    <div className={cn(
-                                     "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-transform group-hover:scale-110",
+                                     "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 transition-transform group-hover:scale-110",
                                      isPassed ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
                                    )}>
                                       <GraduationCap className="w-5 h-5" />
                                    </div>
-                                   <div className="min-w-0">
-                                      <p className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{ex.exam?.title || "Examen"}</p>
+                                   <div className="min-w-0 flex-1">
+                                      <p className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight" title={ex.exam?.title}>
+                                        {ex.exam?.title || "Examen"}
+                                      </p>
                                       <div className="flex items-center gap-2 mt-1">
                                         <Calendar className="w-3 h-3 text-slate-400" />
                                         <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Le {new Date(ex.submittedAt).toLocaleDateString()}</p>

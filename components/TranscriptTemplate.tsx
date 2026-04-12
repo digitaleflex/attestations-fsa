@@ -54,6 +54,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
   };
 
   const getMention = (average: number) => {
+    if (average >= 18) return { label: "EXCELLENT", color: "#1e3a8a" };
     if (average >= 16) return { label: "TRÈS BIEN", color: "#6d28d9" };
     if (average >= 14) return { label: "BIEN", color: "#0369a1" };
     if (average >= 12) return { label: "ASSEZ BIEN", color: "#0e7490" };
@@ -90,15 +91,17 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
           position: "absolute",
           top: "50%",
           left: "50%",
-          transform: "translate(-50%, -50%) rotate(-45deg)",
-          fontSize: "100px",
-          fontWeight: 900,
-          color: "rgba(30, 58, 138, 0.02)",
+          transform: "translate(-50%, -50%)",
+          width: "400px",
+          height: "400px",
+          opacity: 0.03,
           pointerEvents: "none",
           zIndex: 0,
-          whiteSpace: "nowrap"
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
       }}>
-          ST ANDRE FSA
+          <img src="/logo-fsa.png" alt="Watermark" style={{ width: "100%", height: "100%", objectFit: "contain", filter: "grayscale(100%)" }} />
       </div>
 
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>

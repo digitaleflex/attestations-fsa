@@ -36,6 +36,10 @@ export async function GET(
         include: { formation: { select: { name: true } } }
     });
 
+    // Extraction du barème dynamique
+    const answers = (examSession.answers as any) || {};
+    const custom = answers._customBareme || {};
+
     return NextResponse.json({
       id: examSession.id,
       fullName: examSession.candidate?.name || user.name || "Candidat",
@@ -44,6 +48,9 @@ export async function GET(
       scorePart1: examSession.scorePart1,
       scorePart2: examSession.scorePart2,
       scorePart3: examSession.scorePart3,
+      maxPart1: custom.maxPart1 || 20,
+      maxPart2: custom.maxPart2 || 40,
+      maxPart3: custom.maxPart3 || 40,
       totalScore: examSession.totalScore,
       status: examSession.status,
       issuedAt: examSession.submittedAt || examSession.updatedAt

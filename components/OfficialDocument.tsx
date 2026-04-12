@@ -93,7 +93,7 @@ export default function OfficialDocument({ data, id = "official-document-content
           id={id}
           className={cn(
             "flex flex-col items-center p-8 md:p-14 rounded-[12px] relative overflow-hidden transition-all duration-300",
-            isPrinting ? "w-[1120px] min-w-[1120px]" : "w-full shadow-2xl shadow-slate-200"
+            isPrinting ? "w-[1120px] min-w-[1120px] h-[790px] max-h-[790px] overflow-hidden" : "w-full shadow-2xl shadow-slate-200"
           )}
           style={{ 
               border: "8px solid #ffffff",
@@ -107,9 +107,13 @@ export default function OfficialDocument({ data, id = "official-document-content
             <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 rounded-bl-lg" style={{ borderColor: '#2563eb', opacity: 0.2 }}></div>
             <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 rounded-br-lg" style={{ borderColor: '#2563eb', opacity: 0.2 }}></div>
 
-            {/* Filigrane discret */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#000000", opacity: 0.02 }}>
-                <Award size={400} />
+            {/* Filigrane Logo */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.035] w-[600px] h-[600px] flex items-center justify-center">
+                <img 
+                    src="/logo-fsa.png" 
+                    alt="Watermark" 
+                    className="w-full h-full object-contain grayscale"
+                />
             </div>
 
             {/* ✅ ANTI-FORGERY: Security watermark */}

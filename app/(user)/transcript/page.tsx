@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Award, Download, FileText, TrendingUp, CheckCircle, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import dynImport from "next/dynamic";
+import { cn } from "@/lib/utils";
 import TranscriptTemplate from "@/components/TranscriptTemplate";
-import { useState } from "react";
+import TranscriptDocument from "@/components/TranscriptDocument";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,8 +24,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send } from "lucide-react";
+import { Loader2, MessageSquare, Send, CheckCircle2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api-client";
 
 const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 
@@ -33,6 +36,12 @@ export default function TranscriptPage() {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [reclamationSubject, setReclamationSubject] = useState("");
   const [reclamationMessage, setReclamationMessage] = useState("");
+  
+  // Nouveaux états pour le téléchargement individuel
+  const [isPrintingIndividual, setIsPrintingIndividual] = useState(false);
+  const [selectedTranscriptData, setSelectedTranscriptData] = useState<any>(null);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
   const queryClient = useQueryClient();
 
   const reclamationMutation = useMutation({
@@ -85,7 +94,7 @@ export default function TranscriptPage() {
 
         const opt = {
           margin: 10, // Small margin for page numbers/spacing
-          filename: `Releve_Notes_${data.user.fullName.replace(/\s+/g, '_')}.pdf`,
+          filename: `Releve_General_FSA_${data.user.fullName.replace(/\s+/g, '_')}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { 
             scale: 2, 
@@ -101,12 +110,84 @@ export default function TranscriptPage() {
         await html2pdfFn().set(opt).from(element).save();
       })(),
       {
-        loading: 'Génération du relevé de notes...',
+        loading: 'Génération du relevé général...',
         success: 'Téléchargement réussi !',
         error: 'Erreur de génération',
       }
     );
     setDownloading(false);
+  };
+
+  const waitForElement = (id: string): Promise<HTMLElement> => {
+    return new Promise((resolve) => {
+      const check = () => {
+        const el = document.getElementById(id);
+        if (el) resolve(el);
+        else setTimeout(check, 100);
+      };
+      check();
+    });
+  };
+
+  const handleDownloadSession = async (exam: any) => {
+    setIsPrintingIndividual(true);
+    setClaimingId(exam.id);
+    
+    // On prépare les données pour TranscriptDocument
+    setSelectedTranscriptData({
+        id: exam.id,
+        fullName: data.user.fullName,
+        formationName: exam.examName,
+        sessionName: "Session d'Évaluation FSA",
+        scorePart1: exam.part1Score || 0,
+        scorePart2: exam.part2Score || 0,
+        scorePart3: exam.part3Score || 0,
+        maxPart1: exam.maxPart1 || 20,
+        maxPart2: exam.maxPart2 || 40,
+        maxPart3: exam.maxPart3 || 40,
+        totalScore: Math.round(exam.finalScore || (exam.score / exam.totalPoints) * 100),
+        status: (exam.finalScore || (exam.score / exam.totalPoints) * 100) >= 65 ? "VALIDATED" : "PENDING",
+        issuedAt: exam.date
+    });
+
+    toast.promise(
+      (async () => {
+        const element = await waitForElement("transcript-pdf-render");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const html2pdfModule = await import("html2pdf.js");
+        const html2pdfFn = html2pdfModule.default;
+
+        const opt = {
+          margin: 0,
+          filename: `Releve_${exam.examName.replace(/\s+/g, '_')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, width: 1120, windowWidth: 1120 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        await html2pdfFn().set(opt).from(element).save();
+
+        // Signaler au serveur
+        try {
+          await apiFetch(`/api/user/transcript/${exam.id}/claim`, { method: "POST" }, false);
+          queryClient.invalidateQueries({ queryKey: ["user-transcript"] });
+        } catch (e) {
+          console.error("Audit error:", e);
+        }
+      })(),
+      {
+        loading: 'Génération du relevé...',
+        success: 'Téléchargement réussi !',
+        error: 'Échec de la génération',
+      }
+    );
+
+    setTimeout(() => {
+        setIsPrintingIndividual(false);
+        setSelectedTranscriptData(null);
+        setClaimingId(null);
+    }, 2000);
   };
 
   if (isLoading) {
@@ -171,7 +252,7 @@ export default function TranscriptPage() {
             ) : (
               <Download className="w-4 h-4" />
             )}
-            Télécharger (PDF)
+            Télécharger le relevé officiel
           </Button>
         </div>
       </Card>
@@ -243,12 +324,16 @@ export default function TranscriptPage() {
                   const finalPct = exam.finalScore ? Math.round(exam.finalScore) : examPct;
                   const internshipPct = exam.internshipScore ? Math.round(exam.internshipScore) : null;
                   const passed = finalPct >= 65;
+                  const isDownloaded = !!exam.transcriptDownloadedAt;
                   
                   return (
                     <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                       <td className="py-4 font-medium text-slate-800">
                         <div className="flex flex-col">
-                          <span className="font-bold">{exam.examName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold">{exam.examName}</span>
+                            {isDownloaded && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" strokeWidth={3} />}
+                          </div>
                           {exam.type === 'MOCK' && (
                             <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Examen Blanc</span>
                           )}
@@ -269,19 +354,39 @@ export default function TranscriptPage() {
                         </Badge>
                       </td>
                       <td className="py-4 text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedSubmissionId(exam.id);
-                            setReclamationSubject(`Contestation note - ${exam.examName}`);
-                            setIsReclamationOpen(true);
-                          }}
-                          className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg gap-2"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          Contester
-                        </Button>
+                        <div className="flex items-center justify-center gap-2">
+                            <Button
+                                size="sm"
+                                onClick={() => handleDownloadSession(exam)}
+                                disabled={isPrintingIndividual}
+                                className={cn(
+                                    "h-8 rounded-lg px-3 gap-1.5 font-bold text-[11px] transition-all",
+                                    isDownloaded 
+                                        ? "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 shadow-none" 
+                                        : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                                )}
+                            >
+                                {isPrintingIndividual && claimingId === exam.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                    <Download className="w-3 h-3" />
+                                )}
+                                {isDownloaded ? "Réimprimer" : "Relevé"}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setSelectedSubmissionId(exam.id);
+                                    setReclamationSubject(`Contestation note - ${exam.examName}`);
+                                    setIsReclamationOpen(true);
+                                }}
+                                className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
+                                title="Contester"
+                            >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                            </Button>
+                        </div>
                       </td>
                     <td className="py-4 text-right text-slate-500 text-xs font-medium">
                       {new Date(exam.date).toLocaleDateString("fr-FR")}
@@ -300,15 +405,21 @@ export default function TranscriptPage() {
             const finalPct = exam.finalScore ? Math.round(exam.finalScore) : examPct;
             const internshipPct = exam.internshipScore ? Math.round(exam.internshipScore) : null;
             const passed = finalPct >= 65;
+            const isDownloaded = !!exam.transcriptDownloadedAt;
 
             return (
               <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
                 <div className="flex justify-between items-start gap-4">
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-900 leading-tight mb-1">{exam.examName}</p>
-                    <p className="text-[10px] text-slate-400 font-medium">{new Date(exam.date).toLocaleDateString("fr-FR")}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-bold text-slate-900 leading-tight">{exam.examName}</p>
+                        {isDownloaded && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" strokeWidth={3} />}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-widest">
+                        {new Date(exam.date).toLocaleDateString("fr-FR")}
+                    </p>
                     {exam.type === 'MOCK' && (
-                      <Badge variant="secondary" className="mt-2 text-[9px] font-black uppercase tracking-widest bg-white border-slate-200">Examen Blanc</Badge>
+                      <Badge variant="secondary" className="mt-2 text-[9px] font-black uppercase tracking-widest bg-white border-slate-200 text-indigo-600">Examen Blanc</Badge>
                     )}
                   </div>
                   <Badge className={passed ? "bg-emerald-100 text-emerald-700 border-none shrink-0" : "bg-rose-100 text-rose-700 border-none shrink-0"}>
@@ -325,30 +436,60 @@ export default function TranscriptPage() {
                     <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter">Stage</p>
                     <p className="font-bold text-slate-700">{internshipPct !== null ? `${internshipPct}%` : "–"}</p>
                   </div>
-                  <div className="bg-blue-600 p-2 rounded-xl text-center shadow-lg shadow-blue-100">
-                    <p className="text-[8px] text-blue-100 font-black uppercase tracking-tighter">Moyenne</p>
+                  <div className={cn(
+                      "p-2 rounded-xl text-center shadow-lg",
+                      passed ? "bg-emerald-500 shadow-emerald-50" : "bg-blue-600 shadow-blue-50"
+                  )}>
+                    <p className="text-[8px] text-white/70 font-black uppercase tracking-tighter">Total</p>
                     <p className="font-black text-white">{finalPct}%</p>
                   </div>
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedSubmissionId(exam.id);
-                    setReclamationSubject(`Contestation note - ${exam.examName}`);
-                    setIsReclamationOpen(true);
-                  }}
-                  className="w-full h-10 gap-2 font-bold text-xs text-slate-600 bg-white border-slate-200"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Contester ce résultat
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        onClick={() => handleDownloadSession(exam)}
+                        disabled={isPrintingIndividual}
+                        className={cn(
+                            "grow h-11 rounded-xl font-bold gap-2 text-xs",
+                            isDownloaded ? "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100" : "bg-blue-600 text-white"
+                        )}
+                    >
+                        {isPrintingIndividual && claimingId === exam.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Download className="w-4 h-4" />
+                        )}
+                        {isDownloaded ? "Réimprimer le Relevé" : "Télécharger mon Relevé"}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                            setSelectedSubmissionId(exam.id);
+                            setReclamationSubject(`Contestation note - ${exam.examName}`);
+                            setIsReclamationOpen(true);
+                        }}
+                        className="h-11 w-11 rounded-xl border-slate-200 text-slate-400 bg-white"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                    </Button>
+                </div>
               </div>
             );
           })}
         </div>
       </Card>
+
+      {/* Rendeur caché UNIQUE pour le PDF vibrant (TranscriptDocument) */}
+      {isPrintingIndividual && selectedTranscriptData && (
+        <div style={{ position: 'absolute', left: '-9999px', top: 0, visibility: 'hidden' }} aria-hidden="true">
+            <TranscriptDocument
+                id="transcript-pdf-render"
+                data={selectedTranscriptData}
+                isPrinting={true}
+            />
+        </div>
+      )}
 
       {/* Attestations */}
       {data.attestations.length > 0 && (
