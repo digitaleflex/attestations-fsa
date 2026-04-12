@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock, Lock, AlertCircle, Send, CheckCircle } from "lucide-react";
+import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock, Lock, AlertCircle, Send, CheckCircle, ClipboardList, Loader2 } from "lucide-react";
+import TranscriptDocumentComponent from "@/components/TranscriptDocument";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -46,6 +47,11 @@ export default function UserAttestationsPage() {
   const [reportingAtt, setReportingAtt] = useState<any>(null);
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
+  
+  // États pour le téléchargement du relevé
+  const [transcriptData, setTranscriptData] = useState<any>(null);
+  const [isPrintingTranscript, setIsPrintingTranscript] = useState(false);
+  const [isFetchingTranscript, setIsFetchingTranscript] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["user-attestations"],
@@ -105,6 +111,71 @@ export default function UserAttestationsPage() {
       toast.error("Erreur lors de la génération du PDF");
     } finally {
       setDownloading(null);
+    }
+  };
+
+  const handleDownloadTranscript = async (att: any) => {
+    setIsFetchingTranscript(att.id);
+    toast.info("Récupération de votre relevé de notes...");
+
+    try {
+      const res = await fetch(`/api/user/transcript`);
+      if (!res.ok) throw new Error();
+      const allTranscripts = await res.json();
+      
+      // Trouver l'examen qui correspond à cette formation
+      const transcript = allTranscripts.examResults.find((r: any) => 
+        r.examName.toLowerCase().includes(att.formation?.name.toLowerCase()) || 
+        att.formation?.name.toLowerCase().includes(r.examName.toLowerCase())
+      ) || allTranscripts.examResults[0];
+
+      if (!transcript) throw new Error("Aucun relevé trouvé pour cette formation");
+
+      const formattedData = {
+        id: att.id,
+        fullName: att.fullName,
+        formationName: att.formation?.name || "Formation",
+        sessionName: transcript.examName,
+        scorePart1: transcript.part1Score || 0,
+        scorePart2: transcript.part2Score || 0,
+        scorePart3: transcript.part3Score || 0,
+        totalScore: transcript.finalScore || transcript.score,
+        status: transcript.status,
+        issuedAt: transcript.date
+      };
+
+      setTranscriptData(formattedData);
+      
+      setTimeout(async () => {
+        try {
+          setIsPrintingTranscript(true);
+          const html2pdf = (await import("html2pdf.js")).default;
+          const element = document.getElementById(`transcript-template-user-${att.id}`);
+          
+          if (!element) throw new Error("Template introuvable");
+
+          const opt = {
+            margin: 0,
+            filename: `Releve_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, width: 1120, windowWidth: 1120 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          };
+
+          await html2pdf().set(opt).from(element).save();
+          toast.success("✅ Relevé téléchargé !");
+        } catch (err) {
+          toast.error("Erreur génération PDF");
+        } finally {
+          setIsPrintingTranscript(false);
+          setTranscriptData(null);
+        }
+      }, 500);
+
+    } catch (error) {
+      toast.error("Impossible de récupérer le relevé.");
+    } finally {
+      setIsFetchingTranscript(null);
     }
   };
 
@@ -380,6 +451,21 @@ export default function UserAttestationsPage() {
                           <Download className={`w-4 h-4 ${att.status === "CLAIMED" ? "text-blue-500" : "text-slate-500"}`} />
                         )}
                       </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className={`h-10 w-10 sm:h-9 sm:w-9 ${isFetchingTranscript === att.id ? 'border-blue-200 bg-blue-50' : ''}`}
+                        onClick={() => handleDownloadTranscript(att)}
+                        disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED") || isFetchingTranscript === att.id}
+                        title="Télécharger le relevé de notes"
+                      >
+                        {isFetchingTranscript === att.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                        ) : (
+                          <ClipboardList className="w-4 h-4 text-slate-500" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -482,26 +568,34 @@ export default function UserAttestationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Templates cachés pour la génération PDF */}
-      <div className="hidden">
+      {/* Templates cachés pour la génération PDF (Capture technique) */}
+      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
         {data?.attestations?.filter((a: any) => (a.status === "VALIDATED" || a.status === "CLAIMED") && !a.isLocked).map((att: any) => (
-          <CertificateTemplate
-            key={att.id}
-            id={`cert-template-${att.id}`}
-            data={{
-              fullName: att.fullName,
-              formationName: att.formation?.name || "Formation Saint André",
-              code: att.code,
-              issuedAt: att.issuedAt,
-              startDate: att.startDate,
-              endDate: att.endDate,
-              score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
-              hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
-              type: att.type,
-              gender: att.gender,
-              status: att.status
-            }}
-          />
+          <div key={`capture-${att.id}`}>
+             <CertificateTemplate
+                id={`cert-template-${att.id}`}
+                data={{
+                  fullName: att.fullName,
+                  formationName: att.formation?.name || "Formation Saint André",
+                  code: att.code,
+                  issuedAt: att.issuedAt,
+                  startDate: att.startDate,
+                  endDate: att.endDate,
+                  score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
+                  hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
+                  type: att.type,
+                  gender: att.gender,
+                  status: att.status
+                }}
+              />
+              {transcriptData && (
+                <TranscriptDocumentComponent 
+                  data={transcriptData}
+                  id={`transcript-template-user-${att.id}`}
+                  isPrinting={isPrintingTranscript}
+                />
+              )}
+          </div>
         ))}
       </div>
     </div>

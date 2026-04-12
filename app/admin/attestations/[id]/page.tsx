@@ -407,6 +407,24 @@ export default function AttestationDetailsPage() {
               <Download className="w-4 h-4" />
               Télécharger PDF
             </Button>
+            {transcriptData && (
+                <Button 
+                    onClick={async () => {
+                        const current = activeDoc;
+                        setActiveDoc("TRANSCRIPT");
+                        // Timeout pour laisser le DOM se mettre à jour
+                        setTimeout(async () => {
+                            await handleDownload();
+                            setActiveDoc(current);
+                        }, 100);
+                    }} 
+                    variant="outline" 
+                    className="gap-2 bg-indigo-50 text-indigo-600 border-indigo-200"
+                >
+                    <ClipboardList className="w-4 h-4" />
+                    Télécharger Relevé
+                </Button>
+            )}
           </div>
         </div>
 
