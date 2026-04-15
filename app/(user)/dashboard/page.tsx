@@ -177,7 +177,9 @@ export default function UserDashboardPage() {
         body: JSON.stringify({ notificationId: id })
       });
       refetchNotifications();
-    } catch {}
+    } catch (err) {
+      console.error("Mark as read error:", err);
+    }
   };
 
   const { data: statsData } = useQuery({

@@ -12,8 +12,15 @@ interface ProjectChatProps {
   studentId: string;
 }
 
+interface ChatMessage {
+  id: string;
+  content: string;
+  senderRole: "admin" | "candidate" | string;
+  createdAt: string;
+}
+
 export default function ProjectChat({ missionId, studentId }: ProjectChatProps) {
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +37,9 @@ export default function ProjectChat({ missionId, studentId }: ProjectChatProps) 
         const data = await res.json();
         setMessages(data);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {

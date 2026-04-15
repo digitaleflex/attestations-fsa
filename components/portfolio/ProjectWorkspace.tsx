@@ -66,7 +66,9 @@ export default function ProjectWorkspace({ mission, onBack, onUpdate }: ProjectW
         const data = await res.json();
         setChatMessages(data);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error("Project chat fetch error:", err);
+    }
   };
 
   const handleAddLink = async (e: React.FormEvent) => {

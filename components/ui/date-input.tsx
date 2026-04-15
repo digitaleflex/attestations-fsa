@@ -40,7 +40,7 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
       return;
     }
 
-    let inputValue = e.target.value;
+    const inputValue = e.target.value;
 
     // Si l'input est vide, transmettre tel quel
     if (!inputValue) {
@@ -60,7 +60,7 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
     } else if (formatted.length >= 3) {
       formatted = `${formatted.slice(0, 2)}/${formatted.slice(2)}`;
     } else {
-      formatted = formatted;
+      // No change
     }
 
     setDisplayValue(formatted);

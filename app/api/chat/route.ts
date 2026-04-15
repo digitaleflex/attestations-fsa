@@ -110,8 +110,7 @@ export async function POST(req: Request) {
     if (!finalUserId) return NextResponse.json({ error: "Destinataire manquant" }, { status: 400 });
     if (!senderId) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
 
-    // @ts-ignore
-    const chatModel = (prisma as any).chatMessage;
+    const chatModel = prisma.chatMessage;
 
     if (!chatModel) {
         return NextResponse.json({ error: "Module chat indisponible" }, { status: 503 });

@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 export const dynamic = 'force-dynamic';
 
 import { useState } from "react";
@@ -29,7 +31,7 @@ export default function UserExamsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["user-exams"],
     queryFn: async () => {
-      return apiFetch("/api/user/exams?type=OFFICIAL") as Promise<{
+      return apiFetch<{
         exams: Array<{
           id: string;
           name: string;
@@ -53,7 +55,7 @@ export default function UserExamsPage() {
           passed: number;
           failed: number;
         };
-      }>;
+      }>("/api/user/exams?type=OFFICIAL");
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -62,7 +64,7 @@ export default function UserExamsPage() {
   const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
     queryKey: ["scheduled-exams", "OFFICIAL"],
     queryFn: async () => {
-      return apiFetch("/api/exams/scheduled?type=OFFICIAL") as Promise<{
+      return apiFetch<{
         exams: Array<{
           id: string;
           name: string;
@@ -73,7 +75,7 @@ export default function UserExamsPage() {
           totalPoints: number;
           passingScore: number;
         }>;
-      }>;
+      }>("/api/exams/scheduled?type=OFFICIAL");
     },
     staleTime: 60 * 1000, // Update every minute for countdown
   });

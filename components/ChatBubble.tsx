@@ -75,7 +75,9 @@ export default function ChatBubble() {
       if (!res.ok) return;
       const data = await res.json();
       setMessages(data);
-    } catch (err) {}
+    } catch (err) {
+      console.error("Chat fetch error:", err);
+    }
   };
 
   const handleSend = async (e: React.FormEvent) => {

@@ -133,7 +133,9 @@ async function main() {
         const { logOTP } = await import("./lib/otp-store");
         logOTP(TEST_EMAIL, OTP, "forget-password");
         console.log("📝 OTP logged to admin store");
-      } catch {}
+      } catch (err) {
+        console.warn("Could not log OTP to admin store:", err);
+      }
 
       console.log("📧 Vérifie ta boîte de réception (et les spams)");
     } else {

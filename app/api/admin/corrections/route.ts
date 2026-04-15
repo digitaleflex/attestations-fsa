@@ -27,7 +27,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: Request): Promise<NextResponse> {
   try {
     const adminUser = await getAdminUser(request);
     if (!adminUser) {
@@ -63,15 +63,16 @@ export async function PATCH(request: Request) {
     if (status === "APPROVED") {
       // 🛡️ TRANSACTION POUR GARANTIR L'INTÉGRITÉ
       await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        const updateData: Partial<{ name: string; birthDate: Date; birthPlace: string }> = {};
-        const attUpdateData: Partial<{ fullName: string; birthDate: Date; birthPlace: string }> = {};
+        const updateData: { name?: string; birthDate?: Date; birthPlace?: string } = {};
+        const attUpdateData: { fullName?: string; birthDate?: Date; birthPlace?: string } = {};
 
         if (correction.field === "fullName") {
           updateData.name = correction.newValue;
           attUpdateData.fullName = correction.newValue;
         } else if (correction.field === "birthDate") {
-          updateData.birthDate = new Date(correction.newValue);
-          attUpdateData.birthDate = new Date(correction.newValue);
+          const birthDate = new Date(correction.newValue);
+          updateData.birthDate = birthDate;
+          attUpdateData.birthDate = birthDate;
         } else if (correction.field === "birthPlace") {
           updateData.birthPlace = correction.newValue;
           attUpdateData.birthPlace = correction.newValue;

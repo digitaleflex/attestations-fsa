@@ -42,11 +42,11 @@ export default function SignalementPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-gray-100 p-4">
       <div className="w-full max-w-lg mx-auto bg-white/80 backdrop-blur-md border border-red-200 rounded-2xl shadow-xl p-8 flex flex-col items-center animate-fade-in-up">
         <h1 className="text-2xl font-bold text-red-700 mb-4 flex items-center gap-2"><Flag className="w-7 h-7 text-red-600" />Signaler une attestation</h1>
-        <p className="text-gray-700 mb-6 text-center">Vous avez un doute sur une attestation ? Merci de remplir ce formulaire, notre équipe analysera votre signalement dans les plus brefs délais.</p>
+        <p className="text-gray-700 mb-6 text-center">Vous avez un doute sur une attestation ? Merci de remplir ce formulaire, notre équipe analysera votre signalement dans les plus brefs délais.</p>
         {success && (
           <div className="w-full mb-4 rounded-xl border-2 border-green-400 bg-green-100/80 p-4 text-green-900 text-center font-semibold animate-fade-in flex items-center gap-2 justify-center">
             <CheckCircle className="w-6 h-6 text-green-600 animate-bounce" />
-            Signalement envoyé avec succès. Merci pour votre vigilance !
+            Signalement envoyé avec succès. Merci pour votre vigilance !
           </div>
         )}
         {error && (

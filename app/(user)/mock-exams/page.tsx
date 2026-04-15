@@ -29,7 +29,26 @@ export default function UserMockExamsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["user-mock-exams"],
     queryFn: async () => {
-      return apiFetch("/api/user/exams?type=MOCK") as any;
+      return apiFetch<{
+        exams: Array<{
+          id: string;
+          examName: string;
+          examDescription: string;
+          status: string;
+          type: string;
+          duration?: string;
+          questionCount?: number;
+          score?: number;
+          submissionId?: string;
+        }>;
+        stats: {
+          total: number;
+          available: number;
+          completed: number;
+          inProgress: number;
+          passed: number;
+        };
+      }>("/api/user/exams?type=MOCK");
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -38,7 +57,15 @@ export default function UserMockExamsPage() {
   const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
     queryKey: ["scheduled-exams", "MOCK"],
     queryFn: async () => {
-      return apiFetch("/api/exams/scheduled?type=MOCK") as any;
+      return apiFetch<{
+        exams: Array<{
+          id: string;
+          name: string;
+          description: string;
+          scheduledAt: string;
+          duration: number;
+        }>;
+      }>("/api/exams/scheduled?type=MOCK");
     },
     staleTime: 60 * 1000, // Update every minute for countdown
   });

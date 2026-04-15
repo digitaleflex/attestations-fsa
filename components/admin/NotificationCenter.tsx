@@ -206,7 +206,7 @@ export default function NotificationCenter() {
   );
 }
 
-function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
+function ClockIcon(props: React.ComponentProps<"svg">) {
   return (
     <svg
       {...props}

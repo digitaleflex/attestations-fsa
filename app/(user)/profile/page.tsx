@@ -339,7 +339,7 @@ export default function UserProfilePage() {
               <div className="p-10 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
                  <Globe className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                  <h4 className="text-slate-800 font-bold mb-1">Votre visibilité est désactivée</h4>
-                 <p className="text-sm text-slate-400 max-w-sm mx-auto">Activez votre portfolio pour permettre l'affichage public de vos attestations et booster votre employabilité.</p>
+                 <p className="text-sm text-slate-400 max-w-sm mx-auto">Activez votre portfolio pour permettre l&apos;affichage public de vos attestations et booster votre employabilité.</p>
               </div>
             )}
          </div>

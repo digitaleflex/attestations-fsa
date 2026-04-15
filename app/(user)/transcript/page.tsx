@@ -402,7 +402,7 @@ export default function TranscriptPage() {
               </tr>
             </thead>
             <tbody>
-                {data.examResults.map((exam: ExamResult, idx: number) => {
+                {data.examResults.map((exam, idx) => {
                   const examPct = Math.round((exam.score / exam.totalPoints) * 100);
                   const finalPct = exam.finalScore ? Math.round(exam.finalScore) : examPct;
                   const internshipPct = exam.internshipScore ? Math.round(exam.internshipScore) : null;
@@ -586,7 +586,7 @@ export default function TranscriptPage() {
             Attestations obtenues ({data.attestations.length})
           </h3>
           <div className="space-y-3">
-            {data.attestations.map((att: Attestation, idx: number) => (
+            {data.attestations.map((att, idx) => (
               <div
                 key={idx}
                 className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors"
@@ -619,7 +619,7 @@ export default function TranscriptPage() {
             birthDate: data.user.birthDate,
             birthPlace: data.user.birthPlace,
             email: data.user.email,
-            examResults: data.examResults.map((e: ExamResult) => ({
+            examResults: data.examResults.map((e) => ({
               ...e,
               score: Math.round((e.score / e.totalPoints) * 100),
               totalPoints: 100,

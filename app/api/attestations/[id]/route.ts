@@ -155,7 +155,6 @@ export async function PATCH(
     
     const attestation = await prisma.attestation.update({
       where: { id },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: updateData as any,
     });
 
