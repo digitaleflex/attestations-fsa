@@ -114,7 +114,7 @@ export default function TranscriptPage() {
     },
   });
 
-  const handleReclamationSubmit = () => {
+  const handleReclamationSubmit = (): void => {
     if (!selectedSubmissionId || !reclamationSubject || !reclamationMessage) return;
     reclamationMutation.mutate({
       submissionId: selectedSubmissionId,
@@ -125,7 +125,13 @@ export default function TranscriptPage() {
 
   const targetUserId = searchParams.get("userId");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<{
+    user: { fullName: string; birthDate: string | Date; birthPlace: string; email: string };
+    examResults: ExamResult[];
+    attestations: Attestation[];
+    stats: { globalAverage: number; totalExams: number; passedExams: number; successRate: number };
+    isOwner: boolean;
+  }>({
     queryKey: ["user-transcript", targetUserId],
     queryFn: async () => {
       const url = targetUserId 
@@ -138,7 +144,7 @@ export default function TranscriptPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const handleDownload = async () => {
+  const handleDownload = async (): Promise<void> => {
     if (!data) return;
 
     setDownloading(true);
@@ -198,7 +204,8 @@ export default function TranscriptPage() {
     });
   };
 
-  const handleDownloadSession = async (exam: ExamResult) => {
+  const handleDownloadSession = async (exam: ExamResult): Promise<void> => {
+    if (!data) return;
     setIsPrintingIndividual(true);
     setClaimingId(exam.id);
     

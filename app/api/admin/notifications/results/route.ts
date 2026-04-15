@@ -3,16 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { emailService } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
-import { Prisma, ExamSession } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-interface ExamSessionCandidate extends Pick<ExamSession, "id"> {
+interface ExamSessionCandidate {
+  id: string;
+  finalScore?: number | null;
+  score?: number;
   candidate: {
     id: string;
-    name: string | undefined;
-    email: string | undefined;
+    name: string | null;
+    email: string | null;
   };
   exam: {
-    title: string;
+    title: string | null;
     name: string;
   };
 }
@@ -48,7 +51,7 @@ const createWhereFilter = (
   submissionId?: string,
   submissionIds?: string[],
   examId?: string,
-) => {
+): Prisma.ExamSessionWhereInput => {
   const baseFilter: Prisma.ExamSessionWhereInput = {
     status: "GRADED",
     exam: {
@@ -110,7 +113,7 @@ const determinePassStatus = (finalScore?: number, score?: number): boolean => {
   return scoreValue >= passingScore;
 };
 
-const getExamTitle = (exam: { title: string; name: string }): string => {
+const getExamTitle = (exam: { title: string | null; name: string }): string => {
   return exam.title || exam.name;
 };
 
@@ -160,11 +163,10 @@ export async function POST(req: Request): Promise<NextResponse> {
     let failureCount = 0;
     const errors: Array<string> = [];
 
-    const processSession = async (session: ExamSessionCandidate) => {
-      const finalScore = (session as unknown as { finalScore?: number })
-        .finalScore;
-      const score = (session as unknown as { score?: number }).score;
-      const passStatus = isPassing(finalScore, score);
+    const processSession = async (session: ExamSessionCandidate): Promise<void> => {
+      const finalScore = session.finalScore;
+      const score = session.score;
+      const passStatus = isPassing(finalScore ?? undefined, score);
 
       const candidateName = session.candidate.name ?? defaultCandidateName;
       const examTitle = getExamTitle(session.exam);
@@ -182,9 +184,8 @@ export async function POST(req: Request): Promise<NextResponse> {
 
         const emailAddress = testEmail ?? session.candidate.email;
         if (sendEmail && emailAddress) {
-          const actualEmail = emailAddress as string;
           await emailService.sendOfficialTranscriptNotification(
-            actualEmail,
+            emailAddress,
             candidateName,
             examTitle,
             finalScore ?? score ?? 0,

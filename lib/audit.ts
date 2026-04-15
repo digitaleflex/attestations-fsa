@@ -50,7 +50,7 @@ export async function createAuditLog({
   oldValue?: unknown;
   newValue?: unknown;
   ipAddress?: string | null;
-}, tx?: Prisma.TransactionClient) {
+}, tx?: Prisma.TransactionClient): Promise<void | Prisma.AuditLogGetPayload<object>> {
   try {
     const client = tx || prisma;
     return await client.auditLog.create({

@@ -5,7 +5,7 @@ import React from "react";
 interface TranscriptTemplateProps {
   data: {
     fullName: string;
-    birthDate: string;
+    birthDate: string | Date;
     birthPlace: string;
     email: string;
     examResults: {
@@ -13,16 +13,16 @@ interface TranscriptTemplateProps {
       score: number;
       totalPoints: number;
       status: string;
-      date: string;
-      internshipScore?: number;
-      finalScore?: number;
+      date: string | Date;
+      internshipScore?: number | null;
+      finalScore?: number | null;
       type?: string;
     }[];
     attestations: {
       formationName: string;
       type: string;
       code: string;
-      issuedAt: string;
+      issuedAt: string | Date;
       score?: number;
     }[];
     globalAverage: number;
@@ -33,8 +33,8 @@ interface TranscriptTemplateProps {
   id?: string;
 }
 
-const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTemplateProps) => {
-  const formatDate = (d: string) => {
+const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTemplateProps): React.JSX.Element => {
+  const formatDate = (d: string | Date | undefined): string => {
     if (!d) return "--/--/----";
     return new Date(d).toLocaleDateString("fr-FR", {
       day: "2-digit",

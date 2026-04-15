@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ClipboardList, BadgeCheck, ShieldCheck } from "lucide-react";
+import { BadgeCheck, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TranscriptDocumentProps {
@@ -24,15 +24,15 @@ interface TranscriptDocumentProps {
   isPrinting?: boolean;
 }
 
-export default function TranscriptDocument({ data, id = "transcript-document-content", isPrinting = false }: TranscriptDocumentProps) {
+export default function TranscriptDocument({ data, id = "transcript-document-content", isPrinting = false }: TranscriptDocumentProps): React.JSX.Element {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const formatDate = (d: string | Date) => {
-    if (!mounted) return "--/--/----";
+  const formatDate = (d: string | Date | undefined): string => {
+    if (!mounted || !d) return "--/--/----";
     return new Date(d).toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "2-digit",

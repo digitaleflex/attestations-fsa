@@ -5,7 +5,7 @@ import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
 
-export async function GET(request: Request) {
+export async function GET(request: Request): Promise<NextResponse> {
   try {
     const adminUser = await getAdminUser(request);
     if (!adminUser) {
