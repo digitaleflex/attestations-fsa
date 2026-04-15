@@ -57,9 +57,18 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
 
   return (
     <div className={cn(
-        "flex flex-col items-center p-8 md:p-12 rounded-[32px] relative overflow-hidden transition-all duration-300",
-        isPrinting ? "w-[1120px] min-w-[1120px] h-[790px] max-h-[790px] overflow-hidden" : "w-full shadow-xl shadow-slate-100 border border-slate-100"
+        "flex flex-col items-center relative overflow-hidden transition-all duration-300",
+        isPrinting 
+          ? "w-[1120px] min-w-[1120px] h-[790px] max-h-[790px] p-20 overflow-hidden rounded-none" 
+          : "w-full p-8 md:p-12 rounded-[32px] shadow-xl shadow-slate-100 border border-slate-100"
     )} style={{ backgroundColor: '#ffffff' }} id={id}>
+        {/* Decorative Borders for Printing */}
+        {isPrinting && (
+            <>
+                <div className="absolute inset-4 border border-slate-100 pointer-events-none rounded-[24px]" />
+                <div className="absolute inset-6 border-2 border-slate-800/5 pointer-events-none rounded-[20px]" />
+            </>
+        )}
         {/* Filigrane Logo */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.03] w-[500px] h-[500px] flex items-center justify-center">
             <img 
@@ -69,7 +78,7 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
             />
         </div>
 
-        <div className={cn("relative z-10 w-full", isPrinting ? "space-y-6" : "space-y-10")}>
+        <div className={cn("relative z-10 w-full", isPrinting ? "space-y-10" : "space-y-10")}>
             {/* Header / Banner */}
             <div className={cn("flex flex-col md:flex-row items-center justify-between gap-6", isPrinting ? "pb-4" : "pb-8")} style={{ borderBottom: '1px solid #f1f5f9' }}>
                 <div className="flex items-center gap-4">
@@ -138,7 +147,7 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
                     <div className={cn("grid grid-cols-12 items-center", isPrinting ? "p-4" : "p-6")} style={{ backgroundColor: 'rgba(37, 99, 235, 0.05)' }}>
                         <div className="col-span-6">
                             <p className="font-black text-sm uppercase" style={{ color: '#1e3a8a' }}>Moyenne Générale Pondérée</p>
-                            <p className="text-[10px] font-bold uppercase mt-1" style={{ color: '#2563eb' }}>Mention obtenue : {getMention(Math.round((data.totalScore / mTotal) * 100))}</p>
+                            <p className="text-[10px] font-bold uppercase mt-1" style={{ color: '#2563eb' }}>RÉSULTAT : {getMention(Math.round((data.totalScore / mTotal) * 100))}</p>
                         </div>
                         <div className="col-span-3 text-center">
                             <div className="inline-block px-6 py-2 rounded-2xl text-white font-black text-2xl shadow-lg" style={{ backgroundColor: '#2563eb' }}>

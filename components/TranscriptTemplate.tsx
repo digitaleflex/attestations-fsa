@@ -79,13 +79,16 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
         backgroundColor: "#ffffff",
         boxSizing: "border-box",
         margin: "0 auto",
-        padding: "30px 40px",
+        padding: "50px 60px",
         position: "relative",
-        color: "#1e293b"
+        color: "#1e293b",
+        minHeight: "1120px", // A4 height roughly
+        display: "flex",
+        flexDirection: "column"
       }}
     >
-      <div style={{ position: "absolute", inset: "25px", border: "1px solid #cbd5e1", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", inset: "30px", border: "2px solid #1e3a8a", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", inset: "15px", border: "1px solid #cbd5e1", opacity: 0.5, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", inset: "22px", border: "2px solid #1e3a8a", pointerEvents: "none" }} />
 
       <div style={{
           position: "absolute",
@@ -94,7 +97,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
           transform: "translate(-50%, -50%)",
           width: "400px",
           height: "400px",
-          opacity: 0.03,
+          opacity: 0.05,
           pointerEvents: "none",
           zIndex: 0,
           display: "flex",
@@ -107,7 +110,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
         
         {/* ── EN-TÊTE ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px", borderBottom: "2px solid #1e3a8a", paddingBottom: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", borderBottom: "2px solid #1e3a8a", paddingBottom: "20px" }}>
             <div style={{ width: "180px" }}>
                 {/* Espace vide pour équilibrer le logo central */}
             </div>
@@ -128,7 +131,7 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
         </div>
 
         {/* ── IDENTIFICATION ── */}
-        <div style={{ marginBottom: "15px", backgroundColor: "#fcfdfe", padding: "10px 20px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+        <div style={{ marginBottom: "30px", backgroundColor: "#fcfdfe", padding: "15px 25px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
             <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#1e3a8a", margin: "0 0 15px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Profil</h2>
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px 40px", fontSize: "11px" }}>
                 <div>
@@ -155,14 +158,14 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
             <h3 style={{ fontSize: "11px", fontWeight: 900, color: "#1e3a8a", marginBottom: "15px", textTransform: "uppercase", letterSpacing: "1px" }}>
                 ÉTAT RÉCAPITULATIF DES NOTES
             </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "15px" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "30px" }}>
                 <thead>
                     <tr style={{ backgroundColor: "#1e3a8a", color: "#ffffff" }}>
-                        <th style={{ textAlign: "left", padding: "12px 15px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Unités de Formation</th>
-                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Note Exam</th>
-                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Note Stage</th>
-                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Moyenne / 20</th>
-                        <th style={{ textAlign: "center", padding: "12px", fontSize: "8px", fontWeight: 800, textTransform: "uppercase", width: "100px" }}>Verdict</th>
+                        <th style={{ textAlign: "left", padding: "15px 20px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Unités de Formation</th>
+                        <th style={{ textAlign: "center", padding: "15px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Note Exam</th>
+                        <th style={{ textAlign: "center", padding: "15px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Note Stage</th>
+                        <th style={{ textAlign: "center", padding: "15px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Moyenne / 20</th>
+                        <th style={{ textAlign: "center", padding: "15px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", width: "120px" }}>Verdict</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,14 +176,14 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
                         
                         return (
                             <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                                <td style={{ padding: "10px 15px", fontSize: "10px" }}>
+                                <td style={{ padding: "15px 20px", fontSize: "11px" }}>
                                     <p style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>{exam.examName}</p>
-                                    <p style={{ margin: "2px 0 0", fontSize: "7px", color: "#64748b", textTransform: "uppercase" }}>Session du {formatDate(exam.date)}</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "8px", color: "#64748b", textTransform: "uppercase" }}>Session du {formatDate(exam.date)}</p>
                                 </td>
-                                <td style={{ textAlign: "center", padding: "10px", fontSize: "11px", fontWeight: 600 }}>{scorePct}%</td>
-                                <td style={{ textAlign: "center", padding: "10px", fontSize: "11px", color: "#64748b" }}>{exam.internshipScore ? `${Math.round(exam.internshipScore)}%` : "N/A"}</td>
-                                <td style={{ textAlign: "center", padding: "10px", fontSize: "12px", fontWeight: 900, color: "#1e3a8a" }}>{final20.toFixed(2)}</td>
-                                <td style={{ textAlign: "center", padding: "10px" }}>
+                                <td style={{ textAlign: "center", padding: "15px", fontSize: "12px", fontWeight: 600 }}>{scorePct}%</td>
+                                <td style={{ textAlign: "center", padding: "15px", fontSize: "12px", color: "#64748b" }}>{exam.internshipScore ? `${Math.round(exam.internshipScore)}%` : "N/A"}</td>
+                                <td style={{ textAlign: "center", padding: "15px", fontSize: "14px", fontWeight: 900, color: "#1e3a8a" }}>{final20.toFixed(2)}</td>
+                                <td style={{ textAlign: "center", padding: "15px" }}>
                                     <span style={{ 
                                         fontSize: "8px", 
                                         fontWeight: 900, 
@@ -204,8 +207,8 @@ const TranscriptTemplate = ({ data, id = "transcript-content" }: TranscriptTempl
 
             {/* ── RÉSULTAT FINAL ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "30px" }}>
-                <div style={{ backgroundColor: "#1e3a8a", padding: "20px", borderRadius: "8px", color: "#fff", boxShadow: "0 10px 15px -3px rgba(30, 58, 138, 0.2)" }}>
-                    <h4 style={{ margin: "0 0 15px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "5px" }}>Résulat Global</h4>
+                <div style={{ backgroundColor: "#1e3a8a", padding: "30px", borderRadius: "16px", color: "#fff", boxShadow: "0 10px 25px -5px rgba(30, 58, 138, 0.3)" }}>
+                    <h4 style={{ margin: "0 0 20px", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "10px" }}>Résulat Global</h4>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
                         <span style={{ fontSize: "10px", opacity: 0.85 }}>Moyenne Générale :</span>
                         <span style={{ fontSize: "18px", fontWeight: 900 }}>{avg20.toFixed(2)} / 20</span>
