@@ -1,18 +1,26 @@
 "use client";
 
-export const dynamic = 'force-dynamic';
-
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Award, Download, FileText, TrendingUp, CheckCircle, BarChart3 } from "lucide-react";
+import { 
+  Award, 
+  Download, 
+  FileText, 
+  TrendingUp, 
+  CheckCircle, 
+  BarChart3, 
+  Loader2, 
+  MessageSquare, 
+  Send, 
+  CheckCircle2 
+} from "lucide-react";
 import { toast } from "sonner";
-import dynImport from "next/dynamic";
 import { cn } from "@/lib/utils";
 import TranscriptTemplate from "@/components/TranscriptTemplate";
 import TranscriptDocument from "@/components/TranscriptDocument";
-import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,13 +32,53 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, CheckCircle2 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 
-const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
+export const dynamic = 'force-dynamic';
+
+interface ExamResult {
+  id: string;
+  examName: string;
+  score: number;
+  totalPoints: number;
+  internshipScore: number | null;
+  finalScore: number | null;
+  status: string;
+  type: 'OFFICIAL' | 'MOCK' | 'PRACTICE';
+  date: string | Date;
+  part1Score?: number;
+  part2Score?: number;
+  part3Score?: number;
+  maxPart1?: number;
+  maxPart2?: number;
+  maxPart3?: number;
+  transcriptDownloadedAt?: string | Date | null;
+}
+
+interface Attestation {
+  formationName: string;
+  type: string;
+  code: string;
+  issuedAt: string | Date;
+  score?: number;
+}
+
+interface TranscriptData {
+  id: string;
+  fullName: string;
+  formationName: string;
+  sessionName: string;
+  scorePart1: number;
+  scorePart2: number;
+  scorePart3: number;
+  maxPart1: number;
+  maxPart2: number;
+  maxPart3: number;
+  totalScore: number;
+  status: string;
+  issuedAt: string | Date;
+}
 
 export default function TranscriptPage() {
   const [downloading, setDownloading] = useState(false);
@@ -41,8 +89,7 @@ export default function TranscriptPage() {
   
   // Nouveaux états pour le téléchargement individuel
   const [isPrintingIndividual, setIsPrintingIndividual] = useState(false);
-  const [selectedTranscriptData, setSelectedTranscriptData] = useState<any>(null);
-  const [isSignaling, setIsSignaling] = useState(false);
+  const [selectedTranscriptData, setSelectedTranscriptData] = useState<TranscriptData | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   
   const searchParams = useSearchParams();
@@ -51,10 +98,10 @@ export default function TranscriptPage() {
   const queryClient = useQueryClient();
 
   const reclamationMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (reclamationData: { submissionId: string; subject: string; message: string }) => {
       const res = await fetch("/api/user/reclamations", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify(reclamationData),
       });
       if (!res.ok) throw new Error("Erreur");
       return res.json();
@@ -151,7 +198,7 @@ export default function TranscriptPage() {
     });
   };
 
-  const handleDownloadSession = async (exam: any) => {
+  const handleDownloadSession = async (exam: ExamResult) => {
     setIsPrintingIndividual(true);
     setClaimingId(exam.id);
     
@@ -348,7 +395,7 @@ export default function TranscriptPage() {
               </tr>
             </thead>
             <tbody>
-                {data.examResults.map((exam: any, idx: number) => {
+                {data.examResults.map((exam: ExamResult, idx: number) => {
                   const examPct = Math.round((exam.score / exam.totalPoints) * 100);
                   const finalPct = exam.finalScore ? Math.round(exam.finalScore) : examPct;
                   const internshipPct = exam.internshipScore ? Math.round(exam.internshipScore) : null;
@@ -359,13 +406,13 @@ export default function TranscriptPage() {
                     <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                       <td className="py-4 font-medium text-slate-800">
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold">{exam.examName}</span>
-                            {isDownloaded && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" strokeWidth={3} />}
-                          </div>
-                          {exam.type === 'MOCK' && (
-                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Examen Blanc</span>
-                          )}
+                           <div className="flex items-center gap-2">
+                             <span className="font-bold">{exam.examName}</span>
+                             {isDownloaded && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" strokeWidth={3} />}
+                           </div>
+                           {exam.type === 'MOCK' && (
+                             <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Examen Blanc</span>
+                           )}
                         </div>
                       </td>
                       <td className="py-4 text-center text-slate-600 font-bold">
@@ -431,7 +478,7 @@ export default function TranscriptPage() {
 
         {/* Version MOBILE : Cartes */}
         <div className="md:hidden space-y-4">
-          {data.examResults.map((exam: any, idx: number) => {
+          {data.examResults.map((exam: ExamResult, idx: number) => {
             const examPct = Math.round((exam.score / exam.totalPoints) * 100);
             const finalPct = exam.finalScore ? Math.round(exam.finalScore) : examPct;
             const internshipPct = exam.internshipScore ? Math.round(exam.internshipScore) : null;
@@ -443,11 +490,11 @@ export default function TranscriptPage() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                        <p className="font-bold text-slate-900 leading-tight">{exam.examName}</p>
-                        {isDownloaded && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" strokeWidth={3} />}
+                         <p className="font-bold text-slate-900 leading-tight">{exam.examName}</p>
+                         {isDownloaded && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" strokeWidth={3} />}
                     </div>
                     <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-widest">
-                        {new Date(exam.date).toLocaleDateString("fr-FR")}
+                         {new Date(exam.date).toLocaleDateString("fr-FR")}
                     </p>
                     {exam.type === 'MOCK' && (
                       <Badge variant="secondary" className="mt-2 text-[9px] font-black uppercase tracking-widest bg-white border-slate-200 text-indigo-600">Examen Blanc</Badge>
@@ -468,8 +515,8 @@ export default function TranscriptPage() {
                     <p className="font-bold text-slate-700">{internshipPct !== null ? `${internshipPct}%` : "–"}</p>
                   </div>
                   <div className={cn(
-                      "p-2 rounded-xl text-center shadow-lg",
-                      passed ? "bg-emerald-500 shadow-emerald-50" : "bg-blue-600 shadow-blue-50"
+                       "p-2 rounded-xl text-center shadow-lg",
+                       passed ? "bg-emerald-500 shadow-emerald-50" : "bg-blue-600 shadow-blue-50"
                   )}>
                     <p className="text-[8px] text-white/70 font-black uppercase tracking-tighter">Total</p>
                     <p className="font-black text-white">{finalPct}%</p>
@@ -532,7 +579,7 @@ export default function TranscriptPage() {
             Attestations obtenues ({data.attestations.length})
           </h3>
           <div className="space-y-3">
-            {data.attestations.map((att: any, idx: number) => (
+            {data.attestations.map((att: Attestation, idx: number) => (
               <div
                 key={idx}
                 className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors"
@@ -565,7 +612,7 @@ export default function TranscriptPage() {
             birthDate: data.user.birthDate,
             birthPlace: data.user.birthPlace,
             email: data.user.email,
-            examResults: data.examResults.map((e: any) => ({
+            examResults: data.examResults.map((e: ExamResult) => ({
               ...e,
               score: Math.round((e.score / e.totalPoints) * 100),
               totalPoints: 100,
@@ -589,7 +636,7 @@ export default function TranscriptPage() {
               Soumettre une réclamation
             </DialogTitle>
             <DialogDescription className="text-slate-500 font-medium">
-              Expliquez pourquoi vous contestez votre résultat. L'administration examinera votre demande.
+              Expliquez pourquoi vous contestez votre résultat. L&apos;administration examinera votre demande.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">

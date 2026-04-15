@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { AttestationType, AttestationStatus } from "@prisma/client";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
@@ -17,6 +16,21 @@ interface AttestationStats {
   validated: number;
   pending: number;
   rejected: number;
+}
+
+interface AttestationWithFormation {
+  id: string;
+  formationId: string | null;
+  status: string;
+  code: string;
+  isLocked?: boolean;
+}
+
+interface SessionWithExam {
+  exam: {
+    formationId: string | null;
+    showResults: boolean;
+  };
 }
 
 export async function GET(request: Request) {
@@ -81,7 +95,7 @@ export async function GET(request: Request) {
         userId: userId,
         exam: {
           formationId: {
-            in: attestations.map((a: any) => a.formationId).filter(Boolean),
+            in: attestations.map((a: { formationId: string | null }) => a.formationId).filter((id: string | null): id is string => !!id),
           },
           type: "OFFICIAL",
         },
@@ -98,10 +112,10 @@ export async function GET(request: Request) {
     });
 
     // Mapper les attestations avec l'état de verrouillage calculé en mémoire
-    const enhancedAttestations = attestations.map((att: any) => {
+    const enhancedAttestations = (attestations as unknown as AttestationWithFormation[]).map((att) => {
       // Trouver la session la plus récente pour cette formation
-      const session = sessions.find(
-        (s: any) => s.exam.formationId === att.formationId,
+      const session = (sessions as unknown as SessionWithExam[]).find(
+        (s) => s.exam.formationId === att.formationId,
       );
 
       // Si showResults est false, l'attestation est verrouillée
@@ -120,13 +134,13 @@ export async function GET(request: Request) {
     const stats: AttestationStats = {
       total: attestations.length,
       validated: enhancedAttestations.filter(
-        (a: any) => a.status === "VALIDATED" && !a.isLocked,
+        (a) => a.status === "VALIDATED" && !a.isLocked,
       ).length,
       pending: enhancedAttestations.filter(
-        (a: any) =>
+        (a) =>
           a.status === "PENDING" || (a.status === "VALIDATED" && a.isLocked),
       ).length,
-      rejected: enhancedAttestations.filter((a: any) => a.status === "REJECTED")
+      rejected: enhancedAttestations.filter((a) => a.status === "REJECTED")
         .length,
     };
 

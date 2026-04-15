@@ -91,7 +91,10 @@ export async function GET(
 
     // Sécurité supplémentaire: Masquer le code officiel si l'attestation n'est pas encore validée (hors admin)
     if (!adminUser && attestation.status !== 'VALIDATED' && attestation.status !== 'CLAIMED') {
-       (attestation as any).code = "••••-••••-••••";
+       return NextResponse.json({
+         ...attestation,
+         code: "••••-••••-••••"
+       });
     }
 
     return NextResponse.json(attestation);
@@ -135,15 +138,15 @@ export async function PATCH(
       formationId = formationRecord.id;
     }
 
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
     if (formationId) {
       updateData.formationId = formationId;
       delete updateData.formation;
     }
 
-    if (updateData.birthDate) updateData.birthDate = new Date(updateData.birthDate);
-    if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
-    if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
+    if (updateData.birthDate) updateData.birthDate = new Date(updateData.birthDate as string);
+    if (updateData.startDate) updateData.startDate = new Date(updateData.startDate as string);
+    if (updateData.endDate) updateData.endDate = new Date(updateData.endDate as string);
 
     const oldAttestation = await prisma.attestation.findUnique({ 
       where: { id },
@@ -152,7 +155,8 @@ export async function PATCH(
     
     const attestation = await prisma.attestation.update({
       where: { id },
-      data: updateData,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: updateData as any,
     });
 
     // Notifications
@@ -233,6 +237,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Attestation supprimée' });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ message: "Erreur lors de la suppression" }, { status: 500 });
   }
 }
