@@ -3,39 +3,138 @@ import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { emailService } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { Prisma, ExamSession } from "@prisma/client";
 
-export async function POST(request: Request) {
+interface ExamSessionCandidate extends Pick<ExamSession, "id"> {
+  candidate: {
+    id: string;
+    name: string | undefined;
+    email: string | undefined;
+  };
+  exam: {
+    title: string;
+    name: string;
+  };
+}
+
+const BODY_PROPS = {
+  examId: "examId",
+  submissionId: "submissionId",
+  submissionIds: "submissionIds",
+  sendEmail: "sendEmail",
+  sendInApp: "sendInApp",
+  testEmail: "testEmail",
+} as const;
+
+const sendEmailDefault = true;
+const sendInAppDefault = true;
+const passingScore = 65;
+const noSessionsMessage = "Aucune copie corrigée trouvée pour la notification.";
+const errorMessage = "Erreur lors de l'envoi des notifications.";
+const unauthorizedMessage = "Non autorisé - Admin requis";
+const defaultCandidateName = "Candidat";
+const transcriptLink = "/transcript";
+const resultSuccessTitle = "🏆 Examen Réussi !";
+const resultTitle = "📝 Résultats d'Examen";
+const successMessageTemplate =
+  "Félicitations ! Vous avez réussi l'examen EXAM_TITLE. Téléchargez votre relevé dans la section dédiée.";
+const failureMessageTemplate =
+  "Votre correction pour l'examen EXAM_TITLE est disponible. Consultez votre relevé de notes.";
+const successSummaryTemplate =
+  "Notifications envoyées à TOTAL candidats (SUCCESS admis, FAILURE non admis).";
+const errorTemplate = "CANDIDATE: ERROR_MSG";
+
+const createWhereFilter = (
+  submissionId?: string,
+  submissionIds?: string[],
+  examId?: string,
+) => {
+  const baseFilter: Prisma.ExamSessionWhereInput = {
+    status: "GRADED",
+    exam: {
+      type: "OFFICIAL",
+    },
+  };
+
+  if (submissionId) {
+    delete (baseFilter as Record<string, unknown>).exam;
+    baseFilter.id = submissionId;
+  } else if (submissionIds && submissionIds.length > 0) {
+    delete (baseFilter as Record<string, unknown>).exam;
+    baseFilter.id = { in: submissionIds };
+  } else if (examId && examId !== "all") {
+    baseFilter.examId = examId;
+  }
+
+  return baseFilter;
+};
+
+const extractErrorMessage = (err: unknown): string => {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+};
+
+const buildNotificationTitle = (isSuccess: boolean): string => {
+  return isSuccess ? resultSuccessTitle : resultTitle;
+};
+
+const buildNotificationMessage = (
+  isSuccess: boolean,
+  examTitle: string,
+): string => {
+  const message = isSuccess ? successMessageTemplate : failureMessageTemplate;
+  return message.replace("EXAM_TITLE", examTitle);
+};
+
+const formatSummaryMessage = (
+  total: number,
+  success: number,
+  failure: number,
+): string => {
+  return successSummaryTemplate
+    .replace("TOTAL", String(total))
+    .replace("SUCCESS", String(success))
+    .replace("FAILURE", String(failure));
+};
+
+const formatErrorEntry = (candidateName: string, errorMsg: string): string => {
+  return errorTemplate
+    .replace("CANDIDATE", candidateName)
+    .replace("ERROR_MSG", errorMsg);
+};
+
+const determinePassStatus = (finalScore?: number, score?: number): boolean => {
+  const scoreValue = finalScore ?? score ?? 0;
+  return scoreValue >= passingScore;
+};
+
+const getExamTitle = (exam: { title: string; name: string }): string => {
+  return exam.title || exam.name;
+};
+
+const isPassing = determinePassStatus;
+
+export async function POST(req: Request): Promise<NextResponse> {
   try {
-    const adminUser = await getAdminUser(request);
-    if (!adminUser) {
-      return NextResponse.json(
-        { error: "Non autorisé - Admin requis" },
-        { status: 401 }
-      );
+    const authResult = await getAdminUser(req);
+    if (!authResult) {
+      return NextResponse.json({ error: unauthorizedMessage }, { status: 401 });
     }
 
-    const { examId, submissionId, submissionIds, sendEmail = true, sendInApp = true, testEmail } = await request.json();
+    const jsonData = await req.json();
+    const examId = jsonData[BODY_PROPS.examId];
+    const submissionId = jsonData[BODY_PROPS.submissionId];
+    const submissionIds = jsonData[BODY_PROPS.submissionIds];
+    const sendEmail = jsonData[BODY_PROPS.sendEmail] ?? sendEmailDefault;
+    const sendInApp = jsonData[BODY_PROPS.sendInApp] ?? sendInAppDefault;
+    const testEmail = jsonData[BODY_PROPS.testEmail];
 
-    // 1. Trouver toutes les sessions corrigées (GRADED) d'examen OFFICIEL
-    const where: any = {
-      status: "GRADED",
-      exam: {
-        type: "OFFICIAL"
-      }
-    };
-
-    if (submissionId) {
-      delete where.exam; 
-      where.id = submissionId;
-    } else if (submissionIds && Array.isArray(submissionIds) && submissionIds.length > 0) {
-      delete where.exam;
-      where.id = { in: submissionIds };
-    } else if (examId && examId !== "all") {
-      where.examId = examId;
-    }
+    const whereFilter = createWhereFilter(submissionId, submissionIds, examId);
 
     const sessions = await prisma.examSession.findMany({
-      where,
+      where: whereFilter,
       include: {
         candidate: {
           select: {
@@ -53,58 +152,59 @@ export async function POST(request: Request) {
       },
     });
 
-    if (sessions.length === 0) {
-      return NextResponse.json(
-        { message: "Aucune copie corrigée trouvée pour la notification." },
-        { status: 404 }
-      );
+    if (!sessions.length) {
+      return NextResponse.json({ message: noSessionsMessage }, { status: 404 });
     }
 
     let successCount = 0;
     let failureCount = 0;
-    const errors: string[] = [];
+    const errors: Array<string> = [];
 
-    // 2. Envoyer les notifications
-    // On utilise Promise.allSettled pour ne pas bloquer si un email échoue
-    const notificationPromises = sessions.map(async (session: any) => {
-      const isSuccess = (session.finalScore || session.score || 0) >= 65;
-      const candidateName = session.candidate.name || "Candidat";
-      const examTitle = session.exam.title || session.exam.name;
+    const processSession = async (session: ExamSessionCandidate) => {
+      const finalScore = (session as unknown as { finalScore?: number })
+        .finalScore;
+      const score = (session as unknown as { score?: number }).score;
+      const passStatus = isPassing(finalScore, score);
+
+      const candidateName = session.candidate.name ?? defaultCandidateName;
+      const examTitle = getExamTitle(session.exam);
 
       try {
-        // notification In-App
         if (sendInApp) {
           await createNotification({
             userId: session.candidate.id,
             type: "EXAM_RESULT_PUBLISHED",
-            title: isSuccess ? "🏆 Examen Réussi !" : "📝 Résultats d'Examen",
-            message: isSuccess 
-              ? `Félicitations ! Vous avez réussi l'examen ${examTitle}. Téléchargez votre relevé dans la section dédiée.`
-              : `Votre correction pour l'examen ${examTitle} est disponible. Consultez votre relevé de notes.`,
-            link: "/transcript",
+            title: buildNotificationTitle(passStatus),
+            message: buildNotificationMessage(passStatus, examTitle),
+            link: transcriptLink,
           });
         }
 
-        // Email
-        if (sendEmail && (testEmail || session.candidate.email)) {
+        const emailAddress = testEmail ?? session.candidate.email;
+        if (sendEmail && emailAddress) {
+          const actualEmail = emailAddress as string;
           await emailService.sendOfficialTranscriptNotification(
-            testEmail || session.candidate.email,
+            actualEmail,
             candidateName,
             examTitle,
-            session.finalScore || session.score || 0,
-            isSuccess
+            finalScore ?? score ?? 0,
+            passStatus,
           );
         }
 
-        if (isSuccess) successCount++;
-        else failureCount++;
-      } catch (err: any) {
+        if (passStatus) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      } catch (err) {
         console.error(`Error notifying user ${session.candidate.id}:`, err);
-        errors.push(`${candidateName}: ${err.message}`);
+        const errorMsg = extractErrorMessage(err);
+        errors.push(formatErrorEntry(candidateName, errorMsg));
       }
-    });
+    };
 
-    await Promise.all(notificationPromises);
+    await Promise.all(sessions.map(processSession));
 
     return NextResponse.json({
       success: true,
@@ -114,13 +214,14 @@ export async function POST(request: Request) {
         failure: failureCount,
         errors: errors.length > 0 ? errors : null,
       },
-      message: `Notifications envoyées à ${sessions.length} candidats (${successCount} admis, ${failureCount} non admis).`,
+      message: formatSummaryMessage(
+        sessions.length,
+        successCount,
+        failureCount,
+      ),
     });
-  } catch (error: any) {
-    console.error("Bulk Result Notification Error:", error);
-    return NextResponse.json(
-      { error: "Erreur lors de l'envoi des notifications." },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Bulk Result Notification Error:", err);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
