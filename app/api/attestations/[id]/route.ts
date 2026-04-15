@@ -89,6 +89,11 @@ export async function GET(
       }
     }
 
+    // Sécurité supplémentaire: Masquer le code officiel si l'attestation n'est pas encore validée (hors admin)
+    if (!adminUser && attestation.status !== 'VALIDATED' && attestation.status !== 'CLAIMED') {
+       (attestation as any).code = "••••-••••-••••";
+    }
+
     return NextResponse.json(attestation);
   } catch (error) {
     console.error("Erreur lors de la récupération de l'attestation:", error);

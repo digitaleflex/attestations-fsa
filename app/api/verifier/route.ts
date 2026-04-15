@@ -35,14 +35,12 @@ export async function GET(request: Request) {
     // Sanitization
     const validCode = sanitizeInput(parse.data.trim())
 
-    // ✅ RECHERCHE HYBRIDE: Correspondance exacte ou Suffixe (derniers caractères)
-    // On privilégie l'exactitude
-    let attestation = await prisma.attestation.findFirst({
+    // ✅ RECHERCHE SÉCURISÉE : Correspondance exacte uniquement
+    // On ne permet la vérification que pour les attestations VALIDÉES ou RÉCUPÉRÉES
+    const attestation = await prisma.attestation.findFirst({
       where: {
-        OR: [
-          { code: { equals: validCode, mode: 'insensitive' } }, // Correspondance exacte (priorité)
-          { code: { endsWith: validCode, mode: 'insensitive' } } // Suffixe (ex: les 6 derniers caractères)
-        ]
+        code: { equals: validCode, mode: 'insensitive' },
+        status: { in: ['VALIDATED', 'CLAIMED'] }
       },
       select: {
         id: true,

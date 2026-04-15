@@ -51,18 +51,21 @@ export async function POST(req: Request) {
 
     if (sanitizedCode.length <= 5) {
       // Pour les codes courts (5 caractères), recherche par suffixe
+      // SÉCURITÉ : Uniquement les attestations déjà VALIDÉES par l'admin
       attestation = await prisma.attestation.findFirst({
         where: {
           code: { endsWith: sanitizedCode },
-          userId: null, // Uniquement si pas déjà liée
+          userId: null, 
+          status: "VALIDATED",
         },
       });
     } else {
       // Pour les codes longs, recherche exacte
-      attestation = await prisma.attestation.findUnique({
+      attestation = await prisma.attestation.findFirst({
         where: {
           code: sanitizedCode,
           userId: null,
+          status: "VALIDATED",
         },
       });
     }

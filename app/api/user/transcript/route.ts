@@ -125,7 +125,8 @@ export async function GET(request: Request) {
     const attestationData: AttestationData[] = attestations.map((att: any) => ({
       formationName: att.formation?.name || "Formation",
       type: att.type,
-      code: att.code,
+      // Sécurité : Ne pas exposer le code si l'attestation n'est pas validée
+      code: (att.status === "VALIDATED" || att.status === "CLAIMED") ? att.code : "EN ATTENTE",
       issuedAt: att.issuedAt,
       score: att.certificationScore || att.stageScore || undefined,
     }));

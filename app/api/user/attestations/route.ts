@@ -106,10 +106,13 @@ export async function GET(request: Request) {
 
       // Si showResults est false, l'attestation est verrouillée
       const isLocked = session ? !session.exam.showResults : false;
+      const isPublic = (att.status === "VALIDATED" || att.status === "CLAIMED") && !isLocked;
 
       return {
         ...att,
         isLocked,
+        // Sécurité : Masquer le code officiel si l'attestation n'est pas encore prête/validée
+        code: isPublic ? att.code : "••••-••••-••••",
       };
     });
 
