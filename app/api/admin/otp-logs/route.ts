@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const logs = getOTPLogs();
+    const logs = getOTPLogs().map(log => ({
+      ...log,
+      otp: log.otp.substring(0, 2) + "****" // Masquer pour sécurité
+    }));
     return NextResponse.json({ logs });
   } catch (error) {
     console.error("[OTP-LOGS] GET error:", error);

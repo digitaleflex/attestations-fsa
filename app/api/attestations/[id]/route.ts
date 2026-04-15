@@ -183,7 +183,7 @@ export async function PATCH(
     // Audit Log
     if (adminUser) {
       await createAuditLog({
-        userId: oldAttestation?.userId || "",
+        userId: adminUser.id,
         action: data.status === 'VALIDATED' ? 'ATTESTATION_VALIDATED' : 'ATTESTATION_UPDATED',
         resource: 'ATTESTATION',
         resourceId: id,
@@ -221,7 +221,7 @@ export async function DELETE(
 
     if (adminUser && old) {
       await createAuditLog({
-        userId: old.userId || "",
+        userId: adminUser.id,
         action: 'ATTESTATION_DELETED',
         resource: 'ATTESTATION',
         resourceId: id,

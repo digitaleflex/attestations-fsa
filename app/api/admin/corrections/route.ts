@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
@@ -60,47 +61,50 @@ export async function PATCH(request: Request) {
 
     // 3. Si approuvé, mettre à jour le profil ET l'attestation
     if (status === "APPROVED") {
-      const updateData: Record<string, any> = {};
-      const attUpdateData: Record<string, any> = {};
+      // 🛡️ TRANSACTION POUR GARANTIR L'INTÉGRITÉ
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const updateData: Partial<{ name: string; birthDate: Date; birthPlace: string }> = {};
+        const attUpdateData: Partial<{ fullName: string; birthDate: Date; birthPlace: string }> = {};
 
-      if (correction.field === "fullName") {
+        if (correction.field === "fullName") {
           updateData.name = correction.newValue;
           attUpdateData.fullName = correction.newValue;
-      } else if (correction.field === "birthDate") {
+        } else if (correction.field === "birthDate") {
           updateData.birthDate = new Date(correction.newValue);
           attUpdateData.birthDate = new Date(correction.newValue);
-      } else if (correction.field === "birthPlace") {
+        } else if (correction.field === "birthPlace") {
           updateData.birthPlace = correction.newValue;
           attUpdateData.birthPlace = correction.newValue;
-      }
+        }
 
-      // Mise à jour de l'utilisateur
-      await prisma.user.update({
-        where: { id: correction.userId },
-        data: updateData
-      });
+        // Mise à jour de l'utilisateur
+        await tx.user.update({
+          where: { id: correction.userId },
+          data: updateData
+        });
 
-      // Mise à jour de l'attestation cible
-      if (correction.attestationId) {
-          await prisma.attestation.update({
-              where: { id: correction.attestationId },
-              data: attUpdateData
+        // Mise à jour de l'attestation cible
+        if (correction.attestationId) {
+          await tx.attestation.update({
+            where: { id: correction.attestationId },
+            data: attUpdateData
           });
-      }
+        }
 
-      // 🛡️ Audit Log
-      await createAuditLog({
+        // 🛡️ Audit Log inside transaction
+        await createAuditLog({
           userId: adminUser.id,
           action: 'CORRECTION_APPROVED',
           resource: 'CORRECTION_REQUEST',
           resourceId: id,
           newValue: { 
-              field: correction.field, 
-              oldValue: correction.oldValue,
-              newValue: correction.newValue,
-              userId: correction.userId 
+            field: correction.field, 
+            oldValue: correction.oldValue,
+            newValue: correction.newValue,
+            userId: correction.userId 
           },
           ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+        }, tx as Prisma.TransactionClient);
       });
     }
 

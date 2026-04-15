@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { isAdminAuthenticated, getAdminUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 
 const UpdateUserSchema = z.object({
@@ -165,8 +165,8 @@ export async function PATCH(
 
     // Enregistrer le log d'audit
     await createAuditLog({
-      userId: id,
-      action: (data.status ? (data.status === 'ACTIVE' ? 'ACCOUNT_UNBLOCKED' : 'ACCOUNT_BLOCKED') : 'ADMIN_UPDATE_PROFILE') as any,
+      userId: adminUser.id,
+      action: (data.status ? (data.status === 'ACTIVE' ? 'ACCOUNT_UNBLOCKED' : 'ACCOUNT_BLOCKED') : 'ADMIN_UPDATE_PROFILE') as "ACCOUNT_UNBLOCKED" | "ACCOUNT_BLOCKED" | "ADMIN_UPDATE_PROFILE",
       resource: 'USER',
       resourceId: id,
       oldValue: { status: currentUser.status, role: currentUser.role },

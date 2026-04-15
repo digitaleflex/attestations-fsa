@@ -24,20 +24,17 @@ export async function GET(request: Request) {
     const enabledOnly = searchParams.get("enabled") === "true";
     const search = searchParams.get("search");
 
-    const where: any = {};
-    if (enabledOnly) {
-      where.portfolioEnabled = true;
-    }
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" as const } },
-        { email: { contains: search, mode: "insensitive" as const } },
-        { portfolioSlug: { contains: search, mode: "insensitive" as const } },
-      ];
-    }
-
     const users = await prisma.user.findMany({
-      where,
+      where: {
+        portfolioEnabled: enabledOnly ? true : undefined,
+        ...(search ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { portfolioSlug: { contains: search, mode: "insensitive" } },
+          ]
+        } : {})
+      },
       select: {
         id: true,
         name: true,
@@ -103,7 +100,7 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const updateData: any = {};
+    const updateData: Partial<{ portfolioSlug: string; portfolioEnabled: boolean }> = {};
     if (slug !== undefined) updateData.portfolioSlug = slug;
     if (enabled !== undefined) updateData.portfolioEnabled = enabled;
 
@@ -122,7 +119,7 @@ export async function PATCH(request: Request) {
     // 🛡️ Audit Log
     await createAuditLog({
       userId: adminUser.id,
-      action: 'USER_PORTFOLIO_UPDATED' as any,
+      action: 'USER_PORTFOLIO_UPDATED' as "USER_PORTFOLIO_UPDATED",
       resource: 'USER_PORTFOLIO',
       resourceId: userId,
       newValue: { slug: updated.portfolioSlug, enabled: updated.portfolioEnabled },

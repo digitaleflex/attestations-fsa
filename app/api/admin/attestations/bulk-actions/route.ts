@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
@@ -24,68 +25,70 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const results = [];
-
-    for (const id of ids) {
-      const attestation = await prisma.attestation.findUnique({
-        where: { id },
-        include: { formation: true }
-      });
-
-      if (!attestation) continue;
-
-      if (action === 'REVOKE') {
-        const updated = await prisma.attestation.update({
+    const results = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const processed = [];
+      for (const id of ids) {
+        const attestation = await tx.attestation.findUnique({
           where: { id },
-          data: { status: 'REJECTED' }
+          include: { formation: true }
         });
-        
-        if (attestation.userId) {
-          await createNotification({
-            userId: attestation.userId,
-            type: 'ATTESTATION_REJECTED',
-            title: 'Attestation Révoquée ❌',
-            message: `Votre attestation pour "${attestation.formation?.name}" a été annulée par l'administration.`,
-            link: '/results'
+
+        if (!attestation) continue;
+
+        if (action === 'REVOKE') {
+          const updated = await tx.attestation.update({
+            where: { id },
+            data: { status: 'REJECTED' }
           });
-        }
-        
-        results.push(updated);
-      } else if (action === 'RETROGRADE') {
-        // Supprimer sessions d'examen
-        if (attestation.userId && attestation.formationId) {
-          await prisma.examSession.deleteMany({
-            where: {
+          
+          if (attestation.userId) {
+            await createNotification({
               userId: attestation.userId,
-              exam: { formationId: attestation.formationId }
+              type: 'ATTESTATION_REJECTED',
+              title: 'Attestation Révoquée ❌',
+              message: `Votre attestation pour "${attestation.formation?.name}" a été annulée par l'administration.`,
+              link: '/results'
+            });
+          }
+          
+          processed.push(updated);
+        } else if (action === 'RETROGRADE') {
+          // Supprimer sessions d'examen
+          if (attestation.userId && attestation.formationId) {
+            await tx.examSession.deleteMany({
+              where: {
+                userId: attestation.userId,
+                exam: { formationId: attestation.formationId }
+              }
+            });
+          }
+
+          const updated = await tx.attestation.update({
+            where: { id },
+            data: { 
+              status: 'PENDING',
+              certificationScore: 0,
+              stageScore: 0,
+              certificationHours: 0,
+              stageHours: 0
             }
           });
-        }
 
-        const updated = await prisma.attestation.update({
-          where: { id },
-          data: { 
-            status: 'PENDING',
-            certificationScore: 0,
-            stageScore: 0,
-            certificationHours: 0,
-            stageHours: 0
+          if (attestation.userId) {
+            await createNotification({
+              userId: attestation.userId,
+              type: 'GENERAL',
+              title: 'Examen à repasser 🔄',
+              message: `Votre évaluation pour "${attestation.formation?.name}" a été réinitialisée.`,
+              link: '/exams'
+            });
           }
-        });
-
-        if (attestation.userId) {
-          await createNotification({
-            userId: attestation.userId,
-            type: 'GENERAL',
-            title: 'Examen à repasser 🔄',
-            message: `Votre évaluation pour "${attestation.formation?.name}" a été réinitialisée.`,
-            link: '/exams'
-          });
+          
+          processed.push(updated);
         }
-        
-        results.push(updated);
       }
-    }
+      return processed;
+    });
 
     // 🛡️ Audit Log
     await createAuditLog({
@@ -103,8 +106,8 @@ export async function POST(request: NextRequest) {
       message: `${results.length} éléments traités.`
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Bulk Action Error:", error);
-    return NextResponse.json({ error: error.message || "Erreur lors de l'action groupée" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur lors de l'action groupée" }, { status: 500 });
   }
 }

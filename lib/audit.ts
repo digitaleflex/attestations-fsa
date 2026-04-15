@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export type AuditAction =
   | "GRADE_EXAM"
@@ -46,12 +47,13 @@ export async function createAuditLog({
   action: AuditAction;
   resource: string;
   resourceId: string;
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
   ipAddress?: string | null;
-}) {
+}, tx?: Prisma.TransactionClient) {
   try {
-    return await prisma.auditLog.create({
+    const client = tx || prisma;
+    return await client.auditLog.create({
       data: {
         userId,
         action,
