@@ -21,7 +21,7 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
 
     // Role check - using Better Auth structure
     const user = sessionData.user as { role?: string };
-    if (user.role !== 'ADMIN') {
+    if (user.role?.toLowerCase() !== 'admin') {
       router.push('/unauthorized');
       return;
     }

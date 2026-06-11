@@ -26,7 +26,6 @@ const BODY_PROPS = {
   submissionIds: "submissionIds",
   sendEmail: "sendEmail",
   sendInApp: "sendInApp",
-  testEmail: "testEmail",
 } as const;
 
 const sendEmailDefault = true;
@@ -132,7 +131,8 @@ export async function POST(req: Request): Promise<NextResponse> {
     const submissionIds = jsonData[BODY_PROPS.submissionIds];
     const sendEmail = jsonData[BODY_PROPS.sendEmail] ?? sendEmailDefault;
     const sendInApp = jsonData[BODY_PROPS.sendInApp] ?? sendInAppDefault;
-    const testEmail = jsonData[BODY_PROPS.testEmail];
+    // isTest: redirect email to the authenticated admin instead of the candidate
+    const testEmail = jsonData.isTest ? authResult.email : undefined;
 
     const whereFilter = createWhereFilter(submissionId, submissionIds, examId);
 

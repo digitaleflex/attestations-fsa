@@ -2,9 +2,9 @@
 // Configuration unifiée de l'authentification avec Better Auth + Fallback Legacy
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { rawPrisma, prisma } from "@/lib/prisma";
+import { rawPrisma } from "@/lib/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 
 // ✅ FIX: Define typed session user to eliminate `as any` casts
 export type SessionUser = {
@@ -52,14 +52,15 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://192.168.1.*", // Variant IP locale commune
-    "http://192.168.0.*", // Autre variant IP locale commune
+    "http://192.168.1.*",
+    "http://192.168.0.*",
     "https://*.ngrok-free.app",
     "https://*.loca.lt",
-    "https://fsa.eurinhash.com",
-    "https://verifier.fermestandre.com",
-    "https://attestations-fsa.vercel.app",
-    "https://*.vercel.app"
+    "https://*.vercel.app",
+    ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
+    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS
+      ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((s) => s.trim())
+      : []),
   ],
   user: {
     // No additionalFields - Better Auth sign-up endpoint doesn't handle them properly
@@ -102,7 +103,10 @@ export const auth = betterAuth({
   plugins: [
     nextCookies(),
     admin({
-      adminUserIds: ["eflexcloud@gmail.com", "admin@fermestandre.com"],
+      // NOTE: Better Auth expects user UUIDs here, NOT emails.
+      // Run: SELECT id FROM "User" WHERE email IN ('eflexcloud@gmail.com','admin@fermestandre.com');
+      // Then replace the strings below with the actual UUIDs.
+      adminUserIds: [],
     }),
     twoFactor({
       issuer: "Ferme Agro-Piscicole Cité St André",
@@ -170,8 +174,8 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24 * 1, // 1 jour
   },
   pages: {
-    signIn: "/admin/login",
-    error: "/admin/login",
+    signIn: "/auth",
+    error: "/auth",
   },
 });
 
@@ -179,19 +183,6 @@ export const auth = betterAuth({
  * Helper de compatibilité (async)
  */
 export const getAuth = async () => auth;
-
-/**
- * Récupère le cookie de session legacy
- */
-async function getLegacySessionId(request?: Request): Promise<string | null> {
-  if (request) {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const match = cookieHeader.match(/admin_session=([^;]+)/);
-    return match ? match[1] : null;
-  }
-  const cookieStore = await cookies();
-  return cookieStore.get("admin_session")?.value || null;
-}
 
 /**
  * ✅ FIX: Helper to safely extract role from session user with proper typing
@@ -216,33 +207,15 @@ export async function getAdminUser(request: Request): Promise<SessionUser | null
     const session = await auth.api.getSession({ headers: request.headers });
 
     if (session?.user) {
-      const role = getUserRole(session.user)?.toUpperCase() || "ADMIN";
+      const role = getUserRole(session.user);
+      if (role?.toLowerCase() !== "admin") return null;
       return {
         id: session.user.id as string,
         email: session.user.email as string,
         name: (session.user.name as string | null | undefined) || null,
-        role,
+        role: "admin",
         emailVerified: !!session.user.emailVerified,
       };
-    }
-
-    // 2. Fallback avec session legacy (Table User uniquement)
-    const legacyId = await getLegacySessionId(request);
-    if (legacyId) {
-      const user = await prisma.user.findUnique({
-        where: { id: legacyId },
-        select: { id: true, email: true, name: true, role: true },
-      });
-      
-      if (user?.role?.toUpperCase() === "ADMIN") {
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          emailVerified: false,
-        };
-      }
     }
 
     return null;
@@ -280,7 +253,7 @@ export async function getCurrentUser(
       : await auth.api.getSession({ headers: await headers() });
 
     if (session?.user) {
-      const role = getUserRole(session.user)?.toUpperCase() || "USER";
+      const role = getUserRole(session.user) ?? "user";
       return {
         id: session.user.id as string,
         email: session.user.email as string,
@@ -288,17 +261,6 @@ export async function getCurrentUser(
         role,
         emailVerified: !!session.user.emailVerified,
       } as SessionUser;
-    }
-
-    // 2. Fallback avec session legacy
-    const legacyId = await getLegacySessionId(request);
-    if (legacyId) {
-      const user = await prisma.user.findUnique({
-        where: { id: legacyId },
-        select: { id: true, email: true, name: true, role: true },
-      });
-
-      return user || null;
     }
 
     return null;

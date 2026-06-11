@@ -21,7 +21,7 @@ const getResend = () => {
 };
 
 const fromEmail = "Ferme St André <contact@net.eurinhash.com>";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://fsa.eurinhash.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 export const emailService = {
   /**
@@ -37,7 +37,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #10b981; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -93,7 +93,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid ${statusColor}; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -170,7 +170,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #6366f1; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -217,7 +217,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Félicitations !</h2>
@@ -286,7 +286,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #f59e0b; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -353,7 +353,7 @@ export const emailService = {
                     <tr>
                       <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
                         <div style="margin-bottom: 16px;">
-                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                          <img src="${APP_URL}/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
                         </div>
                         <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
                           🔐 Réinitialisation du mot de passe
@@ -518,7 +518,7 @@ export const emailService = {
                     <tr>
                       <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
                         <div style="margin-bottom: 16px;">
-                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                          <img src="${APP_URL}/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
                         </div>
                         <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
                           ✅ Vérification d'email
@@ -634,7 +634,7 @@ export const emailService = {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-top: 4px solid #ef4444; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
+              <img src="${APP_URL}/logo-fsa.png" alt="Ferme St André" style="width: 150px;" />
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
@@ -687,7 +687,7 @@ export const emailService = {
                     <tr>
                       <td style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%); padding: 40px 32px; text-align: center;">
                         <div style="margin-bottom: 16px;">
-                          <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                          <img src="${APP_URL}/logo-fsa.png" alt="FSA" style="width: 100px; height: 100px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
                         </div>
                         <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
                           🔐 Vérification 2FA Requise
@@ -834,7 +834,7 @@ export const emailService = {
                     <!-- Header -->
                     <tr>
                       <td style="background: linear-gradient(135deg, ${isSuccess ? '#059669' : '#1e293b'} 0%, ${isSuccess ? '#10b981' : '#334155'} 100%); padding: 40px 32px; text-align: center;">
-                        <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA Logo" style="width: 80px; height: 80px; margin-bottom: 16px; border-radius: 12px; background: rgba(255,255,255,0.2); padding: 8px;" />
+                        <img src="${APP_URL}/logo-fsa.png" alt="FSA Logo" style="width: 80px; height: 80px; margin-bottom: 16px; border-radius: 12px; background: rgba(255,255,255,0.2); padding: 8px;" />
                         <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;">
                           Ferme Agro-Piscicole Cité St André
                         </h1>

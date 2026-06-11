@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     })
 
     // Générer le lien de vérification
-    const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/user/verify-email?token=${token}`
+    const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL}/api/user/verify-email?token=${token}`
 
     // Envoyer l'email via le service centralisé
     await emailService.sendVerificationEmail(

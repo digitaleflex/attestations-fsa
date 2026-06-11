@@ -41,7 +41,7 @@ async function main() {
               <tr>
                 <td style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 40px 32px; text-align: center;">
                   <div style="margin-bottom: 16px;">
-                    <img src="https://fsa.eurinhash.com/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
+                    <img src="${process.env.NEXT_PUBLIC_APP_URL}/logo-fsa.png" alt="FSA" style="width: 80px; height: 80px; border-radius: 16px; background: rgba(255,255,255,0.15); padding: 8px;" />
                   </div>
                   <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff;">🔐 Réinitialisation du mot de passe</h1>
                   <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Ferme Agro-Piscicole Cité St André</p>
@@ -87,7 +87,7 @@ async function main() {
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0 0 0;">
                     <tr>
                       <td style="text-align: center;">
-                        <a href="https://verifier.fermestandre.com/reset-password" target="_blank" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; border-radius: 12px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Accéder à la page de réinitialisation →</a>
+                        <a href="${process.env.NEXT_PUBLIC_APP_URL}/reset-password" target="_blank" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; border-radius: 12px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Accéder à la page de réinitialisation →</a>
                       </td>
                     </tr>
                   </table>

@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const payload = MonitoringPayloadSchema.parse(body);
     
     // Ensure user is reporting for themselves (unless admin)
-    if (!user || (user.id !== payload.userId && user.role !== 'ADMIN')) {
+    if (!user || (user.id !== payload.userId && user.role?.toLowerCase() !== 'admin')) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser(request);
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || user.role?.toLowerCase() !== 'admin') {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
