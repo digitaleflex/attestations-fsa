@@ -81,6 +81,22 @@ export default function AdminFormationsPage() {
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Navigation Pédagogique */}
+        <div className="flex gap-6 border-b border-slate-200">
+          <Link href="/admin/formations" className="pb-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" /> Formations
+          </Link>
+          <Link href="/admin/exams" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+            Examens
+          </Link>
+          <Link href="/admin/resources" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+            Ressources
+          </Link>
+          <Link href="/admin/tasks" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+            Missions Portfolios
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     });
 
     // 2. Répartition par type (Global)
-    const typeCounts = (await prisma.attestation.groupBy({
+    const typeCounts = (await (prisma.attestation as any).groupBy({
       by: ["type"],
       _count: { id: true },
     })) as Array<{ type: string; _count: { id: number } }>;

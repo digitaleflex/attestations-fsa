@@ -21,7 +21,7 @@ export default function PusherAdminListener() {
         description: `${data.candidateName} vient de terminer son examen.`,
         action: {
           label: "Corriger",
-          onClick: () => router.push(`/admin/submissions/${data.examId}`)
+          onClick: () => router.push(`/admin/tasks`)
         },
         duration: 8000,
         icon: React.createElement(ClipboardCheck, { className: "w-5 h-5 text-indigo-500" })
@@ -33,7 +33,7 @@ export default function PusherAdminListener() {
           description: `${data.candidateName} a ajouté une preuve : ${data.label}`,
           action: {
             label: "Voir",
-            onClick: () => router.push(`/admin/portfolios`)
+            onClick: () => router.push(`/admin/tasks`)
           },
           duration: 8000,
           icon: React.createElement(FileText, { className: "w-5 h-5 text-emerald-500" })

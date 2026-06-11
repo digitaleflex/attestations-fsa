@@ -111,6 +111,22 @@ export const rateLimits = {
     prefix: "ratelimit:contact",
   }) : null,
 
+  // FSA login — OTP request (3 demandes / 10min par IP)
+  fsaOtpRequest: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(3, "10 m"),
+    analytics: true,
+    prefix: "ratelimit:fsa-otp-request",
+  }) : null,
+
+  // FSA login — OTP verify (5 essais / 15min par IP+code)
+  fsaOtpVerify: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "15 m"),
+    analytics: true,
+    prefix: "ratelimit:fsa-otp-verify",
+  }) : null,
+
   // ==========================================
   // ADMIN RATE LIMITS - Sécurité renforcée
   // ==========================================

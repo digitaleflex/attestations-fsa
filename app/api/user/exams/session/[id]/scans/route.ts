@@ -49,6 +49,7 @@ export async function POST(
         action: "COMPOSITION_SCAN_UPLOADED",
         userId: user.id,
         severity: "LOW",
+        status: "SUCCESS",
         details: {
             sessionId,
             pageNumber,

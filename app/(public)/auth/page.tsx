@@ -310,7 +310,7 @@ function AuthContent() {
                       value={fsaCode}
                       onChange={handleFsaCodeChange}
                       required
-                      placeholder="Ex: FSA-2026-M06-00003-f0f9a ou f0f9a"
+                      placeholder="Ex: f0f9a ou code complet"
                       className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
                         fieldErrors.fsaCode ? "border-red-500 focus:ring-red-500/5" : ""
                       }`}

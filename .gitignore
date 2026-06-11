@@ -50,3 +50,8 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Database dumps (contain PII/credentials)
+db-dump-*.json
+/Backup/
+.env.reset

@@ -62,7 +62,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
     // 3. Si approuvé, mettre à jour le profil ET l'attestation
     if (status === "APPROVED") {
       // 🛡️ TRANSACTION POUR GARANTIR L'INTÉGRITÉ
-      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await (prisma as any).$transaction(async (tx: any) => {
         const updateData: { name?: string; birthDate?: Date; birthPlace?: string } = {};
         const attUpdateData: { fullName?: string; birthDate?: Date; birthPlace?: string } = {};
 
@@ -105,7 +105,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
             userId: correction.userId 
           },
           ipAddress: request.headers.get("x-forwarded-for") || "unknown"
-        }, tx as Prisma.TransactionClient);
+        }, tx);
       });
     }
 

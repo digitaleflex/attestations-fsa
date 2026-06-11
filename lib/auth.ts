@@ -105,10 +105,11 @@ export const auth = betterAuth({
   plugins: [
     nextCookies(),
     admin({
-      // NOTE: Better Auth expects user UUIDs here, NOT emails.
-      // Run: SELECT id FROM "User" WHERE email IN ('eflexcloud@gmail.com','admin@fermestandre.com');
-      // Then replace the strings below with the actual UUIDs.
-      adminUserIds: [],
+      adminUserIds: [
+        "12e53c70-d896-4859-bba4-6dd8ebb86f9f", // eflexcloud@gmail.com
+        "825e0264-68ac-4a37-a5bd-e326249d96c5", // admin@fermestandre.com
+        "d50f9baf-4872-4a2c-8f67-01c1965954b8", // admin@fsa.bj
+      ],
     }),
     twoFactor({
       issuer: "Ferme Agro-Piscicole Cité St André",

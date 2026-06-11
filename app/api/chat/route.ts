@@ -61,7 +61,7 @@ export async function GET(req: Request) {
     });
 
     if (!unreadOnly && messages.length > 0) {
-        const lastMessages = messages.filter((m: ChatMessage) =>
+        const lastMessages = messages.filter((m) =>
             (isAdmin && m.senderRole === "user") || (!isAdmin && m.senderRole === "admin")
         );
 
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
             try {
                 await chatModel.updateMany({
                     where: {
-                        id: { in: lastMessages.map((m: ChatMessage) => m.id) },
+                        id: { in: lastMessages.map((m) => m.id) },
                         isRead: false
                     },
                     data: { isRead: true }

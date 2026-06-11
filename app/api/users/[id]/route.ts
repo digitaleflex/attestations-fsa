@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
+import { hashPassword } from "better-auth/crypto";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
@@ -116,7 +117,7 @@ export async function PATCH(
     // Récupérer l'utilisateur actuel avant modification pour le log d'audit
     const currentUser = await prisma.user.findUnique({ 
       where: { id },
-      select: { status: true, role: true }
+      select: { status: true, role: true, email: true }
     });
     if (!currentUser) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
@@ -141,26 +142,47 @@ export async function PATCH(
     if (data.blockedReason !== undefined) updateData.blockedReason = data.blockedReason;
 
     // Hacher le mot de passe si fourni
+    let hashedPassword = "";
     if (data.password) {
-      updateData.password = await bcrypt.hash(data.password, 12);
+      hashedPassword = await hashPassword(data.password);
+      updateData.password = hashedPassword;
     }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        birthDate: true,
-        birthPlace: true,
-        phone: true,
-        address: true,
-        status: true,
-        resetPasswordRequired: true,
-        updatedAt: true,
-      },
+    // Caster en any pour bypasser le problème de types complexes du client étendu de Prisma
+    const user = await (prisma as any).$transaction(async (tx: any) => {
+      const updatedUser = await tx.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          birthDate: true,
+          birthPlace: true,
+          phone: true,
+          address: true,
+          status: true,
+          resetPasswordRequired: true,
+          updatedAt: true,
+        },
+      });
+
+      // Mettre à jour le compte credential si le mot de passe ou l'email a changé
+      if (hashedPassword || data.email) {
+        await tx.account.updateMany({
+          where: { 
+            userId: id,
+            providerId: 'credential'
+          },
+          data: {
+            ...(hashedPassword ? { password: hashedPassword } : {}),
+            ...(data.email ? { accountId: data.email } : {})
+          }
+        });
+      }
+
+      return updatedUser;
     });
 
     // Enregistrer le log d'audit
@@ -210,9 +232,13 @@ export async function DELETE(
 
     const { id } = await params;
 
-    await prisma.user.delete({
-      where: { id },
-    });
+    // Supprimer les dépendances manuellement si nécessaire ou laisser faire le ON DELETE CASCADE
+    // Ici on s'assure de supprimer les comptes et sessions associés
+    await prisma.$transaction([
+        prisma.account.deleteMany({ where: { userId: id } }),
+        prisma.session.deleteMany({ where: { userId: id } }),
+        prisma.user.delete({ where: { id } }),
+    ]);
 
     return NextResponse.json(
       { message: "Utilisateur supprimé avec succès" },

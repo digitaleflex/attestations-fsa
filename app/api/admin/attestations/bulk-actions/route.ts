@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const results = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const results = await (prisma as any).$transaction(async (tx: any) => {
       const processed = [];
       for (const id of ids) {
         const attestation = await tx.attestation.findUnique({

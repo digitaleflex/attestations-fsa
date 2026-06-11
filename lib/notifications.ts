@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { pusherServer } from '@/lib/pusher';
 
 type CreateNotificationInput = {
@@ -8,7 +8,7 @@ type CreateNotificationInput = {
   title: string;
   message: string;
   link?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 };
 
 /**

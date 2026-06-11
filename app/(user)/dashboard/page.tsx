@@ -13,21 +13,6 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import dynImport from "next/dynamic";
-import CertificateTemplate from "@/components/CertificateTemplate";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
 import { User, Attestation, Notification } from "@/types";
 
 interface UserStatistics {
@@ -55,12 +40,8 @@ interface UserStatistics {
   }>;
 }
 
-// Import dynamique pour éviter SSR
-const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
-
 export default function UserDashboardPage() {
   const router = useRouter();
-  const [downloading, setDownloading] = useState<string | null>(null);
   const [claimCode, setClaimCode] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
@@ -163,62 +144,6 @@ export default function UserDashboardPage() {
     } catch (err) {
       console.error("Mark as read error:", err);
     }
-  };
-
-  const handleDownload = async (att: Attestation) => {
-    if (att.status === "REJECTED") {
-      toast.error("Cette attestation a été révoquée par l'administration.");
-      return;
-    }
-    
-    const fileName = `${att.code.slice(-5)}_${att.fullName.replace(/\s+/g, '_')}.pdf`;
-
-    toast.promise(
-      (async () => {
-        const h2p = (await import("html2pdf.js")).default;
-        const element = document.getElementById(`cert-template-dash-${att.id}`);
-        if (!element) throw new Error("Template non trouvé");
-
-        const opt = {
-          margin: 0,
-          filename: fileName,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 3, useCORS: true, letterRendering: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        };
-
-        await h2p().set(opt).from(element).save();
-      })(),
-      {
-        loading: 'Génération de votre diplôme officiel...',
-        success: 'Téléchargement réussi !',
-        error: 'Erreur de génération',
-      }
-    );
-  };
-
-  const chartData = {
-    labels: ['Examens Officiels', 'Réussites', 'En cours'],
-    datasets: [{
-      label: 'Ma Progression',
-      data: [
-        statsData?.overview?.totalExams || 0,
-        statsData?.overview?.examsPassed || 0,
-        (statsData?.overview?.totalExams || 0) - (statsData?.overview?.examsPassed || 0)
-      ],
-      backgroundColor: [
-        'rgba(59, 130, 246, 0.2)',
-        'rgba(16, 185, 129, 0.7)',
-        'rgba(245, 158, 11, 0.2)'
-      ],
-      borderColor: [
-        'rgb(59, 130, 246)',
-        'rgb(16, 185, 129)',
-        'rgb(245, 158, 11)'
-      ],
-      borderWidth: 1,
-      borderRadius: 12
-    }]
   };
 
   if (userLoading) return (
@@ -468,60 +393,32 @@ export default function UserDashboardPage() {
           </div>
         </Card>
 
-        {/* Dossier Linking Section (Refined) */}
-        <Card className={`p-8 border-none shadow-premium relative overflow-hidden transition-all duration-500 ${
-            (attestationsData?.attestations?.length || 0) > 0 ? "bg-emerald-50/50" : "bg-emerald-50"
-        }`}>
-            <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-                <div className="flex-1 space-y-4">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${
-                            (attestationsData?.attestations?.length || 0) > 0 ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-600"
-                        }`}>
-                            {(attestationsData?.attestations?.length || 0) > 0 ? <CheckCircle className="w-5 h-5" /> : <LinkIcon className="w-5 h-5" />}
-                        </div>
-                        <h3 className={`text-xl font-black tracking-tight ${
-                            (attestationsData?.attestations?.length || 0) > 0 ? "text-emerald-800" : "text-emerald-900"
-                        }`}>
-                            {(attestationsData?.attestations?.length || 0) > 0 ? "Félicitations ! Votre dossier est lié." : "Récupérer mon dossier FSA"}
-                        </h3>
+        {/* Dossier Linking Banner */}
+        {(!attestationsData?.attestations?.length) && (
+            <div className="bg-emerald-50 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border border-emerald-100">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                        <LinkIcon className="w-4 h-4" />
                     </div>
-
-                    {(attestationsData?.attestations?.length || 0) > 0 ? (
-                        <div className="space-y-3">
-                            <p className="text-emerald-700/80 text-sm font-medium">
-                                Vos informations officielles ont été synchronisées avec succès. Vous pouvez maintenant télécharger vos documents ci-dessous.
-                            </p>
-                            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-100/50 w-fit px-3 py-1.5 rounded-full">
-                                <ShieldCheck className="w-4 h-4" /> COMPTE CERTIFIÉ
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <p className="text-emerald-700/80 text-sm font-medium">
-                                Saisissez les 5 derniers caractères de la séquence de votre code d&apos;attestation pour lier votre dossier.
-                            </p>
-                            <div className="flex gap-2 max-w-md">
-                                <Input
-                                    placeholder="Ex: 2ee8f"
-                                    className="bg-white border-emerald-200 h-12 rounded-xl font-mono focus-visible:ring-emerald-500 text-lg lowercase"
-                                    value={claimCode}
-                                    onChange={(e) => setClaimCode(e.target.value.toLowerCase())}
-                                    maxLength={30}
-                                />
-                                <Button onClick={handleClaimCode} className="h-12 bg-emerald-700 hover:bg-emerald-800 rounded-xl px-8 font-black shadow-lg shadow-emerald-700/20" disabled={isClaiming}>
-                                    {isClaiming ? <LoaderIcon className="w-5 h-5 animate-spin" /> : "LIER"}
-                                </Button>
-                            </div>
-                        </>
-                    )}
+                    <div>
+                        <h4 className="font-bold text-emerald-900 text-sm">Récupérer mon dossier FSA</h4>
+                        <p className="text-emerald-700 text-xs">Entrez les 5 derniers caractères de votre code.</p>
+                    </div>
                 </div>
-
-                <div className={`hidden lg:block w-32 h-32 transition-transform duration-700 ${(attestationsData?.attestations?.length || 0) > 0 ? "scale-110 rotate-12" : "opacity-20"}`}>
-                    <Award className={`w-full h-full ${(attestationsData?.attestations?.length || 0) > 0 ? "text-emerald-500" : "text-emerald-900"}`} />
+                <div className="flex gap-2 w-full md:w-auto">
+                    <Input
+                        placeholder="Ex: 2ee8f"
+                        className="bg-white border-emerald-200 h-9 rounded-lg font-mono text-sm lowercase w-[120px]"
+                        value={claimCode}
+                        onChange={(e) => setClaimCode(e.target.value.toLowerCase())}
+                        maxLength={30}
+                    />
+                    <Button onClick={handleClaimCode} className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 text-xs font-bold" disabled={isClaiming}>
+                        {isClaiming ? <LoaderIcon className="w-3 h-3 animate-spin" /> : "Lier"}
+                    </Button>
                 </div>
             </div>
-        </Card>
+        )}
 
         {/* Main Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -724,27 +621,19 @@ export default function UserDashboardPage() {
             {/* Right Side Info */}
             <div className="space-y-8">
 
-                {/* Progression Mini-Chart */}
-                <Card className="p-8 border-none shadow-premium bg-white">
-                    <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-blue-500" />
-                        Mon Avancement
+                {/* Progression Info */}
+                <Card className="p-6 border-none shadow-premium bg-white">
+                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-blue-500" />
+                        Taux de Réussite
                     </h3>
-                    <div className="h-48 flex items-center justify-center">
-                        <Bar
-                            data={chartData}
-                            options={{
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: { legend: { display: false } },
-                                scales: { x: { grid: { display: false } }, y: { display: false } }
-                            }}
-                        />
-                    </div>
-                    <div className="mt-6 flex justify-center">
-                        <Badge className="bg-emerald-100 text-emerald-700 border-none font-bold">
-                            Taux de réussite : {statsData?.overview?.totalExams ? Math.round(((statsData?.overview?.examsPassed || 0) / statsData.overview.totalExams) * 100) : 0}%
-                        </Badge>
+                    <div className="flex flex-col items-center justify-center py-4">
+                        <div className="text-5xl font-black text-slate-900 tracking-tighter">
+                            {statsData?.overview?.totalExams ? Math.round(((statsData?.overview?.examsPassed || 0) / statsData.overview.totalExams) * 100) : 0}%
+                        </div>
+                        <p className="text-sm font-medium text-slate-500 mt-2">
+                            Sur {statsData?.overview?.totalExams || 0} examens officiels
+                        </p>
                     </div>
                 </Card>
 
@@ -857,29 +746,6 @@ export default function UserDashboardPage() {
             </div>
         </div>
 
-        {/* Hidden Templates for PDF Generation */}
-        <div className="hidden" aria-hidden="true">
-            {attestationsData?.attestations?.filter((a: any) => a.status === "VALIDATED").map((att: any) => (
-                <CertificateTemplate
-                    key={att.id}
-                    id={`cert-template-dash-${att.id}`}
-                    settings={settings}
-                    data={{
-                        fullName: att.fullName,
-                        formationName: att.formation?.name || "Formation Professionnelle",
-                        code: att.code,
-                        issuedAt: att.issuedAt,
-                        startDate: att.startDate,
-                        endDate: att.endDate,
-                        score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
-                        hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
-                        type: att.type,
-                        gender: att.gender,
-                        status: att.status
-                    }}
-                />
-            ))}
-        </div>
     </div>
   );
 }

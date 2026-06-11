@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { hash } from 'bcryptjs';
+import { hashPassword } from 'better-auth/crypto';
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ async function main() {
   });
 
   const adminPassword = 'AdminFSA1452.';
-  const hashedAdminPassword = await hash(adminPassword, 12);
+  const hashedAdminPassword = await hashPassword(adminPassword);
 
   if (!adminExists) {
     const newUser = await prisma.user.create({
@@ -51,7 +51,7 @@ async function main() {
   });
   
   if (!userExists) {
-    const hashedPassword = await hash('Candidat123!', 12);
+    const hashedPassword = await hashPassword('Candidat123!');
     
     await prisma.user.create({
       data: {
@@ -115,7 +115,7 @@ async function main() {
       name: "Gestion et entrepreneuriat aquacole",
       category: "Entrepreneuriat",
       description: "Planification, marketing, gestion financière, normes sanitaires.",
-      skills: ["Planification", "Marketing", "Gestion financière", "Normes sanitaires"]
+      skills: ["Planification", "Marketing", "Gestion financière", "Nommes sanitaires"]
     },
     {
       name: "Pisciculture extensive",

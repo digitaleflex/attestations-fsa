@@ -1,18 +1,10 @@
+import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const response = NextResponse.json({ message: 'Déconnexion réussie' })
-    response.cookies.set('admin_session', '', {
-      httpOnly: true,
-      path: '/',
-      expires: new Date(0),
-    })
-    response.cookies.set('user_role', '', {
-      path: '/',
-      expires: new Date(0),
-    })
-    return response
+    await auth.api.signOut({ headers: request.headers })
+    return NextResponse.json({ message: 'Déconnexion réussie' })
   } catch (error) {
     console.error('[POST /api/auth/logout ERROR]', error)
     return NextResponse.json(

@@ -3,7 +3,8 @@
 // FIX: Ajout de l'authentification admin sur toutes les routes
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
+import { hashPassword } from "better-auth/crypto";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/error-handler";
@@ -17,7 +18,7 @@ const CreateUserSchema = z.object({
   role: z.enum(["admin", "user", "ADMIN", "USER"]).optional(),
 });
 
-// GET - Liste des utilisateurs (Admin uniquement)
+// GET - Liste des utilisateurs (Admin uniquement avec pagination)
 export async function GET(request: Request) {
   try {
     // Authentification admin requise
@@ -29,24 +30,54 @@ export async function GET(request: Request) {
       );
     }
 
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        emailVerified: true,
-        birthDate: true,
-        birthPlace: true,
-        phone: true,
-        address: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: { createdAt: "desc" },
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20")));
+    const search = searchParams.get("q") || "";
+    const skip = (page - 1) * limit;
+
+    // Filtre de recherche
+    const where = search ? {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { email: { contains: search, mode: 'insensitive' as const } },
+      ],
+    } : {};
+
+    // Exécuter le comptage et la récupération en parallèle pour la performance
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          emailVerified: true,
+          birthDate: true,
+          birthPlace: true,
+          phone: true,
+          address: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      items: users,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
     });
-    return NextResponse.json(users);
   } catch (error: unknown) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     return handleApiError(error instanceof Error ? error : new Error(String(error)), {
@@ -102,29 +133,44 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hacher le mot de passe
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Hacher le mot de passe avec l'algorithme compatible Better Auth
+    const hashedPassword = await hashPassword(password);
 
-    // Créer l'utilisateur
-    const user = await prisma.user.create({
-      data: {
-        name: sanitizedName,
-        email: sanitizedEmail,
-        password: hashedPassword,
-        role: normalizedRole,
-        emailVerified: new Date(),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
+    // Caster en any pour contourner le typage complexe du client étendu de Prisma
+    const result = await (prisma as any).$transaction(async (tx: any) => {
+      const user = await tx.user.create({
+        data: {
+          name: sanitizedName,
+          email: sanitizedEmail,
+          password: hashedPassword,
+          role: normalizedRole,
+          emailVerified: new Date(),
+        },
+      });
+
+      await tx.account.create({
+        data: {
+          userId: user.id,
+          providerId: 'credential',
+          accountId: sanitizedEmail,
+          password: hashedPassword,
+        },
+      });
+
+      return user;
     });
 
     return NextResponse.json(
-      { message: "Utilisateur créé avec succès", user },
+      { 
+        message: "Utilisateur créé avec succès", 
+        user: {
+          id: result.id,
+          name: result.name,
+          email: result.email,
+          role: result.role,
+          createdAt: result.createdAt,
+        }
+      },
       { status: 201 }
     );
   } catch (error: unknown) {

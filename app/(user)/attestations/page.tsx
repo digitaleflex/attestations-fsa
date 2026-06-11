@@ -7,7 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, Search, Filter, X, QrCode, Eye, Share2, ChevronRight, Clock, Lock, AlertCircle, Send, CheckCircle, ClipboardList, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  FileText, Download, Search, Filter, X, QrCode, Eye, 
+  Share2, ChevronRight, Clock, Lock, AlertCircle, Send, 
+  CheckCircle, ClipboardList, Loader2, Award, FileSpreadsheet, BarChart3
+} from "lucide-react";
 import TranscriptDocumentComponent from "@/components/TranscriptDocument";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -18,7 +23,7 @@ import dynImport from "next/dynamic";
 import CertificateTemplate from "@/components/CertificateTemplate";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
 
-// Import dynamique de html2pdf pour éviter les erreurs SSR
+// Import dynamique de html2pdf pour Ã©viter les erreurs SSR
 const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 import {
   Select,
@@ -47,8 +52,8 @@ export default function UserAttestationsPage() {
   const [reportingAtt, setReportingAtt] = useState<any>(null);
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
-  
-  // États pour le téléchargement du relevé
+
+  // Ã‰tats pour le tÃ©lÃ©chargement du relevÃ©
   const [transcriptData, setTranscriptData] = useState<any>(null);
   const [isPrintingTranscript, setIsPrintingTranscript] = useState(false);
   const [isFetchingTranscript, setIsFetchingTranscript] = useState<string | null>(null);
@@ -59,7 +64,7 @@ export default function UserAttestationsPage() {
       const res = await fetch("/api/user/attestations");
       if (!res.ok) {
         if (res.status === 401) router.push("/auth");
-        throw new Error("Non autorisé");
+        throw new Error("Non autorisÃ©");
       }
       return res.json();
     },
@@ -68,14 +73,10 @@ export default function UserAttestationsPage() {
 
   const handleDownload = async (att: any) => {
     setDownloading(att.code);
-    toast.info(`Préparation de l'attestation ${att.code}...`);
+    toast.info(`PrÃ©paration de l'attestation ${att.code}...`);
 
     try {
-      // Importation dynamique côté client uniquement
       const html2pdf = (await import("html2pdf.js")).default;
-
-      // On attend un court instant pour s'assurer que le template soit bien dans le DOM si nécessaire
-      // Bien qu'ici on le crée à la volée ou on utilise un ID unique
       const element = document.getElementById(`cert-template-${att.id}`);
 
       if (!element) {
@@ -87,19 +88,13 @@ export default function UserAttestationsPage() {
         margin: 0,
         filename: `Attestation_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          logging: false
-        },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
 
       await html2pdf().set(opt).from(element).save();
-      toast.success("✅ Attestation téléchargée !");
+      toast.success("âœ… Attestation tÃ©lÃ©chargÃ©e !");
 
-      // Marquer comme récupérée (CLAIMED)
       try {
         await fetch(`/api/user/attestations/${att.id}/claim`, { method: "POST" });
         queryClient.invalidateQueries({ queryKey: ["user-attestations"] });
@@ -108,7 +103,7 @@ export default function UserAttestationsPage() {
       }
     } catch (error) {
       console.error("PDF Error:", error);
-      toast.error("Erreur lors de la génération du PDF");
+      toast.error("Erreur lors de la gÃ©nÃ©ration du PDF");
     } finally {
       setDownloading(null);
     }
@@ -116,20 +111,19 @@ export default function UserAttestationsPage() {
 
   const handleDownloadTranscript = async (att: any) => {
     setIsFetchingTranscript(att.id);
-    toast.info("Récupération de votre relevé de notes...");
+    toast.info("RÃ©cupÃ©ration de votre relevÃ© de notes...");
 
     try {
       const res = await fetch(`/api/user/transcript`);
       if (!res.ok) throw new Error();
       const allTranscripts = await res.json();
-      
-      // Trouver l'examen qui correspond à cette formation
-      const transcript = allTranscripts.examResults.find((r: any) => 
-        r.examName.toLowerCase().includes(att.formation?.name.toLowerCase()) || 
+
+      const transcript = allTranscripts.examResults.find((r: any) =>
+        r.examName.toLowerCase().includes(att.formation?.name.toLowerCase()) ||
         att.formation?.name.toLowerCase().includes(r.examName.toLowerCase())
       ) || allTranscripts.examResults[0];
 
-      if (!transcript) throw new Error("Aucun relevé trouvé pour cette formation");
+      if (!transcript) throw new Error("Aucun relevÃ© trouvÃ© pour cette formation");
 
       const formattedData = {
         id: att.id,
@@ -145,13 +139,13 @@ export default function UserAttestationsPage() {
       };
 
       setTranscriptData(formattedData);
-      
+
       setTimeout(async () => {
         try {
           setIsPrintingTranscript(true);
           const html2pdf = (await import("html2pdf.js")).default;
           const element = document.getElementById(`transcript-template-user-${att.id}`);
-          
+
           if (!element) throw new Error("Template introuvable");
 
           const opt = {
@@ -163,25 +157,23 @@ export default function UserAttestationsPage() {
           };
 
           await html2pdf().set(opt).from(element).save();
-          toast.success("✅ Relevé téléchargé !");
+          toast.success("âœ… RelevÃ© tÃ©lÃ©chargÃ© !");
 
-          // Signaler le téléchargement au serveur (compteur admin)
           try {
-            // Trouver le sessionId (id de l'examen résultat)
             const resData = await fetch(`/api/user/transcript`);
             const all = await resData.json();
-            const session = all.examResults.find((r: any) => 
+            const session = all.examResults.find((r: any) =>
                 r.examName.toLowerCase().includes(att.formation?.name.toLowerCase())
             ) || all.examResults[0];
-            
+
             if (session?.id) {
                await fetch(`/api/user/transcript/${session.id}/claim`, { method: "POST" });
             }
           } catch (e) {
-            console.error("Erreur claim relevé:", e);
+            console.error("Erreur claim relevÃ©:", e);
           }
         } catch (err) {
-          toast.error("Erreur génération PDF");
+          toast.error("Erreur gÃ©nÃ©ration PDF");
         } finally {
           setIsPrintingTranscript(false);
           setTranscriptData(null);
@@ -189,7 +181,7 @@ export default function UserAttestationsPage() {
       }, 500);
 
     } catch (error) {
-      toast.error("Impossible de récupérer le relevé.");
+      toast.error("Impossible de rÃ©cupÃ©rer le relevÃ©.");
     } finally {
       setIsFetchingTranscript(null);
     }
@@ -215,9 +207,9 @@ export default function UserAttestationsPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "VALIDATED": return "Validée";
-      case "CLAIMED": return "Récupérée";
-      case "REJECTED": return "Rejetée";
+      case "VALIDATED": return "ValidÃ©e";
+      case "CLAIMED": return "RÃ©cupÃ©rÃ©e";
+      case "REJECTED": return "RejetÃ©e";
       default: return "En attente";
     }
   };
@@ -237,280 +229,315 @@ export default function UserAttestationsPage() {
   }
 
   return (
-    <div className="space-y-8">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 bg-white shadow-sm">
-            <p className="text-sm text-slate-500">Total</p>
-            <p className="text-2xl font-bold text-slate-800">{data?.stats?.total || 0}</p>
-          </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-emerald-500">
-            <p className="text-sm text-slate-500">Validées</p>
-            <p className="text-2xl font-bold text-emerald-600">{data?.stats?.validated || 0}</p>
-          </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-amber-500">
-            <p className="text-sm text-slate-500">En attente</p>
-            <p className="text-2xl font-bold text-amber-600">{data?.stats?.pending || 0}</p>
-          </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-rose-500">
-            <p className="text-sm text-slate-500">Rejetées</p>
-            <p className="text-2xl font-bold text-rose-600">{data?.stats?.rejected || 0}</p>
-          </Card>
-        </div>
+    <div className="space-y-8 pb-20">
+      <Tabs defaultValue="attestations" className="w-full">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-8 bg-slate-100/50 p-1.5 rounded-[1.5rem]">
+          <TabsTrigger value="attestations" className="rounded-xl font-bold py-3 text-sm sm:text-base data-[state=active]:shadow-md">
+            <Award className="w-4 h-4 mr-2" /> Mes Attestations
+          </TabsTrigger>
+          <TabsTrigger value="releves" className="rounded-xl font-bold py-3 text-sm sm:text-base data-[state=active]:shadow-md">
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Mes RelevÃ©s de Notes
+          </TabsTrigger>
+          <TabsTrigger value="resultats" className="rounded-xl font-bold py-3 text-sm sm:text-base data-[state=active]:shadow-md">
+            <BarChart3 className="w-4 h-4 mr-2" /> DÃ©tail de mes RÃ©sultats
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="attestations" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="p-4 bg-white shadow-sm rounded-2xl border-none shadow-slate-200/50">
+                <p className="text-sm text-slate-500 font-medium">Total</p>
+                <p className="text-3xl font-black text-slate-800 tracking-tight">{data?.stats?.total || 0}</p>
+              </Card>
+              <Card className="p-4 bg-white shadow-sm rounded-2xl border-none shadow-slate-200/50 border-l-4 border-l-emerald-500">
+                <p className="text-sm text-slate-500 font-medium">ValidÃ©es</p>
+                <p className="text-3xl font-black text-emerald-600 tracking-tight">{data?.stats?.validated || 0}</p>
+              </Card>
+              <Card className="p-4 bg-white shadow-sm rounded-2xl border-none shadow-slate-200/50 border-l-4 border-l-amber-500">
+                <p className="text-sm text-slate-500 font-medium">En attente</p>
+                <p className="text-3xl font-black text-amber-600 tracking-tight">{data?.stats?.pending || 0}</p>
+              </Card>
+              <Card className="p-4 bg-white shadow-sm rounded-2xl border-none shadow-slate-200/50 border-l-4 border-l-rose-500">
+                <p className="text-sm text-slate-500 font-medium">RejetÃ©es</p>
+                <p className="text-3xl font-black text-rose-600 tracking-tight">{data?.stats?.rejected || 0}</p>
+              </Card>
+            </div>
 
-        {/* Filters */}
-        <Card className="p-4 bg-white shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <span className="text-sm font-semibold text-slate-700">Filtres</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2 relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher par nom, code ou formation..."
-                className="pl-10 h-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="VALIDATED">Validée</SelectItem>
-                <SelectItem value="PENDING">En attente</SelectItem>
-                <SelectItem value="REJECTED">Rejetée</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="FORMATION">Formation</SelectItem>
-                <SelectItem value="STAGE">Stage</SelectItem>
-                <SelectItem value="CERTIFICATION">Certification</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {(search || statusFilter !== "all" || typeFilter !== "all") && (
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilter("all");
-                  setTypeFilter("all");
-                }}
-                className="gap-2 text-xs"
-              >
-                <X className="w-3 h-3" />
-                Réinitialiser
-              </Button>
-              <Badge variant="secondary">{filteredAttestations?.length || 0} résultat(s)</Badge>
-            </div>
-          )}
-        </Card>
+            {/* Filters */}
+            <Card className="p-6 bg-white shadow-xl shadow-slate-200/50 rounded-3xl border-none">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <span className="text-sm font-black uppercase tracking-widest text-slate-700">Filtres</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2 relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher par nom, code ou formation..."
+                    className="pl-12 h-12 bg-slate-50 border-none rounded-2xl font-medium"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-12 bg-slate-50 border-none rounded-2xl font-medium">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="VALIDATED">ValidÃ©e</SelectItem>
+                    <SelectItem value="PENDING">En attente</SelectItem>
+                    <SelectItem value="REJECTED">RejetÃ©e</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="h-12 bg-slate-50 border-none rounded-2xl font-medium">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="FORMATION">Formation</SelectItem>
+                    <SelectItem value="STAGE">Stage</SelectItem>
+                    <SelectItem value="CERTIFICATION">Certification</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(search || statusFilter !== "all" || typeFilter !== "all") && (
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setStatusFilter("all");
+                      setTypeFilter("all");
+                    }}
+                    className="gap-2 text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-slate-100"
+                  >
+                    <X className="w-3 h-3" />
+                    RÃ©initialiser
+                  </Button>
+                  <Badge variant="secondary" className="rounded-lg">{filteredAttestations?.length || 0} rÃ©sultat(s)</Badge>
+                </div>
+              )}
+            </Card>
 
-        {/* List */}
-        {!filteredAttestations || filteredAttestations.length === 0 ? (
-          <Card className="p-12 bg-white shadow-sm">
-            <div className="text-center">
-              <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-lg font-medium text-slate-600">Aucune attestation trouvée</p>
-              <p className="text-sm text-slate-500 mt-1">
-                Essayez de modifier vos filtres
-              </p>
-            </div>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {filteredAttestations.map((att: any) => (
-              <Card key={att.id} className="p-5 sm:p-6 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
-                  {/* Informations Principales */}
-                  <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <FileText className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="font-bold text-slate-800 text-lg sm:text-base leading-tight truncate max-w-[200px] sm:max-w-none" title={att.fullName}>
-                          {att.fullName}
-                        </h3>
-                        <Badge className={`${att.isLocked ? "bg-slate-100 text-slate-500 border-slate-200" : getStatusBadgeColor(att.status)} text-[10px] sm:text-xs font-semibold px-2 py-0.5`}>
-                          {att.isLocked ? (
-                            <span className="flex items-center gap-1">
-                              <Lock className="w-3 h-3" /> Délibération en cours
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              {att.status === "CLAIMED" && <CheckCircle className="w-3 h-3" />}
-                              {getStatusLabel(att.status)}
-                            </span>
-                          )}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-slate-600 mb-2 leading-relaxed">
-                        {att.formation?.name || "-"} <span className="text-slate-300 mx-1">•</span> 
-                        <span className="font-medium text-blue-600">
-                          {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
-                        </span>
-                      </p>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-slate-500 bg-slate-50 p-2 sm:p-0 sm:bg-transparent rounded-lg sm:rounded-none">
-                        <div className="flex items-center gap-2">
-                          <QrCode className="w-3 h-3 text-slate-400" />
-                          <span>Code: <span className="font-mono bg-white sm:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 sm:border-transparent">{att.isLocked ? "••••-••••-••••" : att.code}</span></span>
-                        </div>
-                        <span className="hidden sm:inline text-slate-300">•</span>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          <span>Obtenue le {new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Option 'J'ai perdu mon attestation' si déjà récupérée ou validée */}
-                      {(att.status === "CLAIMED" || (att.status === "VALIDATED" && !att.isLocked)) && (
-                        <Button 
-                          variant="link" 
-                          size="sm" 
-                          className="h-auto p-0 text-amber-600 text-xs mt-2 hover:text-amber-700 flex items-center gap-1"
-                          onClick={() => {
-                            setReportingAtt(att);
-                            setReportLostOpen(true);
-                          }}
-                        >
-                          <AlertCircle className="w-3 h-3" />
-                          J'ai perdu mon attestation ou besoin d'un duplicata
-                        </Button>
-                      )}
-                    </div>
+            {/* List */}
+            {!filteredAttestations || filteredAttestations.length === 0 ? (
+              <Card className="p-16 bg-white shadow-xl shadow-slate-200/50 border-none rounded-[2.5rem]">
+                <div className="text-center flex flex-col items-center">
+                  <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center mb-6">
+                    <FileText className="w-10 h-10 text-slate-300" />
                   </div>
-
-                  {/* Boutons d'Action */}
-                  <div className="flex items-center gap-2 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                    <Link href={att.isLocked ? "#" : `/attestations/${att.id}`} className="flex-1 sm:flex-none">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onMouseEnter={() => {
-                          if (att.isLocked) return;
-                          queryClient.prefetchQuery({
-                            queryKey: ["user-attestation", att.id],
-                            queryFn: async () => {
-                                const res = await fetch(`/api/attestations/${att.id}`);
-                                return res.json();
-                              },
-                            staleTime: 5 * 60 * 1000,
-                          });
-                        }}
-                        onClick={(e) => {
-                          if (att.isLocked) {
-                            e.preventDefault();
-                            toast.warning("🔒 Cette attestation sera disponible après la délibération finale.");
-                          }
-                        }}
-                        className="w-full gap-2 group shadow-sm hover:border-emerald-200 transition-all h-10 sm:h-9"
-                        disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || att.isLocked}
-                      >
-                        <Eye className="w-4 h-4 text-slate-400 group-hover:text-emerald-500" />
-                        <span className="group-hover:text-emerald-600 text-xs sm:text-sm whitespace-nowrap">
-                          {att.status === "CLAIMED" ? "Revoir" : "Voir l'aperçu"}
-                        </span>
-                      </Button>
-                    </Link>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 sm:h-9 sm:w-9"
-                        onClick={() => {
-                          if (att.isLocked) {
-                            toast.warning("🔒 Le partage sera activé après la délibération.");
-                            return;
-                          }
-                          setSelectedAttestation(att);
-                          setQrDialogOpen(true);
-                        }}
-                        title={att.isLocked ? "Verrouillé" : "Partager le QR Code"}
-                        disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED")}
-                      >
-                        <QrCode className="w-4 h-4 text-slate-500" />
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className={`h-10 w-10 sm:h-9 sm:w-9 ${downloading === att.code ? 'border-emerald-200 bg-emerald-50' : ''} ${att.status === "CLAIMED" ? "border-blue-200 bg-blue-50" : ""}`}
-                        onClick={() => {
-                          if (att.isLocked) {
-                            toast.warning("🔒 Le téléchargement sera disponible après la délibération.");
-                            return;
-                          }
-                          if (att.status === "CLAIMED") {
-                             toast.info("Vous avez déjà téléchargé cette attestation. Un nouveau téléchargement est possible.");
-                          }
-                          handleDownload(att);
-                        }}
-                        disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || downloading === att.code || att.isLocked}
-                        title={att.isLocked ? "Verrouillé" : (att.status === "CLAIMED" ? "Télécharger à nouveau" : "Télécharger en PDF")}
-                      >
-                        {downloading === att.code ? (
-                          <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
-                        ) : (
-                          <Download className={`w-4 h-4 ${att.status === "CLAIMED" ? "text-blue-500" : "text-slate-500"}`} />
-                        )}
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className={`h-10 w-10 sm:h-9 sm:w-9 ${isFetchingTranscript === att.id ? 'border-blue-200 bg-blue-50' : ''}`}
-                        onClick={() => handleDownloadTranscript(att)}
-                        disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED") || isFetchingTranscript === att.id}
-                        title="Télécharger le relevé de notes"
-                      >
-                        {isFetchingTranscript === att.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                        ) : (
-                          <ClipboardList className="w-4 h-4 text-slate-500" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                  <p className="text-xl font-black text-slate-900 mb-2">Aucune attestation trouvÃ©e</p>
+                  <p className="text-sm font-medium text-slate-500">
+                    Essayez de modifier vos filtres
+                  </p>
                 </div>
               </Card>
-            ))}
-          </div>
-        )}
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {filteredAttestations.map((att: any) => (
+                  <Card key={att.id} className="p-6 bg-white shadow-lg shadow-slate-200/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden border-none rounded-[2rem] group">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+                      <div className="flex items-start gap-5 flex-1 min-w-0 w-full">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+                          <Award className="w-7 h-7 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-3 mb-2">
+                            <h3 className="font-black text-slate-900 text-lg leading-tight truncate" title={att.fullName}>
+                              {att.fullName}
+                            </h3>
+                            <Badge className={`${att.isLocked ? "bg-slate-100 text-slate-500" : getStatusBadgeColor(att.status)} text-[10px] font-black uppercase tracking-widest px-2.5 py-1 border-none rounded-lg`}>
+                              {att.isLocked ? (
+                                <span className="flex items-center gap-1.5">
+                                  <Lock className="w-3 h-3" /> DÃ©libÃ©ration en cours
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1.5">
+                                  {att.status === "CLAIMED" && <CheckCircle className="w-3 h-3" />}
+                                  {getStatusLabel(att.status)}
+                                </span>
+                              )}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-600 mb-3">
+                            {att.formation?.name || "-"} <span className="text-slate-300 mx-2">â€¢</span>
+                            <span className="text-blue-600 font-bold uppercase tracking-widest text-[10px]">
+                              {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
+                            </span>
+                          </p>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-medium text-slate-500 bg-slate-50 p-3 sm:p-2 sm:bg-transparent rounded-xl sm:rounded-none">
+                            <div className="flex items-center gap-2">
+                              <QrCode className="w-4 h-4 text-slate-400" />
+                              <span>Code: <span className="font-mono font-bold bg-white sm:bg-slate-100 px-2 py-1 rounded-md shadow-sm sm:shadow-none">{att.isLocked ? "â€¢â€¢â€¢â€¢-â€¢â€¢â€¢â€¢-â€¢â€¢â€¢â€¢" : att.code}</span></span>
+                            </div>
+                            <span className="hidden sm:inline text-slate-300">â€¢</span>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-400" />
+                              <span>Obtenue le {new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
+                            </div>
+                          </div>
+
+                          {(att.status === "CLAIMED" || (att.status === "VALIDATED" && !att.isLocked)) && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-amber-600 text-[11px] font-bold uppercase tracking-widest mt-3 hover:text-amber-700 flex items-center gap-1.5"
+                              onClick={() => {
+                                setReportingAtt(att);
+                                setReportLostOpen(true);
+                              }}
+                            >
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              J'ai perdu mon attestation ou besoin d'un duplicata
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 w-full sm:w-auto pt-5 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                        <Link href={att.isLocked ? "#" : `/attestations/${att.id}`} className="flex-1 sm:flex-none">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onMouseEnter={() => {
+                              if (att.isLocked) return;
+                              queryClient.prefetchQuery({
+                                queryKey: ["user-attestation", att.id],
+                                queryFn: async () => {
+                                    const res = await fetch(`/api/attestations/${att.id}`);
+                                    return res.json();
+                                  },
+                                staleTime: 5 * 60 * 1000,
+                              });
+                            }}
+                            onClick={(e) => {
+                              if (att.isLocked) {
+                                e.preventDefault();
+                                toast.warning("ðŸ”’ Cette attestation sera disponible aprÃ¨s la dÃ©libÃ©ration finale.");
+                              }
+                            }}
+                            className="w-full gap-2 rounded-xl h-12 sm:h-11 shadow-sm font-bold border-slate-200"
+                            disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || att.isLocked}
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="text-[11px] uppercase tracking-widest">
+                              {att.status === "CLAIMED" ? "Revoir" : "AperÃ§u"}
+                            </span>
+                          </Button>
+                        </Link>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-12 w-12 sm:h-11 sm:w-11 rounded-xl shadow-sm border-slate-200"
+                            onClick={() => {
+                              if (att.isLocked) {
+                                toast.warning("ðŸ”’ Le partage sera activÃ© aprÃ¨s la dÃ©libÃ©ration.");
+                                return;
+                              }
+                              setSelectedAttestation(att);
+                              setQrDialogOpen(true);
+                            }}
+                            title={att.isLocked ? "VerrouillÃ©" : "Partager le QR Code"}
+                            disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED")}
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className={`h-12 w-12 sm:h-11 sm:w-11 rounded-xl shadow-sm border-slate-200 ${downloading === att.code ? 'border-emerald-200 bg-emerald-50' : ''} ${att.status === "CLAIMED" ? "border-blue-200 bg-blue-50 text-blue-600" : ""}`}
+                            onClick={() => {
+                              if (att.isLocked) {
+                                toast.warning("ðŸ”’ Le tÃ©lÃ©chargement sera disponible aprÃ¨s la dÃ©libÃ©ration.");
+                                return;
+                              }
+                              if (att.status === "CLAIMED") {
+                                 toast.info("Vous avez dÃ©jÃ  tÃ©lÃ©chargÃ© cette attestation. Un nouveau tÃ©lÃ©chargement est possible.");
+                              }
+                              handleDownload(att);
+                            }}
+                            disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || downloading === att.code || att.isLocked}
+                            title={att.isLocked ? "VerrouillÃ©" : (att.status === "CLAIMED" ? "TÃ©lÃ©charger Ã  nouveau" : "TÃ©lÃ©charger en PDF")}
+                          >
+                            {downloading === att.code ? (
+                              <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+        </TabsContent>
+
+        <TabsContent value="releves" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="p-12 border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-gradient-to-br from-blue-50 to-white flex flex-col items-center text-center">
+            <div className="w-24 h-24 rounded-[2rem] bg-blue-100 flex items-center justify-center mb-6 shadow-inner">
+              <FileSpreadsheet className="w-12 h-12 text-blue-600" />
+            </div>
+            <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Mes RelevÃ©s de Notes</h3>
+            <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-10">
+              Retrouvez ici tous vos relevÃ©s de notes dÃ©taillÃ©s par module pour chaque session d'examen.
+            </p>
+            <Link href="/exams">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1">
+                AccÃ©der Ã  mes examens <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="resultats" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="p-12 border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-gradient-to-br from-emerald-50 to-white flex flex-col items-center text-center">
+            <div className="w-24 h-24 rounded-[2rem] bg-emerald-100 flex items-center justify-center mb-6 shadow-inner">
+              <BarChart3 className="w-12 h-12 text-emerald-600" />
+            </div>
+            <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">DÃ©tail de mes RÃ©sultats</h3>
+            <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-10">
+              Consultez vos statistiques, votre progression et le dÃ©tail de vos performances aux examens.
+            </p>
+            <Link href="/exams">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1">
+                Voir mes statistiques <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* QR Code Dialog */}
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-3xl border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Code de vérification</DialogTitle>
+            <DialogTitle className="text-xl font-black">Code de vÃ©rification</DialogTitle>
           </DialogHeader>
           {selectedAttestation && (
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
+            <div className="text-center space-y-6 py-4">
+              <div className="flex justify-center p-4 bg-slate-50 rounded-3xl inline-block mx-auto border border-slate-100">
                 <QRCodeSVG
                   value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verifier/${selectedAttestation.code}`}
                   size={200}
                   level="H"
+                  className="rounded-xl"
                 />
               </div>
               <div>
-                <p className="text-sm text-slate-500 mb-1">Code de l'attestation</p>
-                <p className="font-mono text-lg font-bold text-slate-800">{selectedAttestation.code}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Code de l'attestation</p>
+                <p className="font-mono text-2xl font-black text-slate-900 bg-slate-100 py-2 px-4 rounded-xl inline-block">{selectedAttestation.code}</p>
               </div>
-              <p className="text-xs text-slate-500">
-                Scannez ce QR code pour vérifier l'authenticité de l'attestation
+              <p className="text-sm font-medium text-slate-500 max-w-xs mx-auto">
+                Scannez ce QR code pour vÃ©rifier l'authenticitÃ© de l'attestation sur notre plateforme.
               </p>
             </div>
           )}
@@ -519,40 +546,43 @@ export default function UserAttestationsPage() {
 
       {/* Lost Attestation Dialog */}
       <Dialog open={reportLostOpen} onOpenChange={setReportLostOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-500" />
-              Signaler un problème / Perte
+            <DialogTitle className="flex items-center gap-3 text-xl font-black">
+              <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              Signaler un problÃ¨me
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-slate-500">
-              Vous avez besoin d'un duplicata ou vous rencontrez un problème avec l'attestation 
-              <span className="font-bold text-slate-800 ml-1">
+          <div className="space-y-5 py-2">
+            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+              Vous avez besoin d'un duplicata ou vous rencontrez un problÃ¨me avec l'attestation
+              <span className="font-black text-slate-900 ml-1">
                 {reportingAtt?.fullName}
               </span> ?
             </p>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Expliquez votre situation :</label>
-              <textarea 
-                className="w-full min-h-[100px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Expliquez votre situation :</label>
+              <textarea
+                className="w-full min-h-[120px] p-4 text-sm font-medium border-none bg-slate-50 rounded-2xl focus:ring-2 focus:ring-amber-500 outline-none transition-all resize-none"
                 placeholder="Ex: J'ai perdu mon fichier PDF, j'aimerais qu'on me le renvoie par email..."
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
               />
             </div>
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 italic text-[10px] text-slate-500">
-              Note : L'administration recevra votre demande et vous contactera par email sous 48h.
+            <div className="bg-amber-50/50 p-4 rounded-2xl text-xs font-medium text-amber-700/80 flex gap-3 items-start">
+              <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+              L'administration recevra votre demande et vous contactera par email sous 48h.
             </div>
           </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setReportLostOpen(false)}>Annuler</Button>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 gap-2"
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setReportLostOpen(false)} className="rounded-xl font-bold">Annuler</Button>
+            <Button
+              className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold px-6"
               onClick={async () => {
                 if (!reportReason.trim()) {
-                  toast.error("Veuillez expliquer votre problème.");
+                  toast.error("Veuillez expliquer votre problÃ¨me.");
                   return;
                 }
                 setSubmittingReport(true);
@@ -566,7 +596,7 @@ export default function UserAttestationsPage() {
                     })
                   });
                   if (!res.ok) throw new Error();
-                  toast.success("Demande envoyée avec succès !");
+                  toast.success("Demande envoyÃ©e avec succÃ¨s !");
                   setReportLostOpen(false);
                   setReportReason("");
                 } catch (e) {
@@ -577,14 +607,14 @@ export default function UserAttestationsPage() {
               }}
               disabled={submittingReport}
             >
-              {submittingReport ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Envoyer la demande
+              {submittingReport ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              Envoyer
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Templates cachés pour la génération PDF (Capture technique) */}
+      {/* Templates cachÃ©s pour la gÃ©nÃ©ration PDF (Capture technique) */}
       <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
         {data?.attestations?.filter((a: any) => (a.status === "VALIDATED" || a.status === "CLAIMED") && !a.isLocked).map((att: any) => (
           <div key={`capture-${att.id}`}>
@@ -592,7 +622,7 @@ export default function UserAttestationsPage() {
                 id={`cert-template-${att.id}`}
                 data={{
                   fullName: att.fullName,
-                  formationName: att.formation?.name || "Formation Saint André",
+                  formationName: att.formation?.name || "Formation Saint AndrÃ©",
                   code: att.code,
                   issuedAt: att.issuedAt,
                   startDate: att.startDate,
@@ -605,7 +635,7 @@ export default function UserAttestationsPage() {
                 }}
               />
               {transcriptData && (
-                <TranscriptDocumentComponent 
+                <TranscriptDocumentComponent
                   data={transcriptData}
                   id={`transcript-template-user-${att.id}`}
                   isPrinting={isPrintingTranscript}
@@ -617,4 +647,3 @@ export default function UserAttestationsPage() {
     </div>
   );
 }
-

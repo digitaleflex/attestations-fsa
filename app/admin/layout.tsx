@@ -1,324 +1,55 @@
-"use client";
-
 import * as React from "react";
-
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarInset,
-  SidebarFooter,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar,
-  SidebarMenuButton,
-  SidebarRail,
-} from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import {
-  LayoutDashboard,
-  FileText,
-  GraduationCap,
-  Users,
-  Settings,
-  AlertCircle,
-  BarChart3,
-  LogOut,
-  Home,
-  ClipboardCheck,
-  Briefcase,
-  Inbox,
-  Shield,
-  Library,
-  List,
-  Key,
-  Mail,
-  Trophy,
-  ChevronDown,
-  ChevronRight,
-  Target,
-  User,
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
-import { usePathname, useRouter } from "next/navigation";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import NotificationCenter from "@/components/admin/NotificationCenter";
 import PusherAdminListener from "@/components/admin/PusherAdminListener";
 
-const menuGroups = [
-  {
-    label: "Principal",
-    items: [
-      { href: "/admin/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-      { href: "/admin/stats", label: "Statistiques", icon: BarChart3 },
-    ]
-  },
-  {
-    label: "Pédagogique",
-    items: [
-      { href: "/admin/exams", label: "Examens", icon: GraduationCap },
-      { href: "/admin/submissions", label: "Gestion des Copies", icon: ClipboardCheck },
-      { href: "/admin/corrections", label: "Corrections Profil", icon: User },
-      { href: "/admin/attestations", label: "Attestations", icon: FileText },
-      { href: "/admin/portfolios", label: "Suivi Portfolios", icon: Trophy, badgeKey: "pendingPortfolios" },
-      { href: "/admin/portfolio/missions", label: "Config. Missions", icon: Target },
-      { href: "/admin/formations", label: "Formations", icon: GraduationCap },
-      { href: "/admin/resources", label: "Ressources", icon: Library },
-    ]
-  },
-  {
-    label: "Candidats",
-    items: [
-      { href: "/admin/users", label: "Utilisateurs", icon: Users },
-      { href: "/admin/internships", label: "Gestion des Stages", icon: Briefcase },
-      { href: "/admin/waitlist", label: "Liste d'attente", icon: List },
-    ]
-  },
-  {
-    label: "Communication",
-    items: [
-      { href: "/admin/notifications", label: "Notifications Poussées", icon: Mail },
-      { href: "/admin/messages", label: "Messagerie Interne", icon: Inbox },
-      { href: "/admin/contacts", label: "Messages & RDV", icon: Mail },
-      { href: "/admin/signalements", label: "Signalements", icon: AlertCircle, badgeKey: "newReports" },
-    ]
-  },
-  {
-    label: "Sécurité & Système",
-    items: [
-      { href: "/admin/monitoring", label: "Surveillance", icon: Shield },
-      { href: "/admin/logs", label: "Journaux d'Audit", icon: Shield },
-      { href: "/admin/otp-logs", label: "Codes OTP", icon: Key },
-      { href: "/admin/settings", label: "Paramètres Généraux", icon: Settings },
-    ]
-  }
-];
-
-function SidebarMenuContent() {
-  const pathname = usePathname();
-  const { state } = useSidebar();
-  
-  // État des groupes ouverts (par défaut le premier est ouvert)
-  const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
-    "Principal": true,
-    "Pédagogique": true
-  });
-
-  const toggleGroup = (label: string) => {
-    setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const { data: counts } = useQuery({
-    queryKey: ["sidebar-counts"],
-    queryFn: async () => {
-      // Simulation pour l'exemple
-      return { pendingPortfolios: 2, newReports: 0 };
-    },
-    staleTime: 60000
-  });
-
-  return (
-    <div className="space-y-4">
-      {menuGroups.map((group) => {
-        const isOpen = openGroups[group.label];
-        const hasActiveChild = group.items.some(item => 
-          pathname === item.href || (pathname && item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
-        );
-
-        return (
-          <div key={group.label} className="space-y-1">
-            {state === "expanded" && (
-              <button 
-                onClick={() => toggleGroup(group.label)}
-                className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors group"
-              >
-                <span>{group.label}</span>
-                {isOpen ? <ChevronDown className="w-3 h-3 transition-transform" /> : <ChevronRight className="w-3 h-3 transition-transform" />}
-              </button>
-            )}
-            
-            {(isOpen || (state === "collapsed" && hasActiveChild)) && (
-              <div className="space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = !!(
-                    pathname === item.href ||
-                    (pathname && item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
-                  );
-                  const badgeValue = item.badgeKey ? (counts as any)?.[item.badgeKey] : 0;
-
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={item.label}
-                        className={`w-full transition-all duration-200 ${
-                          isActive 
-                            ? "bg-slate-900 text-white shadow-md shadow-slate-200 hover:bg-slate-800 hover:text-white" 
-                            : "text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        <Link href={item.href} className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                             <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
-                             <span className="font-medium text-sm">{item.label}</span>
-                          </div>
-                          {badgeValue > 0 && state === "expanded" && (
-                            <Badge className="bg-rose-500 text-white border-none text-[8px] px-1.5 h-4 flex items-center justify-center min-w-[16px]">
-                              {badgeValue}
-                            </Badge>
-                          )}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-export default function AdminLayout({
+/**
+ * Layout Admin optimisé (Server Component)
+ * La sécurité (redirection) est gérée par le middleware.ts pour éviter les boucles.
+ */
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
-
-  // Ne pas afficher la sidebar pour la page de login
-  const isLoginPage =
-    pathname === "/admin/login" || (pathname && pathname.startsWith("/admin/login/"));
-
-  const {
-    data: admin,
-    isLoading,
-  } = useQuery({
-    queryKey: ["admin"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin");
-      if (!res.ok) {
-        // If 401, return null (not authenticated) rather than throwing
-        if (res.status === 401) return null;
-        throw new Error("Failed to fetch admin");
-      }
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    enabled: !isLoginPage,
-    retry: false, // Don't retry on failure to avoid loops
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") || "";
+  
+  // Récupération de la session (le middleware a optimisé la latence, c'est ici qu'on valide le rôle)
+  const session = await auth.api.getSession({
+    headers: headerList,
   });
 
-  // Rediriger si pas admin (sauf page de login)
-  if (!isLoginPage && !isLoading && !admin) {
-    if (typeof window !== "undefined") {
-      router.push("/admin/login");
+  const isLoginPage = pathname === "/admin/login" || pathname.startsWith("/admin/login/");
+
+  // Sécurité Stricte (RSC Validation)
+  if (!isLoginPage) {
+    // Si pas connecté ou pas admin -> on bloque et on redirige
+    if (!session || session.user.role?.toLowerCase() !== 'admin') {
+      redirect("/admin/login");
     }
-    return null;
+  } else {
+    // Si sur la page de login et déjà connecté en tant qu'admin -> go dashboard
+    if (session && session.user.role?.toLowerCase() === 'admin') {
+      redirect("/admin/dashboard");
+    }
   }
 
+  // Pour la page de login des non-connectés, on n'affiche pas la Sidebar
   if (isLoginPage) {
     return <>{children}</>;
   }
 
-  const handleLogout = async () => {
-    try {
-        // 1. Sign out from Better Auth
-        await authClient.signOut();
-        // 2. Clear legacy session via API
-        await fetch("/api/auth/logout", { method: "POST" });
-        // 3. Clean redirect
-        router.push("/admin/login");
-    } catch (error) {
-        console.error("Logout error:", error);
-        // Fallback redirection
-        window.location.href = "/admin/login";
-    }
-  };
-
   return (
     <SidebarProvider defaultOpen={true}>
-      <AdminLayoutInner admin={admin} onLogout={handleLogout}>
-        {children}
-        <PusherAdminListener />
-      </AdminLayoutInner>
-    </SidebarProvider>
-  );
-}
+      <AdminSidebar admin={session?.user || null} />
 
-function AdminLayoutInner({
-  children,
-  admin,
-  onLogout,
-}: {
-  children: React.ReactNode;
-  admin: { name?: string | null; email?: string | null } | null;
-  onLogout: () => void;
-}) {
-  const { state, isMobile } = useSidebar();
-
-  // Sur desktop, on force un padding-left égal à la largeur de la sidebar
-  const desktopPadding = state === "expanded" ? "md:pl-64" : "md:pl-[3rem]";
-
-  return (
-    <div className="flex min-h-screen w-full bg-slate-50 overflow-x-hidden">
-      <Sidebar collapsible="icon" className="border-r shadow-sm">
-        <SidebarHeader className="border-b border-slate-100 p-4">
-          <SidebarHeaderContent />
-        </SidebarHeader>
-
-        <SidebarContent className="flex-1 px-2 py-6 overflow-x-hidden">
-          <SidebarMenu>
-            <SidebarMenuContent />
-          </SidebarMenu>
-        </SidebarContent>
-
-        <SidebarSeparator className="mx-4 bg-slate-100" />
-
-        <SidebarFooter className="p-4 space-y-4">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Site public">
-                <Link href="/">
-                  <Home className="w-4 h-4 shrink-0" />
-                  <span>Site public</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={onLogout}
-                tooltip="Déconnexion"
-                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-              >
-                <LogOut className="w-4 h-4 shrink-0" />
-                <span>Déconnexion</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-
-          <AdminInfo admin={admin} />
-        </SidebarFooter>
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset
-        className={cn(
-          "flex flex-col flex-1 transition-[padding] duration-300 ease-in-out bg-slate-50",
-          !isMobile && desktopPadding,
-        )}
-      >
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-white px-4">
+      <SidebarInset className="flex flex-col min-h-screen bg-slate-50">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-6">
           <div className="flex-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
@@ -335,43 +66,8 @@ function AdminLayoutInner({
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </SidebarInset>
-    </div>
-  );
-}
 
-function SidebarHeaderContent() {
-  const { state } = useSidebar();
-  return (
-    <div className="flex items-center gap-2 overflow-hidden">
-      <div className="shrink-0 w-8 h-8 bg-gradient-to-br from-red-500 to-rose-600 rounded-lg flex items-center justify-center shadow-sm">
-        <span className="text-white font-bold text-sm">FSA</span>
-      </div>
-      {state === "expanded" && (
-        <div className="transition-all duration-300 opacity-100 translate-x-0">
-          <span className="text-lg font-bold block whitespace-nowrap text-slate-800">
-            Admin FSA
-          </span>
-          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold whitespace-nowrap">
-            Gestion Centrale
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AdminInfo({ admin }: { admin: { name?: string | null; email?: string | null } | null }) {
-  const { state } = useSidebar();
-  if (!admin || state !== "expanded") return null;
-
-  return (
-    <div className="mt-2 rounded-xl bg-slate-50 p-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">
-        Session active
-      </p>
-      <p className="font-medium text-slate-700 truncate text-xs">
-        {admin.name || admin.email}
-      </p>
-    </div>
+      <PusherAdminListener />
+    </SidebarProvider>
   );
 }

@@ -177,16 +177,17 @@ export function HowItWorks() {
                           ))}
                       </div>
 
-                      {/* ================= LAYOUT MOBILE (Carrousel avec flèches) ================= */}
+                      {/* ================= LAYOUT MOBILE (Carrousel avec flèches absolues) ================= */}
                       <div 
-                        className="block md:hidden relative w-full px-2 py-4"
+                        className="block md:hidden relative w-full py-4"
                         onTouchStart={() => setIsPaused(true)}
                         onTouchEnd={() => setIsPaused(false)}
                         onMouseEnter={() => setIsPaused(true)}
                         onMouseLeave={() => setIsPaused(false)}
                       >
-                        <div className="flex items-center justify-between gap-1">
-                          {/* Flèche Gauche */}
+                        {/* Conteneur relatif pour les flèches absolues + carte centrée */}
+                        <div className="relative w-full">
+                          {/* Flèche Gauche – positionnée en absolu à mi-hauteur */}
                           <button
                             type="button"
                             onClick={() => {
@@ -194,14 +195,14 @@ export function HowItWorks() {
                               setIsPaused(true);
                               setTimeout(() => setIsPaused(false), 6000);
                             }}
-                            className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm shrink-0"
+                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm"
                             aria-label="Étape précédente"
                           >
                             <ChevronLeft className="w-5 h-5" />
                           </button>
 
-                          {/* Conteneur étape centrale animée */}
-                          <div className="flex-1 min-h-[220px] flex items-center justify-center relative overflow-hidden">
+                          {/* Carte centrale – toujours centrée sur toute la largeur */}
+                          <div className="px-12 min-h-[240px] flex items-center justify-center overflow-hidden">
                             <AnimatePresence mode="wait">
                               <motion.div
                                 key={`${activeTab}-${activeStepIndex}`}
@@ -209,10 +210,10 @@ export function HowItWorks() {
                                 animate={{ opacity: 1, scale: 1, x: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, x: -15 }}
                                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                                className="w-full max-w-xs p-6 rounded-[2rem] bg-white border border-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.03)] relative"
+                                className="w-full max-w-xs mx-auto p-6 rounded-[2rem] bg-white border border-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.05)]"
                               >
                                 <div className="flex flex-col items-center text-center space-y-4">
-                                  {/* Icon */}
+                                  {/* Icône */}
                                   <div className={`w-14 h-14 rounded-[1.2rem] flex items-center justify-center shadow-inner ${
                                       activeTab === 'internships' ? 'bg-emerald-100 text-emerald-600' :
                                       activeTab === 'exams' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
@@ -233,7 +234,7 @@ export function HowItWorks() {
                             </AnimatePresence>
                           </div>
 
-                          {/* Flèche Droite */}
+                          {/* Flèche Droite – positionnée en absolu à mi-hauteur */}
                           <button
                             type="button"
                             onClick={() => {
@@ -241,14 +242,14 @@ export function HowItWorks() {
                               setIsPaused(true);
                               setTimeout(() => setIsPaused(false), 6000);
                             }}
-                            className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm shrink-0"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm"
                             aria-label="Étape suivante"
                           >
                             <ChevronRight className="w-5 h-5" />
                           </button>
                         </div>
 
-                        {/* Indicateurs (Petits points) */}
+                        {/* Indicateurs (points) */}
                         <div className="flex justify-center items-center gap-1.5 mt-4">
                           {current.steps.map((_, index) => (
                             <button

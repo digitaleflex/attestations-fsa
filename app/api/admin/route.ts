@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 
@@ -77,15 +77,21 @@ export async function PATCH(request: Request) {
     updateData.email = email;
   }
 
+  let newHashedPassword = "";
   if (oldPassword && newPassword) {
     if (!currentUser.password) {
         return NextResponse.json({ message: 'Compte sans mot de passe local' }, { status: 400 });
     }
-    const ok = await bcrypt.compare(oldPassword, currentUser.password);
+    // Vérification avec l'algorithme compatible Better Auth
+    const ok = await verifyPassword({
+        hash: currentUser.password,
+        password: oldPassword,
+    });
     if (!ok) {
       return NextResponse.json({ message: 'Ancien mot de passe incorrect' }, { status: 400 });
     }
-    updateData.password = await bcrypt.hash(newPassword, 10);
+    newHashedPassword = await hashPassword(newPassword);
+    updateData.password = newHashedPassword;
   }
 
   if (birthDate) updateData.birthDate = new Date(birthDate);
@@ -93,18 +99,33 @@ export async function PATCH(request: Request) {
   if (phone) updateData.phone = phone;
   if (address) updateData.address = address;
 
-  const updatedAdmin = await prisma.user.update({
-    where: { id: currentUser.id },
-    data: updateData
+  const result = await (prisma as any).$transaction(async (tx: any) => {
+    const updatedAdmin = await tx.user.update({
+      where: { id: currentUser.id },
+      data: updateData
+    });
+
+    // Synchronisation avec la table Account
+    if (newHashedPassword || (email && email !== currentUser.email)) {
+      await tx.account.updateMany({
+        where: { userId: currentUser.id, providerId: 'credential' },
+        data: {
+          ...(newHashedPassword ? { password: newHashedPassword } : {}),
+          ...(email ? { accountId: email } : {})
+        }
+      });
+    }
+
+    return updatedAdmin;
   });
 
   return NextResponse.json({
-    id: updatedAdmin.id,
-    name: updatedAdmin.name,
-    email: updatedAdmin.email,
-    birthDate: updatedAdmin.birthDate?.toISOString().slice(0, 10),
-    birthPlace: updatedAdmin.birthPlace,
-    phone: updatedAdmin.phone,
-    address: updatedAdmin.address,
+    id: result.id,
+    name: result.name,
+    email: result.email,
+    birthDate: result.birthDate?.toISOString().slice(0, 10),
+    birthPlace: result.birthPlace,
+    phone: result.phone,
+    address: result.address,
   });
 }

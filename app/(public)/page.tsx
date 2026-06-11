@@ -24,13 +24,13 @@ export default async function Home() {
               FSA Bénin • Portail Officiel
            </div>
 
-           <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tight sm:tracking-tighter leading-[0.95] md:leading-[1.05] lg:max-w-6xl mx-auto px-4">
-              Passez vos examens FSA en ligne. <br />
-              Obtenez votre <span className="text-emerald-600">attestation</span> <span className="text-blue-600">instantanément.</span>
+           <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tight sm:tracking-tighter leading-[0.95] md:leading-[1.05] lg:max-w-5xl mx-auto px-4">
+              Votre <span className="text-emerald-600">certification</span>,{" "}
+              <span className="text-blue-600">en un clic.</span>
            </h1>
 
-           <p className="text-slate-500 font-bold text-base md:text-lg max-w-xl mx-auto leading-relaxed px-4">
-             Évaluez vos compétences et obtenez vos certifications officielles de la Ferme Cité St André.
+           <p className="text-slate-500 font-bold text-base md:text-lg max-w-md mx-auto leading-relaxed px-4">
+             Examens en ligne et attestations officielles de la Ferme Cité St André.
            </p>
 
            <div className="flex flex-col md:flex-row items-center justify-center gap-4 pt-4">

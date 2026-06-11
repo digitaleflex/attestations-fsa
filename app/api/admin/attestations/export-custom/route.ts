@@ -22,18 +22,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Transformer les données pour Excel en fonction des colonnes sélectionnées
-    const excelData = attestations.map((a: {
-      fullName: string;
-      code: string;
-      type: string;
-      status: string;
-      issuedAt: Date | null;
-      certificationScore: number;
-      stageScore: number;
-      location: string | null;
-      instructor: string | null;
-      formation?: { name: string } | null;
-    }) => {
+    const excelData = attestations.map((a: any) => {
       const row: any = {};
       if (columns.includes("fullName")) row["Nom complet"] = a.fullName;
       if (columns.includes("code")) row["Code"] = a.code;

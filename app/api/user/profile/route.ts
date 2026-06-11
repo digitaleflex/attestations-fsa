@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -148,6 +147,7 @@ export async function PATCH(request: Request) {
     // Gestion du changement de mot de passe (Compatibilité Hybride)
     if (oldPassword && newPassword) {
       const { auth } = await import('@/lib/auth');
+      const { hashPassword, verifyPassword } = await import('better-auth/crypto');
       
       try {
         // 1. Essai de changement via Better Auth (Gère la table Account)
@@ -161,20 +161,32 @@ export async function PATCH(request: Request) {
         });
         console.log(`[PROFILE] Password updated via Better Auth for user ${userId}`);
       } catch (authError: any) {
-        // 2. Si échec, vérification si c'est un utilisateur legacy (table User uniquement)
+        // 2. Si échec, vérification si c'est un utilisateur legacy (table User uniquement ou hash format différent)
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: { password: true }
         });
 
         if (user?.password) {
-          const valid = await bcrypt.compare(oldPassword, user.password);
+          const valid = await verifyPassword({
+            hash: user.password,
+            password: oldPassword
+          });
+
           if (!valid) {
             return NextResponse.json({ message: 'Ancien mot de passe incorrect' }, { status: 401 });
           }
-          // Mise à jour de la table User pour le mode legacy
-          updateData.password = await bcrypt.hash(newPassword, 12);
-          console.log(`[PROFILE] Password updated via Legacy check for user ${userId}`);
+          // Mise à jour de la table User
+          const hashedPassword = await hashPassword(newPassword);
+          updateData.password = hashedPassword;
+
+          // Mise à jour forcée de la table Account pour synchronisation
+          await prisma.account.updateMany({
+            where: { userId, providerId: 'credential' },
+            data: { password: hashedPassword }
+          });
+
+          console.log(`[PROFILE] Password updated via Handled check for user ${userId}`);
         } else {
           // Si pas de password dans User et échec Better Auth
           return NextResponse.json({ 

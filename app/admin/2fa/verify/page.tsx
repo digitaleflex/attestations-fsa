@@ -118,7 +118,7 @@ export default function Admin2FAVerifyPage() {
     setError("");
 
     try {
-      const { data, error: authError } = await authClient.twoFactor.verifyTotp({
+      const { data, error: authError } = await authClient.twoFactor.verifyBackupCode({
         code: backupCode,
         trustDevice: true,
       });

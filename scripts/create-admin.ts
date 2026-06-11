@@ -22,6 +22,7 @@ async function main() {
 
       if (existingUser) {
         console.log(`  🗑️  Suppression de l'ancien compte (id: ${existingUser.id})...`);
+        await prisma.auditLog.deleteMany({ where: { userId: existingUser.id } });
         await prisma.account.deleteMany({ where: { userId: existingUser.id } });
         await prisma.session.deleteMany({ where: { userId: existingUser.id } });
         await prisma.user.delete({ where: { id: existingUser.id } });

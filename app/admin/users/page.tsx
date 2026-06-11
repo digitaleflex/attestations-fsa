@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import Link from "next/link";
+import { UserExamResults } from "@/components/exams/user-exam-results";
+import { UserAuditLogs } from "@/components/admin/user-audit-logs";
+import { User, UserStatus } from "@/types";
+// ... (icons)
 import { 
   Loader2, 
   Plus, 
@@ -46,18 +54,15 @@ import {
   Activity,
   CheckCircle2,
   AlertTriangle,
-  Users
+  Users,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
-import { toast } from "sonner";
-import { UserExamResults } from "@/components/exams/user-exam-results";
-import { UserAuditLogs } from "@/components/admin/user-audit-logs";
-import { User, UserStatus } from "@/types";
-
 
 type UserForm = {
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: "admin" | "user";
   birthDate?: string;
   birthPlace?: string;
@@ -66,9 +71,21 @@ type UserForm = {
 };
 
 export default function AdminUsersPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 });
+  
+  // Lecture des filtres depuis l'URL
+  const queryPage = parseInt(searchParams.get("page") || "1");
+  const querySearch = searchParams.get("q") || "";
+
+  const [search, setSearch] = useState(querySearch);
+  const debouncedSearch = useDebounce(search, 500);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState<UserForm>({
@@ -84,18 +101,40 @@ export default function AdminUsersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // Mettre à jour l'URL quand les filtres changent
+  const updateFilters = useCallback((newPage: number, newSearch: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPage > 1) params.set("page", newPage.toString());
+    else params.delete("page");
+    
+    if (newSearch) params.set("q", newSearch);
+    else params.delete("q");
 
-  const fetchUsers = async () => {
+    router.push(`${pathname}?${params.toString()}`);
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    fetchUsers(queryPage, querySearch);
+  }, [queryPage, querySearch]);
+
+  // Déclencher la mise à jour de l'URL quand la recherche debouncée change
+  useEffect(() => {
+    if (debouncedSearch !== querySearch) {
+      updateFilters(1, debouncedSearch);
+    }
+  }, [debouncedSearch, querySearch, updateFilters]);
+
+  const fetchUsers = async (page: number, q: string) => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch(`/api/users?page=${page}&q=${encodeURIComponent(q)}`);
       if (!res.ok) throw new Error("Erreur lors du chargement");
       const data = await res.json();
-      setUsers(Array.isArray(data) ? data : []);
-      setLoading(false);
+      setUsers(Array.isArray(data.items) ? data.items : []);
+      setMeta(data.meta || { total: 0, page: 1, totalPages: 1, limit: 20 });
     } catch (err) {
+      toast.error("Échec du chargement des utilisateurs");
+    } finally {
       setLoading(false);
     }
   };
@@ -185,7 +224,7 @@ export default function AdminUsersPage() {
 
       toast.success(editingUser ? "Utilisateur modifié !" : "Utilisateur créé !");
       setDialogOpen(false);
-      fetchUsers();
+      fetchUsers(queryPage, querySearch);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur inconnue";
       toast.error(message);
@@ -220,7 +259,7 @@ export default function AdminUsersPage() {
       });
       if (!res.ok) throw new Error("Erreur");
       toast.success(status === 'ACTIVE' ? "Utilisateur débloqué !" : "Utilisateur bloqué !");
-      fetchUsers();
+      fetchUsers(queryPage, querySearch);
       if (viewingUser) setViewingUser(prev => prev ? { ...prev, status } : null);
     } catch (err) {
       toast.error("Échec de la mise à jour du statut");
@@ -241,18 +280,28 @@ export default function AdminUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Le filtrage se fait maintenant côté serveur via fetchUsers(queryPage, querySearch)
+  const displayUsers = users;
 
   return (
     <div className="p-6 space-y-6">
+      {/* Navigation Apprenants / CRM */}
+      <div className="flex gap-6 border-b border-slate-200">
+        <Link href="/admin/users" className="pb-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 flex items-center gap-2">
+          <Users className="w-4 h-4" /> Tous les utilisateurs
+        </Link>
+        <Link href="/admin/internships" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          Demandes de stage
+        </Link>
+        <Link href="/admin/waitlist" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          Liste d'attente
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Utilisateurs</h1>
-          <p className="text-slate-500 mt-1">Gérez les comptes utilisateurs</p>
+          <p className="text-slate-500 mt-1">Gérez les comptes utilisateurs ({meta.total})</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -385,18 +434,21 @@ export default function AdminUsersPage() {
       <Card className="p-6 bg-white">
         <div className="w-full md:w-96">
           <Label htmlFor="search">Rechercher</Label>
-          <Input
-            id="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Nom ou email..."
-            className="mt-1"
-          />
+          <div className="relative">
+            <Input
+              id="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nom ou email..."
+              className="mt-1 pr-10"
+            />
+            {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400" />}
+          </div>
         </div>
       </Card>
 
       {/* Vue Bureau (Tableau) */}
-      <Card className="bg-white hidden md:block">
+      <Card className="bg-white hidden md:block overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -411,21 +463,21 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading && users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="animate-spin w-6 h-6 mx-auto text-slate-400" />
                     <p className="text-sm text-slate-500 mt-2">Chargement...</p>
                   </TableCell>
                 </TableRow>
-              ) : filteredUsers.length === 0 ? (
+              ) : displayUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     {search ? "Aucun utilisateur trouvé" : "Aucun utilisateur"}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((u) => (
+                displayUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.name || "-"}</TableCell>
                     <TableCell>{u.email || "-"}</TableCell>
@@ -496,74 +548,129 @@ export default function AdminUsersPage() {
             </TableBody>
           </Table>
         </div>
+        
+        {/* Pagination Desktop */}
+        <div className="p-4 border-t flex items-center justify-between bg-slate-50/50">
+          <p className="text-xs text-slate-500">
+            Affichage de <span className="font-bold text-slate-700">{users.length}</span> sur <span className="font-bold text-slate-700">{meta.total}</span> utilisateurs
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={meta.page <= 1 || loading}
+              onClick={() => updateFilters(meta.page - 1, querySearch)}
+              className="h-8 gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" /> Précédent
+            </Button>
+            <div className="flex items-center gap-1 mx-2">
+              <span className="text-xs font-medium text-slate-600">Page {meta.page} sur {meta.totalPages}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={meta.page >= meta.totalPages || loading}
+              onClick={() => updateFilters(meta.page + 1, querySearch)}
+              className="h-8 gap-1"
+            >
+              Suivant <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {/* Vue Mobile (Cartes) */}
       <div className="md:hidden space-y-4">
-        {loading ? (
+        {loading && users.length === 0 ? (
           <div className="text-center py-8">
             <Loader2 className="animate-spin w-6 h-6 mx-auto text-slate-400" />
             <p className="text-sm text-slate-500 mt-2">Chargement...</p>
           </div>
-        ) : filteredUsers.length === 0 ? (
+        ) : displayUsers.length === 0 ? (
           <div className="text-center py-8 bg-white rounded-xl border border-slate-100 text-slate-500">
             {search ? "Aucun utilisateur trouvé" : "Aucun utilisateur"}
           </div>
         ) : (
-          filteredUsers.map((u) => (
-            <Card key={u.id} className="p-4 bg-white shadow-sm border-slate-100 space-y-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-slate-800">{u.name || "-"}</h3>
-                  <p className="text-sm text-slate-500">{u.email || "-"}</p>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => handleViewDetails(u)}>
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
-                    <Edit className="w-4 h-4 text-slate-600" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteId(u.id)} className="text-rose-600">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-50">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Rôle</p>
-                  <Badge variant="secondary" className="text-[10px] px-2 py-0">
-                    {u.role === "admin" ? "Admin" : "Élève"}
-                  </Badge>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Statut</p>
-                  <div className="flex justify-end">
-                    <span
-                      className={`text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest ${
-                        u.status === "ACTIVE"
-                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                          : "bg-rose-50 text-rose-600 border border-rose-100"
-                      }`}
-                    >
-                      {u.status === "ACTIVE" ? "Actif" : "Bloqué"}
-                    </span>
+          <>
+            {displayUsers.map((u) => (
+              <Card key={u.id} className="p-4 bg-white shadow-sm border-slate-100 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-slate-800">{u.name || "-"}</h3>
+                    <p className="text-sm text-slate-500">{u.email || "-"}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleViewDetails(u)}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
+                      <Edit className="w-4 h-4 text-slate-600" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(u.id)} className="text-rose-600">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-50">
-                 <div className="flex items-center gap-1">
-                   <Users className="w-3 h-3" />
-                   {u.phone || "Pas de tel"}
-                 </div>
-                 <div>
-                   {new Date(u.createdAt).toLocaleDateString("fr-FR")}
-                 </div>
-              </div>
-            </Card>
-          ))
+                
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-50">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Rôle</p>
+                    <Badge variant="secondary" className="text-[10px] px-2 py-0">
+                      {u.role === "admin" ? "Admin" : "Élève"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Statut</p>
+                    <div className="flex justify-end">
+                      <span
+                        className={`text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest ${
+                          u.status === "ACTIVE"
+                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                            : "bg-rose-50 text-rose-600 border border-rose-100"
+                        }`}
+                      >
+                        {u.status === "ACTIVE" ? "Actif" : "Bloqué"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-50">
+                   <div className="flex items-center gap-1">
+                     <Users className="w-3 h-3" />
+                     {u.phone || "Pas de tel"}
+                   </div>
+                   <div>
+                     {new Date(u.createdAt).toLocaleDateString("fr-FR")}
+                   </div>
+                </div>
+              </Card>
+            ))}
+
+            {/* Pagination Mobile */}
+            <div className="flex items-center justify-between pt-4 pb-8">
+               <Button
+                 variant="outline"
+                 size="sm"
+                 disabled={meta.page <= 1 || loading}
+                 onClick={() => updateFilters(meta.page - 1, querySearch)}
+                 className="bg-white"
+               >
+                 <ChevronLeft className="w-4 h-4 mr-1" /> Précédent
+               </Button>
+               <span className="text-xs font-bold text-slate-600">Page {meta.page} / {meta.totalPages}</span>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 disabled={meta.page >= meta.totalPages || loading}
+                 onClick={() => updateFilters(meta.page + 1, querySearch)}
+                 className="bg-white"
+               >
+                 Suivant <ChevronRight className="w-4 h-4 ml-1" />
+               </Button>
+            </div>
+          </>
         )}
       </div>
 

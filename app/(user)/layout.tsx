@@ -22,7 +22,8 @@ import {
   LifeBuoy,
   MessageCircle,
   Bell,
-  GraduationCap
+  GraduationCap,
+  Award
 } from "lucide-react";
 import ChatBubble from "@/components/ChatBubble";
 import { authClient, signOut } from "@/lib/auth-client";
@@ -73,16 +74,10 @@ export default function UserLayout({
 
   const menuItems = [
     { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Mes Cours", href: "/courses", icon: BookOpen },
-    { name: "Mes Attestations", href: "/attestations", icon: FileText },
-    { name: "Examens", href: "/exams", icon: GraduationCap },
-    { name: "Examens Blancs", href: "/mock-exams", icon: CheckCircle },
-    { name: "Stages", href: "/internships", icon: Briefcase },
-    { name: "Résultats", href: "/results", icon: BarChart3 },
-    { name: "Relevé de notes", href: "/transcript", icon: FileText },
-    { name: "Notifications", href: "/notifications", icon: Bell },
-    { name: "Support", href: "/support", icon: HelpCircle },
-    { name: "Mon Profil", href: "/profile", icon: User },
+    { name: "Mon Apprentissage", href: "/courses", icon: BookOpen },
+    { name: "Mes Certifications", href: "/attestations", icon: Award },
+    { name: "Stages & Projets", href: "/internships", icon: Briefcase },
+    { name: "Mon Espace", href: "/profile", icon: User },
   ];
 
   // Mode Focus pour les examens (Pas de sidebar, pas de header)
@@ -271,11 +266,10 @@ export default function UserLayout({
 
           {[
             { name: "Accueil", href: "/dashboard", icon: LayoutDashboard },
-            { name: "Examens", href: "/exams", icon: BookOpen },
-            { name: "Résultats", href: "/results", icon: BarChart3 },
-            { name: "Attestations", href: "/attestations", icon: FileText },
-            { name: "Notifs", href: "/notifications", icon: Bell },
-            { name: "Profil", href: "/profile", icon: User },
+            { name: "Apprentissage", href: "/courses", icon: BookOpen },
+            { name: "Certifs", href: "/attestations", icon: Award },
+            { name: "Stages", href: "/internships", icon: Briefcase },
+            { name: "Espace", href: "/profile", icon: User },
           ].map((item) => {
             const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
             return (

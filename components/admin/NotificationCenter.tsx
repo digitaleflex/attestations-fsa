@@ -106,7 +106,7 @@ export default function NotificationCenter() {
         title: "Nouveau Signalement",
         message: r.motif,
         time: new Date(r.createdAt),
-        link: `/admin/signalements/${r.id}`,
+        link: `/admin/inbox`,
         icon: AlertTriangle,
         iconClass: "text-amber-500 bg-amber-50"
     })),
@@ -116,7 +116,7 @@ export default function NotificationCenter() {
         title: "Demande de Correction",
         message: `${c.user?.name} souhaite modifier ${c.field}`,
         time: new Date(c.createdAt),
-        link: `/admin/corrections`,
+        link: `/admin/tasks`,
         icon: FileCheck,
         iconClass: "text-blue-500 bg-blue-50"
     })),
@@ -126,7 +126,7 @@ export default function NotificationCenter() {
         title: "Nouveau Message",
         message: m.content,
         time: new Date(m.createdAt),
-        link: `/admin/messages`,
+        link: `/admin/inbox`,
         icon: ChatIcon,
         iconClass: "text-emerald-500 bg-emerald-50"
     }))
@@ -193,10 +193,10 @@ export default function NotificationCenter() {
 
         {allNotifications.length > 0 && (
             <div className="p-3 bg-slate-50 border-t border-slate-100">
-                <Link href="/admin/signalements" onClick={() => setIsOpen(false)}>
+                <Link href="/admin/inbox" onClick={() => setIsOpen(false)}>
                     <Button variant="ghost" className="w-full text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2">
                         <Info className="w-3 h-3" />
-                        Voir tous les signalements
+                        Voir toutes les alertes
                     </Button>
                 </Link>
             </div>

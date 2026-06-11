@@ -1,6 +1,7 @@
 // lib/anti-cheat.ts
 // Answer pattern analysis and cheating detection
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 type JsonValue =
   | string
@@ -41,7 +42,7 @@ export type DetectionType =
 
 type SessionData = {
   userId: string;
-  answers: Record<string, unknown> | null;
+  answers: Prisma.JsonValue;
   submittedAt: Date | null;
 };
 

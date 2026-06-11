@@ -43,6 +43,7 @@ export async function POST(request: Request) {
           eventType: 'EXAM_MONITORING',
           severity: 'INFO',
           action: event.type,
+          status: 'LOGGED',
           resourceId: payload.examId,
           details: event.details || `Automatic event: ${event.type}`,
           ipAddress: request.headers.get('x-forwarded-for') || 'unknown',

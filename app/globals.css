@@ -279,3 +279,11 @@
     animation: vortex-pulse 2s ease-in-out infinite;
   }
 }
+
+/* Correction définitive des problèmes de décalage vertical et troncature de l'interface admin */
+html, body {
+  position: relative !important;
+  top: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}

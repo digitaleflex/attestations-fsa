@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   try {
     // 1. Évolution des inscriptions sur les 30 derniers jours
     const thirtyDaysAgo = subDays(new Date(), 30);
-    const usersByDay = await prisma.user.groupBy({
+    const usersByDay = await (prisma.user as any).groupBy({
       by: ['createdAt'],
       where: {
         createdAt: { gte: thirtyDaysAgo },
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     }));
 
     // 3. Taux de réussite global (basé sur les examens)
-    const examSessions = await prisma.examSession.groupBy({
+    const examSessions = await (prisma.examSession as any).groupBy({
       by: ['status'],
       _count: true
     });

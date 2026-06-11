@@ -6,6 +6,12 @@ import { auth } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { customAlphabet } from 'nanoid';
+import { createHash } from 'crypto';
+import { rateLimits } from '@/lib/rate-limit';
+
+function hashOtp(otp: string): string {
+  return createHash('sha256').update(otp).digest('hex');
+}
 
 const generateOtp = customAlphabet('1234567890', 6);
 
@@ -56,9 +62,11 @@ async function findAttestationByCode(fsaCode: string) {
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+
     const body = await request.json();
     const parse = LoginSchema.safeParse(body);
-    
+
     if (!parse.success) {
       return NextResponse.json({
         message: "Données de connexion invalides.",
@@ -67,6 +75,34 @@ export async function POST(request: Request) {
     }
 
     const data = parse.data;
+
+    // Rate limiting — request-otp: 3/10min par IP
+    if (data.action === 'request-otp') {
+      const limiter = rateLimits.fsaOtpRequest;
+      if (limiter) {
+        const { success, reset } = await limiter.limit(`ip:${ip}`);
+        if (!success) {
+          return NextResponse.json(
+            { message: "Trop de demandes. Réessayez dans quelques minutes." },
+            { status: 429, headers: { 'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString() } }
+          );
+        }
+      }
+    }
+
+    // Rate limiting — verify-otp: 5/15min par IP+code (anti brute-force ciblé)
+    if (data.action === 'verify-otp') {
+      const limiter = rateLimits.fsaOtpVerify;
+      if (limiter) {
+        const { success, reset } = await limiter.limit(`ip:${ip}:code:${data.fsaCode}`);
+        if (!success) {
+          return NextResponse.json(
+            { message: "Trop de tentatives. Réessayez dans quelques minutes." },
+            { status: 429, headers: { 'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString() } }
+          );
+        }
+      }
+    }
 
     // 1. Recherche de l'attestation
     const attestation = await findAttestationByCode(data.fsaCode);
@@ -93,11 +129,11 @@ export async function POST(request: Request) {
         where: { identifier: email }
       });
 
-      // Enregistrer le nouveau code OTP
+      // Enregistrer le hash du code OTP (jamais le plaintext)
       await prisma.verification.create({
         data: {
           identifier: email,
-          value: otp,
+          value: hashOtp(otp),
           expiresAt
         }
       });
@@ -119,11 +155,11 @@ export async function POST(request: Request) {
 
     // --- ACTION : VERIFY OTP ---
     if (data.action === 'verify-otp') {
-      // Rechercher l'OTP valide dans la base de données
+      // Rechercher l'OTP valide (comparaison sur le hash)
       const verification = await prisma.verification.findFirst({
         where: {
           identifier: email,
-          value: data.otp,
+          value: hashOtp(data.otp),
           expiresAt: { gte: new Date() }
         }
       });
