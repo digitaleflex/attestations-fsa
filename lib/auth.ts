@@ -57,6 +57,8 @@ export const auth = betterAuth({
     "https://*.ngrok-free.app",
     "https://*.loca.lt",
     "https://*.vercel.app",
+    "https://fsa.eurin.tech",
+    "http://fsa.eurin.tech",
     ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
     ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS
       ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((s) => s.trim())
