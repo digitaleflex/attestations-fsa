@@ -9,6 +9,7 @@ const nanoid = customAlphabet('1234567890abcdef', 5)
 // Schéma de validation pour la création d'une attestation
 const AttestationSchema = z.object({
   fullName: z.string().min(1, 'Le nom complet est requis.'),
+  email: z.string().email('Adresse e-mail invalide.').optional().or(z.literal('')),
   gender: z.enum(['M', 'F']).optional(),
   birthDate: z.string().min(1, 'La date de naissance est requise.'),
   birthPlace: z.string().min(1, 'Le lieu de naissance est requis.'),
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Entrée invalide', details: parse.error.errors }, { status: 400 })
     }
     const {
-      fullName, gender, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type,
+      fullName, email, gender, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type,
       stageHours, stageScore, stageObservations,
       certificationMention, certificationScore, certificationHours, certificationObservations
     } = parse.data
@@ -151,6 +152,7 @@ export async function POST(request: Request) {
     const attestationData: Record<string, unknown> = {
       code,
       fullName,
+      email: email ? email.trim().toLowerCase() : null,
       gender,
       birthDate: new Date(birthDate),
       birthPlace,

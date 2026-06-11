@@ -43,6 +43,7 @@ const GENDER_OPTIONS = [
 
 const DEFAULT_FORM = {
   fullName: "",
+  email: "",
   gender: undefined as "M" | "F" | undefined,
   birthDate: "",
   birthPlace: "",
@@ -375,6 +376,33 @@ export default function NewAttestationPage() {
               {fieldErrors.fullName && (
                 <p className="text-[10px] text-red-500 mt-1 font-bold italic">
                   → {fieldErrors.fullName}
+                </p>
+              )}
+            </div>
+
+            {/* Adresse e-mail */}
+            <div>
+              <Label
+                htmlFor="email"
+                className={cn(fieldErrors.email && "text-red-500")}
+              >
+                📧 Adresse e-mail (facultative)
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Ex: candidat@gmail.com"
+                className={cn(
+                  "mt-1.5 h-11",
+                  fieldErrors.email && "border-red-500 ring-red-500",
+                )}
+              />
+              {fieldErrors.email && (
+                <p className="text-[10px] text-red-500 mt-1 font-bold italic">
+                  → {fieldErrors.email}
                 </p>
               )}
             </div>

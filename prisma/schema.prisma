@@ -131,6 +131,7 @@ model Attestation {
   issuedAt                  DateTime              @default(now())
   type                      AttestationType       @default(FORMATION)
   fullName                  String
+  email                     String?
   birthDate                 DateTime
   birthPlace                String
   formationId               String

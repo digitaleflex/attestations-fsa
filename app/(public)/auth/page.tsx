@@ -7,337 +7,362 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { Loader2, LogIn, UserPlus, Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Loader2, KeyRound, Mail, ArrowRight, ShieldCheck, RefreshCw, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
-import { authClient } from "@/lib/auth-client";
-import { translateAuthError } from "@/lib/error-translator";
 
-// === Schémas de validation ===
-const LoginSchema = z.object({
-  email: z.string().email("Adresse email invalide"),
-  password: z.string().min(1, "Le mot de passe est requis"),
-  rememberMe: z.boolean().optional(),
+const FsaCodeSchema = z.object({
+  fsaCode: z.string()
+    .min(5, "Le code FSA ou le hash final doit comporter au moins 5 caractères.")
+    .max(50, "Le code saisi est trop long.")
 });
 
-const RegisterSchema = z.object({
-  email: z.string().email("Adresse email invalide"),
-  password: z.string()
-    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
-    .regex(/[A-Z]/, "Le mot de passe doit contenir au moins 1 majuscule")
-    .regex(/[a-z]/, "Le mot de passe doit contenir au moins 1 minuscule")
-    .regex(/[0-9]/, "Le mot de passe doit contenir au moins 1 chiffre")
-    .regex(/[^A-Za-z0-9]/, "Le mot de passe doit contenir au moins 1 caractère spécial"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas",
-  path: ["confirmPassword"],
+const OtpSchema = z.object({
+  otp: z.string().length(6, "Le code OTP doit comporter exactement 6 chiffres.")
 });
 
-// === Page Principale ===
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isLogin, setIsLogin] = useState(true);
+  
+  // États de l'interface
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
+  
+  // Valeurs du formulaire
+  const [fsaCode, setFsaCode] = useState("");
+  const [otp, setOtp] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState("");
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-    rememberMe: false,
-  });
-
-  // Handle URL params for login/register mode
+  // Pré-remplir le code FSA si passé dans l'URL
   useEffect(() => {
-    const regMode = searchParams.get("register");
-    if (regMode === "true") {
-      setIsLogin(false);
+    const urlCode = searchParams.get("code");
+    if (urlCode) {
+      setFsaCode(urlCode.trim());
     }
   }, [searchParams]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
-    if (fieldErrors[name]) {
-      setFieldErrors((prev) => {
+  const handleFsaCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFsaCode(e.target.value);
+    if (fieldErrors.fsaCode) {
+      setFieldErrors(prev => {
         const next = { ...prev };
-        delete next[name];
+        delete next.fsaCode;
         return next;
       });
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Garder uniquement les chiffres
+    const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+    setOtp(val);
+    if (fieldErrors.otp) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next.otp;
+        return next;
+      });
+    }
+  };
+
+  // Étape 1 : Demande de l'OTP
+  const handleRequestOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setFieldErrors({});
 
-    if (!isLogin) {
-      // === REGISTRATION ===
-      const parse = RegisterSchema.safeParse(form);
-      if (!parse.success) {
-        const errors: Record<string, string> = {};
-        parse.error.errors.forEach((err) => {
-          if (err.path[0]) errors[err.path[0] as string] = err.message;
-        });
-        setFieldErrors(errors);
-        setLoading(false);
-        return;
+    const parse = FsaCodeSchema.safeParse({ fsaCode });
+    if (!parse.success) {
+      const errors: Record<string, string> = {};
+      parse.error.errors.forEach((err) => {
+        if (err.path[0]) errors[err.path[0] as string] = err.message;
+      });
+      setFieldErrors(errors);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/fsa-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "request-otp",
+          fsaCode: fsaCode.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Une erreur est survenue.");
       }
 
-      try {
-        const { data, error: authError } = await authClient.signUp.email({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-          name: form.email.split("@")[0], // Default name from email
-        });
+      setMaskedEmail(data.emailMasked);
+      setStep(2);
+      toast.success("🔑 Code de vérification envoyé par e-mail !");
+    } catch (err: any) {
+      const message = err.message || "Impossible de traiter la demande.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        if (authError && Object.keys(authError).length > 0) throw authError;
+  // Renvoyer l'OTP
+  const handleResendOtp = async () => {
+    setResending(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/fsa-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "request-otp",
+          fsaCode: fsaCode.trim(),
+        }),
+      });
 
-        toast.success("Compte créé avec succès ! Bienvenue sur FSA.");
-        setIsRedirecting(true);
-        router.push("/dashboard");
+      const data = await res.json();
 
-      } catch (err: any) {
-        console.error("DEBUG AUTH ERROR OBJECT:", JSON.stringify(err, null, 2));
-        let message = "Une erreur inattendue est survenue";
-
-        if (err instanceof Error) {
-          message = translateAuthError(err.message);
-        } else if (typeof err === "object" && err !== null) {
-          message = err.message || 
-                    err.error?.message || 
-                    err.body?.message || 
-                    err.error || 
-                    JSON.stringify(err);
-        }
-
-        setError(message);
-        toast.error(message);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // === LOGIN ===
-      const parse = LoginSchema.safeParse(form);
-      if (!parse.success) {
-        const errors: Record<string, string> = {};
-        parse.error.errors.forEach((err) => {
-          if (err.path[0]) errors[err.path[0] as string] = err.message;
-        });
-        setFieldErrors(errors);
-        setLoading(false);
-        return;
+      if (!res.ok) {
+        throw new Error(data.message || "Une erreur est survenue.");
       }
 
-      try {
-        const { data, error: authError } = await authClient.signIn.email({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-        });
+      toast.success("🔄 Nouveau code de vérification envoyé !");
+    } catch (err: any) {
+      const message = err.message || "Impossible de renvoyer le code.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setResending(false);
+    }
+  };
 
-        if (authError && Object.keys(authError).length > 0) throw authError;
+  // Étape 2 : Vérification de l'OTP
+  const handleVerifyOtp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setFieldErrors({});
 
-        toast.success("Connexion réussie !");
-        setIsRedirecting(true);
-        if ((data?.user as any)?.role?.toLowerCase() === 'admin') {
-          router.push("/admin/dashboard");
-        } else {
-          router.push("/dashboard");
-        }
-      } catch (err: any) {
-        console.error("DEBUG AUTH ERROR OBJECT:", JSON.stringify(err, null, 2));
-        let message = "Identifiants invalides";
-        
-        if (err instanceof Error) {
-          message = translateAuthError(err.message);
-        } else if (typeof err === "object" && err !== null) {
-          message = err.message || 
-                    err.error?.message || 
-                    err.body?.message || 
-                    err.error || 
-                    JSON.stringify(err);
-        }
-        
-        setError(message);
-        toast.error(message);
-      } finally {
-        setLoading(false);
+    const parse = OtpSchema.safeParse({ otp });
+    if (!parse.success) {
+      const errors: Record<string, string> = {};
+      parse.error.errors.forEach((err) => {
+        if (err.path[0]) errors[err.path[0] as string] = err.message;
+      });
+      setFieldErrors(errors);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/fsa-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify-otp",
+          fsaCode: fsaCode.trim(),
+          otp,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Code de vérification invalide.");
       }
+
+      toast.success("Connexion réussie !");
+      setIsRedirecting(true);
+      router.push("/dashboard");
+    } catch (err: any) {
+      const message = err.message || "Code invalide.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-2 sm:p-4">
-      <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg px-6 py-10 sm:px-12 sm:py-14 border border-gray-100 animate-in zoom-in-95 duration-500">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            {isLogin ? <LogIn className="w-8 h-8 text-white" /> : <UserPlus className="w-8 h-8 text-white" />}
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800">{isLogin ? "Bon retour !" : "Créer un compte"}</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            {isLogin ? "Connectez-vous à votre espace" : "Rejoignez la plateforme FSA"}
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-3 sm:p-4 w-full">
+      <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg px-6 py-10 sm:px-12 sm:py-14 border border-gray-100/80 animate-in zoom-in-95 duration-500 relative overflow-hidden">
+        {/* Effet décoratif discret */}
+        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl" />
 
-        {/* Toggle Button */}
-        <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(true);
-              setFieldErrors({});
-              setError("");
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
-              isLogin ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <LogIn className="w-4 h-4" />
-            Connexion
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(false);
-              setFieldErrors({});
-              setError("");
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold transition-all ${
-              !isLogin ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            Inscription
-          </button>
+        <div className="flex flex-col items-center mb-8 relative z-10">
+          <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-100">
+            {step === 1 ? (
+              <KeyRound className="w-8 h-8 text-white" />
+            ) : (
+              <ShieldCheck className="w-8 h-8 text-white animate-pulse" />
+            )}
+          </div>
+          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+            {step === 1 ? "Accéder à mon Espace" : "Vérification de sécurité"}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1.5 text-center px-4">
+            {step === 1 
+              ? "Saisissez votre code FSA ou votre identifiant de fin pour composer ou voir vos résultats."
+              : `Un code de validation temporaire a été envoyé à l'adresse e-mail :`
+            }
+          </p>
+          {step === 2 && (
+            <span className="mt-1 font-bold text-emerald-600 text-sm tracking-wide bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+              {maskedEmail}
+            </span>
+          )}
         </div>
 
         {error && (
-          <Alert variant="destructive" className="mb-6">
+          <Alert variant="destructive" className="mb-6 rounded-2xl">
             <AlertTitle>Erreur</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
-            <div className="relative mt-1.5">
-              <Mail className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                placeholder="votre@email.com"
-                className={`pl-10 h-11 ${fieldErrors.email ? "border-red-500" : ""}`}
-                autoComplete="email"
-              />
-            </div>
-            {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
-          </div>
-
-          <div>
-            <Label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe</Label>
-            <div className="relative mt-1.5">
-              <Lock className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={handleChange}
-                required
-                placeholder="••••••••"
-                className={`pl-10 pr-10 h-11 ${fieldErrors.password ? "border-red-500" : ""}`}
-                autoComplete={isLogin ? "current-password" : "new-password"}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-            {fieldErrors.password && <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>}
-          </div>
-
-          {!isLogin && (
-            <div>
-              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirmer le mot de passe</Label>
-              <div className="relative mt-1.5">
-                <Lock className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+        {step === 1 ? (
+          /* ================= ÉTAPE 1 : CODE FSA ================= */
+          <form onSubmit={handleRequestOtp} className="space-y-6 relative z-10">
+            <div className="space-y-2">
+              <Label htmlFor="fsaCode" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Code FSA ou Identifiant
+              </Label>
+              <div className="relative">
+                <KeyRound className="absolute left-3.5 top-3.5 w-5 h-5 text-slate-400" />
                 <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  value={form.confirmPassword}
-                  onChange={handleChange}
+                  id="fsaCode"
+                  name="fsaCode"
+                  type="text"
+                  value={fsaCode}
+                  onChange={handleFsaCodeChange}
                   required
-                  placeholder="••••••••"
-                  className={`pl-10 h-11 ${fieldErrors.confirmPassword ? "border-red-500" : ""}`}
-                  autoComplete="new-password"
+                  placeholder="Ex: FSA-2026-M06-00003-f0f9a ou f0f9a"
+                  className={`pl-11 h-12 rounded-xl text-base font-semibold tracking-wide border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/5 ${
+                    fieldErrors.fsaCode ? "border-red-500 focus:ring-red-500/5" : ""
+                  }`}
+                  autoComplete="off"
+                  disabled={loading}
                 />
               </div>
-              {fieldErrors.confirmPassword && <p className="text-red-500 text-xs mt-1">{fieldErrors.confirmPassword}</p>}
+              {fieldErrors.fsaCode && (
+                <p className="text-red-500 text-xs font-semibold mt-1 pl-2">{fieldErrors.fsaCode}</p>
+              )}
+              <p className="text-[11px] text-slate-400 font-medium pl-1">
+                💡 Vous pouvez saisir le code complet ou simplement le hash de 5 caractères situé à la fin de votre attestation.
+              </p>
             </div>
-          )}
 
-          {isLogin && (
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={form.rememberMe}
-                  onChange={handleChange}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className="text-sm text-gray-600">Se souvenir de moi</span>
-              </label>
-              <Link href="/forgot-password" title="password reset" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                Mot de passe oublié ?
-              </Link>
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md transition-all"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin w-5 h-5 mr-2" />
-                {isLogin ? "Connexion..." : "Création..."}
-              </>
-            ) : (
-              isLogin ? "Se connecter" : "Créer mon compte"
-            )}
-          </Button>
-        </form>
-
-        <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-4">
-          <p className="text-sm text-gray-500">
-            {isLogin ? "Pas encore de compte ?" : "Déjà un compte ?"}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-emerald-600 hover:underline font-medium ml-1"
+            <Button
+              type="submit"
+              className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-600/15 transition-all flex items-center justify-center gap-2 group"
+              disabled={loading}
             >
-              {isLogin ? "Créer un compte" : "Se connecter"}
-            </button>
-          </p>
-          <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin w-5 h-5" />
+                  Validation en cours...
+                </>
+              ) : (
+                <>
+                  Continuer
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </Button>
+          </form>
+        ) : (
+          /* ================= ÉTAPE 2 : CODE OTP ================= */
+          <form onSubmit={handleVerifyOtp} className="space-y-6 relative z-10">
+            <div className="space-y-2">
+              <Label htmlFor="otp" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Code de validation (6 chiffres)
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-3.5 w-5 h-5 text-slate-400" />
+                <Input
+                  id="otp"
+                  name="otp"
+                  type="text"
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={handleOtpChange}
+                  required
+                  placeholder="000000"
+                  className={`pl-11 h-12 rounded-xl text-center text-xl font-bold tracking-[0.4em] border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/5 ${
+                    fieldErrors.otp ? "border-red-500 focus:ring-red-500/5" : ""
+                  }`}
+                  autoComplete="one-time-code"
+                  disabled={loading}
+                />
+              </div>
+              {fieldErrors.otp && (
+                <p className="text-red-500 text-xs font-semibold mt-1 text-center">{fieldErrors.otp}</p>
+              )}
+            </div>
+
+            <div className="flex gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setStep(1);
+                  setOtp("");
+                  setError("");
+                }}
+                className="flex-1 h-12 font-bold rounded-xl border-slate-200 text-slate-600 flex items-center justify-center gap-2 hover:bg-slate-50"
+                disabled={loading || resending}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Retour
+              </Button>
+              <Button
+                type="submit"
+                className="flex-[2] h-12 text-base font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-600/15 transition-all flex items-center justify-center gap-2"
+                disabled={loading || resending}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin w-5 h-5" />
+                    Validation...
+                  </>
+                ) : (
+                  <>
+                    Se connecter
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Renvoyer OTP */}
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                className="text-slate-400 hover:text-emerald-600 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors focus:outline-none"
+                disabled={loading || resending}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${resending ? "animate-spin text-emerald-600" : ""}`} />
+                {resending ? "Renvoi du code..." : "Renvoyer le code"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Bouton retour accueil */}
+        <div className="mt-8 pt-6 border-t border-gray-100 flex justify-center">
+          <Link href="/" className="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
             ← Retour à l&apos;accueil
           </Link>
         </div>
@@ -350,7 +375,7 @@ function AuthContent() {
             <div className="vortex-ring" />
             <div className="vortex-ring-inner" />
             <div className="vortex-core">
-              <span className="text-2xl">{isLogin ? "🎓" : "✨"}</span>
+              <span className="text-2xl">🎓</span>
             </div>
           </div>
           <p className="text-emerald-900 font-bold text-xl animate-pulse">Accès en cours...</p>

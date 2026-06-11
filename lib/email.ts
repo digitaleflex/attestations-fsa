@@ -914,4 +914,74 @@ export const emailService = {
       return { success: false, error };
     }
   },
+
+  /**
+   * Envoi d'un code OTP pour connexion via code FSA
+   */
+  async sendFsaLoginOTP(to: string, fullName: string, otp: string) {
+    try {
+      const resend = getResend();
+      const year = new Date().getFullYear();
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject: `🔑 Votre code de connexion temporaire : ${otp}`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f0f4f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.08);">
+                    <tr style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 32px; text-align: center;">
+                      <td style="padding: 40px 32px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff;">🔑 Connexion au Portail FSA</h1>
+                        <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Ferme Agro-Piscicole Cité St André</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 32px;">
+                        <p style="margin: 0 0 24px 0; font-size: 16px; color: #475569; line-height: 1.6;">
+                          Bonjour <strong style="color: #0f172a;">${fullName}</strong>,
+                        </p>
+                        <p style="margin: 0 0 32px 0; font-size: 15px; color: #64748b; line-height: 1.7;">
+                          Vous tentez de vous connecter à votre espace candidat à l'aide de votre Code FSA. Saisissez le code de validation temporaire ci-dessous sur l'écran de connexion :
+                        </p>
+                        <table role="presentation" width="100%" style="margin: 0 0 32px 0;">
+                          <tr>
+                            <td style="background-color: #f0fdf4; border-radius: 16px; padding: 24px; border: 2px solid #bbf7d0; text-align: center;">
+                              <p style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #166534; letter-spacing: 0.5px; text-transform: uppercase;">Code d'accès temporaire</p>
+                              <p style="margin: 0; font-size: 36px; font-weight: 800; color: #15803d; letter-spacing: 8px;">${otp}</p>
+                              <p style="margin: 16px 0 0 0; font-size: 12px; color: #166534; opacity: 0.7;">⏱️ Ce code expire dans 10 minutes</p>
+                            </td>
+                          </tr>
+                        </table>
+                        <p style="margin: 0 0 16px 0; font-size: 13px; color: #94a3b8; text-align: center;">Si vous n'avez pas initié cette connexion, vous pouvez ignorer cet email en toute sécurité.</p>
+                      </td>
+                    </tr>
+                    <tr style="background-color: #f8fafc; padding: 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                      <td style="padding: 24px; text-align: center; font-size: 11px; color: #94a3b8;">
+                        © ${year} Ferme Agro-Piscicole Cité St André • Abomey-Calavi, Bénin
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `,
+      });
+      console.log(`[EMAIL_SERVICE] ✅ FSA Login OTP sent to ${to}`);
+      return { success: true };
+    } catch (error) {
+      console.error("[EMAIL_ERROR] FSA Login OTP:", error);
+      return { success: false, error };
+    }
+  },
 };

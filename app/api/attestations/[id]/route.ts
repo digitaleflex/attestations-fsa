@@ -11,6 +11,7 @@ const AttestationUpdateSchema = z.object({
   status: z.enum(['PENDING', 'VALIDATED', 'REJECTED']).optional(),
   gender: z.enum(['M', 'F']).optional(),
   fullName: z.string().min(1, "Le nom complet est obligatoire.").optional(),
+  email: z.string().email('Adresse e-mail invalide.').optional().or(z.literal('')),
   birthDate: z.string().min(1, "La date de naissance est obligatoire.").optional(),
   birthPlace: z.string().min(1, "Le lieu de naissance est obligatoire.").optional(),
   formation: z.string().min(1, "La formation est obligatoire.").optional(),
@@ -142,6 +143,12 @@ export async function PATCH(
     if (formationId) {
       updateData.formationId = formationId;
       delete updateData.formation;
+    }
+
+    if (updateData.email === "") {
+      updateData.email = null;
+    } else if (typeof updateData.email === "string") {
+      updateData.email = updateData.email.trim().toLowerCase();
     }
 
     if (updateData.birthDate) updateData.birthDate = new Date(updateData.birthDate as string);

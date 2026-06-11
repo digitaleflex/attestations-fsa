@@ -63,6 +63,7 @@ export default function EditAttestationPage() {
     if (attData) {
       setForm({
         fullName: attData.fullName || "",
+        email: attData.email || "",
         gender: attData.gender || "",
         birthDate: formatDate(attData.birthDate),
         birthPlace: attData.birthPlace || "",
@@ -153,7 +154,7 @@ export default function EditAttestationPage() {
       // Nettoyer les champs texte optionnels vides
       const optionalTextFields = [
           'stageObservations', 'certificationObservations', 
-          'issuingCompany', 'location', 'instructor', 'formation'
+          'issuingCompany', 'location', 'instructor', 'formation', 'email'
       ];
       optionalTextFields.forEach(field => {
           if (submitData[field] === "") delete submitData[field];
@@ -262,6 +263,20 @@ export default function EditAttestationPage() {
                     className={cn("mt-1.5 h-11", fieldErrors.fullName && "border-red-500")}
                   />
                   {fieldErrors.fullName && <p className="text-xs text-red-500 mt-1">{fieldErrors.fullName}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="email" className="text-sm font-semibold text-slate-700">📧 Adresse e-mail (facultative)</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={form?.email || ""}
+                    onChange={handleChange}
+                    className={cn("mt-1.5 h-11", fieldErrors.email && "border-red-500")}
+                    placeholder="candidat@gmail.com"
+                  />
+                  {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
                 </div>
 
                 <div>

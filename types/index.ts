@@ -45,6 +45,7 @@ export type AttestationStatus = "PENDING" | "VALIDATED" | "REJECTED" | "CLAIMED"
 export interface Attestation {
   id: string;
   code: string;
+  email: string | null;
   issuedAt: Date | string;
   type: AttestationType;
   fullName: string;

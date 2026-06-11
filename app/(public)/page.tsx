@@ -4,15 +4,12 @@ import {
   Sprout
 } from "lucide-react";
 
-import { getPublicStats } from "@/lib/data-public";
-import { StatsDisplay } from '@/components/stats-display';
 import { HowItWorks } from '@/components/how-it-works';
 import { QuickAccessCards } from '@/components/quick-access-cards';
 import { FaqSection } from '@/components/faq-section';
 import { UpcomingExams } from '@/components/upcoming-exams';
 
 export default async function Home() {
-  const stats = await getPublicStats();
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center w-full space-y-0 pb-24 relative bg-white">
@@ -56,11 +53,6 @@ export default async function Home() {
 
       {/* --- QUICK ACCESS CARDS --- */}
       <QuickAccessCards />
-
-      {/* --- STATS SECTION - Social Proof --- */}
-      <section className="w-full px-4">
-        <StatsDisplay initialData={stats} />
-      </section>
 
       {/* --- HOW IT WORKS --- */}
       <section className="w-full max-w-7xl px-4">

@@ -2,7 +2,7 @@ import "../globals.css";
 import * as React from "react";
 import Link from "next/link";
 import { PublicHeader } from "@/components/PublicHeader";
-import { Facebook, Twitter, Instagram, Linkedin, ExternalLink, Phone, MapPin } from "lucide-react";
+import { Phone, MapPin } from "lucide-react";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -47,18 +47,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               <p className="text-slate-500 text-sm leading-relaxed max-w-sm">
                 Pionniers de l'agro-pisciculture durable au Bénin. Nous formons les leaders de demain à travers des programmes d'excellence et d'innovation.
               </p>
-              <div className="flex gap-3">
-                {[
-                  { icon: Facebook, color: "hover:bg-blue-50 hover:text-blue-600" },
-                  { icon: Twitter, color: "hover:bg-sky-50 hover:text-sky-500" },
-                  { icon: Instagram, color: "hover:bg-pink-50 hover:text-pink-600" },
-                  { icon: Linkedin, color: "hover:bg-indigo-50 hover:text-indigo-600" }
-                ].map((social, i) => (
-                  <a key={i} href="#" className={`w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 transition-all duration-300 ${social.color}`}>
-                    <social.icon className="w-4 h-4" />
-                  </a>
-                ))}
-              </div>
             </div>
 
             {/* Navigation Sections */}
@@ -68,9 +56,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 <ul className="space-y-3">
                   {[
                     { label: 'Accueil', href: '/' },
-                    { label: 'Stages & Formations', href: '/demande-stage' },
-                    { label: 'Examens & Résultats', href: '/exams' },
-                    { label: 'Contact & RDV', href: '/contact' }
+                    { label: 'Nos Formations', href: '/formations' },
+                    { label: 'Demande de Stage', href: '/demande-stage' },
+                    { label: 'Portfolios Stagiaires', href: '/portfolios' },
+                    { label: 'Contact', href: '/contact' }
                   ].map((item) => (
                     <li key={item.label}>
                       <Link href={item.href} className="text-slate-500 hover:text-emerald-600 text-sm transition-colors flex items-center group">
@@ -87,8 +76,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 <ul className="space-y-3">
                   {[
                     { label: 'Centre d\'aide (FAQ)', href: '/faq' },
-                    { label: 'Ressources PDF & Vidéos', href: '/ressources' },
-                    { label: 'Vérifier Certificat', href: '/verifier' },
+                    { label: 'Vérifier un Certificat', href: '/verifier' },
                     { label: 'Signaler un Problème', href: '/signalement' }
                   ].map((item) => (
                     <li key={item.label}>
