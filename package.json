@@ -46,6 +46,7 @@
     "@tanstack/react-query-devtools": "^5.82.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.2",
     "better-auth": "^1.2.12",
     "botid": "^1.5.11",

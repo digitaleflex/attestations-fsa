@@ -5,6 +5,7 @@ import * as React from "react";
 import Script from "next/script";
 import { TopLoader } from "@/components/TopLoader";
 import { BotIdClient } from "botid/client";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -48,6 +49,7 @@ export default function RootLayout({
         />
         <TopLoader />
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
