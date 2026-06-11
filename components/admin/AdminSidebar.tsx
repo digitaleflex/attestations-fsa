@@ -16,43 +16,32 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
-  ListTodo,
-  Inbox,
   Users,
   BookOpen,
   FileText,
   Settings,
   LogOut,
   Home,
+  AlertCircle,
+  ClipboardCheck,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
 const mainLinks = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/tasks", label: "À Traiter", icon: ListTodo, badgeKey: "pendingPortfolios" },
-  { href: "/admin/inbox", label: "Messagerie", icon: Inbox, badgeKey: "newReports" },
   { href: "/admin/users", label: "Apprenants", icon: Users },
   { href: "/admin/formations", label: "Catalogue Pédagogique", icon: BookOpen },
   { href: "/admin/attestations", label: "Attestations", icon: FileText },
+  { href: "/admin/reclamations", label: "Réclamations", icon: AlertCircle },
+  { href: "/admin/waitlist", label: "Liste d'attente", icon: ClipboardCheck },
 ];
 
 export function AdminSidebar({ admin }: { admin: any }) {
   const pathname = usePathname();
   const router = useRouter();
   const { state } = useSidebar();
-
-  const { data: counts } = useQuery({
-    queryKey: ["sidebar-counts"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/sidebar-counts");
-      if (!res.ok) return { pendingPortfolios: 0, newReports: 0 };
-      return res.json();
-    },
-    staleTime: 60000
-  });
 
   const handleLogout = async () => {
     try {
@@ -79,7 +68,6 @@ export function AdminSidebar({ admin }: { admin: any }) {
               pathname === item.href ||
               (pathname && item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
             );
-            const badgeValue = item.badgeKey ? (counts as any)?.[item.badgeKey] : 0;
 
             return (
               <SidebarMenuItem key={item.href}>
@@ -89,18 +77,13 @@ export function AdminSidebar({ admin }: { admin: any }) {
                   tooltip={item.label}
                   className={`transition-all duration-200 ${
                     isActive
-                      ? "bg-slate-900 text-white shadow-md shadow-slate-200 hover:bg-slate-800 hover:text-white"
-                      : "text-slate-600 hover:bg-slate-100"
+                       ? "bg-slate-900 text-white shadow-md shadow-slate-200 hover:bg-slate-800 hover:text-white"
+                       : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
                   <Link href={item.href}>
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
                     <span className="font-medium text-sm">{item.label}</span>
-                    {badgeValue > 0 && (
-                      <Badge className="ml-auto bg-rose-500 text-white border-none text-[8px] px-1.5 h-4 flex items-center justify-center min-w-[16px]">
-                        {badgeValue}
-                      </Badge>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
