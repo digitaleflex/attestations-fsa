@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     // ❌ BLOQUER LES ADMINS : Les attestations doivent être liées à un compte USER
-    if (user.role === 'ADMIN') {
+    if (user.role?.toLowerCase() === 'admin') {
       return NextResponse.json(
         { error: "Action non autorisée pour les administrateurs. Veuillez utiliser un compte candidat." },
         { status: 403 }

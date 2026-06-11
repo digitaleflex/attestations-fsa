@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     // Si un userId est fourni, on vérifie si l'utilisateur est admin ou s'il demande son propre relevé
     let userId = userSession.id;
     if (targetUserId && targetUserId !== userSession.id) {
-      if (userSession.role !== "ADMIN") {
+      if (userSession.role?.toLowerCase() !== "admin") {
         return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
       userId = targetUserId;

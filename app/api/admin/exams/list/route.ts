@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser(request);
-    if (!user || user.role !== "admin") {
+    if (!user || user.role?.toLowerCase() !== "admin") {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 

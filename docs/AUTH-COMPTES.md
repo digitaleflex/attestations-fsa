@@ -2,215 +2,108 @@
 
 ## 📋 Vue d'ensemble
 
-Le système d'authentification de la **Ferme St André (FSA)** gère deux types d'utilisateurs distincts :
+Le système d'authentification de la **Ferme St André (FSA)** est basé sur **Better Auth**. Tous les types d'utilisateurs (Candidats et Administrateurs) sont centralisés dans une table unique `User` en base de données, gérée via un système de rôles.
 
-| Type | Modèle | Rôle | Accès |
-|------|--------|------|-------|
-| **Administrateur** | `Admin` | `ADMIN` | Backoffice complet |
-| **Candidat** | `User` | `USER` | Espace candidat limité |
+| Rôle | Description | Accès |
+|------|-------------|-------|
+| `admin` | Administrateur de la plateforme | Accès complet au Backoffice, gestion des utilisateurs, examens et attestations |
+| `user` | Candidat / Apprenant | Espace candidat (Dashboard personnel, examens, téléchargement d'attestations) |
 
 ---
 
 ## 👤 Comptes Administrateur
 
-### 🔑 Compte Principal (Production)
+### 🔑 Configuration de Production
+- **Email** : Configuré par l'administrateur système lors du déploiement.
+- **Rôle** : `admin` (défini dans la colonne `role` du modèle `User`).
+- **URL de connexion** : `/admin/login`
 
-| Information | Valeur |
-|-------------|--------|
-| **Email** | `admin@fsa.bj` |
-| **Mot de passe** | `Admin123!` |
-| **Rôle** | `ADMIN` |
-| **Modèle** | `Admin` |
-| **URL de connexion** | `/admin/login` |
+### 🔒 Sécurité Administrateur : Double Facteur (2FA)
+Pour protéger l'accès au backoffice, une authentification à deux facteurs (2FA) est disponible et hautement recommandée pour les administrateurs :
+- **TOTP** : Application d'authentification (Google Authenticator, Authy, etc.).
+- **OTP par Email** : Envoi d'un code temporaire par email (validité 5 minutes, 5 essais max).
+- **Codes de secours** : 10 codes à usage unique générés à l'activation pour parer à la perte de l'appareil 2FA.
+- **Appareil de confiance** : Possibilité de mémoriser l'appareil pendant 30 jours.
 
-### 🧪 Compte de Test (Développement)
-
-| Information | Valeur |
-|-------------|--------|
-| **Email** | `admin@example.com` |
-| **Mot de passe** | `admin123` |
-| **Rôle** | `ADMIN` |
-| **Modèle** | `Admin` |
-
-> ⚠️ **Important** : Changez le mot de passe après la première connexion en production !
+*Note : La 2FA est désactivée par défaut et peut être activée volontairement depuis l'espace admin.*
 
 ---
 
 ## 🎓 Comptes Candidat
 
-### 🧪 Compte de Test (Développement)
-
-| Information | Valeur |
-|-------------|--------|
-| **Email** | `candidat@example.com` |
-| **Mot de passe** | `Candidat123!` |
-| **Nom** | `Jean Koffi` |
-| **Date de naissance** | `15/05/1995` |
-| **Lieu de naissance** | `Cotonou, Bénin` |
-| **Téléphone** | `+229 95 12 34 56` |
-| **Rôle** | `USER` |
-| **Modèle** | `User` |
-
 ### 📝 Inscription Publique
-
-Les candidats peuvent s'inscrire via le formulaire public :
-
+Les candidats s'inscrivent via le formulaire public :
 - **URL** : `/auth` (onglet "Inscription")
 - **Champs requis** :
-  - Email
-  - Mot de passe (8+ caractères, majuscule, minuscule, chiffre, caractère spécial)
-  - Nom complet (tel qu'apparaît sur l'acte de naissance)
-  - Date de naissance (format JJ/MM/AAAA)
+  - Nom complet (doit correspondre à l'acte de naissance pour les futures attestations)
+  - Email (validation par OTP obligatoire lors de la création du compte)
+  - Mot de passe (8+ caractères, géré de façon sécurisée par Better Auth)
+  - Date de naissance (format FR `JJ/MM/AAAA` géré et converti côté serveur)
   - Lieu de naissance
   - Téléphone
-- **Champs optionnels** :
-  - Adresse postale
-
----
-
-## 🛠️ Création des Comptes
-
-### Via Script Seed (Recommandé)
-
-```bash
-# Exécuter le script de seed
-pnpm seed
-```
-
-**Ce qui est créé :**
-- ✅ 1 compte administrateur (`admin@fsa.bj`)
-- ✅ 1 compte candidat de test (`candidat@example.com`)
-
-### Via Interface Admin (Uniquement pour Admin)
-
-Les administrateurs peuvent créer d'autres comptes admin depuis :
-- **URL** : `/admin/users` (section "Gestion des utilisateurs")
-
-### Via Formulaire Public (Uniquement pour Candidats)
-
-Les candidats s'inscrivent automatiquement via :
-- **URL** : `/auth`
-- **Rôle attribué** : `USER` (automatique, non modifiable)
+- **Rôle attribué** : `user` (défini automatiquement, non modifiable par l'utilisateur).
 
 ---
 
 ## 📂 Structure de la Base de Données
 
-### Modèle `Admin`
-
-```prisma
-model Admin {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String    // Hashé avec bcrypt
-  name          String?
-  role          String    @default("ADMIN")
-  emailVerified DateTime?
-  birthDate     DateTime?
-  birthPlace    String?
-  phone         String?
-  address       String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-```
-
-### Modèle `User` (Candidat)
+Le modèle Prisma unique pour l'authentification est le suivant :
 
 ```prisma
 model User {
-  id            String    @id @default(uuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?   // Hashé avec bcrypt
-  role          String    @default("USER")
-  birthDate     DateTime?
-  birthPlace    String?
-  phone         String?
-  address       String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
+  id                    String              @id @default(uuid())
+  name                  String?
+  email                 String?             @unique
+  emailVerified         DateTime?
+  password              String?             // Hashé avec Better Auth (bcrypt 12 rounds)
+  role                  String              @default("user")
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Champs spécifiques FSA
+  phone                 String?
+  birthDate             DateTime?
+  birthPlace            String?
+  address               String?
+  attestationCode       String?             @unique
+  attestationStatus     String              @default("PENDING")
+  
+  // Relations Better Auth & FSA
+  accounts              Account[]
+  sessions              Session[]
+  attestations          Attestation[]
+  examSessions          ExamSession[]
+  // ...
 }
 ```
 
----
-
-## 🔒 Sécurité des Mots de Passe
-
-### Critères de Validation
-
-| Critère | Admin | Candidat |
-|---------|-------|----------|
-| **Longueur minimale** | 8 caractères | 8 caractères |
-| **Majuscule requise** | ❌ Non | ✅ Oui |
-| **Minuscule requise** | ❌ Non | ✅ Oui |
-| **Chiffre requis** | ❌ Non | ✅ Oui |
-| **Caractère spécial** | ❌ Non | ✅ Oui |
-
-### Hashage
-
-- **Algorithme** : `bcrypt`
-- **Sel** : 12 rounds
-- **Stockage** : Hash uniquement (jamais en clair)
+*Le modèle historique `Admin` a été supprimé afin de simplifier la gestion des sessions et d'unifier l'infrastructure d'authentification.*
 
 ---
 
-## 🚀 Commandes Utiles
+## 🛠️ Commandes Utiles de Base de Données
 
 ```bash
 # Générer le client Prisma
-pnpm prisma generate
+npm run db:generate
 
-# Créer une migration
-pnpm prisma migrate dev --name <nom>
+# Lancer les migrations en local
+npm run db:migrate
 
-# Exécuter le seed
-pnpm seed
+# Déployer les migrations en production
+npm run db:deploy
 
-# Reset de la base de données (⚠️ efface toutes les données)
-pnpm prisma migrate reset
+# Lancer le script de peuplement (seed)
+npm run db:seed
 ```
 
 ---
 
-## 📝 Notes Importantes
+## 🔒 Sécurité des Mots de Passe & Sessions
 
-1. **Séparation des rôles** :
-   - Les admins sont créés via `Admin` model
-   - Les candidats sont créés via `User` model
-   - Un candidat **ne peut pas** devenir admin via l'inscription publique
+- **Hashage** : Les mots de passe sont hashés à l'aide de l'algorithme `bcrypt` (12 rounds) via Better Auth.
+- **Cookies** : Les jetons de session sont stockés dans des cookies sécurisés `httpOnly`, avec le flag `SameSite` configuré sur `Lax` ou `Strict`.
+- **Expiration** : Les sessions candidats et admins expirent après 30 jours (renouvellement de la validité de session toutes les 24 heures en cas d'activité).
 
-2. **Email unique** :
-   - Chaque email doit être unique dans son modèle
-   - Un même email peut exister dans `Admin` ET `User` (déconseillé)
-
-3. **Protection des routes** :
-   - `/admin/*` : Réservé aux utilisateurs avec rôle `ADMIN`
-   - `/auth` : Public (connexion/inscription)
-   - `/` : Public (accueil, vérification)
-
-4. **Session** :
-   - Durée par défaut : 7 jours
-   - Option "Se souvenir de moi" : 30 jours
-   - Déconnexion automatique à la fermeture du navigateur (si non coché)
-
----
-
-## 📧 Support Technique
-
-En cas de problème de connexion :
-
-1. Vérifier que la base de données est accessible
-2. Exécuter `pnpm prisma generate`
-3. Vérifier les variables d'environnement (`.env`)
-4. Consulter les logs : `console.error` dans les API routes
-
----
-
-**Document mis à jour le** : 31 mars 2026  
-**Version** : 1.0  
-**Projet** : Attestation-FSA
+**Dernière mise à jour** : Juin 2026  
+**Technologie** : Better Auth integration  

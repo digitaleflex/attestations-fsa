@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       slug: portfolioUser?.portfolioSlug,
       enabled: portfolioUser?.portfolioEnabled,
       portfolioUrl: portfolioUser?.portfolioSlug
-        ? `/portfolios/${portfolioUser.portfolioSlug}`
+        ? `/p/${portfolioUser.portfolioSlug}`
         : null,
     });
   } catch (error) {
@@ -97,7 +97,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       success: true,
-      portfolioUrl: `/portfolios/${slug}`,
+      portfolioUrl: `/p/${slug}`,
       ...updated,
     });
   } catch (error) {

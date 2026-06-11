@@ -1,7 +1,4 @@
 // app/api/exams/[id]/submit/route.ts
-// Optimized exam submission with atomic double-submit prevention
-// Supports 50+ concurrent candidates safely
-// ✅ ANTI-CHEAT: Time-based detection and answer pattern analysis
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
@@ -10,23 +7,6 @@ import { analyzeAnswerPattern, logCheatingDetection } from '@/lib/anti-cheat';
 import { createAuditLog } from '@/lib/audit';
 import { pusherServer } from '@/lib/pusher';
 
-
-
-// In-memory idempotency cache (key -> timestamp)
-// Prevents duplicate processing of the same request
-const idempotencyCache = new Map<string, { response: Record<string, unknown>; timestamp: number }>();
-const IDEMPOTENCY_TTL = 60_000; // 1 minute
-
-/**
- * POST /api/exams/[id]/submit
- * Submits candidate answers and calculates Part 1 (QCM) score.
- * 
- * Optimizations for 50+ concurrent submissions:
- * 1. Atomic updateMany with WHERE status check (prevents double submit)
- * 2. Only fetches QCM questions needed for scoring (not full exam)
- * 3. Idempotency key support (prevents duplicate processing)
- * 4. Minimal data loaded per request
- */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -45,16 +25,27 @@ export async function POST(
 
     const { id: examId } = await params;
     const body = await request.json();
-    const { answers, idempotencyKey, startedAt } = body;
+    const { answers } = body;
 
     if (!answers || typeof answers !== 'object') {
       return NextResponse.json({ error: 'Réponses manquantes ou invalides' }, { status: 400 });
     }
 
-    // ✅ ANTI-CHEAT: Time-based detection (Re-enabled)
-    if (startedAt) {
-      const timeTakenMinutes = (Date.now() - startedAt) / 60000;
-      if (timeTakenMinutes < 1) { // Moins d'une minute pour un examen complet
+    // Fetch session to get server-side startedAt (anti-cheat: never trust client clock)
+    const existingSession = await prisma.examSession.findFirst({
+      where: { examId, userId: user.id },
+      select: { startedAt: true, status: true },
+    });
+
+    // Early exit if already submitted (fast path before any heavy queries)
+    if (existingSession?.status && !['IN_PROGRESS', 'PENDING'].includes(existingSession.status)) {
+      return NextResponse.json({ error: 'Session déjà soumise' }, { status: 409 });
+    }
+
+    // ANTI-CHEAT: Time check using DB startedAt (not client-supplied value)
+    if (existingSession?.startedAt) {
+      const timeTakenMinutes = (Date.now() - existingSession.startedAt.getTime()) / 60000;
+      if (timeTakenMinutes < 1) {
         await logCheatingDetection(user.id, examId, request.headers.get('x-forwarded-for') || 'unknown', request.headers.get('user-agent') || 'unknown', {
           isSuspicious: true,
           confidence: 'HIGH',
@@ -64,14 +55,6 @@ export async function POST(
             details: `Soumission extrêmement rapide : ${timeTakenMinutes.toFixed(2)} minutes`
           }]
         });
-      }
-    }
-
-    // ✅ Idempotency check: return cached response if same key seen recently
-    if (idempotencyKey) {
-      const cached = idempotencyCache.get(idempotencyKey);
-      if (cached && Date.now() - cached.timestamp < IDEMPOTENCY_TTL) {
-        return NextResponse.json(cached.response, { status: 200 });
       }
     }
 
@@ -211,20 +194,7 @@ export async function POST(
       status: finalStatus,
     };
 
-    // ✅ Cache response for idempotency
-    if (idempotencyKey) {
-      idempotencyCache.set(idempotencyKey, { response, timestamp: Date.now() });
-    }
-
-    // Clean old cache entries
-    if (idempotencyCache.size > 1000) {
-      const now = Date.now();
-      for (const [key, val] of idempotencyCache.entries()) {
-        if (now - val.timestamp > IDEMPOTENCY_TTL) idempotencyCache.delete(key);
-      }
-    }
-
-    // ✅ Déclenchement Pusher pour l'admin (non-bloquant)
+    // Déclenchement Pusher pour l'admin (non-bloquant)
     try {
         await pusherServer.trigger('admin-updates', 'new-submission', {
             candidateName: user.name,

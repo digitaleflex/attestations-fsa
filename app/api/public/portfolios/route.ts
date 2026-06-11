@@ -57,7 +57,7 @@ export async function GET(request: Request) {
         attestationCount: u._count?.attestations || 0,
         examCount: u._count?.examSessions || 0,
         // Generate public URL
-        portfolioUrl: `/portfolios/${u.portfolioSlug}`,
+        portfolioUrl: `/p/${u.portfolioSlug}`,
         // Anonymize email
         email: u.email ? `${u.email.charAt(0)}***@${u.email.split("@")[1]}` : null,
       })),

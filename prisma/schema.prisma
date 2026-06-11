@@ -24,6 +24,7 @@ model Account {
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, accountId])
+  @@index([userId])
 }
 
 model Session {
@@ -37,6 +38,9 @@ model Session {
   userAgent String?
   impersonatedBy String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Verification {
@@ -46,6 +50,9 @@ model Verification {
   expiresAt  DateTime
   createdAt  DateTime?
   updatedAt  DateTime?
+
+  @@index([identifier])
+  @@index([identifier, expiresAt])
 }
 
 model User {
@@ -95,15 +102,15 @@ model User {
   sessions              Session[]
   exam                  Exam?               @relation(fields: [examId], references: [id])
   formation             Formation?          @relation(fields: [formationId], references: [id])
+
+  @@index([role])
+  @@index([status])
+  @@index([attestationStatus])
+  @@index([formationId])
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
+// VerificationToken removed — NextAuth legacy, unused. Better Auth uses `Verification` model.
+// Migration required: prisma migrate dev --name remove_legacy_models
 
 model Formation {
   id           String        @id @default(uuid())
@@ -146,6 +153,12 @@ model Attestation {
   formation                 Formation             @relation(fields: [formationId], references: [id])
   user                      User?                 @relation(fields: [userId], references: [id])
   correctionRequests        CorrectionRequest[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([formationId])
+  @@index([issuedAt])
 }
 
 model Settings {
@@ -229,6 +242,9 @@ model ExamPart {
   scenario  String?
   exam      Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
   questions Question[]
+
+  @@index([examId])
+  @@index([examId, order])
 }
 
 model Question {
@@ -277,17 +293,17 @@ model ExamSession {
   examId      String
   userId      String
   status      String            @default("PENDING")
-  scorePart1  Float             @default(0)
-  scorePart2  Float             @default(0)
-  scorePart3  Float             @default(0)
-  score       Float             @default(0)
-  internshipScore Float         @default(0)
-  finalScore  Float             @default(0)
-  totalScore  Float             @default(0)
+  scorePart1      Float @default(0) // raw Part 1 auto-grade (QCM)
+  scorePart2      Float @default(0) // raw Part 2 admin-grade
+  scorePart3      Float @default(0) // raw Part 3 admin-grade
+  score           Float @default(0) // legacy Part 1 score alias — prefer scorePart1
+  totalScore      Float @default(0) // (scorePart1+2+3)/5 → /20 after grading
+  internshipScore Float @default(0) // internship component score
+  finalScore      Float @default(0) // weighted avg of totalScore + internshipScore
   gradedBy    String?
   gradedAt    DateTime?
   startedAt   DateTime          @default(now())
-  submittedAt DateTime?         @default(now())
+  submittedAt DateTime?
   updatedAt   DateTime          @updatedAt
   answers     Json?             @default("{}")
   scans       CompositionScan[]
@@ -300,6 +316,9 @@ model ExamSession {
   @@index([userId, examId])
   @@index([status])
   @@index([examId, status])
+  @@index([userId, status])
+  @@index([submittedAt])
+  @@index([gradedAt])
 }
 
 model CompositionScan {
@@ -329,6 +348,10 @@ model InternshipRequest {
   updatedAt  DateTime         @updatedAt
   userId     String?
   user       User?            @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([status, createdAt])
 }
 
 model CorrectionRequest {
@@ -344,6 +367,10 @@ model CorrectionRequest {
   updatedAt     DateTime         @updatedAt
   attestation   Attestation?     @relation(fields: [attestationId], references: [id])
   user          User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([status, createdAt])
 }
 
 model SecurityLog {
@@ -414,8 +441,8 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }
 
 model Contact {
@@ -431,20 +458,8 @@ model Contact {
   updatedAt   DateTime @updatedAt
 }
 
-model Admin {
-  id            String    @id
-  email         String    @unique
-  password      String
-  name          String?
-  createdAt     DateTime  @default(now())
-  emailVerified DateTime?
-  role          String    @default("admin")
-  updatedAt     DateTime
-  address       String?
-  birthDate     DateTime?
-  birthPlace    String?
-  phone         String?
-}
+// Admin model removed — orphan table, no relations. Auth uses User.role = "admin" instead.
+// Migration required: prisma migrate dev --name remove_legacy_models
 
 model Reclamation {
   id            String           @id @default(uuid())
@@ -458,6 +473,11 @@ model Reclamation {
   updatedAt     DateTime         @updatedAt
   user          User             @relation(fields: [userId], references: [id])
   submission    ExamSession      @relation(fields: [submissionId], references: [id])
+
+  @@index([userId])
+  @@index([submissionId])
+  @@index([status])
+  @@index([status, createdAt])
 }
 
 

@@ -3,7 +3,21 @@ import { type NextRequest, NextResponse } from "next/server";
 
 // Routes protégées
 const ADMIN_ROUTES = ['/admin', '/api/admin'];
-const USER_ROUTES = ['/dashboard', '/exams', '/attestations', '/results', '/profile', '/internships', '/api/user'];
+const USER_ROUTES = [
+  '/dashboard',
+  '/exams',
+  '/attestations',
+  '/results',
+  '/profile',
+  '/internships',
+  '/courses',
+  '/mock-exams',
+  '/notifications',
+  '/portfolio',
+  '/support',
+  '/transcript',
+  '/api/user',
+];
 
 /**
  * Middleware d'authentification simplifié et standardisé

@@ -130,44 +130,27 @@ export default function UserDashboardPage() {
     }
   };
 
-  // Fetch user profile
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ["user-profile"],
+  // Fetch consolidated dashboard data
+  const { data: dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = useQuery({
+    queryKey: ["user-dashboard-data"],
     queryFn: async () => {
-      const res = await fetch("/api/user/profile");
+      const res = await fetch("/api/user/dashboard-data");
       if (!res.ok) {
         if (res.status === 401) router.push("/auth");
         throw new Error("Non autorisé");
       }
-      return res.json() as Promise<User & { correctionRequests: any[] }>;
+      return res.json();
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch data
-  const { data: attestationsData } = useQuery({
-    queryKey: ["user-attestations"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/attestations?limit=5");
-      return res.json() as Promise<{ attestations: Attestation[] }>;
-    }
-  });
+  const user = dashboardData?.profile;
+  const attestationsData = dashboardData?.attestations;
+  const examsData = dashboardData?.exams;
+  const notificationsData = dashboardData?.notifications;
+  const statsData = dashboardData?.statistics;
 
-  const { data: examsData } = useQuery({
-    queryKey: ["user-exams"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/exams");
-      return res.json();
-    }
-  });
-
-  const { data: notificationsData, refetch: refetchNotifications } = useQuery({
-    queryKey: ["user-notifications"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/notifications?limit=3");
-      return res.json() as Promise<{ notifications: Notification[], unreadCount: number }>;
-    }
-  });
+  const userLoading = dashboardLoading;
 
   const markAsRead = async (id: string) => {
     try {
@@ -176,19 +159,11 @@ export default function UserDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notificationId: id })
       });
-      refetchNotifications();
+      refetchDashboard();
     } catch (err) {
       console.error("Mark as read error:", err);
     }
   };
-
-  const { data: statsData } = useQuery({
-    queryKey: ["user-statistics"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/statistics");
-      return res.json() as Promise<UserStatistics>;
-    }
-  });
 
   const handleDownload = async (att: Attestation) => {
     if (att.status === "REJECTED") {

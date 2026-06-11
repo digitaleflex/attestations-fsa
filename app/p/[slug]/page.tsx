@@ -25,7 +25,7 @@ export default async function PublicPortfolioPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const currentUrl = `https://fsa-portal.vercel.app/p/${slug}`; // Replace with your domain logic
+  const currentUrl = `${process.env.NEXT_PUBLIC_APP_URL}/p/${slug}`;
 
   const user = await prisma.user.findFirst({
     where: { 

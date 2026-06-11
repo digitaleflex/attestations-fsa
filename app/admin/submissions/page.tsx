@@ -149,10 +149,7 @@ function SubmissionsList() {
       const res = await fetch("/api/admin/notifications/results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          submissionId,
-          testEmail: isTest ? "admin@example.com" : undefined // TODO: Utiliser l'email admin réel ou demander via prompt
-        }),
+        body: JSON.stringify({ submissionId, isTest: isTest || undefined }),
       });
 
       const result = await res.json();
