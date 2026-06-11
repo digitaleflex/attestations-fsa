@@ -23,10 +23,7 @@ export function PublicHeader() {
   const navLinks = [
     { label: "Accueil", href: "/" },
     { label: "Stages", href: "/demande-stage" },
-    { label: "Formations", href: "/formations" },
     { label: "Examens", href: "/exams" },
-    { label: "Ressources", href: "/ressources" },
-    { label: "Contact", href: "/contact" },
   ];
 
   return (
