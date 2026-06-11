@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText, Scan, ShieldCheck, Briefcase,
   Search, ClipboardCheck, GraduationCap, MapPin,
-  Send, Users, Monitor, Award
+  Send, Users, Monitor, Award, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -80,6 +80,20 @@ const CONTENT = {
 export function HowItWorks() {
     const [activeTab, setActiveTab] = useState<'internships' | 'exams' | 'verification'>('internships');
     const current = CONTENT[activeTab];
+    const [activeStepIndex, setActiveStepIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+
+    useEffect(() => {
+      setActiveStepIndex(0);
+    }, [activeTab]);
+
+    useEffect(() => {
+      if (isPaused) return;
+      const interval = setInterval(() => {
+        setActiveStepIndex((prev) => (prev + 1) % current.steps.length);
+      }, 4500); // 4.5s
+      return () => clearInterval(interval);
+    }, [isPaused, current.steps.length]);
 
     const getColorClass = (type: string) => {
       switch(type) {
@@ -132,7 +146,8 @@ export function HowItWorks() {
                       transition={{ duration: 0.3, ease: "easeOut" }}
                       className="w-full"
                   >
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative py-4">
+                      {/* ================= LAYOUT DESKTOP (Grille 3 colonnes) ================= */}
+                      <div className="hidden md:grid grid-cols-3 gap-12 relative py-4">
                           {current.steps.map((step, index) => (
                               <div key={index} className="relative group">
                                   <div className="flex flex-col items-center text-center space-y-6">
@@ -160,6 +175,100 @@ export function HowItWorks() {
                                   )}
                               </div>
                           ))}
+                      </div>
+
+                      {/* ================= LAYOUT MOBILE (Carrousel avec flèches) ================= */}
+                      <div 
+                        className="block md:hidden relative w-full px-2 py-4"
+                        onTouchStart={() => setIsPaused(true)}
+                        onTouchEnd={() => setIsPaused(false)}
+                        onMouseEnter={() => setIsPaused(true)}
+                        onMouseLeave={() => setIsPaused(false)}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          {/* Flèche Gauche */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveStepIndex((prev) => (prev - 1 + current.steps.length) % current.steps.length);
+                              setIsPaused(true);
+                              setTimeout(() => setIsPaused(false), 6000);
+                            }}
+                            className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm shrink-0"
+                            aria-label="Étape précédente"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+
+                          {/* Conteneur étape centrale animée */}
+                          <div className="flex-1 min-h-[220px] flex items-center justify-center relative overflow-hidden">
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={`${activeTab}-${activeStepIndex}`}
+                                initial={{ opacity: 0, scale: 0.95, x: 15 }}
+                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, x: -15 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                className="w-full max-w-xs p-6 rounded-[2rem] bg-white border border-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.03)] relative"
+                              >
+                                <div className="flex flex-col items-center text-center space-y-4">
+                                  {/* Icon */}
+                                  <div className={`w-14 h-14 rounded-[1.2rem] flex items-center justify-center shadow-inner ${
+                                      activeTab === 'internships' ? 'bg-emerald-100 text-emerald-600' :
+                                      activeTab === 'exams' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
+                                  }`}>
+                                      {current.steps[activeStepIndex].icon}
+                                  </div>
+
+                                  <div className="space-y-2">
+                                      <h3 className="text-lg font-black text-slate-800">
+                                          {activeStepIndex + 1}. {current.steps[activeStepIndex].title}
+                                      </h3>
+                                      <p className="text-slate-500 text-xs leading-relaxed font-bold px-2">
+                                          {current.steps[activeStepIndex].description}
+                                      </p>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+
+                          {/* Flèche Droite */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveStepIndex((prev) => (prev + 1) % current.steps.length);
+                              setIsPaused(true);
+                              setTimeout(() => setIsPaused(false), 6000);
+                            }}
+                            className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm shrink-0"
+                            aria-label="Étape suivante"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        {/* Indicateurs (Petits points) */}
+                        <div className="flex justify-center items-center gap-1.5 mt-4">
+                          {current.steps.map((_, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => {
+                                setActiveStepIndex(index);
+                                setIsPaused(true);
+                                setTimeout(() => setIsPaused(false), 6000);
+                              }}
+                              className={`h-1.5 rounded-full transition-all duration-300 ${
+                                activeStepIndex === index 
+                                  ? activeTab === 'internships' ? 'w-5 bg-emerald-600' :
+                                    activeTab === 'exams' ? 'w-5 bg-blue-600' : 'w-5 bg-amber-600'
+                                  : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                              }`}
+                              aria-label={`Aller à l'étape ${index + 1}`}
+                            />
+                          ))}
+                        </div>
                       </div>
 
                       {/* Scenario Highlight Bar */}

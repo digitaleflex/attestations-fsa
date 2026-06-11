@@ -16,14 +16,7 @@ export default async function Home() {
 
       {/* --- HERO SECTION --- */}
       <section className="relative w-full min-h-[65vh] flex flex-col items-center justify-center text-center overflow-hidden pt-20 md:pt-24 px-4 pb-12">
-        {/* Parallax Background */}
-        <div
-          className="absolute inset-0 z-0 bg-[url('/images/hero-bg.png')] bg-cover bg-center bg-fixed opacity-[0.08] pointer-events-none transition-transform duration-700"
-          aria-hidden="true"
-        />
-        {/* Subtle Gradient Overlays for Readability */}
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white to-transparent z-0 pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent z-0 pointer-events-none" />
+
 
         <div className="relative z-10 max-w-6xl w-full space-y-6">
            <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-emerald-100 backdrop-blur-sm border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-[0.3em] shadow-lg">
@@ -36,8 +29,8 @@ export default async function Home() {
               Obtenez votre <span className="text-emerald-600">attestation</span> <span className="text-blue-600">instantanément.</span>
            </h1>
 
-           <p className="text-slate-500 font-bold text-base md:text-lg max-w-2xl mx-auto leading-relaxed px-4">
-             Espace d'évaluation officiel de la Ferme Cité St André. Connectez-vous à votre espace personnel pour composer vos examens ou valider instantanément l'authenticité d'un certificat.
+           <p className="text-slate-500 font-bold text-base md:text-lg max-w-xl mx-auto leading-relaxed px-4">
+             Évaluez vos compétences et obtenez vos certifications officielles de la Ferme Cité St André.
            </p>
 
            <div className="flex flex-col md:flex-row items-center justify-center gap-4 pt-4">

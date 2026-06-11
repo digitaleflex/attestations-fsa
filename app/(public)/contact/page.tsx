@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { 
   Mail, 
@@ -20,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Link from "next/link";
 
-export default function ContactPage() {
+export function ContactContent() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,6 +31,22 @@ export default function ContactPage() {
     subject: "mesure",
     message: "",
   });
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const sub = searchParams?.get("subject");
+    const formationId = searchParams?.get("formationId");
+    if (sub === "inscription") {
+      setFormData(prev => ({
+        ...prev,
+        subject: "inscription",
+        message: formationId 
+          ? `Bonjour, je souhaite m'inscrire à la formation (ID: ${formationId}). Pouvez-vous me recontacter ?` 
+          : "Bonjour, je souhaite obtenir des informations pour m'inscrire à l'une de vos formations."
+      }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,6 +250,7 @@ export default function ContactPage() {
                                     className="w-full h-12 md:h-14 pl-11 pr-10 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 appearance-none text-xs md:text-sm"
                                 >
                                     <option value="mesure">Programme sur-mesure</option>
+                                    <option value="inscription">Demande d'inscription</option>
                                     <option value="info">Informations générales</option>
                                     <option value="rdv">Prendre rendez-vous</option>
                                 </select>
@@ -273,5 +291,13 @@ export default function ContactPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#fafbfc]">Chargement...</div>}>
+      <ContactContent />
+    </Suspense>
   );
 }

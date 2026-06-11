@@ -6,7 +6,7 @@ import Script from "next/script";
 import { TopLoader } from "@/components/TopLoader";
 import { BotIdClient } from "botid/client";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 // Force all pages to use dynamic rendering instead of static generation
 // This prevents build errors with client components that use React hooks

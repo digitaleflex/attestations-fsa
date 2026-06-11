@@ -22,8 +22,8 @@ export function PublicHeader() {
 
   const navLinks = [
     { label: "Accueil", href: "/" },
+    { label: "Formations", href: "/formations" },
     { label: "Stages", href: "/demande-stage" },
-    { label: "Examens", href: "/exams" },
   ];
 
   return (
@@ -31,7 +31,7 @@ export function PublicHeader() {
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 md:gap-3 group">
             <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg md:rounded-xl shadow-emerald-100 shadow-lg group-hover:scale-105 transition-transform duration-500">
-              <Image src="/logo-fsa.png" alt="Logo FSA" fill sizes="40px" className="object-cover" />
+              <Image src="/logo-fsa.png" alt="Logo FSA" fill sizes="40px" className="object-cover" priority />
             </div>
             <div className="flex flex-col">
                 <span className="text-[10px] md:text-xs font-black text-slate-900 leading-none uppercase tracking-tighter italic">Ferme Agro-piscicole</span>
