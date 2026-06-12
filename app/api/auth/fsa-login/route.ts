@@ -104,19 +104,51 @@ export async function POST(request: Request) {
       }
     }
 
-    // 1. Recherche de l'attestation
-    const attestation = await findAttestationByCode(data.fsaCode);
-    if (!attestation) {
-      return NextResponse.json({
-        message: "Aucun dossier trouvé avec ce code FSA. Veuillez vérifier la saisie."
-      }, { status: 404 });
-    }
+    // 1. Recherche hybride (E-mail ou Code FSA)
+    const inputCleaned = data.fsaCode.trim().toLowerCase();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputCleaned);
 
-    const email = attestation.email;
-    if (!email) {
-      return NextResponse.json({
-        message: "Aucune adresse e-mail n'est associée à ce dossier. Veuillez contacter l'administration pour la renseigner."
-      }, { status: 400 });
+    let email = "";
+    let candidateName = "";
+    let attestation: any = null;
+
+    if (isEmail) {
+      const user = await prisma.user.findUnique({
+        where: { email: inputCleaned },
+        select: { id: true, email: true, name: true, role: true }
+      });
+
+      if (!user) {
+        return NextResponse.json({
+          message: "Aucun compte candidat n'est associé à cette adresse e-mail. Veuillez contacter l'administration."
+        }, { status: 404 });
+      }
+
+      if (user.role?.toLowerCase() === 'admin') {
+        return NextResponse.json({
+          message: "Accès refusé. Les administrateurs doivent utiliser l'interface de connexion dédiée."
+        }, { status: 403 });
+      }
+
+      email = user.email || inputCleaned;
+      candidateName = user.name || "Candidat";
+    } else {
+      const foundAttestation = await findAttestationByCode(data.fsaCode);
+      if (!foundAttestation) {
+        return NextResponse.json({
+          message: "Aucun dossier trouvé avec ce code FSA. Veuillez vérifier la saisie."
+        }, { status: 404 });
+      }
+
+      if (!foundAttestation.email) {
+        return NextResponse.json({
+          message: "Aucune adresse e-mail n'est associée à ce dossier. Veuillez contacter l'administration pour la renseigner."
+        }, { status: 400 });
+      }
+
+      email = foundAttestation.email;
+      candidateName = foundAttestation.fullName;
+      attestation = foundAttestation;
     }
 
     // --- ACTION : REQUEST OTP ---
@@ -139,7 +171,7 @@ export async function POST(request: Request) {
       });
 
       // Envoyer le mail contenant l'OTP
-      const emailResult = await emailService.sendFsaLoginOTP(email, attestation.fullName, otp);
+      const emailResult = await emailService.sendFsaLoginOTP(email, candidateName, otp);
       if (!emailResult.success) {
         console.error("[FSA-LOGIN] Failed to send email:", emailResult.error);
         return NextResponse.json({
@@ -184,16 +216,16 @@ export async function POST(request: Request) {
         user = await prisma.user.create({
           data: {
             email,
-            name: attestation.fullName,
+            name: candidateName,
             role: 'user',
-            attestationCode: attestation.code,
-            attestationStatus: 'VALIDATED'
+            attestationCode: attestation ? attestation.code : null,
+            attestationStatus: attestation ? 'VALIDATED' : 'PENDING'
           }
         });
       }
 
       // Associer l'attestation à l'utilisateur si ce n'est pas fait
-      if (attestation.userId !== user.id) {
+      if (attestation && attestation.userId !== user.id) {
         await prisma.attestation.update({
           where: { id: attestation.id },
           data: { userId: user.id }

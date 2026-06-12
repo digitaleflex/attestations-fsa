@@ -264,7 +264,7 @@ function AuthContent() {
           
           <p className="text-slate-400 text-sm mt-3 px-4 font-medium leading-relaxed">
             {step === 1 
-              ? "Saisissez votre code d'attestation FSA ou sa clé de fin à 5 caractères pour accéder à votre espace."
+              ? "Saisissez votre e-mail ou votre code d'attestation FSA pour accéder à votre espace."
               : `Pour votre sécurité, un code d'authentification à 6 chiffres a été envoyé à :`
             }
           </p>
@@ -299,7 +299,7 @@ function AuthContent() {
               >
                 <div className="space-y-2">
                   <Label htmlFor="fsaCode" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Code FSA ou clé finale (5 cars)
+                    E-mail ou Code FSA
                   </Label>
                   <div className="relative group">
                     <KeyRound className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
@@ -310,7 +310,7 @@ function AuthContent() {
                       value={fsaCode}
                       onChange={handleFsaCodeChange}
                       required
-                      placeholder="Ex: f0f9a ou code complet"
+                      placeholder="Ex: candidat@email.com ou code FSA"
                       className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
                         fieldErrors.fsaCode ? "border-red-500 focus:ring-red-500/5" : ""
                       }`}
@@ -325,7 +325,7 @@ function AuthContent() {
                   <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex items-start gap-3 mt-3">
                      <GraduationCap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                      <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                        Le code FSA figure sur votre relevé ou attestation. Pour aller plus vite, saisissez uniquement les 5 derniers caractères (ex: <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-emerald-700">f0f9a</code>).
+                        Saisissez votre e-mail (si pré-enregistré par l&apos;administration) ou le code FSA figurant sur votre relevé ou attestation. Pour aller plus vite, vous pouvez aussi saisir uniquement les 5 derniers caractères du code FSA (ex: <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-emerald-700">f0f9a</code>).
                      </p>
                   </div>
                 </div>

@@ -139,7 +139,7 @@ export async function GET(request: Request) {
     // 2. Ajouter les examens disponibles (non encore soumis)
     const availableResult = availableExams
       .filter((exam: { id: string }) => !submittedExamIds.has(exam.id))
-      .filter((exam: { id: string }) => !user.examId || user.examId === exam.id)
+      .filter((exam: any) => !user.examId || user.examId === exam.id || exam.type === "MOCK")
       .map((exam: any) => ({
         id: exam.id,
         examName: exam.title || exam.name,
