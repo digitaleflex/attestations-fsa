@@ -28,21 +28,6 @@ export const getPublicFormations = unstable_cache(
   { revalidate: 3600, tags: ["formations"] } // 1 hour
 );
 
-export const getPublicResources = unstable_cache(
-  async () => {
-    try {
-      return await prisma.resource.findMany({
-        orderBy: { createdAt: "desc" },
-      });
-    } catch (error) {
-      console.error("⚠️ [RESOURCES_CACHE_ERROR]", error);
-      return [];
-    }
-  },
-  ["public-resources"],
-  { revalidate: 1800, tags: ["resources"] } // 30 minutes
-);
-
 export const getPublicUpcomingExams = unstable_cache(
   async (limit = 3) => {
     // Only future scheduled exams (or very recent ones that are still active)

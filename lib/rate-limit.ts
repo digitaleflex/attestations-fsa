@@ -87,14 +87,6 @@ export const rateLimits = {
     prefix: "ratelimit:email-verify",
   }) : null,
 
-  // Waitlist (portfolio signup)
-  waitlist: redis ? new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(5, "1 h"),  // 5 inscriptions / heure
-    analytics: true,
-    prefix: "ratelimit:waitlist",
-  }) : null,
-
   // Internship applications
   internship: redis ? new Ratelimit({
     redis,

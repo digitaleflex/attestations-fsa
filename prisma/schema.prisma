@@ -82,18 +82,13 @@ model User {
   examScheduledAt       DateTime?
   formationId           String?
   gender                Gender?
-  portfolioEnabled      Boolean             @default(false)
-  portfolioSlug         String?
   blockedReason         String?
   lastBlockedAt         DateTime?
   resetPasswordRequired Boolean             @default(false)
   status                UserStatus          @default(ACTIVE)
-  portfolioStatus       PortfolioStatus     @default(DRAFT)
-  portfolioMissions     UserPortfolioMission[]
   accounts              Account[]
   attestations          Attestation[]
   auditLogs             AuditLog[]
-  chatMessages          ChatMessage[]
   correctionRequests    CorrectionRequest[]
   examSessions          ExamSession[]
   internships           InternshipRequest[]
@@ -122,7 +117,6 @@ model Formation {
   attestations Attestation[]
   exams        Exam[]
   users        User[]
-  portfolioMissions PortfolioMission[]
 }
 
 model Attestation {
@@ -186,17 +180,6 @@ model Report {
   email           String?
   createdAt       DateTime @default(now())
   status          String   @default("NOUVEAU")
-}
-
-model Waitlist {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  message   String?
-  status    String   @default("PENDING")
-  source    String   @default("PORTFOLIO")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Exam {
@@ -270,23 +253,6 @@ model QuestionOption {
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@index([questionId])
-}
-
-model Resource {
-  id          String       @id @default(uuid())
-  title       String
-  description String?
-  type        ResourceType @default(BOOK)
-  url         String
-  thumbnail   String?
-  category    String?
-  isPublished Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  @@index([category])
-  @@index([type])
-  @@index([createdAt])
 }
 
 model ExamSession {
@@ -412,23 +378,6 @@ model AuditLog {
   @@index([timestamp])
 }
 
-model ChatMessage {
-  id          String   @id @default(uuid())
-  content     String
-  senderId    String
-  senderRole  String
-  userId      String
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  attachments Json?
-  userPortfolioMissionId String?
-  userPortfolioMission   UserPortfolioMission? @relation(fields: [userPortfolioMissionId], references: [id])
-  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
 model Notification {
   id        String           @id @default(uuid())
   userId    String
@@ -526,13 +475,6 @@ enum QuestionType {
   OPEN
 }
 
-enum ResourceType {
-  BOOK
-  VIDEO
-  REVISION_FILE
-  OTHER
-}
-
 enum UserStatus {
   ACTIVE
   BLOCKED
@@ -565,63 +507,4 @@ enum NotificationType {
   GENERAL
 }
 
-enum PortfolioStatus {
-  DRAFT
-  PENDING_VALIDATION
-  PUBLISHED
-  REJECTED
-}
 
-enum MissionType {
-  EXERCISE
-  PROJECT
-  FIELD_SUPPORT
-}
-
-enum ProjectLevel {
-  STANDARD
-  ADVANCED
-}
-
-model PortfolioMission {
-  id                 String                 @id @default(uuid())
-  title              String
-  description        String
-  type               MissionType            @default(EXERCISE)
-  guideMarkdown      String?
-  requiredExamId     String?
-  minScoreRequired   Float?                 @default(13)
-  order              Int                    @default(0)
-  dueDate            DateTime?
-  createdAt          DateTime               @default(now())
-  formationId        String?
-  formation          Formation?             @relation(fields: [formationId], references: [id])
-  userMissions       UserPortfolioMission[]
-}
-
-model UserPortfolioMission {
-  id              String               @id @default(uuid())
-  userId          String
-  missionId       String
-  status          String               @default("PENDING")
-  unlockedLevel   ProjectLevel?
-  submissionProof String?
-  adminComment    String?
-  completedAt     DateTime?
-  user            User                 @relation(fields: [userId], references: [id])
-  mission         PortfolioMission     @relation(fields: [missionId], references: [id])
-  proofs          PortfolioProof[]
-  messages        ChatMessage[]
-
-  @@unique([userId, missionId])
-}
-
-model PortfolioProof {
-  id              String               @id @default(uuid())
-  userMissionId   String
-  url             String
-  label           String
-  type            String               @default("LINK")
-  createdAt       DateTime             @default(now())
-  userMission     UserPortfolioMission @relation(fields: [userMissionId], references: [id], onDelete: Cascade)
-}

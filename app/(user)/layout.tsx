@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import {
   LayoutDashboard,
   FileText,
-  BookOpen,
   Briefcase,
   CheckCircle,
   User,
@@ -18,14 +17,10 @@ import {
   Menu,
   X,
   BarChart3,
-  HelpCircle,
-  LifeBuoy,
-  MessageCircle,
   Bell,
   GraduationCap,
   Award
 } from "lucide-react";
-import ChatBubble from "@/components/ChatBubble";
 import { authClient, signOut } from "@/lib/auth-client";
 import { getCurrentUser } from "@/lib/auth";
 import NotificationBell from "@/components/NotificationBell";
@@ -74,10 +69,21 @@ export default function UserLayout({
 
   const menuItems = [
     { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+<<<<<<< HEAD
     { name: "Mon Apprentissage", href: "/courses", icon: BookOpen },
     { name: "Mes Certifications", href: "/attestations", icon: Award },
     { name: "Stages & Projets", href: "/internships", icon: Briefcase },
     { name: "Mon Espace", href: "/profile", icon: User },
+=======
+    { name: "Mes Attestations", href: "/attestations", icon: FileText },
+    { name: "Examens", href: "/exams", icon: GraduationCap },
+    { name: "Examens Blancs", href: "/mock-exams", icon: CheckCircle },
+    { name: "Stages", href: "/internships", icon: Briefcase },
+    { name: "Résultats", href: "/results", icon: BarChart3 },
+    { name: "Relevé de notes", href: "/transcript", icon: FileText },
+    { name: "Notifications", href: "/notifications", icon: Bell },
+    { name: "Mon Profil", href: "/profile", icon: User },
+>>>>>>> c47c5e1 (refactor: supprime les modules Portfolio, Chat, Ressources, Waitlist et Annuaire)
   ];
 
   // Mode Focus pour les examens (Pas de sidebar, pas de header)

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const userId = userAuth.id;
 
     // ÉTAPE 1 : Requêtes de base en PARALLÈLE
-    const [user, allUserAttestations, examSubmissions, internshipApplications, totalMissions, completedMissions, recentExams] =
+    const [user, allUserAttestations, examSubmissions, internshipApplications, recentExams] =
       await Promise.all([
         prisma.user.findUnique({
           where: { id: userId },
@@ -43,10 +43,6 @@ export async function GET(request: Request) {
                 })
               : [],
           ),
-        prisma.portfolioMission.count(),
-        prisma.userPortfolioMission.count({
-          where: { userId: userId, status: 'COMPLETED' }
-        }),
         prisma.examSession.findMany({
           where: { userId: userId },
           orderBy: { submittedAt: 'desc' },
@@ -197,10 +193,6 @@ export async function GET(request: Request) {
       recentActivity,
       monthlyProgression,
       badges,
-      portfolio: {
-        totalMissions,
-        completedMissions
-      },
       recentExams
     });
   } catch (err: unknown) {

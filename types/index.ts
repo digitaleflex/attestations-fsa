@@ -7,8 +7,6 @@ export type UserRole = "user" | "admin" | "superadmin";
 
 export type UserStatus = "ACTIVE" | "BLOCKED" | "SUSPENDED";
 
-export type PortfolioStatus = "DRAFT" | "PENDING_VALIDATION" | "PUBLISHED" | "REJECTED";
-
 export interface User {
   id: string;
   name: string | null;
@@ -24,8 +22,6 @@ export interface User {
   attestationCode: string | null;
   attestationStatus: string;
   formationId: string | null;
-  portfolioEnabled: boolean;
-  portfolioStatus: PortfolioStatus;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -159,14 +155,4 @@ export interface SecurityLog {
   user?: User;
 }
 
-export interface ChatMessage {
-  id: string;
-  content: string;
-  senderId: string;
-  senderRole: "user" | "admin";
-  userId: string;
-  isRead: boolean;
-  createdAt: Date | string;
-  attachments: any;
-  userPortfolioMissionId: string | null;
-}
+

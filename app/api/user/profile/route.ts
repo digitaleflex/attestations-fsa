@@ -14,7 +14,6 @@ const UserProfileSchema = z.object({
   oldPassword: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').optional(),
   newPassword: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').optional(),
   gender: z.enum(['M', 'F']).optional(),
-  portfolioEnabled: z.boolean().optional(),
 });
 
 // GET /api/user/profile - Récupérer le profil de l'utilisateur connecté
@@ -40,8 +39,6 @@ export async function GET(request: Request) {
         gender: true,
         emailVerified: true,
         createdAt: true,
-        portfolioEnabled: true,
-        portfolioSlug: true,
         correctionRequests: {
           where: { status: "PENDING" },
           take: 1
@@ -80,7 +77,7 @@ export async function PATCH(request: Request) {
       }, { status: 400 });
     }
 
-    const { name, email, phone, address, birthDate, birthPlace, gender, portfolioEnabled, oldPassword, newPassword } = parse.data;
+    const { name, email, phone, address, birthDate, birthPlace, gender, oldPassword, newPassword } = parse.data;
 
     // 🔒 SÉCURITÉ: Vérifier si l'utilisateur tente de changer des données d'identité critiques
     // après avoir déjà passé un examen ou obtenu une attestation.
@@ -132,17 +129,6 @@ export async function PATCH(request: Request) {
     }
     if (birthPlace) updateData.birthPlace = birthPlace;
     if (gender) updateData.gender = gender;
-    
-    if (portfolioEnabled !== undefined) {
-      updateData.portfolioEnabled = portfolioEnabled;
-      
-      // Si on active pour la première fois et qu'il n'y a pas de slug
-      const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { portfolioSlug: true, name: true } });
-      if (portfolioEnabled && !currentUser?.portfolioSlug) {
-        const baseSlug = (name || currentUser?.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '-');
-        updateData.portfolioSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
-      }
-    }
 
     // Gestion du changement de mot de passe (Compatibilité Hybride)
     if (oldPassword && newPassword) {
@@ -209,8 +195,6 @@ export async function PATCH(request: Request) {
         birthDate: true,
         birthPlace: true,
         gender: true,
-        portfolioEnabled: true,
-        portfolioSlug: true,
       }
     });
 

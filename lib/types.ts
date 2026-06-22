@@ -12,9 +12,7 @@ import type {
   Notification,
   InternshipRequest,
   CorrectionRequest,
-  ChatMessage,
   Contact,
-  Resource,
   AuditLog,
   SecurityLog,
 } from "@prisma/client";
@@ -256,23 +254,6 @@ export interface ExamStats {
 }
 
 // =================================================================
-// TYPES POUR LES RESSOURCES
-// =================================================================
-
-export interface ResourceWithCategory {
-  id: string;
-  title: string;
-  description: string | null;
-  type: string;
-  url: string;
-  thumbnail: string | null;
-  category: string | null;
-  isPublished: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// =================================================================
 // TYPES POUR LE TRANSCRIPT
 // =================================================================
 
@@ -291,14 +272,6 @@ export interface TranscriptData {
 
 export interface CorrectionWithAttestation extends CorrectionRequest {
   attestation?: Attestation;
-  user?: User;
-}
-
-// =================================================================
-// TYPES POUR LE CHAT
-// =================================================================
-
-export interface ChatMessageWithUser extends ChatMessage {
   user?: User;
 }
 

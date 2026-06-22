@@ -21,8 +21,6 @@ export async function GET(request: Request) {
       detailedSubmissions,
       notifications,
       unreadNotificationsCount,
-      totalPortfolioMissions,
-      completedPortfolioMissions,
       userEmailObj
     ] = await Promise.all([
       // 1. Profil
@@ -40,8 +38,6 @@ export async function GET(request: Request) {
           gender: true,
           emailVerified: true,
           createdAt: true,
-          portfolioEnabled: true,
-          portfolioSlug: true,
           examId: true,
           correctionRequests: {
             where: { status: 'PENDING' },
@@ -124,11 +120,6 @@ export async function GET(request: Request) {
       }),
       prisma.notification.count({
         where: { userId, isRead: false },
-      }),
-      // 7. Portfolio
-      prisma.portfolioMission.count(),
-      prisma.userPortfolioMission.count({
-        where: { userId, status: 'COMPLETED' }
       }),
       // 8. E-mail de l'utilisateur pour les stages
       prisma.user.findUnique({
@@ -333,10 +324,6 @@ export async function GET(request: Request) {
         },
         monthlyProgression,
         badges,
-        portfolio: {
-          totalMissions: totalPortfolioMissions,
-          completedMissions: completedPortfolioMissions
-        }
       }
     });
 
