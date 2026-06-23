@@ -1,27 +1,29 @@
-jest.mock("@/lib/prisma", () => ({
+import { vi, describe, it, expect, beforeEach } from "vitest";
+
+vi.mock("@/lib/prisma", () => ({
   prisma: {
     securityLog: {
-      create: jest.fn().mockResolvedValue({ id: 1 }),
-      findMany: jest.fn().mockResolvedValue([]),
+      create: vi.fn().mockResolvedValue({ id: 1 }),
+      findMany: vi.fn().mockResolvedValue([]),
     },
   },
 }));
 
-jest.mock("@/lib/auth", () => ({
-  getCurrentUser: jest.fn(),
+vi.mock("@/lib/auth", () => ({
+  getCurrentUser: vi.fn(),
 }));
 
-jest.mock("@/lib/exam-enforcement", () => ({
-  evaluateEnforcement: jest.fn(),
-  logEnforcement: jest.fn(),
+vi.mock("@/lib/exam-enforcement", () => ({
+  evaluateEnforcement: vi.fn(),
+  logEnforcement: vi.fn(),
 }));
 
 import { POST } from "@/app/api/exams/monitoring/route";
 import { getCurrentUser } from "@/lib/auth";
 import { evaluateEnforcement } from "@/lib/exam-enforcement";
 
-const mockGetUser = getCurrentUser as jest.Mock;
-const mockEvaluate = evaluateEnforcement as jest.Mock;
+const mockGetUser = getCurrentUser as ReturnType<typeof vi.fn>;
+const mockEvaluate = evaluateEnforcement as ReturnType<typeof vi.fn>;
 
 const validPayload = {
   events: [
@@ -42,7 +44,7 @@ function buildRequest(body: unknown): Request {
 
 describe("POST /api/exams/monitoring", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockEvaluate.mockResolvedValue({ lockAnswers: false, forceSubmit: false, warnUser: false });
   });
 

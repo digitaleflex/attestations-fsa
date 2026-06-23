@@ -7,15 +7,17 @@
     "build": "prisma generate --no-engine && next build --webpack",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:coverage": "vitest run --coverage",
+    "test:jest-legacy": "jest"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -97,6 +99,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/webpack": "^5.28.5",
+    "@vitest/coverage-v8": "^4.1.9",
     "autoprefixer": "^10.4.21",
     "cross-env": "^7.0.3",
     "dotenv": "^17.2.0",
@@ -116,6 +119,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.36.0",
+    "vitest": "^4.1.9",
     "webpack": "^5.99.9"
   },
   "prisma": {

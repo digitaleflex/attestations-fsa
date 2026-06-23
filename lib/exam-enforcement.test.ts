@@ -1,8 +1,10 @@
-jest.mock("@/lib/prisma", () => ({
+import { vi, describe, it, expect, beforeEach } from "vitest";
+
+vi.mock("@/lib/prisma", () => ({
   prisma: {
     securityLog: {
-      findMany: jest.fn(),
-      create: jest.fn().mockResolvedValue({ id: 1 }),
+      findMany: vi.fn(),
+      create: vi.fn().mockResolvedValue({ id: 1 }),
     },
   },
 }));
@@ -10,7 +12,7 @@ jest.mock("@/lib/prisma", () => ({
 import { evaluateEnforcement, logEnforcement } from "./exam-enforcement";
 import { prisma } from "@/lib/prisma";
 
-const mockFindMany = prisma.securityLog.findMany as jest.Mock;
+const mockFindMany = prisma.securityLog.findMany as ReturnType<typeof vi.fn>;
 
 describe("evaluateEnforcement", () => {
   beforeEach(() => {

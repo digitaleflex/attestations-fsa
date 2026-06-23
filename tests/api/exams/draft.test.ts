@@ -1,21 +1,23 @@
-jest.mock("@/lib/auth", () => ({
-  getCurrentUser: jest.fn(),
+import { vi, describe, it, expect, beforeEach } from "vitest";
+
+vi.mock("@/lib/auth", () => ({
+  getCurrentUser: vi.fn(),
 }));
 
-jest.mock("@/lib/exam-draft", () => ({
-  saveDraft: jest.fn(),
-  loadDraft: jest.fn(),
-  deleteDraft: jest.fn(),
+vi.mock("@/lib/exam-draft", () => ({
+  saveDraft: vi.fn(),
+  loadDraft: vi.fn(),
+  deleteDraft: vi.fn(),
 }));
 
 import { POST, GET, DELETE } from "@/app/api/exams/[id]/draft/route";
 import { getCurrentUser } from "@/lib/auth";
 import { saveDraft, loadDraft, deleteDraft } from "@/lib/exam-draft";
 
-const mockGetUser = getCurrentUser as jest.Mock;
-const mockSave = saveDraft as jest.Mock;
-const mockLoad = loadDraft as jest.Mock;
-const mockDelete = deleteDraft as jest.Mock;
+const mockGetUser = getCurrentUser as ReturnType<typeof vi.fn>;
+const mockSave = saveDraft as ReturnType<typeof vi.fn>;
+const mockLoad = loadDraft as ReturnType<typeof vi.fn>;
+const mockDelete = deleteDraft as ReturnType<typeof vi.fn>;
 
 function buildParams(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -30,7 +32,7 @@ function buildRequest(body?: unknown): Request {
 
 describe("POST /api/exams/[id]/draft", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
   });
 
@@ -59,7 +61,7 @@ describe("POST /api/exams/[id]/draft", () => {
 
 describe("GET /api/exams/[id]/draft", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
   });
 
@@ -81,7 +83,7 @@ describe("GET /api/exams/[id]/draft", () => {
 
 describe("DELETE /api/exams/[id]/draft", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
   });
 

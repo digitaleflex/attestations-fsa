@@ -1,9 +1,12 @@
-jest.mock('@/lib/prisma', () => ({
+import { vi, describe, it, expect } from "vitest";
+
+vi.mock('@/lib/prisma', () => ({
   prisma: {
     report: {
-      create: jest.fn().mockResolvedValue({ id: 1 }),
+      create: vi.fn().mockResolvedValue({ id: 1 }),
     },
   },
+  rawPrisma: {} as never,
 }));
 
 import { POST } from '../../app/api/signalement/route';

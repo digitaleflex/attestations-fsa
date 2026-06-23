@@ -1,24 +1,26 @@
-jest.mock("@/lib/redis", () => ({
-  getRedis: jest.fn(),
-  isRedisReady: jest.fn(),
+import { vi, describe, it, expect, beforeEach } from "vitest";
+
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(),
+  isRedisReady: vi.fn(),
 }));
 
 import { saveDraft, loadDraft, deleteDraft } from "./exam-draft";
 import { getRedis, isRedisReady } from "@/lib/redis";
 
 const mockRedis = {
-  set: jest.fn(),
-  get: jest.fn(),
-  del: jest.fn(),
+  set: vi.fn(),
+  get: vi.fn(),
+  del: vi.fn(),
 };
 
-const mockGetRedis = getRedis as jest.Mock;
-const mockIsReady = isRedisReady as jest.Mock;
+const mockGetRedis = getRedis as ReturnType<typeof vi.fn>;
+const mockIsReady = isRedisReady as ReturnType<typeof vi.fn>;
 const mockDraft = { answers: { q1: "A" }, timeRemaining: 3000, currentPart: 1, lastSync: new Date().toISOString() };
 
 describe("saveDraft", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetRedis.mockReturnValue(mockRedis);
   });
 
@@ -51,7 +53,7 @@ describe("saveDraft", () => {
 
 describe("loadDraft", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetRedis.mockReturnValue(mockRedis);
   });
 
@@ -78,7 +80,7 @@ describe("loadDraft", () => {
 
 describe("deleteDraft", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetRedis.mockReturnValue(mockRedis);
   });
 
