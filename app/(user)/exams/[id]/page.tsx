@@ -25,6 +25,15 @@ interface ExamSessionResponse {
   duration: number;
 }
 
+interface DraftResponse {
+  draft: {
+    answers: Record<string, string>;
+    timeRemaining: number;
+    currentPart: number;
+    lastSync: string;
+  } | null;
+}
+
 export default function ExamSessionPage() {
   const router = useRouter();
   const params = useParams();
@@ -88,6 +97,7 @@ export default function ExamSessionPage() {
     onSuccess: () => {
       toast.success("Examen soumis avec succès !");
       localStorage.removeItem(`exam-${id}-draft`);
+      deleteDraftMutation.mutate();
       router.push("/results");
     },
     onError: (error) => {
@@ -95,6 +105,61 @@ export default function ExamSessionPage() {
       setIsSubmitting(false);
     },
   });
+
+  const draftQuery = useQuery<DraftResponse>({
+    queryKey: ["exam-draft", id],
+    queryFn: () => apiFetch<DraftResponse>(`/api/exams/${id}/draft`),
+    staleTime: 0,
+    retry: false,
+    enabled: !showInstructions && !!id,
+  });
+
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  const timeRef = useRef(timeRemaining);
+  timeRef.current = timeRemaining;
+  const partRef = useRef(currentPart);
+  partRef.current = currentPart;
+
+  const deleteDraftMutation = useMutation<void, Error, void>({
+    mutationFn: () =>
+      apiFetch<void>(`/api/exams/${id}/draft?v=${Date.now()}`, {
+        method: "DELETE",
+      }),
+  });
+
+  // Restore server draft when available
+  useEffect(() => {
+    if (draftQuery.data?.draft) {
+      const d = draftQuery.data.draft;
+      if (Object.keys(d.answers).length > 0) {
+        setAnswers(d.answers);
+        setTimeRemaining(d.timeRemaining);
+        setCurrentPart(d.currentPart);
+        toast.info("Brouillon serveur récupéré");
+      }
+    }
+  }, [draftQuery.data]);
+
+  // Periodic server-side auto-save (every 15s)
+  useEffect(() => {
+    if (showInstructions || !id) return;
+    const interval = setInterval(async () => {
+      try {
+        await apiFetch<void>(`/api/exams/${id}/draft`, {
+          method: "POST",
+          body: JSON.stringify({
+            answers: answersRef.current,
+            timeRemaining: timeRef.current,
+            currentPart: partRef.current,
+          }),
+        });
+      } catch {
+        // Ignore silent failures during auto-save
+      }
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [id, showInstructions]);
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
