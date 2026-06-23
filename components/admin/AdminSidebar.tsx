@@ -35,7 +35,6 @@ const mainLinks = [
   { href: "/admin/formations", label: "Catalogue Pédagogique", icon: BookOpen },
   { href: "/admin/attestations", label: "Attestations", icon: FileText },
   { href: "/admin/reclamations", label: "Réclamations", icon: AlertCircle },
-  { href: "/admin/waitlist", label: "Liste d'attente", icon: ClipboardCheck },
 ];
 
 export function AdminSidebar({ admin }: { admin: any }) {

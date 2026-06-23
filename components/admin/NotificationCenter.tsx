@@ -6,7 +6,6 @@ import {
   FileCheck,
   Check,
   Info,
-  MessageSquare as ChatIcon
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,10 +37,6 @@ interface CorrectionNotification extends BaseNotification {
   user: { name: string | null };
 }
 
-interface ChatNotification extends BaseNotification {
-  content: string;
-}
-
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -66,16 +61,6 @@ export default function NotificationCenter() {
     refetchInterval: 45000,
   });
 
-  const { data: messages = [] } = useQuery<ChatNotification[]>({
-    queryKey: ["admin-notifications-messages"],
-    queryFn: async () => {
-      const res = await fetch("/api/chat?unread=true");
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    },
-    refetchInterval: 60000,
-  });
-
   useEffect(() => {
     const pusher = getPusherClient();
     const channel = pusher.subscribe("admin-events");
@@ -83,14 +68,12 @@ export default function NotificationCenter() {
     const refresh = (type: string, data: { content?: string; motif?: string; userName?: string }) => {
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-reports"] });
         queryClient.invalidateQueries({ queryKey: ["admin-notifications-corrections"] });
-        queryClient.invalidateQueries({ queryKey: ["admin-notifications-messages"] });
 
-        toast.info(type === "message" ? "Nouveau Message" : type === "report" ? "Nouveau Signalement" : "Demande de Correction", {
+        toast.info(type === "report" ? "Nouveau Signalement" : "Demande de Correction", {
             description: data.content || data.motif || data.userName || "Action requise",
         });
     };
 
-    channel.bind("message", (data: { content?: string }) => refresh("message", data));
     channel.bind("report", (data: { motif?: string }) => refresh("report", data));
     channel.bind("correction", (data: { userName?: string }) => refresh("correction", data));
 
@@ -120,16 +103,6 @@ export default function NotificationCenter() {
         icon: FileCheck,
         iconClass: "text-blue-500 bg-blue-50"
     })),
-    ...messages.map((m) => ({
-        id: m.id,
-        type: "MESSAGE",
-        title: "Nouveau Message",
-        message: m.content,
-        time: new Date(m.createdAt),
-        link: `/admin/inbox`,
-        icon: ChatIcon,
-        iconClass: "text-emerald-500 bg-emerald-50"
-    }))
   ].sort((a, b) => b.time.getTime() - a.time.getTime());
 
   const unreadCount = allNotifications.length;
