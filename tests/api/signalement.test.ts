@@ -17,7 +17,7 @@ describe('POST /api/signalement', () => {
     const res = await POST(req);
     const data = await res.json();
     expect(res.status).toBe(400);
-    expect(data.message).toBe('Entrée invalide');
+    expect(data.error).toBe('Entrée invalide');
     expect(data.details).toBeDefined();
   });
 
