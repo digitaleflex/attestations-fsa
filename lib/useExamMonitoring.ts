@@ -1,6 +1,5 @@
-// lib/useExamMonitoring.ts
-// Hook for detecting tab changes, focus loss, and suspicious behavior during exams
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { EnforcementAction } from '@/lib/exam-enforcement';
 
 export interface MonitoringEvent {
   type: 'VISIBILITY_CHANGE' | 'BLUR' | 'FOCUS' | 'WINDOW_RESIZE' | 'MULTIPLE_WINDOWS';
@@ -20,19 +19,17 @@ export interface MonitoringState {
 interface UseExamMonitoringProps {
   examId: string;
   userId?: string;
-  maxTabSwitches?: number; // Threshold for warnings
+  maxTabSwitches?: number;
   onViolation?: (event: MonitoringEvent, state: MonitoringState) => void;
+  onEnforcement?: (action: EnforcementAction) => void;
 }
 
-/**
- * Hook to monitor exam-taking behavior
- * Tracks: tab switches, window blur, focus changes, multiple windows
- */
 export function useExamMonitoring({
   examId,
   userId,
   maxTabSwitches = 3,
   onViolation,
+  onEnforcement,
 }: UseExamMonitoringProps) {
   const [state, setState] = useState<MonitoringState>({
     events: [],
@@ -43,22 +40,17 @@ export function useExamMonitoring({
     isCurrentlyFocused: true,
   });
 
-  // Track event queue for reporting
   const eventQueue = useRef<MonitoringEvent[]>([]);
+  const isFullscreen = useRef(false);
 
   const addEvent = useCallback((type: MonitoringEvent['type'], details?: string) => {
-    const newEvent: MonitoringEvent = {
-      type,
-      timestamp: Date.now(),
-      details,
-    };
-
+    const newEvent: MonitoringEvent = { type, timestamp: Date.now(), details };
     eventQueue.current.push(newEvent);
 
     setState((prev) => {
       const isHidden = type === 'VISIBILITY_CHANGE' && document.visibilityState === 'hidden';
       const isBlur = type === 'BLUR';
-      
+
       const newState = {
         ...prev,
         events: [...prev.events, newEvent],
@@ -69,15 +61,42 @@ export function useExamMonitoring({
         isCurrentlyFocused: type === 'FOCUS' ? true : (isBlur ? false : prev.isCurrentlyFocused),
       };
 
-      if (onViolation) {
-        onViolation(newEvent, newState);
-      }
-
+      if (onViolation) onViolation(newEvent, newState);
       return newState;
     });
   }, [onViolation]);
 
+  // Fullscreen enforcement
+  const enterFullscreen = useCallback(async () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+        isFullscreen.current = true;
+      }
+    } catch {
+      addEvent('WINDOW_RESIZE', 'Impossible de passer en plein écran');
+    }
+  }, [addEvent]);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen();
+      isFullscreen.current = false;
+    }
+  }, []);
+
   useEffect(() => {
+    if (!userId) return;
+
+    enterFullscreen();
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen.current) {
+        addEvent('WINDOW_RESIZE', 'Sortie du mode plein écran');
+        enterFullscreen();
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.hidden) {
         addEvent('VISIBILITY_CHANGE', 'Changement d\'onglet détecté');
@@ -90,65 +109,82 @@ export function useExamMonitoring({
       addEvent('BLUR', 'Perte de focus sur la fenêtre d\'examen');
     };
 
-    const handleFocus = () => {
-      // Focus regained
+    // Block copy/paste/contextmenu
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      addEvent('BLUR', 'Tentative de copie détectée');
     };
 
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('focus', handleFocus);
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      addEvent('BLUR', 'Tentative de collage détectée');
+    };
 
-    // Periodic reporting of events if userId is provided
-    const reportInterval = setInterval(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      addEvent('BLUR', 'Tentative de menu contextuel détectée');
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('copy', handleCopy);
+    window.addEventListener('paste', handlePaste);
+    window.addEventListener('contextmenu', handleContextMenu);
+
+    const reportInterval = setInterval(async () => {
       if (eventQueue.current.length > 0 && userId) {
         const eventsToReport = [...eventQueue.current];
         eventQueue.current = [];
-        reportMonitoringEvents(eventsToReport, examId, userId);
+        try {
+          const enforcement = await reportMonitoringEvents(eventsToReport, examId, userId);
+          if (enforcement && (enforcement.lockAnswers || enforcement.warnUser)) {
+            onEnforcement?.(enforcement);
+          }
+        } catch {
+          eventQueue.current.unshift(...eventsToReport);
+        }
       }
-    }, 5000); // Report every 5 seconds if events exist
+    }, 5000);
 
     return () => {
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('copy', handleCopy);
+      window.removeEventListener('paste', handlePaste);
+      window.removeEventListener('contextmenu', handleContextMenu);
       clearInterval(reportInterval);
-      
-      // Final report
+      exitFullscreen();
+
       if (eventQueue.current.length > 0 && userId) {
         reportMonitoringEvents(eventQueue.current, examId, userId);
       }
     };
-  }, [addEvent, examId, userId]);
+  }, [addEvent, examId, userId, enterFullscreen, exitFullscreen, onEnforcement]);
 
-  return state;
+  return { ...state, enterFullscreen, exitFullscreen };
 }
 
-/**
- * Send monitoring events to server for logging
- */
-export async function reportMonitoringEvents(
+async function reportMonitoringEvents(
   events: MonitoringEvent[],
   examId: string,
-  userId: string
-): Promise<void> {
-  if (events.length === 0) return;
+  userId: string,
+): Promise<EnforcementAction | null> {
+  if (events.length === 0) return null;
 
   try {
     const response = await fetch('/api/exams/monitoring', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        events,
-        examId,
-        userId,
-        timestamp: Date.now(),
-      }),
+      body: JSON.stringify({ events, examId, userId, timestamp: Date.now() }),
     });
 
-    if (!response.ok) {
-      console.error('Failed to report monitoring events');
-    }
-  } catch (error) {
-    console.error('Error reporting monitoring events:', error);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data.enforcement ?? null;
+  } catch {
+    return null;
   }
 }
