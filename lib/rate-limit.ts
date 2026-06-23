@@ -1,25 +1,9 @@
-// lib/rate-limit.ts
-// Rate limiting avec Upstash Redis - Protection contre brute-force et DDoS
-// ✅ FIX: Accept Request instead of NextRequest to eliminate `as any` casts
 import { Ratelimit } from "@upstash/ratelimit"
-import { Redis } from "@upstash/redis"
+import { getRedis, isRedisReady } from "@/lib/redis"
 import { NextResponse } from 'next/server'
 
-// Initialisation Redis
-let redis: Redis | null = null
-let ratelimitEnabled = false
-
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
-    ratelimitEnabled = true
-  }
-} catch (error) {
-  console.error('[RATE LIMIT ERROR]', error);
-}
+const redis = getRedis()
+const ratelimitEnabled = isRedisReady()
 
 // Rate limits par endpoint
 export const rateLimits = {
