@@ -5,11 +5,14 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Clock, BookOpen, Save } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Clock, BookOpen, Save, AlertTriangle, Lock, Shield } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { useExamMonitoring } from "@/lib/useExamMonitoring";
+import type { EnforcementAction } from "@/lib/exam-enforcement";
 
 import { ExamInstructions } from "./_components/ExamInstructions";
 import { ExamPart1 } from "./_components/ExamPart1";
@@ -33,8 +36,30 @@ export default function ExamSessionPage() {
   const [showInstructions, setShowInstructions] = useState(true);
   const [agreedToRules, setAgreedToRules] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [answersLocked, setAnswersLocked] = useState(false);
+  const [enforcementMessage, setEnforcementMessage] = useState<string | null>(null);
+  const [forceSubmitTriggered, setForceSubmitTriggered] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const mon = useExamMonitoring({
+    examId: id,
+    maxTabSwitches: 3,
+    onEnforcement: (action: EnforcementAction) => {
+      if (action.warnUser && action.reason) {
+        setEnforcementMessage(action.reason);
+        toast.warning(action.reason);
+      }
+      if (action.lockAnswers) {
+        setAnswersLocked(true);
+      }
+      if (action.forceSubmit && !forceSubmitTriggered) {
+        setForceSubmitTriggered(true);
+        toast.error("Tentatives de triche détectées. Soumission forcée.");
+        handleSubmit();
+      }
+    },
+  });
 
   const { data: exam, isLoading: examLoading } = useQuery({
     queryKey: ["exam", id],
@@ -61,7 +86,7 @@ export default function ExamSessionPage() {
         body: JSON.stringify({ answers: finalAnswers }),
       }),
     onSuccess: () => {
-      toast.success("✅ Examen soumis avec succès !");
+      toast.success("Examen soumis avec succès !");
       localStorage.removeItem(`exam-${id}-draft`);
       router.push("/results");
     },
@@ -82,7 +107,6 @@ export default function ExamSessionPage() {
 
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
-  // Draft auto-save on answers/part change
   useEffect(() => {
     if (showInstructions || !id) return;
     localStorage.setItem(`exam-${id}-draft`, JSON.stringify({
@@ -90,7 +114,6 @@ export default function ExamSessionPage() {
     }));
   }, [answers, currentPart, id, showInstructions]);
 
-  // Timer sync every 10s
   useEffect(() => {
     if (showInstructions) return;
     const interval = setInterval(() => {
@@ -101,7 +124,6 @@ export default function ExamSessionPage() {
     return () => clearInterval(interval);
   }, [timeRemaining, currentPart, id, showInstructions]);
 
-  // Restore draft on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const raw = localStorage.getItem(`exam-${id}-draft`);
@@ -111,13 +133,14 @@ export default function ExamSessionPage() {
       setAnswers(saved.answers || {});
       setTimeRemaining(saved.timeRemaining || 3600);
       setCurrentPart(saved.currentPart || 1);
-      toast.info("📝 Brouillon récupéré automatiquement");
+      toast.info("Brouillon récupéré automatiquement");
     } catch {
       localStorage.removeItem(`exam-${id}-draft`);
     }
   }, [id]);
 
   const handleAnswerChange = (questionId: string, value: string) => {
+    if (answersLocked) return;
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
@@ -166,7 +189,26 @@ export default function ExamSessionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Sticky header */}
+      {enforcementMessage && (
+        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0">
+          <AlertTriangle className="w-4 h-4" />
+          <AlertTitle>Comportement suspect</AlertTitle>
+          <AlertDescription>{enforcementMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {answersLocked && (
+        <div className="rounded-none border-x-0 border-t-0 bg-amber-50 border-b border-amber-200 px-4 py-3 text-sm flex items-start gap-3">
+          <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-amber-800">Réponses verrouillées</p>
+            <p className="text-amber-700">
+              Les réponses ne peuvent plus être modifiées en raison d'activités suspectes.
+            </p>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -182,6 +224,12 @@ export default function ExamSessionPage() {
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 pt-3 sm:pt-0">
+            {answersLocked && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium">
+                <Shield className="w-3.5 h-3.5" />
+                Verrouillé
+              </div>
+            )}
             <div className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg ${
               timeRemaining < 300 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
             }`}>
@@ -238,7 +286,9 @@ export default function ExamSessionPage() {
             answers={answers}
             totalPoints={exam?.part3Points || 40}
             isSubmitting={isSubmitting}
-            onAnswerChange={(value) => setAnswers((prev) => ({ ...prev, part3: value }))}
+            onAnswerChange={(value) => {
+              if (!answersLocked) setAnswers((prev) => ({ ...prev, part3: value }));
+            }}
             onBack={() => setCurrentPart(2)}
             onSubmit={handleSubmit}
           />

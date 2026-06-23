@@ -1,9 +1,8 @@
-// app/api/exams/monitoring/route.ts
-// Receives and logs exam monitoring events (tab switches, blur, etc.)
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { z } from 'zod';
+import { evaluateEnforcement, logEnforcement } from '@/lib/exam-enforcement';
 
 const MonitoringEventSchema = z.object({
   type: z.enum(['VISIBILITY_CHANGE', 'BLUR', 'FOCUS', 'WINDOW_RESIZE', 'MULTIPLE_WINDOWS']),
@@ -20,23 +19,23 @@ const MonitoringPayloadSchema = z.object({
 
 /**
  * POST /api/exams/monitoring
- * Receives monitoring events from client and logs them to SecurityLog
+ * Logs monitoring events and returns enforcement actions if thresholds are exceeded.
  */
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser(request);
     const body = await request.json();
     
-    // Validate payload
     const payload = MonitoringPayloadSchema.parse(body);
     
-    // Ensure user is reporting for themselves (unless admin)
     if (!user || (user.id !== payload.userId && user.role?.toLowerCase() !== 'admin')) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    // Create logs for each event
-    const logs = await Promise.all(payload.events.map(event => 
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const ua = request.headers.get('user-agent') || 'unknown';
+
+    await Promise.all(payload.events.map(event => 
       prisma.securityLog.create({
         data: {
           userId: payload.userId,
@@ -46,17 +45,23 @@ export async function POST(request: Request) {
           status: 'LOGGED',
           resourceId: payload.examId,
           details: event.details || `Automatic event: ${event.type}`,
-          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-          userAgent: request.headers.get('user-agent') || 'unknown',
+          ipAddress: ip,
+          userAgent: ua,
           timestamp: new Date(event.timestamp),
         }
       })
     ));
 
+    const enforcement = await evaluateEnforcement(payload.examId, payload.userId);
+
+    if (enforcement.lockAnswers || enforcement.forceSubmit) {
+      await logEnforcement(payload.examId, payload.userId, enforcement, ip, ua);
+    }
+
     return NextResponse.json({ 
-      received: payload.events.length, 
-      logged: logs.length,
-      success: true 
+      received: payload.events.length,
+      logged: payload.events.length,
+      enforcement,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
