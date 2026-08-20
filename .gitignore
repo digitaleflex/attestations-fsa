@@ -51,7 +51,13 @@ next-env.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
 
+# pnpm store
+.pnpm-store/
+
+# Docker local
+docker/prisma/
+
 # Database dumps (contain PII/credentials)
 db-dump-*.json
 /Backup/
-.env.reset
+.env.reset.env.deploy
