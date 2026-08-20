@@ -18,7 +18,8 @@ import {
   ExternalLink,
   ChevronRight,
   Award,
-  Plus
+  Plus,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -136,14 +137,22 @@ export default function AdminInternshipsPage() {
   if (loading) return <div className="p-20 flex justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-8 space-y-6">        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Gestion des Stages</h1>
-          <p className="text-slate-500">Gérez les demandes de stage entrants (`{requests.length}`).</p>
+          <p className="text-slate-500">Gérez les demandes de stage entrants ({`{requests.length}`}).</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-            {['ALL', 'PENDING', 'REVIEWING', 'ACCEPTED', 'REJECTED'].map((s) => (
+        <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-2"
+              onClick={() => window.open(`/api/admin/internships/export?status=${filter}`, '_blank')}
+            >
+              <Download className="w-4 h-4" />
+              Export Excel
+            </Button>
+            {['ALL', 'PENDING', 'REVIEWING', 'ACCEPTED', 'REJECTED', 'ARCHIVED'].map((s) => (
                 <Button
                   key={s}
                   variant={filter === s ? "default" : "outline"}

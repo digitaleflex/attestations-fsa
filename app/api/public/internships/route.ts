@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { emailService } from '@/lib/email';
 import { applyRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/sanitization';
+import { notifyAllAdmins } from '@/lib/notifications';
 import { z } from 'zod';
 
 // ✅ VALIDATION SCHEMA
@@ -73,6 +74,15 @@ export async function POST(request: NextRequest) {
     });
 
     await emailService.sendInternshipConfirmation(sanitizedEmail, sanitizedName);
+
+    // Notifier tous les admins
+    await notifyAllAdmins({
+      type: 'GENERAL',
+      title: '📋 Nouvelle demande de stage',
+      message: `${sanitizedName} a postulé pour le poste "${position}".`,
+      link: '/admin/internships',
+      metadata: { internshipRequestId: internshipRequest.id, email: sanitizedEmail },
+    });
 
     return NextResponse.json(internshipRequest, { status: 201 });
   } catch (error) {

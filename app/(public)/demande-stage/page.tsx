@@ -120,30 +120,34 @@ export default function InternshipApplicationPage() {
     setLoading(true);
 
     try {
-      const payload = { ...formData } as any;
+      let cvUrl = "";
+
+      // Upload CV file
       if (formData.cvFile) {
-        const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = error => reject(error);
+        const uploadForm = new FormData();
+        uploadForm.append("file", formData.cvFile);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadForm,
         });
-        
-        try {
-          const base64 = await toBase64(formData.cvFile);
-          payload.cvUrl = base64;
-        } catch (e) {
-          toast.error('Erreur de lecture du CV');
-          setLoading(false);
-          return;
-        }
-        delete payload.cvFile;
+        if (!uploadRes.ok) throw new Error("Erreur upload CV");
+        const uploadData = await uploadRes.json();
+        cvUrl = uploadData.url;
       }
-      
+
       const res = await fetch("/api/public/internships", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          position: formData.position,
+          university: formData.university,
+          level: formData.level,
+          cvUrl,
+          message: formData.message,
+        })
       });
 
       if (!res.ok) throw new Error("Erreur");
