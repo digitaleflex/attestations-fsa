@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: attestations-fsa-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-attestation_fsa_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-attestation_fsa_password}
+      POSTGRES_DB: ${POSTGRES_DB:-attestation_fsa}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-attestation_fsa_user} -d ${POSTGRES_DB:-attestation_fsa}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - attestations-fsa-network
+
+  # Optional: run the Next.js app in Docker for full local testing
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.local
+  #   container_name: attestations-fsa-app
+  #   environment:
+  #     DATABASE_URL: postgresql://${POSTGRES_USER:-attestation_fsa_user}:${POSTGRES_PASSWORD:-attestation_fsa_password}@postgres:5432/${POSTGRES_DB:-attestation_fsa}?sslmode=disable
+  #     NODE_ENV: development
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   volumes:
+  #     - .:/app
+  #     - /app/node_modules
+  #   command: pnpm dev
+  #   networks:
+  #     - attestations-fsa-network
+
+volumes:
+  postgres_data:
+
+networks:
+  attestations-fsa-network:
+    driver: bridge

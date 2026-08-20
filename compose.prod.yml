@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: attestations-fsa-prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-attestation_fsa_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-attestation_fsa}?sslmode=disable
+      AUTH_SECRET: ${AUTH_SECRET}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_DOMAIN: ${RESEND_DOMAIN}
+      EMAIL_FROM: ${EMAIL_FROM:-"FSA <noreply@fermestandre.com>"}
+      PUSHER_APP_ID: ${PUSHER_APP_ID}
+      PUSHER_KEY: ${PUSHER_KEY}
+      PUSHER_SECRET: ${PUSHER_SECRET}
+      PUSHER_CLUSTER: ${PUSHER_CLUSTER}
+      NEXT_PUBLIC_PUSHER_KEY: ${NEXT_PUBLIC_PUSHER_KEY}
+      NEXT_PUBLIC_PUSHER_CLUSTER: ${NEXT_PUBLIC_PUSHER_CLUSTER}
+      KV_REST_API_URL: ${KV_REST_API_URL}
+      KV_REST_API_TOKEN: ${KV_REST_API_TOKEN}
+      KV_REST_API_READ_ONLY_TOKEN: ${KV_REST_API_READ_ONLY_TOKEN}
+      REDIS_URL: ${REDIS_URL}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
+      BOTID_SECRET: ${BOTID_SECRET}
+    ports:
+      - "${PORT:-3000}:3000"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - attestations-fsa-network
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: attestations-fsa-postgres-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-attestation_fsa_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-attestation_fsa}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-attestation_fsa_user} -d ${POSTGRES_DB:-attestation_fsa}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - attestations-fsa-network
+    # Uncomment to expose PostgreSQL port (for debugging)
+    # ports:
+    #   - "5432:5432"
+
+networks:
+  attestations-fsa-network:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:

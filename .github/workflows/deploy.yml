@@ -1,0 +1,85 @@
+name: Deploy to VPS (Docker)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      skip_db:
+        description: 'Skip database restore'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS (Docker)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            set -e
+
+            echo "==> 🐳 Starting Docker deployment..."
+            cd /home/audest/attestation-fsa
+
+            echo "==> Pulling latest code..."
+            git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+            SKIP_DB="${{ github.event.inputs.skip_db || 'false' }}"
+
+            # ── Database restore (first deploy only) ──
+            if [ "$SKIP_DB" != "true" ]; then
+              # Check if PostgreSQL container exists and has data
+              TABLE_COUNT=$(docker exec attestations-fsa-postgres-prod \
+                psql -U attestation_fsa_user -d attestation_fsa -t -c \
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null | tr -d ' ' || echo "0")
+
+              if [ "$TABLE_COUNT" -lt 5 ] 2>/dev/null; then
+                echo "==> Database empty. Restoring backup..."
+
+                # Start PostgreSQL
+                docker compose -f compose.prod.yml up -d postgres
+                sleep 5
+
+                # Restore
+                if [ -f "Backup/deploy-dump.sql" ]; then
+                  docker exec -i attestations-fsa-postgres-prod \
+                    psql -U attestation_fsa_user -d attestation_fsa < Backup/deploy-dump.sql
+                  echo "==> ✅ Database restored!"
+                else
+                  echo "==> ⚠️  No backup found. Database will be created empty."
+                fi
+              else
+                echo "==> Database OK ($TABLE_COUNT tables)"
+              fi
+            else
+              echo "==> Skipping database restore"
+            fi
+
+            # ── Build & Deploy ──
+            echo "==> Stopping old containers..."
+            docker compose -f compose.prod.yml down
+
+            echo "==> Building & starting..."
+            docker compose -f compose.prod.yml up -d --build
+
+            echo "==> Waiting for health check..."
+            sleep 15
+
+            echo "==> Container status:"
+            docker compose -f compose.prod.yml ps
+
+            echo "==> ✅ Deployment complete!"
