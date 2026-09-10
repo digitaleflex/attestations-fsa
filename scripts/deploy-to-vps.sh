@@ -175,7 +175,7 @@ PUSHER_CLUSTER=${PUSHER_CLUSTER:-eu}
 NEXT_PUBLIC_PUSHER_KEY=${NEXT_PUBLIC_PUSHER_KEY:-}
 NEXT_PUBLIC_PUSHER_CLUSTER=${NEXT_PUBLIC_PUSHER_CLUSTER:-eu}
 BOTID_SECRET=${BOTID_SECRET:-}
-TRAEFIK_NETWORK=${TRAEFIK_NETWORK:-traefik-public}
+TRAEFIK_NETWORK=${TRAEFIK_NETWORK:-proxy}
 TRAEFIK_HOST=${TRAEFIK_HOST:-attestations.local}
 TRAEFIK_ENTRYPOINT=${TRAEFIK_ENTRYPOINT:-websecure}
 TRAEFIK_CERTRESOLVER=${TRAEFIK_CERTRESOLVER:-letsencrypt}
@@ -243,7 +243,7 @@ fi
 step "Phase 5/5 — Docker build & restart"
 
 log "Réseau proxy Traefik (idempotent)..."
-$SSH_CMD "docker network inspect ${TRAEFIK_NETWORK:-traefik-public} >/dev/null 2>&1 || docker network create ${TRAEFIK_NETWORK:-traefik-public}"
+$SSH_CMD "docker network inspect ${TRAEFIK_NETWORK:-proxy} >/dev/null 2>&1 || docker network create ${TRAEFIK_NETWORK:-proxy}"
 
 log "Arrêt anciens conteneurs..."
 $SSH_CMD "cd ${VPS_APP_DIR} && docker compose -f compose.prod.yml down 2>/dev/null || true"

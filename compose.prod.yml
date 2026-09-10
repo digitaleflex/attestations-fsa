@@ -3,7 +3,7 @@
 # Services aux noms clairs : fsa-app (Next.js) + fsa-postgres (DB)
 # Réseaux : proxy (externe, vers Traefik) + backend (privé app<->db, isolé du proxy)
 # Volume persistant : fsa-postgres-prod-data (/var/lib/postgresql/data sur VPS)
-# Pré-requis VPS : docker network create ${TRAEFIK_NETWORK:-traefik-public}
+# Pré-requis VPS : docker network create ${TRAEFIK_NETWORK:-proxy}
 # =================================================================
 services:
   fsa-app:
@@ -24,7 +24,7 @@ services:
     #   - "${PORT:-3000}:3000"
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik-public}"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-proxy}"
       - "traefik.http.routers.fsa-app.rule=Host(`${TRAEFIK_HOST:-hashcode.cloud}`) || Host(`www.${TRAEFIK_HOST:-hashcode.cloud}`)"
       - "traefik.http.routers.fsa-app.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.fsa-app.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
@@ -124,11 +124,11 @@ services:
     restart: "no"
 
 networks:
-  # Externe, créé par Traefik sur le VPS : docker network create traefik-public
+  # Externe, créé par Traefik sur le VPS : docker network create proxy
   # Seul fsa-app y est branché. fsa-postgres reste sur backend uniquement.
   proxy:
     external: true
-    name: ${TRAEFIK_NETWORK:-traefik-public}
+    name: ${TRAEFIK_NETWORK:-proxy}
   backend:
     driver: bridge
     name: attestations-fsa-backend
