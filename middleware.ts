@@ -9,11 +9,7 @@ const USER_ROUTES = [
   "/results",
   "/profile",
   "/internships",
-  "/courses",
-  "/mock-exams",
   "/notifications",
-  "/portfolio",
-  "/support",
   "/transcript",
   "/api/user",
 ];
@@ -96,7 +92,11 @@ export default async function middleware(request: NextRequest) {
 
   // 3. Logique Admin
   if (isAdminRoute) {
-    if (pathname === "/admin/login") {
+    if (
+      pathname === "/admin/login" ||
+      pathname === "/admin/register" ||
+      pathname === "/admin/signup"
+    ) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 

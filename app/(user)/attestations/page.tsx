@@ -23,7 +23,7 @@ import dynImport from "next/dynamic";
 import CertificateTemplate from "@/components/CertificateTemplate";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
 
-// Import dynamique de html2pdf pour Ã©viter les erreurs SSR
+// Import dynamique de html2pdf pour éviter les erreurs SSR
 const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
 import {
   Select,
@@ -53,7 +53,7 @@ export default function UserAttestationsPage() {
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
 
-  // Ã‰tats pour le tÃ©lÃ©chargement du relevÃ©
+  // États pour le téléchargement du relevé
   const [transcriptData, setTranscriptData] = useState<any>(null);
   const [isPrintingTranscript, setIsPrintingTranscript] = useState(false);
   const [isFetchingTranscript, setIsFetchingTranscript] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export default function UserAttestationsPage() {
       const res = await fetch("/api/user/attestations");
       if (!res.ok) {
         if (res.status === 401) router.push("/auth");
-        throw new Error("Non autorisÃ©");
+        throw new Error("Non autorisé");
       }
       return res.json();
     },
@@ -73,7 +73,7 @@ export default function UserAttestationsPage() {
 
   const handleDownload = async (att: any) => {
     setDownloading(att.code);
-    toast.info(`PrÃ©paration de l'attestation ${att.code}...`);
+    toast.info(`Préparation de l'attestation ${att.code}...`);
 
     try {
       const html2pdf = (await import("html2pdf.js")).default;
@@ -93,7 +93,7 @@ export default function UserAttestationsPage() {
       };
 
       await html2pdf().set(opt).from(element).save();
-      toast.success("âœ… Attestation tÃ©lÃ©chargÃ©e !");
+      toast.success("✅ Attestation téléchargée !");
 
       try {
         await fetch(`/api/user/attestations/${att.id}/claim`, { method: "POST" });
@@ -103,7 +103,7 @@ export default function UserAttestationsPage() {
       }
     } catch (error) {
       console.error("PDF Error:", error);
-      toast.error("Erreur lors de la gÃ©nÃ©ration du PDF");
+      toast.error("Erreur lors de la génération du PDF");
     } finally {
       setDownloading(null);
     }
@@ -111,7 +111,7 @@ export default function UserAttestationsPage() {
 
   const handleDownloadTranscript = async (att: any) => {
     setIsFetchingTranscript(att.id);
-    toast.info("RÃ©cupÃ©ration de votre relevÃ© de notes...");
+    toast.info("Récupération de votre relevé de notes...");
 
     try {
       const res = await fetch(`/api/user/transcript`);
@@ -123,7 +123,7 @@ export default function UserAttestationsPage() {
         att.formation?.name.toLowerCase().includes(r.examName.toLowerCase())
       ) || allTranscripts.examResults[0];
 
-      if (!transcript) throw new Error("Aucun relevÃ© trouvÃ© pour cette formation");
+      if (!transcript) throw new Error("Aucun relevé trouvé pour cette formation");
 
       const formattedData = {
         id: att.id,
@@ -157,7 +157,7 @@ export default function UserAttestationsPage() {
           };
 
           await html2pdf().set(opt).from(element).save();
-          toast.success("âœ… RelevÃ© tÃ©lÃ©chargÃ© !");
+          toast.success("✅ Relevé téléchargé !");
 
           try {
             const resData = await fetch(`/api/user/transcript`);
@@ -170,10 +170,10 @@ export default function UserAttestationsPage() {
                await fetch(`/api/user/transcript/${session.id}/claim`, { method: "POST" });
             }
           } catch (e) {
-            console.error("Erreur claim relevÃ©:", e);
+            console.error("Erreur claim relevé:", e);
           }
         } catch (err) {
-          toast.error("Erreur gÃ©nÃ©ration PDF");
+          toast.error("Erreur génération PDF");
         } finally {
           setIsPrintingTranscript(false);
           setTranscriptData(null);
@@ -181,7 +181,7 @@ export default function UserAttestationsPage() {
       }, 500);
 
     } catch (error) {
-      toast.error("Impossible de rÃ©cupÃ©rer le relevÃ©.");
+      toast.error("Impossible de récupérer le relevé.");
     } finally {
       setIsFetchingTranscript(null);
     }
@@ -207,9 +207,9 @@ export default function UserAttestationsPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "VALIDATED": return "ValidÃ©e";
-      case "CLAIMED": return "RÃ©cupÃ©rÃ©e";
-      case "REJECTED": return "RejetÃ©e";
+      case "VALIDATED": return "Validée";
+      case "CLAIMED": return "Récupérée";
+      case "REJECTED": return "Rejetée";
       default: return "En attente";
     }
   };
@@ -236,10 +236,10 @@ export default function UserAttestationsPage() {
             <Award className="w-4 h-4 mr-2" /> Mes Attestations
           </TabsTrigger>
           <TabsTrigger value="releves" className="rounded-xl font-bold py-3 text-sm sm:text-base data-[state=active]:shadow-md">
-            <FileSpreadsheet className="w-4 h-4 mr-2" /> Mes RelevÃ©s de Notes
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Mes Relevés de Notes
           </TabsTrigger>
           <TabsTrigger value="resultats" className="rounded-xl font-bold py-3 text-sm sm:text-base data-[state=active]:shadow-md">
-            <BarChart3 className="w-4 h-4 mr-2" /> DÃ©tail de mes RÃ©sultats
+            <BarChart3 className="w-4 h-4 mr-2" /> Détail de mes Résultats
           </TabsTrigger>
         </TabsList>
         
@@ -251,7 +251,7 @@ export default function UserAttestationsPage() {
                 <p className="text-3xl font-black text-slate-800 tracking-tight">{data?.stats?.total || 0}</p>
               </Card>
               <Card className="p-4 bg-white shadow-sm rounded-2xl border-none shadow-slate-200/50 border-l-4 border-l-emerald-500">
-                <p className="text-sm text-slate-500 font-medium">ValidÃ©es</p>
+                <p className="text-sm text-slate-500 font-medium">Validées</p>
                 <p className="text-3xl font-black text-emerald-600 tracking-tight">{data?.stats?.validated || 0}</p>
               </Card>
               <Card className="p-4 bg-white shadow-sm rounded-2xl border-none shadow-slate-200/50 border-l-4 border-l-amber-500">
@@ -259,7 +259,7 @@ export default function UserAttestationsPage() {
                 <p className="text-3xl font-black text-amber-600 tracking-tight">{data?.stats?.pending || 0}</p>
               </Card>
               <Card className="p-4 bg-white shadow-sm rounded-2xl border-none shadow-slate-200/50 border-l-4 border-l-rose-500">
-                <p className="text-sm text-slate-500 font-medium">RejetÃ©es</p>
+                <p className="text-sm text-slate-500 font-medium">Rejetées</p>
                 <p className="text-3xl font-black text-rose-600 tracking-tight">{data?.stats?.rejected || 0}</p>
               </Card>
             </div>
@@ -286,9 +286,9 @@ export default function UserAttestationsPage() {
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     <SelectItem value="all">Tous les statuts</SelectItem>
-                    <SelectItem value="VALIDATED">ValidÃ©e</SelectItem>
+                    <SelectItem value="VALIDATED">Validée</SelectItem>
                     <SelectItem value="PENDING">En attente</SelectItem>
-                    <SelectItem value="REJECTED">RejetÃ©e</SelectItem>
+                    <SelectItem value="REJECTED">Rejetée</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -316,9 +316,9 @@ export default function UserAttestationsPage() {
                     className="gap-2 text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-slate-100"
                   >
                     <X className="w-3 h-3" />
-                    RÃ©initialiser
+                    Réinitialiser
                   </Button>
-                  <Badge variant="secondary" className="rounded-lg">{filteredAttestations?.length || 0} rÃ©sultat(s)</Badge>
+                  <Badge variant="secondary" className="rounded-lg">{filteredAttestations?.length || 0} résultat(s)</Badge>
                 </div>
               )}
             </Card>
@@ -330,7 +330,7 @@ export default function UserAttestationsPage() {
                   <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center mb-6">
                     <FileText className="w-10 h-10 text-slate-300" />
                   </div>
-                  <p className="text-xl font-black text-slate-900 mb-2">Aucune attestation trouvÃ©e</p>
+                  <p className="text-xl font-black text-slate-900 mb-2">Aucune attestation trouvée</p>
                   <p className="text-sm font-medium text-slate-500">
                     Essayez de modifier vos filtres
                   </p>
@@ -353,7 +353,7 @@ export default function UserAttestationsPage() {
                             <Badge className={`${att.isLocked ? "bg-slate-100 text-slate-500" : getStatusBadgeColor(att.status)} text-[10px] font-black uppercase tracking-widest px-2.5 py-1 border-none rounded-lg`}>
                               {att.isLocked ? (
                                 <span className="flex items-center gap-1.5">
-                                  <Lock className="w-3 h-3" /> DÃ©libÃ©ration en cours
+                                  <Lock className="w-3 h-3" /> Délibération en cours
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1.5">
@@ -364,7 +364,7 @@ export default function UserAttestationsPage() {
                             </Badge>
                           </div>
                           <p className="text-sm font-semibold text-slate-600 mb-3">
-                            {att.formation?.name || "-"} <span className="text-slate-300 mx-2">â€¢</span>
+                            {att.formation?.name || "-"} <span className="text-slate-300 mx-2">•</span>
                             <span className="text-blue-600 font-bold uppercase tracking-widest text-[10px]">
                               {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
                             </span>
@@ -372,9 +372,9 @@ export default function UserAttestationsPage() {
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-medium text-slate-500 bg-slate-50 p-3 sm:p-2 sm:bg-transparent rounded-xl sm:rounded-none">
                             <div className="flex items-center gap-2">
                               <QrCode className="w-4 h-4 text-slate-400" />
-                              <span>Code: <span className="font-mono font-bold bg-white sm:bg-slate-100 px-2 py-1 rounded-md shadow-sm sm:shadow-none">{att.isLocked ? "â€¢â€¢â€¢â€¢-â€¢â€¢â€¢â€¢-â€¢â€¢â€¢â€¢" : att.code}</span></span>
+                              <span>Code: <span className="font-mono font-bold bg-white sm:bg-slate-100 px-2 py-1 rounded-md shadow-sm sm:shadow-none">{att.isLocked ? "••••-••••-••••" : att.code}</span></span>
                             </div>
-                            <span className="hidden sm:inline text-slate-300">â€¢</span>
+                            <span className="hidden sm:inline text-slate-300">•</span>
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4 text-slate-400" />
                               <span>Obtenue le {new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
@@ -417,7 +417,7 @@ export default function UserAttestationsPage() {
                             onClick={(e) => {
                               if (att.isLocked) {
                                 e.preventDefault();
-                                toast.warning("ðŸ”’ Cette attestation sera disponible aprÃ¨s la dÃ©libÃ©ration finale.");
+                                toast.warning("🔒 Cette attestation sera disponible après la délibération finale.");
                               }
                             }}
                             className="w-full gap-2 rounded-xl h-12 sm:h-11 shadow-sm font-bold border-slate-200"
@@ -425,7 +425,7 @@ export default function UserAttestationsPage() {
                           >
                             <Eye className="w-4 h-4" />
                             <span className="text-[11px] uppercase tracking-widest">
-                              {att.status === "CLAIMED" ? "Revoir" : "AperÃ§u"}
+                              {att.status === "CLAIMED" ? "Revoir" : "Aperçu"}
                             </span>
                           </Button>
                         </Link>
@@ -437,13 +437,13 @@ export default function UserAttestationsPage() {
                             className="h-12 w-12 sm:h-11 sm:w-11 rounded-xl shadow-sm border-slate-200"
                             onClick={() => {
                               if (att.isLocked) {
-                                toast.warning("ðŸ”’ Le partage sera activÃ© aprÃ¨s la dÃ©libÃ©ration.");
+                                toast.warning("🔒 Le partage sera activé après la délibération.");
                                 return;
                               }
                               setSelectedAttestation(att);
                               setQrDialogOpen(true);
                             }}
-                            title={att.isLocked ? "VerrouillÃ©" : "Partager le QR Code"}
+                            title={att.isLocked ? "Verrouillé" : "Partager le QR Code"}
                             disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED")}
                           >
                             <QrCode className="w-4 h-4" />
@@ -455,16 +455,16 @@ export default function UserAttestationsPage() {
                             className={`h-12 w-12 sm:h-11 sm:w-11 rounded-xl shadow-sm border-slate-200 ${downloading === att.code ? 'border-emerald-200 bg-emerald-50' : ''} ${att.status === "CLAIMED" ? "border-blue-200 bg-blue-50 text-blue-600" : ""}`}
                             onClick={() => {
                               if (att.isLocked) {
-                                toast.warning("ðŸ”’ Le tÃ©lÃ©chargement sera disponible aprÃ¨s la dÃ©libÃ©ration.");
+                                toast.warning("🔒 Le téléchargement sera disponible après la délibération.");
                                 return;
                               }
                               if (att.status === "CLAIMED") {
-                                 toast.info("Vous avez dÃ©jÃ  tÃ©lÃ©chargÃ© cette attestation. Un nouveau tÃ©lÃ©chargement est possible.");
+                                 toast.info("Vous avez déjà téléchargé cette attestation. Un nouveau téléchargement est possible.");
                               }
                               handleDownload(att);
                             }}
                             disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || downloading === att.code || att.isLocked}
-                            title={att.isLocked ? "VerrouillÃ©" : (att.status === "CLAIMED" ? "TÃ©lÃ©charger Ã  nouveau" : "TÃ©lÃ©charger en PDF")}
+                            title={att.isLocked ? "Verrouillé" : (att.status === "CLAIMED" ? "Télécharger à nouveau" : "Télécharger en PDF")}
                           >
                             {downloading === att.code ? (
                               <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
@@ -486,13 +486,13 @@ export default function UserAttestationsPage() {
             <div className="w-24 h-24 rounded-[2rem] bg-blue-100 flex items-center justify-center mb-6 shadow-inner">
               <FileSpreadsheet className="w-12 h-12 text-blue-600" />
             </div>
-            <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Mes RelevÃ©s de Notes</h3>
+            <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Mes Relevés de Notes</h3>
             <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-10">
-              Retrouvez ici tous vos relevÃ©s de notes dÃ©taillÃ©s par module pour chaque session d'examen.
+              Retrouvez ici tous vos relevés de notes détaillés par module pour chaque session d'examen.
             </p>
             <Link href="/exams">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1">
-                AccÃ©der Ã  mes examens <ChevronRight className="w-4 h-4" />
+                Accéder à mes examens <ChevronRight className="w-4 h-4" />
               </Button>
             </Link>
           </Card>
@@ -503,9 +503,9 @@ export default function UserAttestationsPage() {
             <div className="w-24 h-24 rounded-[2rem] bg-emerald-100 flex items-center justify-center mb-6 shadow-inner">
               <BarChart3 className="w-12 h-12 text-emerald-600" />
             </div>
-            <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">DÃ©tail de mes RÃ©sultats</h3>
+            <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Détail de mes Résultats</h3>
             <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-10">
-              Consultez vos statistiques, votre progression et le dÃ©tail de vos performances aux examens.
+              Consultez vos statistiques, votre progression et le détail de vos performances aux examens.
             </p>
             <Link href="/exams">
               <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1">
@@ -520,7 +520,7 @@ export default function UserAttestationsPage() {
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
         <DialogContent className="rounded-3xl border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black">Code de vÃ©rification</DialogTitle>
+            <DialogTitle className="text-xl font-black">Code de vérification</DialogTitle>
           </DialogHeader>
           {selectedAttestation && (
             <div className="text-center space-y-6 py-4">
@@ -537,7 +537,7 @@ export default function UserAttestationsPage() {
                 <p className="font-mono text-2xl font-black text-slate-900 bg-slate-100 py-2 px-4 rounded-xl inline-block">{selectedAttestation.code}</p>
               </div>
               <p className="text-sm font-medium text-slate-500 max-w-xs mx-auto">
-                Scannez ce QR code pour vÃ©rifier l'authenticitÃ© de l'attestation sur notre plateforme.
+                Scannez ce QR code pour vérifier l'authenticité de l'attestation sur notre plateforme.
               </p>
             </div>
           )}
@@ -552,12 +552,12 @@ export default function UserAttestationsPage() {
               <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
                 <AlertCircle className="w-6 h-6" />
               </div>
-              Signaler un problÃ¨me
+              Signaler un problème
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5 py-2">
             <p className="text-sm font-medium text-slate-600 leading-relaxed">
-              Vous avez besoin d'un duplicata ou vous rencontrez un problÃ¨me avec l'attestation
+              Vous avez besoin d'un duplicata ou vous rencontrez un problème avec l'attestation
               <span className="font-black text-slate-900 ml-1">
                 {reportingAtt?.fullName}
               </span> ?
@@ -582,7 +582,7 @@ export default function UserAttestationsPage() {
               className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold px-6"
               onClick={async () => {
                 if (!reportReason.trim()) {
-                  toast.error("Veuillez expliquer votre problÃ¨me.");
+                  toast.error("Veuillez expliquer votre problème.");
                   return;
                 }
                 setSubmittingReport(true);
@@ -596,7 +596,7 @@ export default function UserAttestationsPage() {
                     })
                   });
                   if (!res.ok) throw new Error();
-                  toast.success("Demande envoyÃ©e avec succÃ¨s !");
+                  toast.success("Demande envoyée avec succès !");
                   setReportLostOpen(false);
                   setReportReason("");
                 } catch (e) {
@@ -614,7 +614,7 @@ export default function UserAttestationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Templates cachÃ©s pour la gÃ©nÃ©ration PDF (Capture technique) */}
+      {/* Templates cachés pour la génération PDF (Capture technique) */}
       <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
         {data?.attestations?.filter((a: any) => (a.status === "VALIDATED" || a.status === "CLAIMED") && !a.isLocked).map((att: any) => (
           <div key={`capture-${att.id}`}>
@@ -622,7 +622,7 @@ export default function UserAttestationsPage() {
                 id={`cert-template-${att.id}`}
                 data={{
                   fullName: att.fullName,
-                  formationName: att.formation?.name || "Formation Saint AndrÃ©",
+                  formationName: att.formation?.name || "Formation Saint André",
                   code: att.code,
                   issuedAt: att.issuedAt,
                   startDate: att.startDate,

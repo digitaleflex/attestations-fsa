@@ -9,8 +9,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
+    // NOTE: fonctionnalité Portfolio non déployée (pas de User.portfolioStatus
+    // dans prisma/schema.prisma) — compteur neutralisé à 0, forme inchangée.
     const [pendingPortfolios, newReports] = await Promise.all([
-      prisma.user.count({ where: { portfolioStatus: "PENDING_VALIDATION" } }),
+      Promise.resolve(0),
       prisma.report.count({ where: { status: "NEW" } }),
     ]);
 

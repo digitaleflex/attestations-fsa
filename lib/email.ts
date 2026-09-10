@@ -939,4 +939,80 @@ export const emailService = {
       return { success: false, error };
     }
   },
+
+  /**
+   * Envoi d'un lien magique de connexion (OTP + lien cliquable)
+   */
+  async sendMagicLink(to: string, fullName: string, magicLinkUrl: string) {
+    try {
+      const resend = getResend();
+      const year = new Date().getFullYear();
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject: `🔗 Connectez-vous en un clic — Portail FSA`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f0f4f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.08);">
+                    <tr style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                      <td style="padding: 40px 32px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff;">🔗 Lien de connexion</h1>
+                        <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Ferme Agro-Piscicole Cité St André</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 32px;">
+                        <p style="margin: 0 0 24px 0; font-size: 16px; color: #475569; line-height: 1.6;">
+                          Bonjour <strong style="color: #0f172a;">${fullName}</strong>,
+                        </p>
+                        <p style="margin: 0 0 32px 0; font-size: 15px; color: #64748b; line-height: 1.7;">
+                          Cliquez sur le bouton ci-dessous pour vous connecter instantanément à votre espace. Ce lien est valable <strong>10 minutes</strong> et ne peut être utilisé qu&apos;une seule fois.
+                        </p>
+                        <table role="presentation" width="100%" style="margin: 0 0 32px 0;">
+                          <tr>
+                            <td style="text-align: center;">
+                              <a href="${magicLinkUrl}" style="display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(16,185,129,0.3);">
+                                Me connecter
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        <p style="margin: 0 0 8px 0; font-size: 12px; color: #94a3b8; text-align: center;">
+                          Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :
+                        </p>
+                        <p style="margin: 0 0 16px 0; font-size: 11px; color: #6366f1; text-align: center; word-break: break-all;">
+                          ${magicLinkUrl}
+                        </p>
+                        <p style="margin: 0 0 16px 0; font-size: 13px; color: #94a3b8; text-align: center;">Si vous n&apos;avez pas demandé cet email, vous pouvez l&apos;ignorer en toute sécurité.</p>
+                      </td>
+                    </tr>
+                    <tr style="background-color: #f8fafc; padding: 24px; text-align: center;">
+                      <td style="padding: 24px; text-align: center; font-size: 11px; color: #94a3b8;">
+                        © ${year} Ferme Agro-Piscicole Cité St André • Abomey-Calavi, Bénin
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `,
+      });
+      console.log(`[EMAIL_SERVICE] ✅ Magic link sent to ${to}`);
+      return { success: true };
+    } catch (error) {
+      console.error("[EMAIL_ERROR] Magic Link:", error);
+      return { success: false, error };
+    }
+  },
 };

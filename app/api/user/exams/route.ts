@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 const ExamsQuerySchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
-  type: z.enum(['OFFICIAL', 'MOCK']).optional(),
+  type: z.enum(["OFFICIAL", "MOCK"]).optional(),
   limit: z.coerce.number().min(1).max(50).optional(),
 });
 
@@ -63,11 +63,11 @@ export async function GET(request: Request) {
         ...(params.data.limit ? { take: params.data.limit } : {}),
       }),
       prisma.examSession.findMany({
-        where: { 
+        where: {
           userId,
           exam: {
-            type: params.data.type || undefined
-          }
+            type: params.data.type || undefined,
+          },
         },
         select: {
           id: true,
@@ -111,12 +111,13 @@ export async function GET(request: Request) {
       const exam = sub.exam;
       const qCount =
         exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0);
-      
+
       // Récupérer le barème personnalisé s'il existe
-      const customBareme = sub.answers && typeof sub.answers === 'object' 
-        ? (sub.answers as any)._customBareme 
-        : null;
-      
+      const customBareme =
+        sub.answers && typeof sub.answers === "object"
+          ? (sub.answers as any)._customBareme
+          : null;
+
       const maxScore = customBareme?.totalMax ?? (exam.totalPoints || 100);
 
       return {
@@ -124,7 +125,12 @@ export async function GET(request: Request) {
         submissionId: sub.id,
         examName: exam.title || exam.name,
         examDescription: exam.description,
-        status: sub.status === "GRADED" ? "COMPLETED" : "IN_PROGRESS",
+        status:
+          sub.status === "IN_PROGRESS" || sub.status === "PENDING"
+            ? "IN_PROGRESS"
+            : sub.status === "PENDING_REVIEW"
+              ? "SUBMITTED"
+              : "COMPLETED",
         score: sub.totalScore,
         maxScore: maxScore,
         passingScore: exam.passingScore || 65,
@@ -139,7 +145,10 @@ export async function GET(request: Request) {
     // 2. Ajouter les examens disponibles (non encore soumis)
     const availableResult = availableExams
       .filter((exam: { id: string }) => !submittedExamIds.has(exam.id))
-      .filter((exam: any) => !user.examId || user.examId === exam.id || exam.type === "MOCK")
+      .filter(
+        (exam: any) =>
+          !user.examId || user.examId === exam.id || exam.type === "MOCK",
+      )
       .map((exam: any) => ({
         id: exam.id,
         examName: exam.title || exam.name,
@@ -169,7 +178,8 @@ export async function GET(request: Request) {
       passed: examsResult.filter(
         (e) =>
           e.status === "COMPLETED" &&
-          (e.maxScore > 0 ? (e.score / e.maxScore) * 100 : 0) >= (e.passingScore || 65),
+          (e.maxScore > 0 ? (e.score / e.maxScore) * 100 : 0) >=
+            (e.passingScore || 65),
       ).length,
     };
 

@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { createAuditLog } from '@/lib/audit';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 
 /**
  * POST /api/exams/[id]/start
@@ -9,12 +9,12 @@ import { createAuditLog } from '@/lib/audit';
  */
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
     const { id: examId } = await params;
@@ -27,23 +27,30 @@ export async function POST(
         status: true,
         duration: true,
         type: true,
-      }
+      },
     });
 
-    if (!exam || exam.status !== 'PUBLISHED') {
-      return NextResponse.json({ error: 'Examen non disponible' }, { status: 404 });
+    if (!exam || exam.status !== "PUBLISHED") {
+      return NextResponse.json(
+        { error: "Examen non disponible" },
+        { status: 404 },
+      );
     }
 
     // 1.5 Vérifier si l'utilisateur est restreint à un examen spécifique
     const userRecord = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { examId: true }
+      select: { examId: true },
     });
 
     if (userRecord?.examId && userRecord.examId !== examId) {
-      return NextResponse.json({ 
-        error: 'Accès restreint : Vous n\'êtes pas autorisé à passer cet examen spécifique.' 
-      }, { status: 403 });
+      return NextResponse.json(
+        {
+          error:
+            "Accès restreint : Vous n'êtes pas autorisé à passer cet examen spécifique.",
+        },
+        { status: 403 },
+      );
     }
 
     // 2. Vérifier si une session existe déjà
@@ -51,29 +58,38 @@ export async function POST(
       where: {
         examId,
         userId: user.id,
-      }
+      },
     });
 
     if (existingSession) {
-      // Si déjà soumis, on ne peut pas recommencer
-      if (existingSession.status === 'COMPLETED' || existingSession.status === 'GRADED') {
-        return NextResponse.json({ 
-          error: 'Examen déjà soumis',
-          status: existingSession.status 
-        }, { status: 400 });
+      // Si déjà soumis (auto-corrigé ou en revue) ou noté, on ne peut pas recommencer
+      if (
+        ["COMPLETED", "GRADED", "PENDING_REVIEW"].includes(
+          existingSession.status,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error: "Examen déjà soumis",
+            status: existingSession.status,
+          },
+          { status: 400 },
+        );
       }
 
       // Calculer le temps restant
       const now = new Date();
       const startedAt = new Date(existingSession.startedAt);
-      const elapsedSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+      const elapsedSeconds = Math.floor(
+        (now.getTime() - startedAt.getTime()) / 1000,
+      );
       const remainingSeconds = Math.max(0, exam.duration - elapsedSeconds);
 
       return NextResponse.json({
-        message: 'Session existante reprise',
+        message: "Session existante reprise",
         sessionId: existingSession.id,
         duration: remainingSeconds,
-        status: existingSession.status
+        status: existingSession.status,
       });
     }
 
@@ -82,31 +98,33 @@ export async function POST(
       data: {
         examId,
         userId: user.id,
-        status: 'IN_PROGRESS',
+        status: "IN_PROGRESS",
         startedAt: new Date(),
         type: exam.type,
-      }
+      },
     });
 
     // Enregistrer le log d'audit
     await createAuditLog({
       userId: user.id,
-      action: 'EXAM_STARTED',
-      resource: 'EXAM',
+      action: "EXAM_STARTED",
+      resource: "EXAM",
       resourceId: examId,
       newValue: { sessionId: session.id, startedAt: session.startedAt },
-      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown",
     });
 
-    return NextResponse.json({
-      message: 'Examen démarré',
-      sessionId: session.id,
-      duration: exam.duration,
-      status: 'IN_PROGRESS'
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        message: "Examen démarré",
+        sessionId: session.id,
+        duration: exam.duration,
+        status: "IN_PROGRESS",
+      },
+      { status: 201 },
+    );
   } catch (error) {
-    console.error('[EXAM_START_ERROR]', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    console.error("[EXAM_START_ERROR]", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

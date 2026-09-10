@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   LayoutDashboard,
   FileText,
-  BookOpen,
+  ClipboardList,
   Briefcase,
   CheckCircle,
   User,
@@ -23,7 +23,7 @@ import {
   MessageCircle,
   Bell,
   GraduationCap,
-  Award
+  Award,
 } from "lucide-react";
 import { authClient, signOut } from "@/lib/auth-client";
 import { getCurrentUser } from "@/lib/auth";
@@ -58,36 +58,35 @@ export default function UserLayout({
 
   const handleLogout = async () => {
     try {
-        // 1. Better Auth Sign Out
-        await signOut();
-        // 2. Legacy API Logout
-        await fetch("/api/auth/logout", { method: "POST" });
-        
-        toast.success("Déconnecté avec succès");
-        router.push("/");
+      // 1. Better Auth Sign Out
+      await signOut();
+      // 2. Legacy API Logout
+      await fetch("/api/auth/logout", { method: "POST" });
+
+      toast.success("Déconnecté avec succès");
+      router.push("/");
     } catch (err) {
-        console.error("User logout error:", err);
-        router.push("/");
+      console.error("User logout error:", err);
+      router.push("/");
     }
   };
 
   const menuItems = [
     { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Mon Apprentissage", href: "/courses", icon: BookOpen },
+    { name: "Mes Examens", href: "/exams", icon: ClipboardList },
+    { name: "Mes Résultats", href: "/results", icon: BarChart3 },
     { name: "Mes Certifications", href: "/attestations", icon: Award },
     { name: "Stages & Projets", href: "/internships", icon: Briefcase },
     { name: "Mon Espace", href: "/profile", icon: User },
   ];
 
   // Mode Focus pour les examens (Pas de sidebar, pas de header)
-  const isExamPage = pathname ? pathname.startsWith("/exams/") && pathname !== "/exams" : false;
+  const isExamPage = pathname
+    ? pathname.startsWith("/exams/") && pathname !== "/exams"
+    : false;
 
   if (isExamPage) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        {children}
-      </div>
-    );
+    return <div className="min-h-screen bg-slate-50">{children}</div>;
   }
 
   // Note: On retire le spinner bloquant pour éviter les "gels" d'interface en cas de latence réseau
@@ -101,7 +100,6 @@ export default function UserLayout({
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-
       {/* Sidebar Desktop */}
       <aside
         className={`hidden lg:flex flex-col bg-white border-r border-slate-200/60 shadow-[4px_0_24px_-10px_rgba(0,0,0,0.05)] transition-all duration-300 z-20 ${
@@ -109,14 +107,21 @@ export default function UserLayout({
         }`}
       >
         <div className="h-20 flex items-center px-5 border-b border-slate-100 justify-between">
-          <div className="flex items-center gap-3 overflow-hidden" title="Ferme Agro-piscicole St Andre">
+          <div
+            className="flex items-center gap-3 overflow-hidden"
+            title="Ferme Agro-piscicole St Andre"
+          >
             <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
               FSA
             </div>
             {isSidebarOpen && (
               <div className="flex flex-col">
-                <span className="font-bold text-slate-800 tracking-tight whitespace-nowrap text-xs">Agro-piscicole</span>
-                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">St Andre</span>
+                <span className="font-bold text-slate-800 tracking-tight whitespace-nowrap text-xs">
+                  Agro-piscicole
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                  St Andre
+                </span>
               </div>
             )}
           </div>
@@ -124,7 +129,9 @@ export default function UserLayout({
 
         <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-hide">
           {menuItems.map((item) => {
-            const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
+            const isActive =
+              pathname === item.href ||
+              (pathname && pathname.startsWith(`${item.href}/`));
             return (
               <Link key={item.name} href={item.href}>
                 <div
@@ -135,13 +142,17 @@ export default function UserLayout({
                   }`}
                   title={!isSidebarOpen ? item.name : undefined}
                 >
-                  <item.icon className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-400 group-hover:text-emerald-500"}`} />
+                  <item.icon
+                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-400 group-hover:text-emerald-500"}`}
+                  />
                   {isSidebarOpen && (
-                    <span className="font-medium whitespace-nowrap tracking-wide text-sm">{item.name}</span>
+                    <span className="font-medium whitespace-nowrap tracking-wide text-sm">
+                      {item.name}
+                    </span>
                   )}
                 </div>
               </Link>
-            )
+            );
           })}
         </div>
 
@@ -152,14 +163,17 @@ export default function UserLayout({
             title={!isSidebarOpen ? "Déconnexion" : undefined}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {isSidebarOpen && <span className="font-medium whitespace-nowrap text-sm">Déconnexion</span>}
+            {isSidebarOpen && (
+              <span className="font-medium whitespace-nowrap text-sm">
+                Déconnexion
+              </span>
+            )}
           </button>
         </div>
       </aside>
 
       {/* Main content wrapper */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-
         {/* Header (Top Navbar) */}
         <header className="h-20 bg-white border-b border-slate-200/60 shadow-sm flex items-center justify-between px-6 lg:px-10 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -176,7 +190,11 @@ export default function UserLayout({
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="hidden sm:block text-xl font-bold text-slate-800 tracking-tight">
-              {menuItems.find(i => pathname === i.href || (pathname && pathname.startsWith(`${i.href}/`)))?.name || "Espace Candidat"}
+              {menuItems.find(
+                (i) =>
+                  pathname === i.href ||
+                  (pathname && pathname.startsWith(`${i.href}/`)),
+              )?.name || "Espace Candidat"}
             </h2>
           </div>
 
@@ -202,8 +220,6 @@ export default function UserLayout({
             {children}
           </div>
         </main>
-
-
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -219,7 +235,9 @@ export default function UserLayout({
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                   FSA
                 </div>
-                <span className="font-bold text-slate-800 tracking-tight">Portail Candidat</span>
+                <span className="font-bold text-slate-800 tracking-tight">
+                  Portail Candidat
+                </span>
               </div>
               <button
                 className="p-2 text-slate-400 hover:text-slate-700 hover:bg-white rounded-full transition-colors shadow-sm"
@@ -230,19 +248,29 @@ export default function UserLayout({
             </div>
             <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
               {menuItems.map((item) => {
-                const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
+                const isActive =
+                  pathname === item.href ||
+                  (pathname && pathname.startsWith(`${item.href}/`));
                 return (
-                  <Link key={item.name} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors font-medium border border-transparent ${
-                      isActive
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm"
-                        : "text-slate-600 hover:bg-slate-50"
-                    }`}>
-                      <item.icon className={`w-5 h-5 ${isActive ? "text-emerald-500" : "text-slate-400"}`} />
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div
+                      className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors font-medium border border-transparent ${
+                        isActive
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm"
+                          : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <item.icon
+                        className={`w-5 h-5 ${isActive ? "text-emerald-500" : "text-slate-400"}`}
+                      />
                       {item.name}
                     </div>
                   </Link>
-                )
+                );
               })}
             </div>
             <div className="p-4 border-t border-slate-100 bg-slate-50/50">
@@ -265,12 +293,14 @@ export default function UserLayout({
 
           {[
             { name: "Accueil", href: "/dashboard", icon: LayoutDashboard },
-            { name: "Apprentissage", href: "/courses", icon: BookOpen },
+            { name: "Examens", href: "/exams", icon: ClipboardList },
+            { name: "Résultats", href: "/results", icon: BarChart3 },
             { name: "Certifs", href: "/attestations", icon: Award },
-            { name: "Stages", href: "/internships", icon: Briefcase },
             { name: "Espace", href: "/profile", icon: User },
           ].map((item) => {
-            const isActive = pathname === item.href || (pathname && pathname.startsWith(`${item.href}/`));
+            const isActive =
+              pathname === item.href ||
+              (pathname && pathname.startsWith(`${item.href}/`));
             return (
               <Link
                 key={item.name}
@@ -280,12 +310,16 @@ export default function UserLayout({
                 {isActive && (
                   <div className="absolute inset-x-1 inset-y-1 bg-emerald-500 rounded-2xl -z-10 shadow-lg shadow-emerald-500/20 animate-in fade-in zoom-in duration-300" />
                 )}
-                <item.icon className={`w-5 h-5 transition-colors duration-300 ${
-                  isActive ? "text-white" : "text-slate-400"
-                }`} />
-                <span className={`text-[9px] font-bold uppercase tracking-tighter transition-colors duration-300 ${
-                  isActive ? "text-white" : "text-slate-400"
-                }`}>
+                <item.icon
+                  className={`w-5 h-5 transition-colors duration-300 ${
+                    isActive ? "text-white" : "text-slate-400"
+                  }`}
+                />
+                <span
+                  className={`text-[9px] font-bold uppercase tracking-tighter transition-colors duration-300 ${
+                    isActive ? "text-white" : "text-slate-400"
+                  }`}
+                >
                   {item.name}
                 </span>
               </Link>

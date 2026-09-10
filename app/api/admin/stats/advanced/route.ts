@@ -1,42 +1,46 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { isAdminAuthenticated } from '@/lib/auth';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { isAdminAuthenticated } from "@/lib/auth";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
 
 export async function GET(request: Request) {
-  if (!await isAdminAuthenticated(request)) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+  if (!(await isAdminAuthenticated(request))) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
     // 1. Évolution des inscriptions sur les 30 derniers jours
     const thirtyDaysAgo = subDays(new Date(), 30);
     const usersByDay = await (prisma.user as any).groupBy({
-      by: ['createdAt'],
+      by: ["createdAt"],
       where: {
         createdAt: { gte: thirtyDaysAgo },
-        role: 'user'
+        role: "user",
       },
       _count: true,
     });
- 
+
     interface GroupedResult {
       createdAt: Date;
       _count: number;
     }
- 
+
     interface DailyStat {
       date: string;
       count: number;
     }
 
     // Formatter pour le graphique
-    const dailyUsers: DailyStat[] = Array.from({ length: 30 }).map((_, i) => {
-      const date = subDays(new Date(), i);
-      const dateStr = format(date, 'yyyy-MM-dd');
-      const count = (usersByDay as unknown as GroupedResult[]).filter((u) => format(u.createdAt, 'yyyy-MM-dd') === dateStr).reduce((acc, curr) => acc + curr._count, 0);
-      return { date: format(date, 'dd/MM'), count };
-    }).reverse();
+    const dailyUsers: DailyStat[] = Array.from({ length: 30 })
+      .map((_, i) => {
+        const date = subDays(new Date(), i);
+        const dateStr = format(date, "yyyy-MM-dd");
+        const count = (usersByDay as unknown as GroupedResult[])
+          .filter((u) => format(u.createdAt, "yyyy-MM-dd") === dateStr)
+          .reduce((acc, curr) => acc + curr._count, 0);
+        return { date: format(date, "dd/MM"), count };
+      })
+      .reverse();
 
     // 2. Performances par formation
     const formations = await prisma.formation.findMany({
@@ -44,25 +48,34 @@ export async function GET(request: Request) {
         id: true,
         name: true,
         _count: {
-          select: { attestations: true }
-        }
-      }
+          select: { attestations: true },
+        },
+      },
     });
 
-    const formationStats = formations.map((f: { name: string; _count: { attestations: number } }) => ({
-      name: f.name.length > 20 ? f.name.slice(0, 20) + '...' : f.name,
-      attestations: f._count.attestations
-    }));
+    const formationStats = formations.map(
+      (f: { name: string; _count: { attestations: number } }) => ({
+        name: f.name.length > 20 ? f.name.slice(0, 20) + "..." : f.name,
+        attestations: f._count.attestations,
+      }),
+    );
 
     // 3. Taux de réussite global (basé sur les examens)
     const examSessions = await (prisma.examSession as any).groupBy({
-      by: ['status'],
-      _count: true
+      by: ["status"],
+      _count: true,
     });
 
-    const sessionStats = (examSessions as { status: string; _count: number }[]).map((s) => ({
-      name: s.status === 'COMPLETED' ? 'Admis' : s.status === 'PENDING_REVIEW' ? 'En correction' : 'En cours',
-      value: s._count
+    const sessionStats = (
+      examSessions as { status: string; _count: number }[]
+    ).map((s) => ({
+      name:
+        s.status === "COMPLETED"
+          ? "Admis"
+          : s.status === "PENDING_REVIEW"
+            ? "En correction"
+            : "En cours",
+      value: s._count,
     }));
 
     return NextResponse.json({
@@ -72,11 +85,13 @@ export async function GET(request: Request) {
       summary: {
         totalFormations: await prisma.formation.count(),
         totalSubmissions: await prisma.examSession.count(),
-        totalMissions: await prisma.portfolioMission.count()
-      }
+        // NOTE: modèle PortfolioMission absent de prisma/schema.prisma
+        // (fonctionnalité non déployée) — neutralisé à 0, forme inchangée.
+        totalMissions: 0,
+      },
     });
   } catch (error) {
-    console.error('[ADVANCED_STATS_ERROR]', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    console.error("[ADVANCED_STATS_ERROR]", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -1,5 +1,9 @@
 import * as React from "react";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -18,23 +22,27 @@ export default async function AdminLayout({
 }) {
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") || "";
-  
+
   // Récupération de la session (le middleware a optimisé la latence, c'est ici qu'on valide le rôle)
   const session = await auth.api.getSession({
     headers: headerList,
   });
 
-  const isLoginPage = pathname === "/admin/login" || pathname.startsWith("/admin/login/");
+  const isLoginPage =
+    pathname === "/admin/login" ||
+    pathname.startsWith("/admin/login/") ||
+    pathname === "/admin/register" ||
+    pathname === "/admin/signup";
 
   // Sécurité Stricte (RSC Validation)
   if (!isLoginPage) {
     // Si pas connecté ou pas admin -> on bloque et on redirige
-    if (!session || session.user.role?.toLowerCase() !== 'admin') {
+    if (!session || session.user.role?.toLowerCase() !== "admin") {
       redirect("/admin/login");
     }
   } else {
     // Si sur la page de login et déjà connecté en tant qu'admin -> go dashboard
-    if (session && session.user.role?.toLowerCase() === 'admin') {
+    if (session && session.user.role?.toLowerCase() === "admin") {
       redirect("/admin/dashboard");
     }
   }

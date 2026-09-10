@@ -25,16 +25,19 @@ export async function GET(request: Request) {
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
-      prisma.user.count({ where: { role: 'admin' } }),
-      prisma.user.count({ where: { portfolioStatus: 'PENDING_VALIDATION' } }),
-      prisma.report.count({ where: { status: 'NEW' } }),
+      prisma.user.count({ where: { role: "admin" } }),
+      // NOTE: fonctionnalité Portfolio non déployée (aucun modèle User.portfolioStatus
+      // ni Portfolio* dans prisma/schema.prisma) — compteur neutralisé à 0 en
+      // conservant la forme de réponse pour le frontend.
+      Promise.resolve(0),
+      prisma.report.count({ where: { status: "NEW" } }),
       prisma.attestation.count(),
-      prisma.examSession.count({ where: { status: 'PASSED' } }),
+      prisma.examSession.count({ where: { status: "PASSED" } }),
       prisma.attestation.findMany({
         take: 5,
-        orderBy: { issuedAt: 'desc' },
-        include: { formation: { select: { name: true } } }
-      })
+        orderBy: { issuedAt: "desc" },
+        include: { formation: { select: { name: true } } },
+      }),
     ]);
 
     return NextResponse.json({
@@ -52,9 +55,8 @@ export async function GET(request: Request) {
         totalAttestations,
         validatedExams,
         recentAttestations,
-      }
+      },
     });
-
   } catch (error) {
     console.error("[DASHBOARD_OVERVIEW_ERROR]", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
