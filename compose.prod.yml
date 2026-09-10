@@ -38,7 +38,7 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_DOMAIN: ${RESEND_DOMAIN}
-      EMAIL_FROM: ${EMAIL_FROM:-"FSA <noreply@fermestandre.com>"}
+      EMAIL_FROM: "${EMAIL_FROM:-FSA <noreply@fermestandre.com>}"
       PUSHER_APP_ID: ${PUSHER_APP_ID}
       PUSHER_KEY: ${PUSHER_KEY}
       PUSHER_SECRET: ${PUSHER_SECRET}
@@ -48,6 +48,8 @@ services:
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
       BOTID_SECRET: ${BOTID_SECRET}
+      # Plugin admin Better Auth : IDs des utilisateurs promus admin
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS}
     restart: unless-stopped
     depends_on:
       fsa-postgres:
@@ -102,6 +104,24 @@ services:
     # Débug local uniquement, ne jamais décommenter sur VPS public :
     # ports:
     #   - "5432:5432"
+
+  # Migrator one-shot : applique les migrations Prisma puis s'arrête.
+  # Usage : docker compose -f compose.prod.yml --profile tools run --rm prisma migrate deploy
+  prisma:
+    build:
+      context: .
+      dockerfile: Dockerfile.prisma
+    container_name: attestations-fsa-prisma-prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-attestation_fsa_user}:${POSTGRES_PASSWORD}@fsa-postgres:5432/${POSTGRES_DB:-attestation_fsa}?sslmode=disable
+    depends_on:
+      fsa-postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    profiles:
+      - tools
+    restart: "no"
 
 networks:
   # Externe, créé par Traefik sur le VPS : docker network create traefik-public

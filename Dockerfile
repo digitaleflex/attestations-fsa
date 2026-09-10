@@ -1,16 +1,20 @@
 FROM node:22-alpine AS deps
 
-RUN apk add --no-cache libc6-compat
+# libc6-compat : compat glibc ; openssl : requis par le moteur Prisma
+RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
-RUN npm install -g pnpm && \
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate && \
     pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
+
+RUN apk add --no-cache libc6-compat openssl
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
@@ -29,7 +33,13 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-RUN npx prisma generate
+# Secrets factices pour le build uniquement (les vraies valeurs sont
+# injectées au runtime via environment:). Nécessaire car `next build`
+# évalue les routes (lib/auth.ts lève une erreur sans secret en prod).
+ENV BETTER_AUTH_SECRET=dummy-build-only-secret-do-not-use
+ENV DATABASE_URL=postgresql://build:dummy@localhost:5432/build?sslmode=disable
+
+# `pnpm build` exécute déjà `prisma generate` (cf. package.json)
 RUN pnpm build
 
 FROM node:22-alpine AS runner
@@ -38,6 +48,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# openssl requis au runtime par le moteur Prisma (query engine)
+RUN apk add --no-cache openssl
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs

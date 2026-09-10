@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       skip_db:
-        description: 'Skip database restore'
+        description: "Skip database restore"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
                 echo "==> Database empty. Restoring backup..."
 
                 # Start PostgreSQL
-                docker compose -f compose.prod.yml up -d postgres
+                docker compose -f compose.prod.yml up -d fsa-postgres
                 sleep 5
 
                 # Restore
@@ -68,6 +68,10 @@ jobs:
             else
               echo "==> Skipping database restore"
             fi
+
+            # ── Prisma migrations ──
+            echo "==> Applying Prisma migrations..."
+            docker compose -f compose.prod.yml --profile tools run --rm prisma migrate deploy
 
             # ── Build & Deploy ──
             echo "==> Stopping old containers..."

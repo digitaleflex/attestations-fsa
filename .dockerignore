@@ -8,6 +8,7 @@ node_modules
 Backup
 backups
 Dockerfile*
+compose*.yml
 docker-compose*
 README.md
 *.md
