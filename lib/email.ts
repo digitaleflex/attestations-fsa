@@ -28,7 +28,8 @@ export function __resetResendInstanceForTests() {
   resendInstance = null;
 }
 
-const fromEmail = "Ferme St André <contact@net.eurinhash.com>";
+const fromEmail =
+  process.env.EMAIL_FROM?.trim() || "Ferme St André <admin@hashcode.cloud>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 export const emailService = {
