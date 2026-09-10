@@ -1,17 +1,20 @@
 import { Resend } from "resend";
+import { getResendApiKey, requireResendApiKey } from "@/lib/email-health";
 
 // Initialisation paresseuse pour éviter les erreurs lors du build (si la clé API est absente)
 let resendInstance: Resend | null = null;
 
 const getResend = () => {
   if (!resendInstance) {
-    const apiKey = process.env.RESEND_API_KEY;
+    const apiKey = getResendApiKey();
     if (!apiKey) {
+      // Échoue vite en production si la clé manque, reste tolérant hors prod (build/dev).
+      requireResendApiKey();
       console.warn(
         "[EMAIL_SERVICE] RESEND_API_KEY is missing. Email sending will fail.",
       );
       // Pendant le build, on peut retourner une instance bidon pour éviter les crashs
-      // Mais en production, il faut la clé.
+      // Mais en production, requireResendApiKey() a déjà levé une erreur ci-dessus.
       resendInstance = new Resend("disabled_key");
     } else {
       resendInstance = new Resend(apiKey);
@@ -19,6 +22,11 @@ const getResend = () => {
   }
   return resendInstance;
 };
+
+/** Réinitialise le singleton Resend (réservé aux tests). */
+export function __resetResendInstanceForTests() {
+  resendInstance = null;
+}
 
 const fromEmail = "Ferme St André <contact@net.eurinhash.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -70,21 +78,29 @@ export const emailService = {
     examTitle: string,
     score: number,
     isSuccess: boolean,
-    examType: 'OFFICIAL' | 'MOCK' = 'OFFICIAL',
+    examType: "OFFICIAL" | "MOCK" = "OFFICIAL",
   ) {
     try {
       const resend = getResend();
-      const isMock = examType === 'MOCK';
-      
+      const isMock = examType === "MOCK";
+
       const statusText = isSuccess
-        ? (isMock ? "OBJECTIF ATTEINT ! Bel entraînement." : "ADMIS - FÉLICITATIONS !")
-        : (isMock ? "ENTRAÎNEMENT À POURSUIVRE." : "REFUSÉ - SCORE INSUFFISANT.");
-      
+        ? isMock
+          ? "OBJECTIF ATTEINT ! Bel entraînement."
+          : "ADMIS - FÉLICITATIONS !"
+        : isMock
+          ? "ENTRAÎNEMENT À POURSUIVRE."
+          : "REFUSÉ - SCORE INSUFFISANT.";
+
       const statusColor = isSuccess ? "#10b981" : "#ef4444";
-      
+
       const subject = isSuccess
-        ? (isMock ? `🏆 Objectif Atteint : ${examTitle}` : `🎓 ADMIS ! Votre attestation est prête - ${examTitle}`)
-        : (isMock ? `📝 Score Entraînement : ${examTitle}` : `📉 Résultat Examen : REFUSÉ - ${examTitle}`);
+        ? isMock
+          ? `🏆 Objectif Atteint : ${examTitle}`
+          : `🎓 ADMIS ! Votre attestation est prête - ${examTitle}`
+        : isMock
+          ? `📝 Score Entraînement : ${examTitle}`
+          : `📉 Résultat Examen : REFUSÉ - ${examTitle}`;
 
       await resend.emails.send({
         from: fromEmail,
@@ -97,7 +113,7 @@ export const emailService = {
             </div>
             <div style="padding: 32px; color: #334155; line-height: 1.6;">
               <h2 style="color: #0f172a; margin-top: 0;">Bonjour ${fullName},</h2>
-              <p>Votre ${isMock ? 'auto-évaluation' : 'examen'} "<strong>${examTitle}</strong>" a été corrigé.</p>
+              <p>Votre ${isMock ? "auto-évaluation" : "examen"} "<strong>${examTitle}</strong>" a été corrigé.</p>
 
               <div style="margin: 32px 0; padding: 32px; text-align: center; background-color: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 14px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Note Finale</p>
@@ -108,12 +124,12 @@ export const emailService = {
                     Soit <span style="color: ${statusColor};">${(score / 5).toFixed(2)} / 20</span>
                  </p>
                  <p style="margin: 0; font-weight: bold; color: ${statusColor}; text-transform: uppercase;">${statusText}</p>
-                 ${isMock ? '<p style="margin: 8px 0 0 0; font-size: 11px; color: #6366f1; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Mode Entraînement</p>' : ''}
+                 ${isMock ? '<p style="margin: 8px 0 0 0; font-size: 11px; color: #6366f1; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Mode Entraînement</p>' : ""}
               </div>
 
               ${
                 isSuccess
-                  ? isMock 
+                  ? isMock
                     ? `
                     <p>Bravo pour ce score ! Continuez à vous entraîner pour être prêt lors de la session officielle. Vos notes d'entraînement sont consultables sur votre relevé de notes.</p>
                     <div style="text-align: center; margin-top: 32px;">
@@ -133,7 +149,7 @@ export const emailService = {
                   : `
                 <p>Le seuil de réussite est fixé à <strong>13/20</strong> (65%). ${isMock ? "Utilisez ce résultat pour identifier vos points d'amélioration et retentez l'entraînement pour atteindre l'excellence." : "Ne vous découragez pas, la persévérance est la clé du succès. Contactez votre formateur pour les modalités de rattrapage."}</p>
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="${APP_URL}/${isMock ? 'mock-exams' : 'exams'}" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
+                  <a href="${APP_URL}/${isMock ? "mock-exams" : "exams"}" style="display: inline-block; padding: 16px 32px; background-color: #0f172a; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
                     ${isMock ? "Retenter l'entraînement" : "Retour au centre d'examens"}
                   </a>
                 </div>
@@ -557,7 +573,12 @@ export const emailService = {
   /**
    * Envoi d'une notification générale personnalisée
    */
-  async sendGeneralNotification(to: string, fullName: string, title: string, message: string) {
+  async sendGeneralNotification(
+    to: string,
+    fullName: string,
+    title: string,
+    message: string,
+  ) {
     try {
       const resend = getResend();
       await resend.emails.send({
@@ -702,12 +723,12 @@ export const emailService = {
     fullName: string,
     examTitle: string,
     score: number,
-    isSuccess: boolean
+    isSuccess: boolean,
   ) {
     try {
       const resend = getResend();
       const statusColor = isSuccess ? "#10b981" : "#ef4444";
-      const subject = isSuccess 
+      const subject = isSuccess
         ? `🏆 Félicitations ! Votre relevé de notes officiel est disponible - Filtre FSA`
         : `📝 Résultat de votre examen - Filtre FSA`;
 
@@ -766,7 +787,7 @@ export const emailService = {
                     
                     <!-- Header -->
                     <tr>
-                      <td style="background: linear-gradient(135deg, ${isSuccess ? '#059669' : '#1e293b'} 0%, ${isSuccess ? '#10b981' : '#334155'} 100%); padding: 40px 32px; text-align: center;">
+                      <td style="background: linear-gradient(135deg, ${isSuccess ? "#059669" : "#1e293b"} 0%, ${isSuccess ? "#10b981" : "#334155"} 100%); padding: 40px 32px; text-align: center;">
                         <img src="${APP_URL}/logo-fsa.png" alt="FSA Logo" style="width: 80px; height: 80px; margin-bottom: 16px; border-radius: 12px; background: rgba(255,255,255,0.2); padding: 8px;" />
                         <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;">
                           Ferme Agro-Piscicole Cité St André
