@@ -1,10 +1,10 @@
 {
   "name": "attestation-fsa",
-  "version": "3.0. 1",
+  "version": "3.0.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate --no-engine && next build --webpack",
+    "build": "prisma generate && next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.11.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -69,6 +70,7 @@
     "nanoid": "^5.1.6",
     "next": "^16.2.9",
     "nextjs-toploader": "^3.9.17",
+    "pg": "^8.11.5",
     "pusher": "^5.3.3",
     "pusher-js": "^8.5.0",
     "qrcode.react": "^4.2.0",
@@ -96,6 +98,7 @@
     "@types/dompurify": "^3.2.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.19.4",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/webpack": "^5.28.5",
