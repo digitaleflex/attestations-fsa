@@ -159,7 +159,7 @@ if [ "$APP_ONLY" = false ]; then
   if [ "$ENV_EXISTS" = "no" ]; then
     log "Création du .env sur le VPS..."
     $SSH_CMD "cat > ${VPS_APP_DIR}/.env << ENVEOF
-DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable
+DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@fsa-postgres:5432/${DB_NAME}?sslmode=disable
 AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=${NEXT_PUBLIC_APP_URL:-https://your-domain.com}
@@ -177,6 +177,10 @@ PUSHER_CLUSTER=${PUSHER_CLUSTER:-eu}
 NEXT_PUBLIC_PUSHER_KEY=${NEXT_PUBLIC_PUSHER_KEY:-}
 NEXT_PUBLIC_PUSHER_CLUSTER=${NEXT_PUBLIC_PUSHER_CLUSTER:-eu}
 BOTID_SECRET=${BOTID_SECRET:-}
+TRAEFIK_NETWORK=${TRAEFIK_NETWORK:-traefik-public}
+TRAEFIK_HOST=${TRAEFIK_HOST:-attestations.local}
+TRAEFIK_ENTRYPOINT=${TRAEFIK_ENTRYPOINT:-websecure}
+TRAEFIK_CERTRESOLVER=${TRAEFIK_CERTRESOLVER:-letsencrypt}
 POSTGRES_USER=${DB_USER}
 POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=${DB_NAME}
@@ -220,7 +224,7 @@ if [ "$APP_ONLY" = false ]; then
 
   if [ "$TABLE_COUNT" -lt 5 ] 2>/dev/null; then
     log "Base vide. Démarrage PostgreSQL..."
-    $SSH_CMD "cd ${VPS_APP_DIR} && docker compose -f compose.prod.yml up -d postgres"
+    $SSH_CMD "cd ${VPS_APP_DIR} && docker compose -f compose.prod.yml up -d fsa-postgres"
     sleep 5
 
     log "Restauration du dump..."
@@ -239,6 +243,9 @@ fi
 # PHASE 5: Docker build & restart
 # =================================================================
 step "Phase 5/5 — Docker build & restart"
+
+log "Réseau proxy Traefik (idempotent)..."
+$SSH_CMD "docker network inspect ${TRAEFIK_NETWORK:-traefik-public} >/dev/null 2>&1 || docker network create ${TRAEFIK_NETWORK:-traefik-public}"
 
 log "Arrêt anciens conteneurs..."
 $SSH_CMD "cd ${VPS_APP_DIR} && docker compose -f compose.prod.yml down 2>/dev/null || true"

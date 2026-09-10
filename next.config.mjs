@@ -2,6 +2,7 @@ import { withBotId } from 'botid/next/config';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   turbopack: {},
   webpack: (config, { isServer }) => {
     if (!isServer && config.resolve) {

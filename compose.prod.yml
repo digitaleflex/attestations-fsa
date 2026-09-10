@@ -1,11 +1,36 @@
+# =================================================================
+# PROD — FSA Attestations (VPS + Traefik)
+# Services aux noms clairs : fsa-app (Next.js) + fsa-postgres (DB)
+# Réseaux : proxy (externe, vers Traefik) + backend (privé app<->db, isolé du proxy)
+# Volume persistant : fsa-postgres-prod-data (/var/lib/postgresql/data sur VPS)
+# Pré-requis VPS : docker network create ${TRAEFIK_NETWORK:-traefik-public}
+# =================================================================
 services:
-  app:
+  fsa-app:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_PUSHER_KEY: ${NEXT_PUBLIC_PUSHER_KEY}
+        NEXT_PUBLIC_PUSHER_CLUSTER: ${NEXT_PUBLIC_PUSHER_CLUSTER}
     container_name: attestations-fsa-prod
+    hostname: fsa-app
+    expose:
+      - "3000"
+    # Pas de ports publiés : Traefik route via le réseau proxy.
+    # Débug direct sans Traefik : décommentez les 2 lignes ci-dessous.
+    # ports:
+    #   - "${PORT:-3000}:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik-public}"
+      - "traefik.http.routers.fsa-app.rule=Host(`${TRAEFIK_HOST:-hashcode.cloud}`) || Host(`www.${TRAEFIK_HOST:-hashcode.cloud}`)"
+      - "traefik.http.routers.fsa-app.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.fsa-app.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.fsa-app.loadbalancer.server.port=3000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-attestation_fsa_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-attestation_fsa}?sslmode=disable
+      DATABASE_URL: postgresql://${POSTGRES_USER:-attestation_fsa_user}:${POSTGRES_PASSWORD}@fsa-postgres:5432/${POSTGRES_DB:-attestation_fsa}?sslmode=disable
       AUTH_SECRET: ${AUTH_SECRET}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
@@ -20,46 +45,78 @@ services:
       PUSHER_CLUSTER: ${PUSHER_CLUSTER}
       NEXT_PUBLIC_PUSHER_KEY: ${NEXT_PUBLIC_PUSHER_KEY}
       NEXT_PUBLIC_PUSHER_CLUSTER: ${NEXT_PUBLIC_PUSHER_CLUSTER}
-      KV_REST_API_URL: ${KV_REST_API_URL}
-      KV_REST_API_TOKEN: ${KV_REST_API_TOKEN}
-      KV_REST_API_READ_ONLY_TOKEN: ${KV_REST_API_READ_ONLY_TOKEN}
-      REDIS_URL: ${REDIS_URL}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
       BOTID_SECRET: ${BOTID_SECRET}
-    ports:
-      - "${PORT:-3000}:3000"
     restart: unless-stopped
     depends_on:
-      postgres:
+      fsa-postgres:
         condition: service_healthy
     networks:
-      - attestations-fsa-network
+      - proxy
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  postgres:
+  fsa-postgres:
     image: postgres:17-alpine
     container_name: attestations-fsa-postgres-prod
+    hostname: fsa-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-attestation_fsa_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-attestation_fsa}
     volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
+      - fsa-postgres-prod-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-attestation_fsa_user} -d ${POSTGRES_DB:-attestation_fsa}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-attestation_fsa_user} -d ${POSTGRES_DB:-attestation_fsa}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     networks:
-      - attestations-fsa-network
-    # Uncomment to expose PostgreSQL port (for debugging)
+      - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # DB isolée du proxy : jamais exposée à Traefik, uniquement joignable via backend par fsa-app.
+    # Débug local uniquement, ne jamais décommenter sur VPS public :
     # ports:
     #   - "5432:5432"
 
 networks:
-  attestations-fsa-network:
+  # Externe, créé par Traefik sur le VPS : docker network create traefik-public
+  # Seul fsa-app y est branché. fsa-postgres reste sur backend uniquement.
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik-public}
+  backend:
     driver: bridge
+    name: attestations-fsa-backend
 
 volumes:
-  postgres_prod_data:
+  # Persistant sur VPS : /var/lib/docker/volumes/attestations-fsa-postgres-prod-data/_data
+  # Renommé depuis postgres_prod_data pour clarté — 1ère montée = volume vide,
+  # le script deploy-to-vps.sh restaure automatiquement depuis Backup/deploy-dump.sql si base vide.
+  fsa-postgres-prod-data:
+    driver: local
+    name: attestations-fsa-postgres-prod-data
