@@ -5,6 +5,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { rawPrisma } from "@/lib/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
+import { normalizeEmailVerified, isEmailVerified } from "@/lib/email-verified";
 
 // ✅ FIX: Define typed session user to eliminate `as any` casts
 export type SessionUser = {
@@ -48,7 +49,12 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   secret: authSecret || "dev-fallback-secret-do-not-use-in-prod",
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"),
+  baseURL:
+    process.env.BETTER_AUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== "undefined"
+      ? window.location.origin
+      : "http://localhost:3000"),
   trustedOrigins: [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -59,7 +65,9 @@ export const auth = betterAuth({
     "https://*.vercel.app",
     "https://fsa.eurin.tech",
     "http://fsa.eurin.tech",
-    ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
+    ...(process.env.NEXT_PUBLIC_APP_URL
+      ? [process.env.NEXT_PUBLIC_APP_URL]
+      : []),
     ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS
       ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((s) => s.trim())
       : []),
@@ -79,12 +87,9 @@ export const auth = betterAuth({
       create: {
         before: async (user) => {
           console.log(`[AUTH] Sanitizing user creation for: ${user.email}`);
-          // 🔥 FIX: Prisma attend DateTime? ou null, mais Better Auth envoie false/true.
-          // On convertit le booléen en valeur compatible Prisma.
-          const sanitizedUser = {
-            ...user,
-            emailVerified: user.emailVerified === true ? new Date() : null
-          };
+          // Prisma attend DateTime? ou null, mais Better Auth envoie boolean.
+          // Conversion centralisée (voir lib/email-verified.ts).
+          const sanitizedUser = normalizeEmailVerified({ ...user });
           return { data: sanitizedUser as any };
         },
         after: async (user) => {
@@ -93,22 +98,24 @@ export const auth = betterAuth({
       },
       update: {
         before: async (user) => {
-          // 🔥 FIX: Même logique pour l'update
-          if (typeof (user as any).emailVerified === 'boolean') {
-            (user as any).emailVerified = (user as any).emailVerified ? new Date() : null;
-          }
+          // Même logique centralisée pour l'update.
+          const normalized = normalizeEmailVerified({ ...(user as any) });
+          (user as any).emailVerified = (normalized as any).emailVerified;
           return { data: user as any };
-        }
-      }
+        },
+      },
     },
   },
   plugins: [
     nextCookies(),
     admin({
       adminUserIds: [
-        "12e53c70-d896-4859-bba4-6dd8ebb86f9f", // eflexcloud@gmail.com
-        "825e0264-68ac-4a37-a5bd-e326249d96c5", // admin@fermestandre.com
-        "d50f9baf-4872-4a2c-8f67-01c1965954b8", // admin@fsa.bj
+        // IDs loaded from env var ADMIN_USER_IDS (comma-separated)
+        ...(process.env.ADMIN_USER_IDS
+          ? process.env.ADMIN_USER_IDS.split(",")
+              .map((id) => id.trim())
+              .filter(Boolean)
+          : []),
       ],
     }),
     twoFactor({
@@ -200,11 +207,13 @@ function getUserRole(user: { role?: unknown }): string | undefined {
 /**
  * 🔒 Récupère l'admin authentifié en un seul appel atomique
  * Retourne null si non authentifié ou non admin
- * 
+ *
  * @param request - La requête HTTP (obligatoire pour les routes API)
  * @returns L'utilisateur admin ou null
  */
-export async function getAdminUser(request: Request): Promise<SessionUser | null> {
+export async function getAdminUser(
+  request: Request,
+): Promise<SessionUser | null> {
   try {
     // 1. Essai avec Better Auth
     const session = await auth.api.getSession({ headers: request.headers });
@@ -217,7 +226,7 @@ export async function getAdminUser(request: Request): Promise<SessionUser | null
         email: session.user.email as string,
         name: (session.user.name as string | null | undefined) || null,
         role: "admin",
-        emailVerified: !!session.user.emailVerified,
+        emailVerified: isEmailVerified(session.user.emailVerified),
       };
     }
 
@@ -232,9 +241,7 @@ export async function getAdminUser(request: Request): Promise<SessionUser | null
  * Vérifie si l'utilisateur est un administrateur (Hybride)
  * @deprecated Utilisez getAdminUser() pour obtenir l'utilisateur ET vérifier le rôle en un seul appel
  */
-export async function isAdminAuthenticated(
-  request: Request,
-): Promise<boolean> {
+export async function isAdminAuthenticated(request: Request): Promise<boolean> {
   const adminUser = await getAdminUser(request);
   return adminUser !== null;
 }
@@ -262,7 +269,7 @@ export async function getCurrentUser(
         email: session.user.email as string,
         name: session.user.name as string | null | undefined,
         role,
-        emailVerified: !!session.user.emailVerified,
+        emailVerified: isEmailVerified(session.user.emailVerified),
       } as SessionUser;
     }
 
@@ -270,11 +277,11 @@ export async function getCurrentUser(
   } catch (error: any) {
     console.error("[AUTH ERROR] getCurrentUser:", error);
     // On log l'erreur spécifique pour diagnostiquer "Failed to get session"
-    if (error.message?.includes('session')) {
-        console.error("DEBUG SESSION DATA:", {
-            headers: request?.headers?.get('cookie') ? 'PRESENT' : 'MISSING',
-            env: process.env.NODE_ENV
-        });
+    if (error.message?.includes("session")) {
+      console.error("DEBUG SESSION DATA:", {
+        headers: request?.headers?.get("cookie") ? "PRESENT" : "MISSING",
+        env: process.env.NODE_ENV,
+      });
     }
     return null;
   }

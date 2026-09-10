@@ -1,34 +1,57 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import { toEmailVerifiedDate } from "@/lib/email-verified";
 
 declare global {
   var prisma: PrismaClient | undefined;
 }
 
+const connectionString = process.env.DATABASE_URL || "";
+const isAccelerateUrl =
+  connectionString.startsWith("prisma") ||
+  connectionString.startsWith("prisma+postgres");
+
+const clientOptions: any = {
+  log: process.env.NODE_ENV === "development" ? ["error"] : ["error"],
+};
+
+if (!isAccelerateUrl) {
+  const pool = new Pool({ connectionString });
+  clientOptions.adapter = new PrismaPg(pool);
+}
+
 const prismaClient =
   global.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['error'] : ['error'],
-  }).$extends({
+  new PrismaClient(clientOptions).$extends({
     query: {
       user: {
         async create({ args, query }) {
-          if (args.data && typeof (args.data as any).emailVerified === 'boolean') {
-            (args.data as any).emailVerified = (args.data as any).emailVerified ? new Date() : null;
+          if (args.data && "emailVerified" in (args.data as any)) {
+            (args.data as any).emailVerified = toEmailVerifiedDate(
+              (args.data as any).emailVerified,
+            );
           }
           return query(args);
         },
         async update({ args, query }) {
-          if (args.data && typeof (args.data as any).emailVerified === 'boolean') {
-            (args.data as any).emailVerified = (args.data as any).emailVerified ? new Date() : null;
+          if (args.data && "emailVerified" in (args.data as any)) {
+            (args.data as any).emailVerified = toEmailVerifiedDate(
+              (args.data as any).emailVerified,
+            );
           }
           return query(args);
         },
         async upsert({ args, query }) {
-          if (args.create && typeof (args.create as any).emailVerified === 'boolean') {
-            (args.create as any).emailVerified = (args.create as any).emailVerified ? new Date() : null;
+          if (args.create && "emailVerified" in (args.create as any)) {
+            (args.create as any).emailVerified = toEmailVerifiedDate(
+              (args.create as any).emailVerified,
+            );
           }
-          if (args.update && typeof (args.update as any).emailVerified === 'boolean') {
-            (args.update as any).emailVerified = (args.update as any).emailVerified ? new Date() : null;
+          if (args.update && "emailVerified" in (args.update as any)) {
+            (args.update as any).emailVerified = toEmailVerifiedDate(
+              (args.update as any).emailVerified,
+            );
           }
           return query(args);
         },
@@ -36,7 +59,7 @@ const prismaClient =
     },
   });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   global.prisma = prismaClient as any;
 }
 
