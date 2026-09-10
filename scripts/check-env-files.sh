@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fichiers .env autorisés (modèles/templates uniquement)
+ALLOWED=(
+  .env.example
+  .env.deploy.example
+  .env.docker.example
+  .env.prod.example
+  .env.vps.example
+)
+
+# Pattern strict : .env, .env.local, .env.example, .env.deploy, etc.
+# Exclut les dossiers comme .envsitter/
+PATTERN='^\.env(\..*)?$'
+
+# Fichiers .env suivis
+TRACKED="$(git ls-files | grep -E "$PATTERN" || true)"
+
+# Fichiers .env non suivis
+UNTRACKED="$(git ls-files --others --exclude-standard | grep -E "$PATTERN" || true)"
+
+ALL=()
+if [[ -n "$TRACKED" ]]; then
+  while IFS= read -r f; do ALL+=("$f"); done <<< "$TRACKED"
+fi
+if [[ -n "$UNTRACKED" ]]; then
+  while IFS= read -r f; do ALL+=("$f"); done <<< "$UNTRACKED"
+fi
+
+FOUND=0
+for f in "${ALL[@]}"; do
+  MATCH=0
+  for a in "${ALLOWED[@]}"; do
+    if [[ "$f" == "$a" ]]; then
+      MATCH=1
+      break
+    fi
+  done
+  if [[ "$MATCH" -eq 0 ]]; then
+    echo "Erreur: fichier .env non autorisé détecté: $f"
+    FOUND=1
+  fi
+done
+
+if [[ "$FOUND" -eq 0 ]]; then
+  echo "Aucun fichier .env non autorisé détecté"
+fi
+
+exit $FOUND

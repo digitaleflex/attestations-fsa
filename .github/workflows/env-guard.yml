@@ -1,0 +1,13 @@
+name: Env Guard
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  env-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for forbidden .env files
+        run: bash ./scripts/check-env-files.sh
