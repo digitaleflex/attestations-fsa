@@ -6,12 +6,12 @@ Ce guide détaille la migration complète de la base de données **Prisma Postgr
 
 ## 📋 Prérequis
 
-| Composant | Requis | Notes |
-|-----------|--------|-------|
-| VPS Ubuntu/Debian | ✅ | Accès SSH avec permissions root/sudo |
-| Dump SQL de la DB | ✅ | Export depuis Prisma Postgres |
-| Espace disque | ≥ 2 GB | Pour PostgreSQL + backups |
-| RAM | ≥ 1 GB | Pour PostgreSQL + Next.js |
+| Composant         | Requis | Notes                                |
+| ----------------- | ------ | ------------------------------------ |
+| VPS Ubuntu/Debian | ✅     | Accès SSH avec permissions root/sudo |
+| Dump SQL de la DB | ✅     | Export depuis Prisma Postgres        |
+| Espace disque     | ≥ 2 GB | Pour PostgreSQL + backups            |
+| RAM               | ≥ 1 GB | Pour PostgreSQL + Next.js            |
 
 ---
 
@@ -67,6 +67,7 @@ DB_PASSWORD='votre_mot_de_passe_securise' ./scripts/migrate-to-vps.sh --step=ful
 ```
 
 Le script va :
+
 1. ✅ Installer PostgreSQL 17
 2. ✅ Créer la base de données et l'utilisateur
 3. ✅ Nettoyer le dump (supprimer les extensions Prisma Postgres)
@@ -113,22 +114,22 @@ npx prisma migrate deploy
 
 ```bash
 # Copier le template
-cp .env.vps.example .env
+cp .env.example .env.production
 
 # Éditer avec vos valeurs
-nano .env
+nano .env.production
 ```
 
 ### Variables critiques à remplir
 
-| Variable | Description | Générer avec |
-|----------|-------------|--------------|
-| `DATABASE_URL` | URL PostgreSQL | Fournie par le script |
-| `AUTH_SECRET` | Secret Better Auth | `openssl rand -base64 32` |
-| `BETTER_AUTH_URL` | URL publique | `https://votre-domaine.com` |
-| `NEXT_PUBLIC_APP_URL` | URL publique | `https://votre-domaine.com` |
-| `UPSTASH_REDIS_REST_URL` | Redis Upstash | Dashboard Upstash |
-| `RESEND_API_KEY` | Clé Resend | Dashboard Resend |
+| Variable                 | Description        | Générer avec                |
+| ------------------------ | ------------------ | --------------------------- |
+| `DATABASE_URL`           | URL PostgreSQL     | Fournie par le script       |
+| `AUTH_SECRET`            | Secret Better Auth | `openssl rand -base64 32`   |
+| `BETTER_AUTH_URL`        | URL publique       | `https://votre-domaine.com` |
+| `NEXT_PUBLIC_APP_URL`    | URL publique       | `https://votre-domaine.com` |
+| `UPSTASH_REDIS_REST_URL` | Redis Upstash      | Dashboard Upstash           |
+| `RESEND_API_KEY`         | Clé Resend         | Dashboard Resend            |
 
 ---
 
@@ -193,12 +194,12 @@ docker compose -f compose.prod.yml logs -f app
 
 Mettez à jour les secrets dans **Settings → Secrets → Actions** :
 
-| Secret | Valeur |
-|--------|--------|
-| `VPS_HOST` | IP du VPS |
-| `VPS_USER` | Utilisateur SSH |
-| `VPS_SSH_KEY` | Clé SSH privée |
-| `VPS_PORT` | Port SSH (défaut: 22) |
+| Secret        | Valeur                |
+| ------------- | --------------------- |
+| `VPS_HOST`    | IP du VPS             |
+| `VPS_USER`    | Utilisateur SSH       |
+| `VPS_SSH_KEY` | Clé SSH privée        |
+| `VPS_PORT`    | Port SSH (défaut: 22) |
 
 Le workflow `deploy.yml` se déclenchera automatiquement sur push à `main`.
 

@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Fichiers .env autorisés (modèles/templates uniquement)
+# Fichiers .env autorisés : seul le modèle canonique (.env.local et
+# .env.production sont locaux, ignorés par git et donc invisibles ici)
 ALLOWED=(
   .env.example
-  .env.deploy.example
-  .env.docker.example
-  .env.prod.example
-  .env.vps.example
 )
 
-# Pattern strict : .env, .env.local, .env.example, .env.deploy, etc.
+# Pattern strict : .env.local, .env.example, .env.production
 # Exclut les dossiers comme .envsitter/
 PATTERN='^\.env(\..*)?$'
 

@@ -109,8 +109,8 @@ L'app est accessible sur [http://localhost:3000](http://localhost:3000).
 Copier et modifier le fichier de déploiement :
 
 ```bash
-cp .env.deploy.example .env.deploy
-nano .env.deploy
+cp .env.example .env.production
+nano .env.production
 ```
 
 Remplir les valeurs :
@@ -163,10 +163,10 @@ Le workflow détecte si la DB est vide et restaure le dump automatiquement.
 
 ### Conteneurs
 
-| Conteneur | Rôle | Port |
-|-----------|------|------|
-| `attestations-fsa-prod` | Application Next.js | 3000 |
-| `attestations-fsa-postgres-prod` | PostgreSQL 17 | 5432 (interne) |
+| Conteneur                        | Rôle                | Port           |
+| -------------------------------- | ------------------- | -------------- |
+| `attestations-fsa-prod`          | Application Next.js | 3000           |
+| `attestations-fsa-postgres-prod` | PostgreSQL 17       | 5432 (interne) |
 
 ### Commandes Docker
 
@@ -236,7 +236,7 @@ attestations-fsa/
 ├── compose.prod.yml              # Docker Compose production
 ├── compose.local.yml             # Docker Compose développement
 ├── Dockerfile                    # Build multi-stage
-└── .env.deploy                   # Config déploiement
+└── .env.production               # Config production (valeurs réelles, non versionné)
 ```
 
 ---
@@ -245,16 +245,16 @@ attestations-fsa/
 
 ### Tables principales
 
-| Table | Description |
-|-------|-------------|
-| `User` | Utilisateurs (admin + candidats) |
-| `Formation` | Catalogue des formations |
-| `Attestation` | Attestations délivrées |
-| `Exam` | Examens (QCM + parties ouvertes) |
-| `ExamSession` | Sessions de passage d'examen |
-| `Settings` | Configuration institution |
-| `AuditLog` | Journal d'audit |
-| `Notification` | Notifications utilisateurs |
+| Table          | Description                      |
+| -------------- | -------------------------------- |
+| `User`         | Utilisateurs (admin + candidats) |
+| `Formation`    | Catalogue des formations         |
+| `Attestation`  | Attestations délivrées           |
+| `Exam`         | Examens (QCM + parties ouvertes) |
+| `ExamSession`  | Sessions de passage d'examen     |
+| `Settings`     | Configuration institution        |
+| `AuditLog`     | Journal d'audit                  |
+| `Notification` | Notifications utilisateurs       |
 
 ### Format code attestation
 
@@ -313,7 +313,7 @@ node scripts/json-to-sql.mjs Backup/db-dump-XXXXX.json > Backup/dump.sql
 ### Premier déploiement
 
 - [ ] VPS accessible en SSH
-- [ ] `.env.deploy` configuré avec la bonne IP
+- [ ] `.env.production` configuré avec la bonne IP
 - [ ] Dump JSON dans `Backup/db-dump-*.json`
 - [ ] Lancer `./scripts/deploy-to-vps.sh`
 - [ ] Vérifier l'app sur `http://VPS_IP:3000`

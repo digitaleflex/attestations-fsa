@@ -42,7 +42,7 @@ jobs:
 
             # ── 1. Démarrer la base ──
             echo "==> Starting PostgreSQL..."
-            docker compose -f compose.prod.yml up -d fsa-postgres
+            docker compose --env-file .env.production -f compose.prod.yml up -d fsa-postgres
 
             echo "==> Waiting for PostgreSQL to be ready..."
             for i in $(seq 1 30); do
@@ -55,7 +55,7 @@ jobs:
 
             # ── 2. SCHÉMA : migrations Prisma (source de vérité) ──
             echo "==> Applying Prisma migrations (schema)..."
-            docker compose -f compose.prod.yml --profile tools run --rm prisma migrate deploy
+            docker compose --env-file .env.production -f compose.prod.yml --profile tools run --rm prisma migrate deploy
 
             # ── 3. DONNÉES : injection one-shot du dump SI la base est vide ──
             if [ "$SKIP_DB" != "true" ]; then
@@ -81,15 +81,15 @@ jobs:
 
             # ── 4. Build & déploiement de l'app ──
             echo "==> Stopping old containers..."
-            docker compose -f compose.prod.yml down
+            docker compose --env-file .env.production -f compose.prod.yml down
 
             echo "==> Building & starting..."
-            docker compose -f compose.prod.yml up -d --build
+            docker compose --env-file .env.production -f compose.prod.yml up -d --build
 
             echo "==> Waiting for health check..."
             sleep 15
 
             echo "==> Container status:"
-            docker compose -f compose.prod.yml ps
+            docker compose --env-file .env.production -f compose.prod.yml ps
 
             echo "==> ✅ Deployment complete!"

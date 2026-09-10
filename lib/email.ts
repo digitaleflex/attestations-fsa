@@ -28,8 +28,15 @@ export function __resetResendInstanceForTests() {
   resendInstance = null;
 }
 
+// Source unique du domaine d'envoi : RESEND_DOMAIN (cf. .env).
+// EMAIL_FROM reste prioritaire s'il est défini explicitement, sinon il est
+// construit depuis RESEND_DOMAIN (un seul endroit à changer si le domaine évolue).
+export const resendDomain = (
+  process.env.RESEND_DOMAIN || "hashcode.cloud"
+).trim();
+
 const fromEmail =
-  process.env.EMAIL_FROM?.trim() || "Ferme St André <admin@hashcode.cloud>";
+  process.env.EMAIL_FROM?.trim() || `Ferme St André <admin@${resendDomain}>`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 export const emailService = {

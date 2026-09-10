@@ -11,24 +11,22 @@ set -euo pipefail
 #   ./scripts/deploy-to-vps.sh --skip-dump
 #   ./scripts/deploy-to-vps.sh --app-only
 #
-# Config is read from .env.deploy (copied from .env.deploy.example)
+# Config is read from .env.production
 # =================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
-# ── Load .env.deploy ──────────────────────────────────────────────
-if [ -f .env.deploy ]; then
+# ── Load .env.production ──────────────────────────────────────────
+if [ -f .env.production ]; then
   set -a
-  source .env.deploy
+  source .env.production
   set +a
-  echo "✅ Loaded .env.deploy"
+  echo "✅ Loaded .env.production"
 else
-  echo "❌ .env.deploy not found!"
-  echo "   Copy .env.deploy.example to .env.deploy and fill in your values:"
-  echo "   cp .env.deploy.example .env.deploy"
-  echo "   nano .env.deploy"
+  echo "❌ .env.production not found!"
+  echo "   Copy .env.example to .env.production and fill in your values."
   exit 1
 fi
 
@@ -76,8 +74,8 @@ SSH_CMD="ssh -o ConnectTimeout=10 -p $VPS_PORT ${VPS_USER}@${VPS_HOST}"
 SCP_CMD="scp -P $VPS_PORT"
 
 # ── Validation ────────────────────────────────────────────────────
-[ -z "$VPS_HOST" ] && fail "VPS_HOST manquant dans .env.deploy"
-[ -z "$VPS_USER" ] && fail "VPS_USER manquant dans .env.deploy"
+[ -z "$VPS_HOST" ] && fail "VPS_HOST manquant dans .env.production"
+[ -z "$VPS_USER" ] && fail "VPS_USER manquant dans .env.production"
 
 echo -e "${CYAN}${BOLD}"
 echo "╔═══════════════════════════════════════════════════╗"
@@ -139,7 +137,7 @@ if [ "$APP_ONLY" = false ]; then
   ok "Dump transféré"
 
   log "Transfert scripts & configs..."
-  for f in scripts/vps-setup-postgres.sh scripts/vps-restore-dump.sh scripts/vps-pre-deploy-backup.sh compose.prod.yml Dockerfile .env.deploy.example; do
+  for f in scripts/vps-setup-postgres.sh scripts/vps-restore-dump.sh scripts/vps-pre-deploy-backup.sh compose.prod.yml Dockerfile .env.production; do
     [ -f "$f" ] && $SCP_CMD "$f" "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/" 2>/dev/null || true
   done
   $SSH_CMD "chmod +x ${VPS_APP_DIR}/scripts/*.sh 2>/dev/null || true"
@@ -168,7 +166,7 @@ NODE_ENV=production
 UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL:-}
 UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN:-}
 RESEND_API_KEY=${RESEND_API_KEY:-}
-RESEND_DOMAIN=${RESEND_DOMAIN:-}
+RESEND_DOMAIN=${RESEND_DOMAIN:-hashcode.cloud}
 EMAIL_FROM=${EMAIL_FROM:-FSA <noreply@fermestandre.com>}
 PUSHER_APP_ID=${PUSHER_APP_ID:-}
 PUSHER_KEY=${PUSHER_KEY:-}

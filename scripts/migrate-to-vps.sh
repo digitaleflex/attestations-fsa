@@ -334,7 +334,7 @@ UPSTASH_REDIS_REST_TOKEN="${UPSTASH_REDIS_REST_TOKEN:-your_token}"
 
 # EMAIL (Resend)
 RESEND_API_KEY="${RESEND_API_KEY:-re_your_key}"
-RESEND_DOMAIN="${RESEND_DOMAIN:-your-domain.com}"
+RESEND_DOMAIN="${RESEND_DOMAIN:-hashcode.cloud}"
 EMAIL_FROM="${EMAIL_FROM:-FSA <noreply@your-domain.com>}"
 
 # PUSHER (Real-time notifications)
