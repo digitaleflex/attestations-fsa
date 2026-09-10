@@ -57,6 +57,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                   {[
                     { label: 'Accueil', href: '/' },
                     { label: 'Nos Formations', href: '/formations' },
+                    { label: 'Examens', href: '/examens' },
                     { label: 'Demande de Stage', href: '/demande-stage' },
                     { label: 'Portfolios Stagiaires', href: '/portfolios' },
                     { label: 'Contact', href: '/contact' }

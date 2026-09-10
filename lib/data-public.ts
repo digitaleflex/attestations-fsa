@@ -62,6 +62,37 @@ export const getPublicUpcomingExams = unstable_cache(
   { revalidate: 900, tags: ["exams"] } // 15 minutes
 );
 
+export const getPublicAllExams = unstable_cache(
+  async () => {
+    const today = new Date();
+    try {
+      return await prisma.exam.findMany({
+        where: {
+          scheduledAt: {
+            gte: new Date(today.getTime() - 24 * 60 * 60 * 1000)
+          },
+          status: 'PUBLISHED'
+        },
+        orderBy: { scheduledAt: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          title: true,
+          description: true,
+          scheduledAt: true,
+          duration: true,
+          status: true,
+        }
+      });
+    } catch (error) {
+      console.error("⚠️ [ALL_EXAMS_CACHE_ERROR]", error);
+      return [];
+    }
+  },
+  ["public-all-exams"],
+  { revalidate: 900, tags: ["exams"] }
+);
+
 export const getPublicStats = unstable_cache(
     async () => {
         try {

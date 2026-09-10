@@ -249,7 +249,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
 
                     {/* Bouton d'action */}
                     <div className="mt-auto relative z-10">
-                      <Link href={`/contact?subject=inscription&formationId=${f.id}`} className="block">
+                      <Link href={`/formations/inscription?formationId=${f.id}`} className="block">
                         <Button className={`w-full h-14 rounded-2xl bg-slate-900 text-white font-black hover:text-white transition-all duration-500 group/btn active:scale-[0.98] text-xs uppercase tracking-widest shadow-lg shadow-slate-100 ${style.btnHover}`}>
                           <span className="flex items-center justify-center gap-2">
                             S'inscrire
