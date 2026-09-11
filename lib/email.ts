@@ -37,6 +37,35 @@ export const resendDomain = (
 
 const fromEmail =
   process.env.EMAIL_FROM?.trim() || `Ferme St André <admin@${resendDomain}>`;
+
+/**
+ * Envoie un email via Resend en vérifiant réellement le résultat.
+ * Le SDK Resend 6.x renvoie `{ data, error }` SANS lever d'exception :
+ * on transforme donc une erreur en exception pour que les `catch` existants
+ * la traitent (log [EMAIL_ERROR] + `{ success: false }`) et pour que le log
+ * « ✅ … sent » ne s'affiche qu'en cas de succès réel.
+ */
+async function sendEmail(payload: {
+  to: string | string[];
+  subject: string;
+  html: string;
+  from?: string;
+}) {
+  const resend = getResend();
+  const { data, error } = await resend.emails.send({
+    from: payload.from ?? fromEmail,
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+  });
+  if (error) {
+    const reason =
+      (error as { message?: string }).message ?? JSON.stringify(error);
+    throw new Error(`Resend send failed: ${reason}`);
+  }
+  return data;
+}
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 export const emailService = {
@@ -45,9 +74,7 @@ export const emailService = {
    */
   async sendInternshipConfirmation(to: string, fullName: string) {
     try {
-      const resend = getResend();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: "Confirmation de votre demande de stage - Ferme St André",
         html: `
@@ -89,7 +116,6 @@ export const emailService = {
     examType: "OFFICIAL" | "MOCK" = "OFFICIAL",
   ) {
     try {
-      const resend = getResend();
       const isMock = examType === "MOCK";
 
       const statusText = isSuccess
@@ -110,8 +136,7 @@ export const emailService = {
           ? `📝 Score Entraînement : ${examTitle}`
           : `📉 Résultat Examen : REFUSÉ - ${examTitle}`;
 
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: subject,
         html: `
@@ -186,9 +211,7 @@ export const emailService = {
     verifyLink: string,
   ) {
     try {
-      const resend = getResend();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: "Vérifiez votre adresse email - Ferme St André",
         html: `
@@ -235,9 +258,7 @@ export const emailService = {
    */
   async sendPasswordReset(to: string, fullName: string, resetLink: string) {
     try {
-      const resend = getResend();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: "Réinitialisation de votre mot de passe - Ferme St André",
         html: `
@@ -282,11 +303,9 @@ export const emailService = {
    */
   async sendPasswordResetOTP(to: string, fullName: string, otp: string) {
     try {
-      const resend = getResend();
       const year = new Date().getFullYear();
       const resetUrl = `${APP_URL}/reset-password`;
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: `🔐 Votre code de vérification : ${otp}`,
         html: `
@@ -447,11 +466,9 @@ export const emailService = {
    */
   async sendVerificationOTP(to: string, fullName: string, otp: string) {
     try {
-      const resend = getResend();
       const year = new Date().getFullYear();
       const verifyUrl = `${APP_URL}/auth?verify=true`;
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: `✅ Vérifiez votre email - Code OTP`,
         html: `
@@ -588,9 +605,7 @@ export const emailService = {
     message: string,
   ) {
     try {
-      const resend = getResend();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: `${title} - Ferme St André`,
         html: `
@@ -627,10 +642,8 @@ export const emailService = {
    */
   async sendTwoFactorOTP(to: string, fullName: string, otp: string) {
     try {
-      const resend = getResend();
       const year = new Date().getFullYear();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: `🔐 Code de vérification 2FA - FSA Admin`,
         html: `
@@ -734,7 +747,6 @@ export const emailService = {
     isSuccess: boolean,
   ) {
     try {
-      const resend = getResend();
       const statusColor = isSuccess ? "#10b981" : "#ef4444";
       const subject = isSuccess
         ? `🏆 Félicitations ! Votre relevé de notes officiel est disponible - Filtre FSA`
@@ -776,8 +788,7 @@ export const emailService = {
         <p style="color: #64748b; font-style: italic;">Ne vous découragez pas, la persévérance est la clé du succès. L'équipe FSA est à votre disposition pour vous accompagner.</p>
       `;
 
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject,
         html: `
@@ -882,10 +893,8 @@ export const emailService = {
    */
   async sendFsaLoginOTP(to: string, fullName: string, otp: string) {
     try {
-      const resend = getResend();
       const year = new Date().getFullYear();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: `🔑 Votre code de connexion temporaire : ${otp}`,
         html: `
@@ -952,10 +961,8 @@ export const emailService = {
    */
   async sendMagicLink(to: string, fullName: string, magicLinkUrl: string) {
     try {
-      const resend = getResend();
       const year = new Date().getFullYear();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to,
         subject: `🔗 Connectez-vous en un clic — Portail FSA`,
         html: `
