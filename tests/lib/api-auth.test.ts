@@ -6,7 +6,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 import { requireAdmin, requireUser, assertAdminRole } from "@/lib/api-auth";
-import { isPlausibleSessionToken } from "@/middleware";
+import { isPlausibleSessionToken } from "@/proxy";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
 
 const mockGetAdminUser = getAdminUser as ReturnType<typeof vi.fn>;
