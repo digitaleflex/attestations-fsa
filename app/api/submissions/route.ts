@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
 import { handleApiError } from '@/lib/error-handler';
 import type { Prisma } from '@prisma/client';
-import type { ExamSessionStatus } from '@/lib/prisma-types';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -41,44 +40,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return handleApiError(error, {
       route: '/api/submissions',
       operation: 'list_submissions',
-    });
-  }
-}
-
-export async function PATCH(request: NextRequest): Promise<NextResponse> {
-  try {
-    const adminUser = await getAdminUser(request);
-    if (!adminUser) {
-      return NextResponse.json(
-        { error: 'Non autorisé - Authentification admin requise' },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { id, scorePart1, scorePart2, scorePart3, status, gradedBy } = body;
-
-    const totalScore = (scorePart1 || 0) + (scorePart2 || 0) + (scorePart3 || 0);
-
-    const submission = await prisma.examSession.update({
-      where: { id },
-      data: {
-        scorePart1,
-        scorePart2,
-        scorePart3,
-        totalScore,
-        status,
-        gradedBy,
-        gradedAt: new Date()
-      }
-    });
-
-    return NextResponse.json(submission);
-  } catch (error: any) {
-    console.error(error);
-    return handleApiError(error, {
-      route: '/api/submissions',
-      operation: 'update_submission',
     });
   }
 }

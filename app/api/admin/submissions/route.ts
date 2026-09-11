@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
+import { isPassed, resolveExamMax } from "@/lib/exams/scoring";
 
 // GET /api/admin/submissions - Récupérer toutes les soumissions
 export async function GET(request: Request) {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const submissions = (await prisma.examSession.findMany({
+    const rawSubmissions = await prisma.examSession.findMany({
       include: {
         candidate: {
           select: {
@@ -28,11 +29,36 @@ export async function GET(request: Request) {
             name: true,
             description: true,
             type: true,
+            totalPoints: true,
+            part1Points: true,
+            part2Points: true,
+            part3Points: true,
+            part1Enabled: true,
+            part2Enabled: true,
+            part3Enabled: true,
+            passingScore: true,
+            showResults: true,
           },
         },
       },
       orderBy: { startedAt: "desc" },
-    })) as Array<{ status: string; score: number | null; finalScore: number | null; type: string }>;
+    });
+
+    // Champs calculés par soumission (format tableau conservé).
+    const submissions = rawSubmissions.map((sub) => {
+      const maxScore = resolveExamMax(sub.exam);
+      const passed =
+        sub.status === "GRADED" &&
+        isPassed(sub.finalScore, sub.exam.passingScore);
+
+      return {
+        ...sub,
+        maxScore,
+        passed,
+        completed: sub.status === "GRADED",
+        pendingReview: sub.status === "PENDING_REVIEW",
+      };
+    });
 
     // Statistiques
     const stats = {
@@ -41,9 +67,7 @@ export async function GET(request: Request) {
         .length,
       inProgress: submissions.filter((s) => s.status === "IN_PROGRESS").length,
       completed: submissions.filter((s) => s.status === "GRADED").length,
-      passed: submissions.filter(
-        (s) => s.status === "GRADED" && (s.finalScore || s.score || 0) >= 65,
-      ).length,
+      passed: submissions.filter((s) => s.passed).length,
     };
 
     return NextResponse.json({
