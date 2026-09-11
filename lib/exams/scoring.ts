@@ -69,3 +69,23 @@ export function isPassed(
 ): boolean {
   return finalScore >= (passingScore ?? 65);
 }
+
+/** Canonical certification mentions (mirrors the Prisma `CertificationMention` enum). */
+export type CertificationMention =
+  | "PASSABLE"
+  | "ASSEZ_BIEN"
+  | "BIEN"
+  | "TRES_BIEN"
+  | "EXCELLENCE";
+
+/**
+ * Single source of truth for certification mentions, from a 0..100 percentage.
+ * Thresholds: 90 Excellence, 80 Très Bien, 70 Bien, 65 Assez Bien, sinon Passable.
+ */
+export function resolveMention(finalScore: number): CertificationMention {
+  if (finalScore >= 90) return "EXCELLENCE";
+  if (finalScore >= 80) return "TRES_BIEN";
+  if (finalScore >= 70) return "BIEN";
+  if (finalScore >= 65) return "ASSEZ_BIEN";
+  return "PASSABLE";
+}

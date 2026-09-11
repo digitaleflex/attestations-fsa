@@ -3,6 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { BadgeCheck, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { resolveMention } from "@/lib/exams/scoring";
+
+const MENTION_LABELS: Record<ReturnType<typeof resolveMention>, string> = {
+  EXCELLENCE: "EXCELLENT",
+  TRES_BIEN: "TRES BIEN",
+  BIEN: "BIEN",
+  ASSEZ_BIEN: "ASSEZ BIEN",
+  PASSABLE: "PASSABLE",
+};
 
 interface TranscriptDocumentProps {
   data: {
@@ -40,14 +49,9 @@ export default function TranscriptDocument({ data, id = "transcript-document-con
     });
   };
 
-  const getMention = (score: number) => {
-    if (score >= 90) return "EXCELLENT";
-    if (score >= 80) return "TRES BIEN";
-    if (score >= 70) return "BIEN";
-    if (score >= 60) return "ASSEZ BIEN";
-    if (score >= 50) return "PASSABLE";
-    return "INSUFFISANT";
-  };
+  // Règle unique (>=65) via resolveMention ; "INSUFFISANT" n'est qu'un libellé d'échec en affichage.
+  const getMention = (score: number) =>
+    score >= 65 ? MENTION_LABELS[resolveMention(score)] : "INSUFFISANT";
 
   // Barèmes dynamiques avec fallbacks
   const mP1 = data.maxPart1 || 20;

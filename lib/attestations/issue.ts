@@ -3,23 +3,9 @@
 // Extraite de l'ancienne logique de correct/route.ts (hub unique).
 import { prisma } from "@/lib/prisma";
 import { customAlphabet } from "nanoid";
+import { resolveMention } from "@/lib/exams/scoring";
 
 const customNanoid = customAlphabet("1234567890abcdef", 5);
-
-type CertificationMentionValue =
-  | "PASSABLE"
-  | "ASSEZ_BIEN"
-  | "BIEN"
-  | "TRES_BIEN"
-  | "EXCELLENCE";
-
-function resolveMention(finalScore: number): CertificationMentionValue {
-  if (finalScore >= 90) return "EXCELLENCE";
-  if (finalScore >= 80) return "TRES_BIEN";
-  if (finalScore >= 70) return "BIEN";
-  if (finalScore >= 65) return "ASSEZ_BIEN";
-  return "PASSABLE";
-}
 
 /**
  * Émet (ou retrouve) l'attestation CERTIFICATION d'une session d'examen.
