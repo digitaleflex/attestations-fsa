@@ -17,3 +17,10 @@ coverage
 .idea
 *.log
 .pnpm-store
+.github
+.cursor
+tests
+docs
+tmp
+test-email*.ts
+*.tsbuildinfo
