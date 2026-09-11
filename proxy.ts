@@ -55,7 +55,7 @@ function unauthorizedApiResponse() {
     { status: 401 },
   );
 }
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Ignorer les routes internes et publiques
