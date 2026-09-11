@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ShieldCheck, Menu, X, LogIn, ArrowRight } from "lucide-react";
+import { ShieldCheck, Menu, X, LogIn, ArrowRight, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 import { usePathname } from "next/navigation";
@@ -68,10 +68,16 @@ export function PublicHeader() {
             Sortie
           </button>
         ) : (
-          <Link href="/auth" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all text-[10px] uppercase tracking-widest">
-            <LogIn className="w-3.5 h-3.5" />
-            Espace Pro
-          </Link>
+          <>
+            <Link href="/auth" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all text-[10px] uppercase tracking-widest">
+              <LogIn className="w-3.5 h-3.5" />
+              Espace Pro
+            </Link>
+            <Link href="/inscription" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-emerald-600 transition-all text-[10px] uppercase tracking-widest">
+              <UserPlus className="w-3.5 h-3.5" />
+              Inscription
+            </Link>
+          </>
         )}
 
         <Link href="/verifier" className="ml-1 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.15em] hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-0.5 transition-all active:scale-95 shadow-lg">
@@ -122,22 +128,29 @@ export function PublicHeader() {
                   
                   <div className="h-px bg-slate-100 my-2" />
                   
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <Link 
                       href="/auth" 
                       onClick={() => setOpen(false)} 
-                      className="flex-1 p-4 rounded-xl bg-slate-50 text-slate-600 font-bold uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
+                      className="p-4 rounded-xl bg-slate-50 text-slate-600 font-bold uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
                     >
                         <LogIn className="w-4 h-4" /> Connexion
                     </Link>
                     <Link 
-                      href="/verifier" 
+                      href="/inscription" 
                       onClick={() => setOpen(false)} 
-                      className="flex-1 p-4 rounded-xl bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"
+                      className="p-4 rounded-xl bg-emerald-50 text-emerald-700 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
                     >
-                        <ShieldCheck className="w-4 h-4" /> Vérifier
+                        <UserPlus className="w-4 h-4" /> Inscription
                     </Link>
                   </div>
+                  <Link 
+                    href="/verifier" 
+                    onClick={() => setOpen(false)} 
+                    className="p-4 rounded-xl bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"
+                  >
+                      <ShieldCheck className="w-4 h-4" /> Vérifier
+                  </Link>
              </div>
           </motion.div>
         )}

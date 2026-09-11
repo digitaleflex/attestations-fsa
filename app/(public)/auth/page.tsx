@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,17 @@ import {
   RefreshCw,
   ArrowLeft,
   GraduationCap,
-  Link2,
+  Lock,
+  Eye,
+  EyeOff,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
+import { authClient } from "@/lib/auth-client";
+import { translateAuthError } from "@/lib/error-translator";
 
 const FsaCodeSchema = z.object({
   fsaCode: z
@@ -38,6 +43,14 @@ const OtpSchema = z.object({
     .string()
     .length(6, "Le code OTP doit comporter exactement 6 chiffres."),
 });
+
+const EmailSignInSchema = z.object({
+  email: z.string().email("Veuillez entrer une adresse e-mail valide."),
+  password: z.string().min(1, "Le mot de passe est requis."),
+});
+
+type LoginTab = "password" | "fsa";
+type VerificationMode = "fsa" | "email";
 
 const slideVariants = {
   enter: (dir: number) => ({
@@ -62,9 +75,31 @@ const slideVariants = {
   }),
 } as const;
 
+// Messages lisibles pour les codes d'erreur renvoyés dans l'URL (?error=...)
+const URL_ERROR_MESSAGES: Record<string, string> = {
+  EMAIL_NOT_VERIFIED: "Votre adresse e-mail n'est pas encore vérifiée.",
+  invalid_token: "Le lien de vérification est invalide ou a déjà été utilisé.",
+  INVALID_TOKEN: "Le lien de vérification est invalide ou a déjà été utilisé.",
+  expired_token: "Le lien de vérification a expiré. Veuillez réessayer.",
+  EXPIRED_TOKEN: "Le lien de vérification a expiré. Veuillez réessayer.",
+  invalid_email: "L'adresse e-mail fournie est invalide.",
+  INVALID_EMAIL: "L'adresse e-mail fournie est invalide.",
+  user_not_found: "Aucun compte n'est associé à cette adresse e-mail.",
+  USER_NOT_FOUND: "Aucun compte n'est associé à cette adresse e-mail.",
+};
+
+function humanizeAuthError(raw: string): string {
+  return URL_ERROR_MESSAGES[raw] ?? translateAuthError(raw);
+}
+
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const callbackUrl =
+    searchParams?.get("callbackUrl") ||
+    searchParams?.get("callbackURL") ||
+    "/dashboard";
 
   // États de l'interface
   const [step, setStep] = useState<1 | 2>(1);
@@ -76,19 +111,35 @@ function AuthContent() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Valeurs du formulaire
+  // Onglet de connexion + mode de vérification
+  const [tab, setTab] = useState<LoginTab>("password");
+  const [verificationMode, setVerificationMode] =
+    useState<VerificationMode>("fsa");
+
+  // Valeurs du formulaire e-mail / mot de passe
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Valeurs du formulaire FSA / OTP
   const [fsaCode, setFsaCode] = useState("");
   const [otp, setOtp] = useState("");
   const [maskedEmail, setMaskedEmail] = useState("");
-  const [authMethod, setAuthMethod] = useState<"otp" | "magic-link-sent">(
-    "otp",
-  );
+
+  // Afficher une éventuelle erreur transmise dans l'URL
+  useEffect(() => {
+    const urlError = searchParams?.get("error");
+    if (urlError) {
+      setError(humanizeAuthError(urlError));
+    }
+  }, [searchParams]);
 
   // Pré-remplir le code FSA si passé dans l'URL
   useEffect(() => {
     const urlCode = searchParams?.get("code");
     if (urlCode) {
       setFsaCode(urlCode.trim());
+      setTab("fsa");
     }
   }, [searchParams]);
 
@@ -101,30 +152,110 @@ function AuthContent() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const switchTab = (next: LoginTab) => {
+    setTab(next);
+    setError("");
+    setFieldErrors({});
+  };
+
   const handleFsaCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFsaCode(e.target.value);
-    if (fieldErrors.fsaCode) {
-      setFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next.fsaCode;
-        return next;
-      });
-    }
+    clearFieldError("fsaCode");
   };
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
     setOtp(val);
-    if (fieldErrors.otp) {
-      setFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next.otp;
-        return next;
+    clearFieldError("otp");
+  };
+
+  // ============ CONNEXION E-MAIL + MOT DE PASSE ============
+  const handleEmailPasswordSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setFieldErrors({});
+
+    const parse = EmailSignInSchema.safeParse({ email, password });
+    if (!parse.success) {
+      const errors: Record<string, string> = {};
+      parse.error.errors.forEach((err) => {
+        if (err.path[0]) errors[err.path[0] as string] = err.message;
       });
+      setFieldErrors(errors);
+      setLoading(false);
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+
+    try {
+      const { error: authError } = await authClient.signIn.email({
+        email: trimmedEmail,
+        password,
+        callbackURL: callbackUrl,
+      });
+
+      if (authError) {
+        const code = (authError as { code?: string }).code;
+        const rawMessage = authError.message || "";
+        const notVerified =
+          code === "EMAIL_NOT_VERIFIED" ||
+          /not verified|non v[ée]rifi/i.test(rawMessage);
+
+        if (notVerified) {
+          // Compte existant dont l'e-mail n'est pas vérifié :
+          // on bascule vers la vérification par code OTP.
+          setMaskedEmail(trimmedEmail);
+          setDirection(1);
+          setVerificationMode("email");
+          setStep(2);
+          setOtp("");
+          setError(
+            "Votre adresse e-mail n'est pas encore vérifiée. Saisissez le code qui vient de vous être envoyé, ou cliquez sur « Renvoyer le code ».",
+          );
+          toast.info("Vérification de l'e-mail requise", {
+            description: "Un nouveau code vient de vous être envoyé.",
+          });
+          // Envoi automatique d'un code frais (sans toast pour éviter le doublon visuel)
+          void sendEmailVerificationOtp(trimmedEmail, false);
+          return;
+        }
+
+        const message =
+          translateAuthError(rawMessage) || "Échec de la connexion.";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+
+      toast.success("Connexion réussie !");
+      setIsRedirecting(true);
+      router.push(callbackUrl);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? translateAuthError(err.message)
+          : "Une erreur est survenue.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Étape 1 : Demande de l'OTP
+  // ============ ÉTAPE 1 : DEMANDE DE L'OTP FSA ============
   const handleRequestOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -160,12 +291,15 @@ function AuthContent() {
 
       setMaskedEmail(data.emailMasked);
       setDirection(1);
+      setVerificationMode("fsa");
       setStep(2);
-      setAuthMethod("otp");
       setResendCooldown(60); // Initialiser le cooldown à 60s
       toast.success("🔑 Options de connexion envoyées par e-mail !");
-    } catch (err: any) {
-      const message = err.message || "Impossible de traiter la demande.";
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Impossible de traiter la demande.";
       setError(message);
       toast.error(message);
     } finally {
@@ -173,7 +307,7 @@ function AuthContent() {
     }
   };
 
-  // Renvoyer l'OTP
+  // Renvoyer l'OTP FSA
   const handleResendOtp = async () => {
     setResending(true);
     setError("");
@@ -195,8 +329,9 @@ function AuthContent() {
 
       setResendCooldown(60); // Réinitialiser le cooldown à 60s après renvoi réussi
       toast.success("🔄 Nouveau code de vérification envoyé !");
-    } catch (err: any) {
-      const message = err.message || "Impossible de renvoyer le code.";
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Impossible de renvoyer le code.";
       setError(message);
       toast.error(message);
     } finally {
@@ -204,32 +339,81 @@ function AuthContent() {
     }
   };
 
-  // Demander un lien magique
-  const handleRequestMagicLink = async () => {
-    setLoading(true);
-    setError("");
+  // ============ VÉRIFICATION E-MAIL (OTP Better Auth) ============
+  const sendEmailVerificationOtp = async (
+    targetEmail: string,
+    showToast: boolean,
+  ) => {
+    setResending(true);
     try {
-      const res = await fetch("/api/auth/fsa-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "request-magic-link",
-          fsaCode: fsaCode.trim(),
-        }),
+      const { error: otpError } = await authClient.emailOtp.sendVerificationOtp({
+        email: targetEmail,
+        type: "email-verification",
       });
 
-      const data = await res.json();
+      if (otpError) throw otpError;
 
-      if (!res.ok) {
-        throw new Error(
-          data.message || "Impossible d'envoyer le lien magique.",
-        );
-      }
+      setResendCooldown(60);
+      if (showToast) toast.success("🔄 Nouveau code de vérification envoyé !");
+      return true;
+    } catch (err: unknown) {
+      const message = translateAuthError(
+        err instanceof Error
+          ? err.message
+          : "Impossible d'envoyer le code de vérification.",
+      );
+      setError(message);
+      if (showToast) toast.error(message);
+      return false;
+    } finally {
+      setResending(false);
+    }
+  };
 
-      setAuthMethod("magic-link-sent");
-      toast.success("🔗 Lien magique envoyé ! Vérifiez votre boîte mail.");
-    } catch (err: any) {
-      const message = err.message || "Impossible d'envoyer le lien magique.";
+  const handleVerifyEmailOtp = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setFieldErrors({});
+
+    const parse = OtpSchema.safeParse({ otp });
+    if (!parse.success) {
+      const errors: Record<string, string> = {};
+      parse.error.errors.forEach((err) => {
+        if (err.path[0]) errors[err.path[0] as string] = err.message;
+      });
+      setFieldErrors(errors);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error: verifyError } = await authClient.emailOtp.verifyEmail({
+        email: maskedEmail,
+        otp,
+      });
+
+      if (verifyError) throw verifyError;
+
+      // La vérification peut ne pas ouvrir de session : on se connecte
+      // explicitement avec le mot de passe saisi pour garantir l'accès.
+      const { error: signInError } = await authClient.signIn.email({
+        email: maskedEmail,
+        password,
+        callbackURL: callbackUrl,
+      });
+
+      if (signInError) throw signInError;
+
+      toast.success("E-mail vérifié ! Connexion en cours...");
+      setIsRedirecting(true);
+      router.push(callbackUrl);
+    } catch (err: unknown) {
+      const message = translateAuthError(
+        err instanceof Error ? err.message : "Code invalide ou expiré.",
+      );
       setError(message);
       toast.error(message);
     } finally {
@@ -237,7 +421,7 @@ function AuthContent() {
     }
   };
 
-  // Étape 2 : Vérification de l'OTP
+  // ============ ÉTAPE 2 : VÉRIFICATION DE L'OTP FSA ============
   const handleVerifyOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -274,15 +458,41 @@ function AuthContent() {
 
       toast.success("Connexion réussie !");
       setIsRedirecting(true);
-      router.push("/dashboard");
-    } catch (err: any) {
-      const message = err.message || "Code invalide.";
+      router.push(callbackUrl);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Code de vérification invalide.";
       setError(message);
       toast.error(message);
     } finally {
       setLoading(false);
     }
   };
+
+  const goBackToStepOne = () => {
+    setDirection(-1);
+    setStep(1);
+    setOtp("");
+    setVerificationMode("fsa");
+    setError("");
+    setFieldErrors({});
+  };
+
+  const headerTitle =
+    step === 1
+      ? "Connexion"
+      : verificationMode === "email"
+        ? "Vérifiez votre e-mail"
+        : "Sécurité OTP";
+
+  const headerDescription =
+    step === 1
+      ? tab === "password"
+        ? "Connectez-vous avec votre adresse e-mail et votre mot de passe."
+        : "Saisissez votre e-mail ou votre code d'attestation FSA pour recevoir un code de connexion."
+      : verificationMode === "email"
+        ? "Pour activer votre compte, saisissez le code de vérification à 6 chiffres envoyé à :"
+        : "Pour votre sécurité, un code d'authentification à 6 chiffres a été envoyé à :";
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 relative overflow-hidden px-4 py-8">
@@ -302,26 +512,24 @@ function AuthContent() {
           <div className="relative w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-200/50 group overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000" />
             {step === 1 ? (
-              <KeyRound className="w-9 h-9 text-white" />
+              tab === "password" ? (
+                <Lock className="w-9 h-9 text-white" />
+              ) : (
+                <KeyRound className="w-9 h-9 text-white" />
+              )
+            ) : verificationMode === "email" ? (
+              <Mail className="w-9 h-9 text-white" />
             ) : (
               <ShieldCheck className="w-9 h-9 text-white animate-pulse" />
             )}
           </div>
 
           <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none">
-            {step === 1
-              ? "Connexion"
-              : authMethod === "magic-link-sent"
-                ? "Lien magique"
-                : "Sécurité OTP"}
+            {headerTitle}
           </h1>
 
           <p className="text-slate-400 text-sm mt-3 px-4 font-medium leading-relaxed">
-            {step === 1
-              ? "Saisissez votre e-mail ou votre code d'attestation FSA pour accéder à votre espace."
-              : authMethod === "magic-link-sent"
-                ? `Un lien de connexion sécurisé a été envoyé à :`
-                : `Pour votre sécurité, un code d'authentification à 6 chiffres a été envoyé à :`}
+            {headerDescription}
           </p>
 
           {step === 2 && (
@@ -346,7 +554,7 @@ function AuthContent() {
         <div className="relative overflow-hidden min-h-[200px]">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             {step === 1 ? (
-              /* ================= ÉTAPE 1 : CODE FSA ================= */
+              /* ================= ÉTAPE 1 : CONNEXION ================= */
               <motion.form
                 key="step1"
                 custom={direction}
@@ -354,77 +562,335 @@ function AuthContent() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                onSubmit={handleRequestOtp}
+                onSubmit={
+                  tab === "password"
+                    ? handleEmailPasswordSubmit
+                    : handleRequestOtp
+                }
                 className="space-y-6 relative z-10"
               >
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="fsaCode"
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
-                  >
-                    E-mail ou Code FSA
-                  </Label>
-                  <div className="relative group">
-                    <KeyRound className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
-                    <Input
-                      id="fsaCode"
-                      name="fsaCode"
-                      type="text"
-                      value={fsaCode}
-                      onChange={handleFsaCodeChange}
-                      required
-                      placeholder="Ex: candidat@email.com ou code FSA"
-                      className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
-                        fieldErrors.fsaCode
-                          ? "border-red-500 focus:ring-red-500/5"
-                          : ""
+                {/* Sélecteur de méthode */}
+                <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100/80 rounded-2xl border border-slate-100">
+                  {(
+                    [
+                      { id: "password", label: "Mot de passe", icon: Lock },
+                      { id: "fsa", label: "Code FSA & OTP", icon: KeyRound },
+                    ] as const
+                  ).map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => switchTab(id)}
+                      className={`relative z-10 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors duration-300 ${
+                        tab === id
+                          ? "text-white"
+                          : "text-slate-400 hover:text-slate-600"
                       }`}
-                      autoComplete="off"
-                      disabled={loading}
-                    />
-                  </div>
-                  {fieldErrors.fsaCode && (
-                    <p className="text-red-500 text-xs font-semibold mt-1 pl-2">
-                      {fieldErrors.fsaCode}
-                    </p>
-                  )}
-
-                  <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex items-start gap-3 mt-3">
-                    <GraduationCap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                      Saisissez votre e-mail (si pré-enregistré par
-                      l&apos;administration) ou le code FSA figurant sur votre
-                      relevé ou attestation. Pour aller plus vite, vous pouvez
-                      aussi saisir uniquement les 5 derniers caractères du code
-                      FSA (ex:{" "}
-                      <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-emerald-700">
-                        f0f9a
-                      </code>
-                      ).
-                    </p>
-                  </div>
+                    >
+                      {tab === id && (
+                        <motion.span
+                          layoutId="auth-tab-pill"
+                          className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg shadow-emerald-600/20"
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 32,
+                          }}
+                        />
+                      )}
+                      <Icon className="w-3.5 h-3.5" />
+                      {label}
+                    </button>
+                  ))}
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
-                      Recherche du dossier...
-                    </>
-                  ) : (
-                    <>
-                      Continuer
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-                    </>
-                  )}
-                </Button>
+                {tab === "password" ? (
+                  /* --- Connexion e-mail + mot de passe --- */
+                  <>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="email"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                      >
+                        Adresse e-mail
+                      </Label>
+                      <div className="relative group">
+                        <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            clearFieldError("email");
+                          }}
+                          required
+                          placeholder="votre@email.com"
+                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                            fieldErrors.email
+                              ? "border-red-500 focus:ring-red-500/5"
+                              : ""
+                          }`}
+                          autoComplete="email"
+                          disabled={loading}
+                        />
+                      </div>
+                      {fieldErrors.email && (
+                        <p className="text-red-500 text-xs font-semibold mt-1 pl-2">
+                          {fieldErrors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between ml-1">
+                        <Label
+                          htmlFor="password"
+                          className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                        >
+                          Mot de passe
+                        </Label>
+                        <Link
+                          href="/forgot-password"
+                          className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-colors"
+                        >
+                          Mot de passe oublié ?
+                        </Link>
+                      </div>
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            clearFieldError("password");
+                          }}
+                          required
+                          placeholder="••••••••"
+                          className={`pl-12 pr-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                            fieldErrors.password
+                              ? "border-red-500 focus:ring-red-500/5"
+                              : ""
+                          }`}
+                          autoComplete="current-password"
+                          disabled={loading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-4 top-4 text-slate-300 hover:text-emerald-600 transition-colors"
+                          aria-label={
+                            showPassword
+                              ? "Masquer le mot de passe"
+                              : "Afficher le mot de passe"
+                          }
+                          tabIndex={-1}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                      {fieldErrors.password && (
+                        <p className="text-red-500 text-xs font-semibold mt-1 pl-2">
+                          {fieldErrors.password}
+                        </p>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
+                          Connexion...
+                        </>
+                      ) : (
+                        <>
+                          Se connecter
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  /* --- Connexion par code FSA / OTP --- */
+                  <>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="fsaCode"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                      >
+                        E-mail ou Code FSA
+                      </Label>
+                      <div className="relative group">
+                        <KeyRound className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                        <Input
+                          id="fsaCode"
+                          name="fsaCode"
+                          type="text"
+                          value={fsaCode}
+                          onChange={handleFsaCodeChange}
+                          required
+                          placeholder="Ex: candidat@email.com ou code FSA"
+                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                            fieldErrors.fsaCode
+                              ? "border-red-500 focus:ring-red-500/5"
+                              : ""
+                          }`}
+                          autoComplete="off"
+                          disabled={loading}
+                        />
+                      </div>
+                      {fieldErrors.fsaCode && (
+                        <p className="text-red-500 text-xs font-semibold mt-1 pl-2">
+                          {fieldErrors.fsaCode}
+                        </p>
+                      )}
+
+                      <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex items-start gap-3 mt-3">
+                        <GraduationCap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                          Saisissez votre e-mail (si pré-enregistré par
+                          l&apos;administration) ou le code FSA figurant sur
+                          votre relevé ou attestation. Pour aller plus vite,
+                          vous pouvez aussi saisir uniquement les 5 derniers
+                          caractères du code FSA (ex:{" "}
+                          <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-emerald-700">
+                            f0f9a
+                          </code>
+                          ).
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
+                          Recherche du dossier...
+                        </>
+                      ) : (
+                        <>
+                          Continuer
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
               </motion.form>
+            ) : verificationMode === "email" ? (
+              /* ================= ÉTAPE 2 : VÉRIFICATION E-MAIL ================= */
+              <motion.div
+                key="email-verify"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="space-y-6 relative z-10"
+              >
+                <form onSubmit={handleVerifyEmailOtp} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="email-otp"
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                    >
+                      Code de vérification (6 chiffres)
+                    </Label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                      <Input
+                        id="email-otp"
+                        name="email-otp"
+                        type="text"
+                        inputMode="numeric"
+                        value={otp}
+                        onChange={handleOtpChange}
+                        required
+                        placeholder="0 0 0 0 0 0"
+                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                          fieldErrors.otp
+                            ? "border-red-500 focus:ring-red-500/5"
+                            : ""
+                        }`}
+                        autoComplete="one-time-code"
+                        disabled={loading}
+                      />
+                    </div>
+                    {fieldErrors.otp && (
+                      <p className="text-red-500 text-xs font-semibold mt-1 text-center">
+                        {fieldErrors.otp}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={goBackToStepOne}
+                      className="flex-1 h-14 font-black uppercase tracking-widest text-xs rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-500 flex items-center justify-center gap-2"
+                      disabled={loading || resending}
+                    >
+                      <ArrowLeft className="w-4 h-4 text-slate-400" />
+                      Retour
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
+                      disabled={loading || resending}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
+                          Vérification...
+                        </>
+                      ) : (
+                        "Vérifier le code"
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => sendEmailVerificationOtp(maskedEmail, true)}
+                      className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors focus:outline-none ${
+                        resendCooldown > 0
+                          ? "text-slate-300 cursor-not-allowed"
+                          : "text-slate-400 hover:text-emerald-600"
+                      }`}
+                      disabled={loading || resending || resendCooldown > 0}
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-emerald-600" : ""}`}
+                      />
+                      {resending
+                        ? "Renvoi en cours..."
+                        : resendCooldown > 0
+                          ? `Renvoyer le code (dans ${resendCooldown}s)`
+                          : "Renvoyer le code"}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
             ) : (
-              /* ================= ÉTAPE 2 : CODE OTP OU LIEN MAGIQUE ================= */
+              /* ================= ÉTAPE 2 : OTP FSA ================= */
               <motion.div
                 key="step2"
                 custom={direction}
@@ -434,166 +900,104 @@ function AuthContent() {
                 exit="exit"
                 className="space-y-6 relative z-10"
               >
-                {authMethod === "otp" ? (
-                  /* --- Option A : Saisie OTP --- */
-                  <form onSubmit={handleVerifyOtp} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="otp"
-                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
-                      >
-                        Code OTP (6 chiffres)
-                      </Label>
-                      <div className="relative group">
-                        <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
-                        <Input
-                          id="otp"
-                          name="otp"
-                          type="text"
-                          inputMode="numeric"
-                          value={otp}
-                          onChange={handleOtpChange}
-                          required
-                          placeholder="0 0 0 0 0 0"
-                          className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
-                            fieldErrors.otp
-                              ? "border-red-500 focus:ring-red-500/5"
-                              : ""
-                          }`}
-                          autoComplete="one-time-code"
-                          disabled={loading}
-                        />
-                      </div>
-                      {fieldErrors.otp && (
-                        <p className="text-red-500 text-xs font-semibold mt-1 text-center">
-                          {fieldErrors.otp}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setDirection(-1);
-                          setStep(1);
-                          setOtp("");
-                          setAuthMethod("otp");
-                          setError("");
-                        }}
-                        className="flex-1 h-14 font-black uppercase tracking-widest text-xs rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-500 flex items-center justify-center gap-2"
-                        disabled={loading || resending}
-                      >
-                        <ArrowLeft className="w-4 h-4 text-slate-400" />
-                        Retour
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
-                        disabled={loading || resending}
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
-                            Connexion...
-                          </>
-                        ) : (
-                          <>Se connecter</>
-                        )}
-                      </Button>
-                    </div>
-
-                    {/* Resend OTP + Magic link toggle */}
-                    <div className="flex flex-col items-center gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={handleResendOtp}
-                        className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors focus:outline-none ${
-                          resendCooldown > 0
-                            ? "text-slate-300 cursor-not-allowed"
-                            : "text-slate-400 hover:text-emerald-600"
+                <form onSubmit={handleVerifyOtp} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="otp"
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
+                    >
+                      Code OTP (6 chiffres)
+                    </Label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                      <Input
+                        id="otp"
+                        name="otp"
+                        type="text"
+                        inputMode="numeric"
+                        value={otp}
+                        onChange={handleOtpChange}
+                        required
+                        placeholder="0 0 0 0 0 0"
+                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                          fieldErrors.otp
+                            ? "border-red-500 focus:ring-red-500/5"
+                            : ""
                         }`}
-                        disabled={loading || resending || resendCooldown > 0}
-                      >
-                        <RefreshCw
-                          className={`w-3.5 h-3.5 ${resending ? "animate-spin text-emerald-600" : ""}`}
-                        />
-                        {resending
-                          ? "Renvoi en cours..."
-                          : resendCooldown > 0
-                            ? `Renvoyer le code (dans ${resendCooldown}s)`
-                            : "Renvoyer le code OTP"}
-                      </button>
-                      <div className="h-px w-16 bg-slate-200" />
-                      <button
-                        type="button"
-                        onClick={handleRequestMagicLink}
-                        className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors focus:outline-none"
+                        autoComplete="one-time-code"
                         disabled={loading}
-                      >
-                        <Link2 className="w-3.5 h-3.5" />
-                        Ou recevoir un lien magique
-                      </button>
+                      />
                     </div>
-                  </form>
-                ) : (
-                  /* --- Option B : Lien magique envoyé --- */
-                  <div className="text-center space-y-6 py-4">
-                    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto">
-                      <Link2 className="w-8 h-8 text-blue-600" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-bold text-slate-800">
-                        Lien envoyé !
-                      </h3>
-                      <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                        Vérifiez votre boîte mail et cliquez sur le bouton{" "}
-                        <strong>&laquo; Me connecter &raquo;</strong> pour
-                        accéder à votre espace.
+                    {fieldErrors.otp && (
+                      <p className="text-red-500 text-xs font-semibold mt-1 text-center">
+                        {fieldErrors.otp}
                       </p>
-                      <p className="text-xs text-slate-400">
-                        Le lien expire dans <strong>10 minutes</strong>.
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setAuthMethod("otp");
-                          setOtp("");
-                          setError("");
-                        }}
-                        className="h-12 px-8 font-black uppercase tracking-widest text-xs rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-500 flex items-center gap-2"
-                        disabled={loading}
-                      >
-                        <ArrowLeft className="w-4 h-4 text-slate-400" />
-                        Saisir le code OTP à la place
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDirection(-1);
-                          setStep(1);
-                          setAuthMethod("otp");
-                          setOtp("");
-                          setError("");
-                        }}
-                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-colors"
-                      >
-                        Changer d&apos;adresse e-mail
-                      </button>
-                    </div>
+                    )}
                   </div>
-                )}
+
+                  <div className="flex gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={goBackToStepOne}
+                      className="flex-1 h-14 font-black uppercase tracking-widest text-xs rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-500 flex items-center justify-center gap-2"
+                      disabled={loading || resending}
+                    >
+                      <ArrowLeft className="w-4 h-4 text-slate-400" />
+                      Retour
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
+                      disabled={loading || resending}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
+                          Connexion...
+                        </>
+                      ) : (
+                        <>Se connecter</>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors focus:outline-none ${
+                        resendCooldown > 0
+                          ? "text-slate-300 cursor-not-allowed"
+                          : "text-slate-400 hover:text-emerald-600"
+                      }`}
+                      disabled={loading || resending || resendCooldown > 0}
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-emerald-600" : ""}`}
+                      />
+                      {resending
+                        ? "Renvoi en cours..."
+                        : resendCooldown > 0
+                          ? `Renvoyer le code (dans ${resendCooldown}s)`
+                          : "Renvoyer le code OTP"}
+                    </button>
+                  </div>
+                </form>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Back Link to Homepage */}
-        <div className="mt-8 pt-6 border-t border-slate-100/80 flex justify-center">
+        {/* Créer un compte + retour au portail */}
+        <div className="mt-8 pt-6 border-t border-slate-100/80 flex flex-col items-center gap-3">
+          <Link
+            href="/inscription"
+            className="text-xs font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1.5"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Pas de compte ? Créer un compte
+          </Link>
           <Link
             href="/"
             className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-colors flex items-center gap-1.5"
@@ -611,7 +1015,7 @@ function AuthContent() {
             {
               "--vortex-color-1": "#10b981",
               "--vortex-color-2": "#2563eb",
-            } as any
+            } as CSSProperties
           }
         >
           <div className="vortex-halo">
