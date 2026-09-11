@@ -15,6 +15,14 @@ set -euo pipefail
 # Sans ces variables, le backup reste local uniquement.
 # =================================================================
 
+# Charge une config locale optionnelle (BACKUP_REMOTE, BACKUP_AGE_RECIPIENT…).
+# Utilisée par le cron et la CI (les deux tournent sur le VPS en tant qu'audest).
+BACKUP_ENV_FILE="${BACKUP_ENV_FILE:-$HOME/.config/attestations-fsa/backup.env}"
+if [ -f "$BACKUP_ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  set -a; . "$BACKUP_ENV_FILE"; set +a
+fi
+
 CONTAINER="${CONTAINER:-attestations-fsa-postgres-prod}"
 DB_NAME="${DB_NAME:-attestation_fsa}"
 DB_USER="${DB_USER:-attestation_fsa_user}"
