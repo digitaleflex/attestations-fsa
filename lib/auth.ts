@@ -150,6 +150,9 @@ export const auth = betterAuth({
       expiresIn: 60 * 10, // 10 minutes
       allowedAttempts: 5,
       resendStrategy: "rotate",
+      // L'inscription e-mail/mot de passe déclenche l'envoi d'un OTP
+      // (type "email-verification") au lieu du lien de vérification par défaut.
+      overrideDefaultEmailVerification: true,
       async sendVerificationOTP({ email, otp, type }) {
         // Log OTP pour administration
         const { logOTP } = await import("@/lib/otp-store");
@@ -163,6 +166,14 @@ export const auth = betterAuth({
             email.split("@")[0],
             otp,
           );
+        } else if (type === "sign-in") {
+          // Connexion par code OTP (code FSA / adresse e-mail)
+          logOTP(email, otp, type);
+          await emailService.sendFsaLoginOTP(
+            email,
+            email.split("@")[0],
+            otp,
+          );
         } else if (type === "forget-password") {
           // Réinitialisation du mot de passe
           logOTP(email, otp, type);
@@ -170,6 +181,11 @@ export const auth = betterAuth({
             email,
             email.split("@")[0],
             otp,
+          );
+        } else if (type === "change-email") {
+          // Flux de changement d'email non pris en charge pour l'instant
+          console.warn(
+            `[AUTH] OTP "change-email" ignoré (non pris en charge) pour ${email}`,
           );
         }
       },

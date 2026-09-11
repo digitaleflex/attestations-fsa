@@ -70,6 +70,8 @@ model User {
   banned                Boolean?
   banReason             String?
   banExpires            DateTime?
+  // Two-Factor Plugin Fields (better-auth twoFactor)
+  twoFactorEnabled      Boolean             @default(false)
   
   address               String?
   birthDate             DateTime?
@@ -95,6 +97,7 @@ model User {
   notifications         Notification[]
   reclamations          Reclamation[]
   sessions              Session[]
+  twoFactor             TwoFactor[]
   exam                  Exam?               @relation(fields: [examId], references: [id])
   formation             Formation?          @relation(fields: [formationId], references: [id])
 
@@ -102,6 +105,15 @@ model User {
   @@index([status])
   @@index([attestationStatus])
   @@index([formationId])
+}
+
+// better-auth `twoFactor` plugin storage (TOTP secret + backup codes).
+model TwoFactor {
+  id          String @id @default(cuid())
+  secret      String
+  backupCodes String
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // VerificationToken removed — NextAuth legacy, unused. Better Auth uses `Verification` model.

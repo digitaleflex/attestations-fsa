@@ -1,19 +1,9 @@
 // app/api/auth/fsa-login/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { emailService } from "@/lib/email";
 import { auth } from "@/lib/auth";
-import { cookies } from "next/headers";
 import { z } from "zod";
-import { customAlphabet } from "nanoid";
-import { createHash, randomBytes } from "crypto";
 import { rateLimits } from "@/lib/rate-limit";
-
-function hashOtp(otp: string): string {
-  return createHash("sha256").update(otp).digest("hex");
-}
-
-const generateOtp = customAlphabet("1234567890", 6);
 
 const RequestOtpSchema = z.object({
   action: z.literal("request-otp"),
@@ -79,6 +69,8 @@ async function findAttestationByCode(fsaCode: string) {
     },
   });
 }
+
+type AttestationRecord = Awaited<ReturnType<typeof findAttestationByCode>>;
 
 export async function POST(request: Request) {
   try {
@@ -149,7 +141,7 @@ export async function POST(request: Request) {
 
     let email = "";
     let candidateName = "";
-    let attestation: any = null;
+    let attestation: AttestationRecord = null;
 
     if (isEmail) {
       const user = await prisma.user.findUnique({
@@ -208,31 +200,19 @@ export async function POST(request: Request) {
 
     // --- ACTION : REQUEST OTP ---
     if (data.action === "request-otp") {
-      const otp = generateOtp();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-      // Nettoyer les anciens codes OTP en suspens pour cet email
-      await prisma.verification.deleteMany({
-        where: { identifier: email },
+      // Better Auth génère l'OTP, l'enregistre et envoie le mail via
+      // sendVerificationOTP (type "sign-in"). Aucune session n'est créée ici.
+      const otpResponse = await auth.api.sendVerificationOTP({
+        body: { email, type: "sign-in" },
+        headers: request.headers,
+        asResponse: true,
       });
 
-      // Enregistrer le hash du code OTP (jamais le plaintext)
-      await prisma.verification.create({
-        data: {
-          identifier: email,
-          value: hashOtp(otp),
-          expiresAt,
-        },
-      });
-
-      // Envoyer le mail contenant l'OTP
-      const emailResult = await emailService.sendFsaLoginOTP(
-        email,
-        candidateName,
-        otp,
-      );
-      if (!emailResult.success) {
-        console.error("[FSA-LOGIN] Failed to send email:", emailResult.error);
+      if (!otpResponse.ok) {
+        console.error(
+          "[FSA-LOGIN] sendVerificationOTP failed:",
+          otpResponse.status,
+        );
         return NextResponse.json(
           {
             message:
@@ -242,149 +222,90 @@ export async function POST(request: Request) {
         );
       }
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
+        email: maskEmail(email),
+        // Conservé pour compatibilité avec l'UI existante.
         emailMasked: maskEmail(email),
+        name: candidateName,
       });
+
+      // Transmettre d'éventuels cookies signés émis par Better Auth.
+      for (const cookie of otpResponse.headers.getSetCookie()) {
+        response.headers.append("set-cookie", cookie);
+      }
+
+      return response;
     }
 
     // --- ACTION : VERIFY OTP ---
     if (data.action === "verify-otp") {
-      // Rechercher l'OTP valide (comparaison sur le hash)
-      const verification = await prisma.verification.findFirst({
-        where: {
-          identifier: email,
-          value: hashOtp(data.otp),
-          expiresAt: { gte: new Date() },
-        },
+      // Refuser la connexion OTP aux administrateurs (interface dédiée requise)
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, role: true },
       });
 
-      if (!verification) {
+      if (existingUser?.role?.toLowerCase() === "admin") {
         return NextResponse.json(
           {
-            message: "Code de vérification invalide ou expiré.",
+            message:
+              "Accès refusé. Les administrateurs doivent utiliser /admin/login.",
           },
-          { status: 400 },
+          { status: 403 },
         );
       }
 
-      // Supprimer l'OTP pour éviter le rejeu
-      await prisma.verification.delete({
-        where: { id: verification.id },
+      // Better Auth valide l'OTP, crée l'utilisateur si absent, crée la session
+      // et émet le cookie de session SIGNÉ (HMAC) via Set-Cookie.
+      const signInResponse = await auth.api.signInEmailOTP({
+        body: { email, otp: data.otp },
+        headers: request.headers,
+        asResponse: true,
       });
 
-      // Récupérer ou créer l'utilisateur User
-      let user = await prisma.user.findUnique({
+      if (!signInResponse.ok) {
+        return NextResponse.json(
+          { message: "Code de vérification invalide ou expiré." },
+          { status: signInResponse.status === 401 ? 401 : 400 },
+        );
+      }
+
+      // Récupérer l'utilisateur (auto-créé par Better Auth si absent)
+      const user = await prisma.user.findUnique({
         where: { email },
       });
 
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            email,
-            name: candidateName,
-            role: "user",
-            attestationCode: attestation ? attestation.code : null,
-            attestationStatus: attestation ? "VALIDATED" : "PENDING",
-          },
-        });
-      }
-
-      // Associer l'attestation à l'utilisateur si ce n'est pas fait
-      if (attestation && attestation.userId !== user.id) {
+      // Associer l'attestation à l'utilisateur si ce n'est pas déjà fait
+      if (attestation && user && attestation.userId !== user.id) {
         await prisma.attestation.update({
           where: { id: attestation.id },
           data: { userId: user.id },
         });
       }
 
-      // Générer le token de session et l'enregistrer manuellement dans la table Session de Better Auth
-      const sessionToken = customAlphabet(
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-        40,
-      )();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 jours (config standard)
-
-      const session = await prisma.session.create({
-        data: {
-          userId: user.id,
-          token: sessionToken,
-          expiresAt,
-          userAgent: request.headers.get("user-agent") || null,
-          ipAddress: request.headers.get("x-forwarded-for") || null,
-        },
-      });
-
-      // Définir le cookie de session sur le client
-      const cookieStore = await cookies();
-      const cookieName =
-        process.env.NODE_ENV === "production"
-          ? "__Secure-better-auth.session_token"
-          : "better-auth.session_token";
-
-      cookieStore.set(cookieName, session.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        expires: session.expiresAt,
-        path: "/",
-      });
-
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
-      });
-    }
-
-    // --- ACTION : REQUEST MAGIC LINK ---
-    if (data.action === "request-magic-link") {
-      const token = randomBytes(32).toString("hex");
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-      // Nettoyer les anciens tokens magic link pour cet email
-      await prisma.verification.deleteMany({
-        where: { identifier: `magic-link:${email}` },
+        role: user?.role ?? "user",
       });
 
-      // Enregistrer le hash du token (jamais le plaintext)
-      await prisma.verification.create({
-        data: {
-          identifier: `magic-link:${email}`,
-          value: hashOtp(token),
-          expiresAt,
-        },
-      });
-
-      // Construire l'URL du lien magique
-      const appUrl =
-        process.env.BETTER_AUTH_URL ||
-        process.env.NEXT_PUBLIC_APP_URL ||
-        "http://localhost:3000";
-      const magicLinkUrl = `${appUrl}/api/auth/magic-link?token=${token}&redirect=/dashboard`;
-
-      // Envoyer le mail contenant le lien magique
-      const emailResult = await emailService.sendMagicLink(
-        email,
-        candidateName,
-        magicLinkUrl,
-      );
-      if (!emailResult.success) {
-        console.error(
-          "[FSA-LOGIN] Failed to send magic link:",
-          emailResult.error,
-        );
-        return NextResponse.json(
-          {
-            message:
-              "Erreur lors de l'envoi du lien magique. Veuillez réessayer.",
-          },
-          { status: 500 },
-        );
+      // Recopier les cookies signés émis par Better Auth (session_token, etc.)
+      for (const cookie of signInResponse.headers.getSetCookie()) {
+        response.headers.append("set-cookie", cookie);
       }
 
-      return NextResponse.json({
-        success: true,
-        emailMasked: maskEmail(email),
-      });
+      return response;
+    }
+
+    // --- ACTION : REQUEST MAGIC LINK (désactivée) ---
+    if (data.action === "request-magic-link") {
+      return NextResponse.json(
+        {
+          message:
+            "La connexion par lien magique est désactivée. Utilisez le code de vérification (OTP) envoyé par e-mail.",
+        },
+        { status: 410 },
+      );
     }
 
     return NextResponse.json(
