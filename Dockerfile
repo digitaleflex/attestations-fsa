@@ -42,6 +42,18 @@ ENV DATABASE_URL=postgresql://build:dummy@localhost:5432/build?sslmode=disable
 # `pnpm build` exécute déjà `prisma generate` (cf. package.json)
 RUN pnpm build
 
+# pnpm (node-linker isolé) génère le client Prisma sous
+# node_modules/.pnpm/@prisma+client@.../node_modules/.prisma, PAS à la racine.
+# On matérialise un arbre déréférencé (client + .prisma frères) pour le runner.
+RUN set -eux; \
+    real="$(readlink -f node_modules/@prisma/client)"; \
+    mkdir -p /app/prisma-runtime; \
+    cp -a "$real" /app/prisma-runtime/client; \
+    engine="$(find node_modules/.pnpm -maxdepth 5 -type d -name '.prisma' | head -n 1)"; \
+    test -n "$engine"; \
+    cp -a "$engine" /app/prisma-runtime/engine; \
+    ls -la /app/prisma-runtime /app/prisma-runtime/engine
+
 FROM node:22-alpine AS runner
 
 WORKDIR /app
@@ -59,9 +71,12 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/prisma-runtime/client ./node_modules/@prisma/client
+COPY --from=builder /app/prisma-runtime/engine ./node_modules/.prisma
 COPY --from=builder /app/node_modules/pg ./node_modules/pg
+
+# Cache ISR/Next inscriptible par l'utilisateur non-root (sinon EACCES sur /app/.next/cache)
+RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next
 
 USER nextjs
 
