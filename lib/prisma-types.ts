@@ -7,7 +7,7 @@ export const USER_ROLES = ['USER', 'ADMIN'] as const;
 export type UserRole = typeof USER_ROLES[number];
 
 // Exam session statuses
-export const EXAM_SESSION_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'GRADED'] as const;
+export const EXAM_SESSION_STATUSES = ['PENDING', 'IN_PROGRESS', 'PENDING_REVIEW', 'COMPLETED', 'GRADED'] as const;
 export type ExamSessionStatus = typeof EXAM_SESSION_STATUSES[number];
 
 // Attestation statuses

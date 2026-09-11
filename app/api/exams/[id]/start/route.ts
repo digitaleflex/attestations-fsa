@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { isExamAvailable } from "@/lib/exams/availability";
 
 /**
  * POST /api/exams/[id]/start
@@ -27,14 +28,23 @@ export async function POST(
         status: true,
         duration: true,
         type: true,
+        scheduledAt: true,
       },
     });
 
-    if (!exam || exam.status !== "PUBLISHED") {
+    if (!exam || !isExamAvailable(exam)) {
       return NextResponse.json(
         { error: "Examen non disponible" },
         { status: 404 },
       );
+    }
+
+    // Ouvre l'examen paresseusement s'il est planifié et arrivé à échéance.
+    if (exam.status === "SCHEDULED") {
+      await prisma.exam.update({
+        where: { id: examId },
+        data: { status: "PUBLISHED" },
+      });
     }
 
     // 1.5 Vérifier si l'utilisateur est restreint à un examen spécifique

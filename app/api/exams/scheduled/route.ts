@@ -3,16 +3,21 @@
 // Returns only public exam info (no questions/answers)
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { autoOpenDueExams } from "@/lib/exams/availability";
 
 export async function GET(request: Request) {
   try {
+    // Ouvre paresseusement les examens SCHEDULED dont l'heure est atteinte.
+    await autoOpenDueExams();
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
 
-    // Fetch only scheduled exams with public info
+    // Fetch only still-scheduled exams with public info (annonce à venir)
     const exams = await prisma.exam.findMany({
       where: {
         status: "SCHEDULED",
+        scheduledAt: { not: null },
         type: (type as any) || undefined,
       },
       select: {
@@ -29,13 +34,7 @@ export async function GET(request: Request) {
       },
     });
 
-    // Filter out exams without scheduledAt
-    const upcomingExams = exams.filter(
-      (exam: { scheduledAt: Date | null }) =>
-        exam.scheduledAt && new Date(exam.scheduledAt) > new Date(),
-    );
-
-    return NextResponse.json({ exams: upcomingExams });
+    return NextResponse.json({ exams });
   } catch (error) {
     console.error("Error fetching scheduled exams:", error);
     return NextResponse.json(

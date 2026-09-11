@@ -6,6 +6,14 @@ import { applyRateLimitByUser } from '@/lib/rate-limit';
 import { analyzeAnswerPattern, logCheatingDetection } from '@/lib/anti-cheat';
 import { createAuditLog } from '@/lib/audit';
 import { pusherServer } from '@/lib/pusher';
+import {
+  computeFinalScore,
+  computePart1Score,
+  isPassed,
+  resolveExamMax,
+  round2,
+} from '@/lib/exams/scoring';
+import { issueExamAttestation } from '@/lib/attestations/issue';
 
 export async function POST(
   request: Request,
@@ -76,20 +84,30 @@ export async function POST(
       }
     });
 
-    // Verify exam exists
-    const examExists = await prisma.exam.findUnique({
+    // Full exam config: source of truth for the scoring scale.
+    const exam = await prisma.exam.findUnique({
       where: { id: examId },
-      select: { id: true, part1Points: true },
+      select: {
+        id: true,
+        part1Points: true,
+        part2Points: true,
+        part3Points: true,
+        part1Enabled: true,
+        part2Enabled: true,
+        part3Enabled: true,
+        totalPoints: true,
+        type: true,
+        passingScore: true,
+        formationId: true,
+      },
     });
 
-    if (!examExists) {
+    if (!exam) {
       return NextResponse.json({ error: 'Examen non trouvé' }, { status: 404 });
     }
 
-    // ✅ ATOMIC double-submit prevention
-    // Single UPDATE ... WHERE status IN (...) query
-    // If another request already completed this, count will be 0
-    const totalPart1Points = examExists.part1Points || 20;
+    // Canonical max raw score for this exam (enabled parts, fallback totalPoints).
+    const totalPoints = resolveExamMax(exam);
 
     // Calculate Part 1 score BEFORE the update (we have all needed data)
     let scorePart1 = 0;
@@ -107,25 +125,56 @@ export async function POST(
       const totalQuestions = qcm.questions.length;
 
       for (const q of qcm.questions) {
-        const userAnswerId = answers[q.id];
-        const correctOption = q.options.find((o: { id: string; isCorrect: boolean }) => o.isCorrect);
-        if (correctOption && userAnswerId === correctOption.id) {
-          correctAnswersCount++;
+        const userAnswer: unknown = answers[q.id];
+        const correctIds = q.options
+          .filter((o) => o.isCorrect)
+          .map((o) => o.id);
+
+        if (Array.isArray(userAnswer)) {
+          // MULTIPLE_CHOICE: the selected set must exactly match the correct set.
+          const userSet = new Set(
+            userAnswer.map((answer: unknown) => String(answer)),
+          );
+          if (
+            correctIds.length > 0 &&
+            correctIds.length === userSet.size &&
+            correctIds.every((correctId) => userSet.has(correctId))
+          ) {
+            correctAnswersCount++;
+          }
+        } else {
+          const correctOption = q.options.find((o) => o.isCorrect);
+          if (correctOption && userAnswer === correctOption.id) {
+            correctAnswersCount++;
+          }
         }
       }
 
-      if (totalQuestions > 0) {
-        scorePart1 = (correctAnswersCount / totalQuestions) * totalPart1Points;
-      }
+      scorePart1 = computePart1Score(
+        correctAnswersCount,
+        totalQuestions,
+        exam.part1Points || 20,
+      );
     }
 
-    // ✅ Detect if exam has manual grading parts (Part 2 or 3)
+    // ✅ Detect if exam has manual grading parts (Part 2/3+, OPEN or CASE_STUDY)
     const allExamParts = await prisma.examPart.findMany({
       where: { examId },
       select: { order: true, type: true }
     });
-    const hasManualGrading = allExamParts.some((p: { order: number; type: string }) => p.order > 1);
+    const hasManualGrading = allExamParts.some(
+      (p: { order: number; type: string }) =>
+        p.order > 1 || p.type === 'OPEN' || p.type === 'CASE_STUDY',
+    );
     const finalStatus = hasManualGrading ? 'PENDING_REVIEW' : 'COMPLETED';
+
+    // Canonical scale: scorePartN = raw points, totalScore = raw sum,
+    // finalScore = percentage (only meaningful once fully corrected).
+    const roundedPart1 = round2(scorePart1);
+    const finalScore =
+      finalStatus === 'COMPLETED'
+        ? computeFinalScore(roundedPart1, totalPoints)
+        : 0;
 
     // ✅ Atomic update: only succeeds if session is still submittable
     const result = await prisma.examSession.updateMany({
@@ -138,10 +187,12 @@ export async function POST(
         status: finalStatus,
         submittedAt: new Date(),
         answers: answers,
-        scorePart1: Math.round(scorePart1 * 100) / 100,
+        scorePart1: roundedPart1,
+        score: roundedPart1, // legacy alias = Part 1 raw score
         scorePart2: 0,
         scorePart3: 0,
-        totalScore: Math.round(scorePart1 * 100) / 100,
+        totalScore: roundedPart1,
+        finalScore,
       },
     });
 
@@ -159,7 +210,7 @@ export async function POST(
       action: 'EXAM_SUBMITTED',
       resource: 'EXAM',
       resourceId: examId,
-      newValue: { status: finalStatus, scorePart1: Math.round(scorePart1 * 100) / 100 },
+      newValue: { status: finalStatus, scorePart1: roundedPart1, finalScore },
       ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
 
@@ -183,14 +234,38 @@ export async function POST(
     // Fetch the updated session for the response
     const updatedSession = await prisma.examSession.findFirst({
       where: { examId, userId: user.id },
-      select: { id: true, status: true, scorePart1: true, totalScore: true },
+      select: {
+        id: true,
+        status: true,
+        scorePart1: true,
+        totalScore: true,
+        finalScore: true,
+      },
     });
+
+    // Attestation automatique : examen officiel, entièrement corrigé et réussi.
+    // Non bloquant — issueExamAttestation ne throw jamais.
+    if (
+      finalStatus === 'COMPLETED' &&
+      isPassed(finalScore, exam.passingScore) &&
+      exam.type === 'OFFICIAL' &&
+      exam.formationId &&
+      updatedSession?.id
+    ) {
+      try {
+        await issueExamAttestation(updatedSession.id);
+      } catch (attestationError) {
+        console.error('[ATTESTATION_ISSUE_ERROR]', attestationError);
+      }
+    }
 
     const response = {
       message: 'Examen soumis avec succès',
       submissionId: updatedSession?.id,
       scorePart1: updatedSession?.scorePart1,
       totalScore: updatedSession?.totalScore,
+      finalScore: updatedSession?.finalScore ?? finalScore,
+      maxScore: totalPoints,
       status: finalStatus,
     };
 

@@ -22,6 +22,15 @@ export interface User {
   attestationCode: string | null;
   attestationStatus: string;
   formationId: string | null;
+  examId?: string | null;
+  examScheduledAt?: Date | string | null;
+  exam?: {
+    id: string;
+    title: string;
+    name: string;
+    status: string;
+    scheduledAt: Date | string | null;
+  } | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
+import { VISIBLE_EXAM_STATUSES } from "@/lib/exams/availability";
 
 /**
  * High-performance cached data fetching for the public pages of the FSA Platform.
@@ -30,16 +31,10 @@ export const getPublicFormations = unstable_cache(
 
 export const getPublicUpcomingExams = unstable_cache(
   async (limit = 3) => {
-    // Only future scheduled exams (or very recent ones that are still active)
-    const today = new Date();
-
     try {
       return await prisma.exam.findMany({
         where: {
-            scheduledAt: {
-                gte: new Date(today.getTime() - 24 * 60 * 60 * 1000)
-            },
-            status: 'PUBLISHED' // Ensure only published exams are visible
+          status: { in: [...VISIBLE_EXAM_STATUSES] },
         },
         orderBy: { scheduledAt: 'asc' },
         take: limit,
@@ -64,14 +59,10 @@ export const getPublicUpcomingExams = unstable_cache(
 
 export const getPublicAllExams = unstable_cache(
   async () => {
-    const today = new Date();
     try {
       return await prisma.exam.findMany({
         where: {
-          scheduledAt: {
-            gte: new Date(today.getTime() - 24 * 60 * 60 * 1000)
-          },
-          status: 'PUBLISHED'
+          status: { in: [...VISIBLE_EXAM_STATUSES] },
         },
         orderBy: { scheduledAt: 'asc' },
         select: {

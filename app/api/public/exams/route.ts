@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { VISIBLE_EXAM_STATUSES } from '@/lib/exams/availability';
 
 export const revalidate = 3600; // Cache results for 1 hour
 
@@ -7,7 +8,7 @@ export async function GET() {
     try {
         const exams = await prisma.exam.findMany({
             where: {
-                status: 'SCHEDULED',
+                status: { in: [...VISIBLE_EXAM_STATUSES] },
             },
             select: {
                 id: true,

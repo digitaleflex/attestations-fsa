@@ -17,19 +17,61 @@ export async function GET(
   try {
     const exam = await prisma.exam.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        name: true,
+        description: true,
+        status: true,
+        totalPoints: true,
+        duration: true,
+        formationId: true,
+        type: true,
+        scheduledAt: true,
+        passingScore: true,
+        randomizeQuestions: true,
+        showResults: true,
+        part1Enabled: true,
+        part1Points: true,
+        part1Questions: true,
+        part2Enabled: true,
+        part2Points: true,
+        part2Questions: true,
+        part3Enabled: true,
+        part3Mode: true,
+        part3Points: true,
+        part3Subject: true,
         parts: {
           orderBy: { order: "asc" },
-          include: {
+          select: {
+            id: true,
+            examId: true,
+            title: true,
+            type: true,
+            duration: true,
+            points: true,
+            order: true,
+            scenario: true,
             questions: {
               orderBy: { order: "asc" },
-              include: {
-                options: true,
+              select: {
+                id: true,
+                partId: true,
+                text: true,
+                type: true,
+                points: true,
+                order: true,
+                // ⚠️ isCorrect / feedback NEVER exposed to candidates
+                options: {
+                  select: {
+                    id: true,
+                    text: true,
+                  },
+                },
               },
             },
           },
         },
-        sessions: true,
       },
     });
 
