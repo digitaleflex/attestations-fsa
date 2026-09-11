@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { emailService } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { isCorrected, isPassed } from "@/lib/exams/scoring";
 import { Prisma } from "@prisma/client";
 
 interface ExamSessionCandidate {
   id: string;
+  status: string;
   finalScore?: number | null;
-  score?: number;
   candidate: {
     id: string;
     name: string | null;
@@ -17,6 +18,7 @@ interface ExamSessionCandidate {
   exam: {
     title: string | null;
     name: string;
+    passingScore: number | null;
   };
 }
 
@@ -30,7 +32,6 @@ const BODY_PROPS = {
 
 const sendEmailDefault = true;
 const sendInAppDefault = true;
-const passingScore = 65;
 const noSessionsMessage = "Aucune copie corrigée trouvée pour la notification.";
 const errorMessage = "Erreur lors de l'envoi des notifications.";
 const unauthorizedMessage = "Non autorisé - Admin requis";
@@ -107,16 +108,9 @@ const formatErrorEntry = (candidateName: string, errorMsg: string): string => {
     .replace("ERROR_MSG", errorMsg);
 };
 
-const determinePassStatus = (finalScore?: number, score?: number): boolean => {
-  const scoreValue = finalScore ?? score ?? 0;
-  return scoreValue >= passingScore;
-};
-
 const getExamTitle = (exam: { title: string | null; name: string }): string => {
   return exam.title || exam.name;
 };
-
-const isPassing = determinePassStatus;
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
@@ -150,6 +144,7 @@ export async function POST(req: Request): Promise<NextResponse> {
           select: {
             title: true,
             name: true,
+            passingScore: true,
           },
         },
       },
@@ -165,8 +160,9 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     const processSession = async (session: ExamSessionCandidate): Promise<void> => {
       const finalScore = session.finalScore;
-      const score = session.score;
-      const passStatus = isPassing(finalScore ?? undefined, score);
+      const passStatus =
+        isCorrected(session.status) &&
+        isPassed(finalScore ?? 0, session.exam.passingScore);
 
       const candidateName = session.candidate.name ?? defaultCandidateName;
       const examTitle = getExamTitle(session.exam);
@@ -188,7 +184,7 @@ export async function POST(req: Request): Promise<NextResponse> {
             emailAddress,
             candidateName,
             examTitle,
-            finalScore ?? score ?? 0,
+            finalScore ?? 0,
             passStatus,
           );
         }

@@ -33,7 +33,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
     scheduledAt: initialData?.scheduledAt || "",
     session: initialData?.session || "",
     duration: initialData?.duration ?? 3600,
-    passingScore: initialData?.passingScore ?? 60,
+    passingScore: initialData?.passingScore ?? 65,
     randomizeQuestions: initialData?.randomizeQuestions ?? false,
     showResults: initialData?.showResults ?? false,
     parts: initialData?.parts || DEFAULT_PARTS,
@@ -84,7 +84,18 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
     }
   }, [formData, initialData]);
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, steps.length - 1));
+  // A SCHEDULED exam must carry a scheduled date/time
+  const scheduleInvalid = formData.status === "SCHEDULED" && !formData.scheduledAt;
+  const scheduleErrorMessage =
+    "La date et l'heure de programmation sont requises pour un examen programmé.";
+
+  const handleNext = () => {
+    if (step === 0 && scheduleInvalid) {
+      toast.error(scheduleErrorMessage);
+      return;
+    }
+    setStep((s) => Math.min(s + 1, steps.length - 1));
+  };
   const handlePrev = () => setStep((s) => Math.max(s - 1, 0));
 
   const updateFormData = (updates: Partial<ExamFormData>) => {
@@ -98,6 +109,11 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   };
 
   const handleSubmit = async () => {
+    if (scheduleInvalid) {
+      toast.error(scheduleErrorMessage);
+      setStep(0);
+      return;
+    }
     setSaving(true);
     try {
       // Use admin API endpoint

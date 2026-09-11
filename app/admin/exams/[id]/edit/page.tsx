@@ -16,16 +16,39 @@ export default function EditExamPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.id) {
-          // Transform API response to form data format
+          // Transform API response to form data format (preserve every editable field)
+          const scheduledAt = (() => {
+            if (!data.scheduledAt) return "";
+            const d = new Date(data.scheduledAt);
+            if (Number.isNaN(d.getTime())) return "";
+            const pad = (n: number) => String(n).padStart(2, "0");
+            // Keep full local wall-clock time so edits do not shift the schedule
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          })();
+
           const formData = {
             id: data.id,
-            title: data.title || data.name,
+            title: data.title || data.name || "",
             description: data.description || "",
             status: data.status || "DRAFT",
-            scheduledAt: data.scheduledAt
-              ? new Date(data.scheduledAt).toISOString().slice(0, 16)
-              : "",
-            formationId: data.formationId,
+            scheduledAt,
+            session: data.session || "",
+            duration: data.duration ?? 3600,
+            passingScore: data.passingScore ?? 65,
+            type: data.type || "OFFICIAL",
+            randomizeQuestions: data.randomizeQuestions ?? false,
+            showResults: data.showResults ?? false,
+            formationId: data.formationId || "",
+            part1Enabled: data.part1Enabled ?? false,
+            part1Points: data.part1Points ?? 0,
+            part1Questions: data.part1Questions ?? 0,
+            part2Enabled: data.part2Enabled ?? false,
+            part2Points: data.part2Points ?? 0,
+            part2Questions: data.part2Questions ?? 0,
+            part3Enabled: data.part3Enabled ?? false,
+            part3Mode: data.part3Mode || "digital",
+            part3Points: data.part3Points ?? 0,
+            part3Subject: data.part3Subject || "",
             parts:
               data.parts?.map((p: any) => ({
                 id: p.id,
@@ -36,6 +59,11 @@ export default function EditExamPage() {
                 order: p.order,
                 enabled: true,
                 scenario: p.scenario || p.subject,
+                // ExamPart has no `mode` column: the case-study mode lives on Exam.part3Mode
+                mode:
+                  p.type === "CASE_STUDY"
+                    ? data.part3Mode || "digital"
+                    : p.mode || "digital",
                 questions:
                   p.questions?.map((q: any) => ({
                     text: q.text,

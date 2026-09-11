@@ -53,7 +53,7 @@ type Exam = {
   createdAt: string;
   session: string | null;
   _count: {
-    submissions: number;
+    sessions: number;
   };
   type: 'OFFICIAL' | 'MOCK';
 };
@@ -248,7 +248,7 @@ export default function AdminExamsPage() {
                                 <Users className="w-3 h-3" />
                                 Candidats
                             </p>
-                            <p className="text-lg font-black text-slate-800">{exam._count.submissions}</p>
+                            <p className="text-lg font-black text-slate-800">{exam._count.sessions}</p>
                         </div>
                         <div className="space-y-1">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -303,7 +303,7 @@ export default function AdminExamsPage() {
                                <div>
                                   <p className="font-black text-slate-900 leading-tight">{exam.title}</p>
                                   <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider italic flex items-center gap-2">
-                                     <Users className="w-3 h-3" /> {exam._count.submissions} candidats {exam.session && `• SESSION ${exam.session}`}
+                                     <Users className="w-3 h-3" /> {exam._count.sessions} candidats {exam.session && `• SESSION ${exam.session}`}
                                      <Badge variant="outline" className={`${exam.type === 'MOCK' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'} p-0 px-1.5 text-[8px] h-4 font-black`}>
                                        {exam.type === 'MOCK' ? 'BLANC' : 'OFFICIEL'}
                                      </Badge>

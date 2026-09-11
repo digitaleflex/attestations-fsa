@@ -1,6 +1,7 @@
 // app/api/admin/exams/route.ts
 // Admin routes for exam management with Better Auth support
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
@@ -210,6 +211,8 @@ export async function POST(request: Request) {
         }
       }).catch((err: unknown) => console.error("Audit log failed:", err));
     }
+
+    revalidateTag("exams", { expire: 0 });
 
     return NextResponse.json(
       {

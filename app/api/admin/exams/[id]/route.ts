@@ -1,6 +1,7 @@
 // app/api/admin/exams/[id]/route.ts
 // Admin exam update route
 import { NextResponse, NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
@@ -203,6 +204,8 @@ export async function PATCH(
       });
     }
 
+    revalidateTag("exams", { expire: 0 });
+
     return NextResponse.json(exam);
   } catch (error) {
     console.error("[EXAM_UPDATE_ERROR]", error);
@@ -240,6 +243,8 @@ export async function DELETE(
         ipAddress: request.headers.get("x-forwarded-for") || "unknown"
       });
     }
+
+    revalidateTag("exams", { expire: 0 });
 
     return NextResponse.json({ message: "Examen supprimé avec succès" });
   } catch (error) {

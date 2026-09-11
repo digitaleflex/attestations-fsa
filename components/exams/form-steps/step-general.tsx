@@ -173,6 +173,15 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                 </select>
               </div>
             </div>
+
+            {formData.status === "SCHEDULED" && !formData.scheduledAt && (
+              <div className="md:col-span-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                <p className="text-sm font-bold text-rose-600">
+                  La date et l&apos;heure de programmation sont requises pour un
+                  examen au statut « Programmé ».
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
