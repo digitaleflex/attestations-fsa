@@ -64,3 +64,5 @@ docker/prisma/
 db-dump-*.json
 /Backup/
 .env.reset.env.deploy
+# npm lockfile (le projet utilise pnpm)
+package-lock.json
