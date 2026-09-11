@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { emailService } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -35,6 +36,33 @@ export async function POST(req: Request) {
         type: "FORMATION_INSCRIPTION",
       },
     });
+
+    // Notification admin : ne doit jamais faire échouer l'inscription.
+    try {
+      const settings = await prisma.settings.findFirst();
+      const adminEmail =
+        settings?.supportEmail ||
+        process.env.SUPPORT_EMAIL ||
+        "contact@fermestandre.com";
+
+      const body = [
+        `Nom : ${nom}`,
+        `Email : ${email}`,
+        `Téléphone : ${telephone}`,
+        `Formation : ${formation.name}`,
+        `Message : ${message || "—"}`,
+        `Date : ${new Date().toLocaleString("fr-FR")}`,
+      ].join("\n");
+
+      await emailService.sendGeneralNotification(
+        adminEmail,
+        "Administration FSA",
+        "Nouvelle inscription à une formation",
+        body
+      );
+    } catch (emailError) {
+      console.error("Erreur envoi notification email inscription formation:", emailError);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

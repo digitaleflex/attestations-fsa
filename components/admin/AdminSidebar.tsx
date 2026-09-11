@@ -24,6 +24,10 @@ import {
   Home,
   AlertCircle,
   ClipboardCheck,
+  Activity,
+  FileCheck,
+  Bell,
+  Mail,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -33,8 +37,13 @@ const mainLinks = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Apprenants", icon: Users },
   { href: "/admin/formations", label: "Catalogue Pédagogique", icon: BookOpen },
+  { href: "/admin/exams", label: "Examens", icon: ClipboardCheck },
+  { href: "/admin/monitoring", label: "Monitoring", icon: Activity },
+  { href: "/admin/corrections", label: "Corrections", icon: FileCheck },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/attestations", label: "Attestations", icon: FileText },
   { href: "/admin/reclamations", label: "Réclamations", icon: AlertCircle },
+  { href: "/admin/contacts", label: "Messages", icon: Mail },
 ];
 
 export function AdminSidebar({ admin }: { admin: any }) {
