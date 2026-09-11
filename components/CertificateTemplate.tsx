@@ -4,6 +4,7 @@
 import React from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
+import { resolveMention } from "@/lib/exams/scoring";
 
 interface CertificateTemplateProps {
   data: {
@@ -18,6 +19,7 @@ interface CertificateTemplateProps {
     type: string;
     gender?: string;
     status: string;
+    certificationMention?: string;
   };
   settings?: {
     institutionName: string;
@@ -46,6 +48,20 @@ const CertificateTemplate = ({
 
   const prefix =
     data.gender === "F" ? "Mme " : data.gender === "M" ? "M. " : "";
+
+  const MENTION_FR: Record<string, string> = {
+    EXCELLENCE: "Mention Excellence",
+    TRES_BIEN: "Mention Très Bien",
+    BIEN: "Mention Bien",
+    ASSEZ_BIEN: "Mention Assez Bien",
+    PASSABLE: "Mention Passable",
+  };
+  // Source unique : mention stockée si disponible, sinon dérivée du score /100 (jamais /20).
+  const mentionLabel = data.certificationMention
+    ? MENTION_FR[data.certificationMention] ?? null
+    : data.score !== undefined
+      ? MENTION_FR[resolveMention(data.score)]
+      : null;
 
   const issuedDate = formatDate(data.issuedAt);
   const startDate = formatDate(data.startDate);
@@ -271,10 +287,8 @@ const CertificateTemplate = ({
 
           {data.score !== undefined && data.score > 0 && (
             <p className="text-2xl font-bold italic" style={{ color: "#b91c1c" }}>
-              avec une note de {data.score}/100 
-              {data.type === "FORMATION" && (
-                 <span> ({data.score >= 18 ? "Mention Excellence" : data.score >= 16 ? "Mention Très Bien" : data.score >= 14 ? "Mention Bien" : "Mention Passable"})</span>
-              )}
+              avec une note de {data.score}/100
+              {mentionLabel ? <span> ({mentionLabel})</span> : null}
             </p>
           )}
 
