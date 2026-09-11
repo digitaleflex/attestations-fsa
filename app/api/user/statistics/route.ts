@@ -1,6 +1,49 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  round2,
+  isCorrected,
+  resolveExamMax,
+  computeFinalScore,
+  isPassed,
+} from "@/lib/exams/scoring";
+
+interface ScoringExam {
+  passingScore: number | null;
+  totalPoints: number;
+  part1Points?: number | null;
+  part2Points?: number | null;
+  part3Points?: number | null;
+  part1Enabled?: boolean | null;
+  part2Enabled?: boolean | null;
+  part3Enabled?: boolean | null;
+  type?: string | null;
+}
+
+interface SubmissionWithExam {
+  totalScore: number;
+  finalScore: number;
+  status: string;
+  type?: string | null;
+  submittedAt: Date | null;
+  exam: ScoringExam | null;
+}
+
+/** Pourcentage canonique d'une session corrigée (via finalScore, fallback points bruts). */
+function resolveSessionFinalScore(sub: SubmissionWithExam): number | null {
+  if (!isCorrected(sub.status)) return null;
+  if (typeof sub.finalScore === "number" && sub.finalScore > 0) {
+    return round2(sub.finalScore);
+  }
+  const maxScore = resolveExamMax(sub.exam ?? {});
+  return computeFinalScore(sub.totalScore, maxScore);
+}
+
+function isSessionPassed(sub: SubmissionWithExam): boolean {
+  const finalScore = resolveSessionFinalScore(sub);
+  return finalScore !== null && isPassed(finalScore, sub.exam?.passingScore);
+}
 
 export async function GET(request: Request) {
   try {
@@ -26,8 +69,23 @@ export async function GET(request: Request) {
           where: { userId: userId },
           select: {
             totalScore: true,
+            finalScore: true,
+            status: true,
             submittedAt: true,
-            exam: { select: { passingScore: true, totalPoints: true } },
+            type: true,
+            exam: {
+              select: {
+                passingScore: true,
+                totalPoints: true,
+                part1Points: true,
+                part2Points: true,
+                part3Points: true,
+                part1Enabled: true,
+                part2Enabled: true,
+                part3Enabled: true,
+                type: true,
+              },
+            },
           },
         }),
         prisma.user
@@ -70,46 +128,26 @@ export async function GET(request: Request) {
     );
     const attestationsCount = validAttestations.length;
 
-    interface SubmissionWithExam {
-        totalScore: number;
-        type?: string | null;
-        submittedAt: Date | null;
-        exam: { passingScore: number; totalPoints: number; type?: string | null } | null;
-    }
-
     const officialExams = (examSubmissions as unknown as SubmissionWithExam[]).filter((s) => s.exam?.type === 'OFFICIAL' || s.type === 'OFFICIAL');
     const mockExams = (examSubmissions as unknown as SubmissionWithExam[]).filter((s) => s.exam?.type === 'MOCK' || s.type === 'MOCK');
 
-    const examsCompleted = officialExams.length;
-    const examsPassed = officialExams.filter((sub) => {
-      const maxPoints = sub.exam?.totalPoints || 100;
-      const scorePercent =
-        maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
-      const passingScore = sub.exam?.passingScore || 60;
-      return scorePercent >= passingScore;
-    }).length;
+    // Seules les sessions corrigées sont comptabilisées comme réussies/échouées.
+    const officialCorrected = officialExams.filter((s) => isCorrected(s.status));
+    const mockCorrected = mockExams.filter((s) => isCorrected(s.status));
 
-    const mockExamsCompleted = mockExams.length;
-    const mockExamsPassed = mockExams.filter((sub) => {
-      const maxPoints = sub.exam?.totalPoints || 100;
-      const scorePercent =
-        maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
-      const passingScore = sub.exam?.passingScore || 60;
-      return scorePercent >= passingScore;
-    }).length;
+    const examsCompleted = officialCorrected.length;
+    const examsPassed = officialCorrected.filter(isSessionPassed).length;
+
+    const mockExamsCompleted = mockCorrected.length;
+    const mockExamsPassed = mockCorrected.filter(isSessionPassed).length;
 
     const averageScore =
       examsCompleted > 0
         ? Math.round(
-            officialExams.reduce((sum, sub) => {
-              const maxPoints = sub.exam?.totalPoints || 100;
-              return (
-                sum +
-                (maxPoints > 0
-                  ? Math.round((sub.totalScore / maxPoints) * 100)
-                  : 0)
-              );
-            }, 0) / examsCompleted,
+            officialCorrected.reduce(
+              (sum, sub) => sum + (resolveSessionFinalScore(sub) ?? 0),
+              0,
+            ) / examsCompleted,
           )
         : 0;
 

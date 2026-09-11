@@ -11,10 +11,12 @@ import { cn } from "@/lib/utils";
 interface TranscriptExamResult {
   id: string;
   examName: string;
-  score: number;
+  totalScore: number;
   totalPoints: number;
   internshipScore: number;
-  finalScore: number;
+  finalScore: number | null;
+  passingScore: number;
+  passed: boolean;
   status: string;
   type: string;
   date: string;
@@ -240,13 +242,12 @@ export default function TranscriptPage() {
                   </thead>
                   <tbody>
                     {examResults.map((r) => {
+                      // Notes basées sur finalScore (%), seuil passingScore.
                       const pct =
-                        r.finalScore > 0
-                          ? Math.round(r.finalScore)
-                          : r.totalPoints > 0
-                            ? Math.round((r.score / r.totalPoints) * 100)
-                            : 0;
-                      const passed = pct >= 65;
+                        r.finalScore === null || r.finalScore === undefined
+                          ? null
+                          : Math.round(r.finalScore);
+                      const passed = pct !== null && r.passed;
                       return (
                         <tr
                           key={r.id}
@@ -266,21 +267,31 @@ export default function TranscriptPage() {
                           <td
                             className={cn(
                               "py-3 px-3 text-right font-black",
-                              passed ? "text-emerald-600" : "text-rose-600",
+                              pct === null
+                                ? "text-slate-400"
+                                : passed
+                                  ? "text-emerald-600"
+                                  : "text-rose-600",
                             )}
                           >
-                            {pct}%
+                            {pct === null ? "—" : `${pct}%`}
                           </td>
                           <td className="py-3 pl-3 text-right">
                             <Badge
                               className={cn(
                                 "rounded-full border-none text-[9px] font-black uppercase tracking-wider",
-                                passed
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : "bg-rose-50 text-rose-700",
+                                pct === null
+                                  ? "bg-amber-50 text-amber-700"
+                                  : passed
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "bg-rose-50 text-rose-700",
                               )}
                             >
-                              {passed ? "Validé" : "Ajourné"}
+                              {pct === null
+                                ? "En correction"
+                                : passed
+                                  ? "Validé"
+                                  : "Ajourné"}
                             </Badge>
                           </td>
                         </tr>

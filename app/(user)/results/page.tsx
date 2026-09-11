@@ -25,19 +25,20 @@ interface ExamResult {
   examDescription?: string | null;
   status: string;
   passingScore: number;
-  scorePart1: number;
+  scorePart1: number | null;
   scorePart2: number | null;
   scorePart3: number | null;
   internshipScore?: number | null;
   finalScore?: number | null;
-  totalScore: number;
+  totalScore: number | null;
   maxScore: number;
-  scorePercent: number;
+  scorePercent: number | null;
   maxPart1: number;
   maxPart2: number;
   maxPart3: number;
   passed: boolean;
   completedAt: string | null;
+  showResults: boolean;
 }
 
 interface ResultsResponse {
@@ -193,43 +194,49 @@ export default function UserResultsPage() {
           ) : (
             <div className="space-y-4">
               {results.map((result) => {
-                const pct = Math.max(
-                  0,
-                  Math.min(100, Math.round(result.scorePercent)),
-                );
                 const isGraded =
                   result.status === "GRADED" || result.status === "COMPLETED";
+                const gradesVisible = isGraded && result.showResults !== false;
+                const rawPercent =
+                  result.scorePercent ?? result.finalScore ?? null;
+                const pct =
+                  rawPercent === null
+                    ? 0
+                    : Math.max(0, Math.min(100, Math.round(rawPercent)));
+                const passed = gradesVisible && result.passed;
                 const parts: Array<{
                   label: string;
-                  score: number;
+                  score: number | null;
                   max: number;
-                }> = [
-                  {
-                    label: "Partie 1",
-                    score: result.scorePart1,
-                    max: result.maxPart1,
-                  },
-                ];
-                if (
-                  result.scorePart2 !== null &&
-                  result.scorePart2 !== undefined
-                ) {
-                  parts.push({
-                    label: "Partie 2",
-                    score: result.scorePart2,
-                    max: result.maxPart2,
-                  });
-                }
-                if (
-                  result.scorePart3 !== null &&
-                  result.scorePart3 !== undefined
-                ) {
-                  parts.push({
-                    label: "Partie 3",
-                    score: result.scorePart3,
-                    max: result.maxPart3,
-                  });
-                }
+                }> = gradesVisible
+                  ? [
+                      {
+                        label: "Partie 1",
+                        score: result.scorePart1,
+                        max: result.maxPart1,
+                      },
+                      ...(result.scorePart2 !== null &&
+                      result.scorePart2 !== undefined
+                        ? [
+                            {
+                              label: "Partie 2",
+                              score: result.scorePart2,
+                              max: result.maxPart2,
+                            },
+                          ]
+                        : []),
+                      ...(result.scorePart3 !== null &&
+                      result.scorePart3 !== undefined
+                        ? [
+                            {
+                              label: "Partie 3",
+                              score: result.scorePart3,
+                              max: result.maxPart3,
+                            },
+                          ]
+                        : []),
+                    ]
+                  : [];
 
                 return (
                   <Card
@@ -248,16 +255,20 @@ export default function UserResultsPage() {
                                 "rounded-full border-none text-[10px] font-black uppercase tracking-wider",
                                 !isGraded
                                   ? "bg-amber-50 text-amber-700"
-                                  : result.passed
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "bg-rose-50 text-rose-700",
+                                  : !gradesVisible
+                                    ? "bg-slate-100 text-slate-600"
+                                    : passed
+                                      ? "bg-emerald-50 text-emerald-700"
+                                      : "bg-rose-50 text-rose-700",
                               )}
                             >
                               {!isGraded
                                 ? "En correction"
-                                : result.passed
-                                  ? "Réussi"
-                                  : "Échoué"}
+                                : !gradesVisible
+                                  ? "Notes masquées"
+                                  : passed
+                                    ? "Réussi"
+                                    : "Échoué"}
                             </Badge>
                           </div>
                           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1.5">
@@ -266,12 +277,12 @@ export default function UserResultsPage() {
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          {isGraded ? (
+                          {gradesVisible ? (
                             <>
                               <p
                                 className={cn(
                                   "text-3xl font-black tracking-tight",
-                                  result.passed
+                                  passed
                                     ? "text-emerald-600"
                                     : "text-rose-600",
                                 )}
@@ -282,6 +293,10 @@ export default function UserResultsPage() {
                                 Seuil {result.passingScore}%
                               </p>
                             </>
+                          ) : isGraded ? (
+                            <p className="text-sm font-black uppercase tracking-widest text-slate-500">
+                              Notes masquées
+                            </p>
                           ) : (
                             <p className="text-sm font-black uppercase tracking-widest text-amber-600">
                               En attente
@@ -297,30 +312,34 @@ export default function UserResultsPage() {
                             "h-full rounded-full transition-all duration-1000",
                             !isGraded
                               ? "bg-amber-300"
-                              : result.passed
-                                ? "bg-gradient-to-r from-emerald-500 to-teal-500"
-                                : "bg-gradient-to-r from-rose-500 to-orange-500",
+                              : !gradesVisible
+                                ? "bg-slate-200"
+                                : passed
+                                  ? "bg-gradient-to-r from-emerald-500 to-teal-500"
+                                  : "bg-gradient-to-r from-rose-500 to-orange-500",
                           )}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
 
                       {/* Détail par partie */}
-                      <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {parts.map((part) => (
-                          <div
-                            key={part.label}
-                            className="bg-slate-50/70 rounded-xl p-3 border border-slate-100"
-                          >
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                              {part.label}
-                            </p>
-                            <p className="text-sm font-bold text-slate-700">
-                              {part.score} / {part.max}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                      {gradesVisible && parts.length > 0 && (
+                        <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {parts.map((part) => (
+                            <div
+                              key={part.label}
+                              className="bg-slate-50/70 rounded-xl p-3 border border-slate-100"
+                            >
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                                {part.label}
+                              </p>
+                              <p className="text-sm font-bold text-slate-700">
+                                {part.score} / {part.max}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );

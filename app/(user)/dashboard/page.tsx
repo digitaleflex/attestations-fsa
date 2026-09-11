@@ -58,17 +58,21 @@ interface UserStatistics {
     completedMissions: number;
     totalMissions: number;
   };
-  recentExams: Array<{
-    id: string;
-    totalScore: number;
-    status: string;
-    submittedAt: string;
-    exam: {
-      title: string;
-      totalPoints: number;
-    };
-  }>;
 }
+
+type DashboardExamEntry = {
+  id: string;
+  examName: string;
+  status: string;
+  score: number;
+  maxScore: number;
+  finalScore: number | null;
+  passingScore: number;
+  passed: boolean;
+  startedAt: string | null;
+  completedAt: string | null;
+  type: string;
+};
 
 export default function UserDashboardPage() {
   const router = useRouter();
@@ -133,6 +137,11 @@ export default function UserDashboardPage() {
   const statsData = dashboardData?.statistics;
 
   const userLoading = dashboardLoading;
+
+  // Dernières notes : sessions corrigées (hors examens disponibles), via le contrat dashboard-data.
+  const recentNotes: DashboardExamEntry[] = (examsData?.exams ?? [])
+    .filter((ex: DashboardExamEntry) => ex.status !== "AVAILABLE")
+    .slice(0, 3);
 
   const markAsRead = async (id: string) => {
     try {
@@ -831,15 +840,14 @@ export default function UserDashboardPage() {
               Notes
             </h3>
             <div className="space-y-3">
-              {statsData?.recentExams && statsData.recentExams.length > 0 ? (
-                statsData.recentExams.map((ex: any) => {
-                  const passingThreshold = ex.exam?.passingScore || 65;
+              {recentNotes.length > 0 ? (
+                recentNotes.map((ex) => {
+                  // Pourcentage canonique fourni par l'API (finalScore, sessions corrigées).
                   const scorePercent =
-                    ex.exam?.totalPoints > 0
-                      ? (ex.totalScore / ex.exam.totalPoints) * 100
-                      : 0;
+                    typeof ex.finalScore === "number" ? ex.finalScore : 0;
                   const scoreOn20 = (scorePercent / 100) * 20;
-                  const isPassed = scorePercent >= passingThreshold;
+                  const isGraded = ex.status === "COMPLETED";
+                  const isPassed = isGraded && ex.passed;
 
                   return (
                     <div
@@ -860,14 +868,17 @@ export default function UserDashboardPage() {
                         <div className="min-w-0 flex-1">
                           <p
                             className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight"
-                            title={ex.exam?.title}
+                            title={ex.examName}
                           >
-                            {ex.exam?.title || "Examen"}
+                            {ex.examName || "Examen"}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <Calendar className="w-3 h-3 text-slate-400" />
                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                              Le {new Date(ex.submittedAt).toLocaleDateString()}
+                              Le{" "}
+                              {new Date(
+                                ex.completedAt || ex.startedAt || "",
+                              ).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
@@ -884,14 +895,14 @@ export default function UserDashboardPage() {
                         <Badge
                           className={cn(
                             "text-[8px] h-4 leading-none font-black uppercase tracking-tighter shadow-sm border-none",
-                            ex.status === "GRADED" || ex.status === "COMPLETED"
+                            isGraded
                               ? isPassed
                                 ? "bg-emerald-500 text-white"
                                 : "bg-rose-500 text-white"
                               : "bg-amber-100 text-amber-700",
                           )}
                         >
-                          {ex.status === "GRADED" || ex.status === "COMPLETED"
+                          {isGraded
                             ? isPassed
                               ? "Admis"
                               : "Échec"

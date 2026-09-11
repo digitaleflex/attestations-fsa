@@ -26,7 +26,6 @@ import {
   Award,
 } from "lucide-react";
 import { authClient, signOut } from "@/lib/auth-client";
-import { getCurrentUser } from "@/lib/auth";
 import NotificationBell from "@/components/NotificationBell";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 

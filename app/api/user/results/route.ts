@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  round2,
+  isCorrected,
+  resolveExamMax,
+  computeFinalScore,
+  isPassed,
+} from "@/lib/exams/scoring";
 
-// Helper local supprimé au profit de getCurrentUser unifié.
+interface CustomBareme {
+  totalMax?: number;
+  maxPart1?: number;
+  maxPart2?: number;
+  maxPart3?: number;
+}
 
 interface ExamResult {
   id: string;
@@ -11,17 +23,19 @@ interface ExamResult {
   examDescription?: string | null;
   status: string;
   passingScore: number;
-  scorePart1: number;
+  scorePart1: number | null;
   scorePart2: number | null;
   scorePart3: number | null;
-  totalScore: number;
+  totalScore: number | null;
   maxScore: number;
-  scorePercent: number;
+  scorePercent: number | null;
   maxPart1: number;
   maxPart2: number;
   maxPart3: number;
   passed: boolean;
   completedAt: Date | string | null;
+  submittedAt: Date | string | null;
+  showResults: boolean;
 }
 
 export async function GET(request: Request) {
@@ -61,31 +75,59 @@ export async function GET(request: Request) {
             part1Points: true,
             part2Points: true,
             part3Points: true,
+            part1Enabled: true,
+            part2Enabled: true,
+            part3Enabled: true,
+            showResults: true,
           },
         },
       },
       orderBy: { submittedAt: "desc" },
     });
 
-    const results: ExamResult[] = submissions.map((sub: any) => {
-      // Récupérer le barème personnalisé s'il existe
-      const customBareme = sub.answers && typeof sub.answers === 'object' 
-        ? (sub.answers as any)._customBareme 
+    const scored = submissions.map((sub) => {
+      // Barème personnalisé éventuel stocké au niveau de la session
+      const answers = sub.answers as { _customBareme?: CustomBareme } | null;
+      const customBareme = answers?._customBareme ?? null;
+
+      const maxPart1 = customBareme?.maxPart1 ?? sub.exam?.part1Points ?? 20;
+      const maxPart2 = customBareme?.maxPart2 ?? sub.exam?.part2Points ?? 40;
+      const maxPart3 = customBareme?.maxPart3 ?? sub.exam?.part3Points ?? 40;
+      const maxScore = customBareme?.totalMax ?? resolveExamMax(sub.exam ?? {});
+
+      const isDone = isCorrected(sub.status);
+      const hasFinalScore =
+        typeof sub.finalScore === "number" &&
+        Number.isFinite(sub.finalScore) &&
+        sub.finalScore > 0;
+
+      // finalScore = pourcentage 0..100 ; fallback calculé sur les points bruts.
+      const finalScore = isDone
+        ? hasFinalScore
+          ? round2(sub.finalScore)
+          : computeFinalScore(sub.totalScore, maxScore)
         : null;
 
-      const maxPart1 = customBareme?.maxPart1 ?? (sub.exam?.part1Points || 20);
-      const maxPart2 = customBareme?.maxPart2 ?? (sub.exam?.part2Points || 40);
-      const maxPart3 = customBareme?.maxPart3 ?? (sub.exam?.part3Points || 40);
-      const maxScore = customBareme?.totalMax ?? (sub.exam?.totalPoints || 100);
+      const showResults = sub.exam?.showResults !== false;
+      const gradesVisible = isDone && showResults;
 
-      const scorePercent =
-        maxScore > 0 ? Math.round((sub.totalScore / maxScore) * 100) : 0;
-      const passingScore = sub.exam?.passingScore || 65;
+      return {
+        sub,
+        customBareme,
+        maxPart1,
+        maxPart2,
+        maxPart3,
+        maxScore,
+        isDone,
+        finalScore,
+        showResults,
+        gradesVisible,
+      };
+    });
 
-      // Note finale : on utilise finalScore s'il existe (moyenne exam + stage), sinon le % exam
-      const finalDisplayScore = sub.finalScore !== undefined && sub.finalScore !== null && sub.finalScore > 0
-        ? sub.finalScore 
-        : scorePercent;
+    const results: ExamResult[] = scored.map((entry) => {
+      const { sub, isDone, finalScore, gradesVisible, showResults } = entry;
+      const passingScore = sub.exam?.passingScore ?? 65;
 
       return {
         id: sub.id,
@@ -95,36 +137,49 @@ export async function GET(request: Request) {
         status: sub.status,
         type: sub.exam?.type || "OFFICIAL",
         passingScore,
-        scorePart1: sub.scorePart1,
-        scorePart2: sub.scorePart2,
-        scorePart3: sub.scorePart3,
+        scorePart1: gradesVisible ? sub.scorePart1 : null,
+        scorePart2: gradesVisible ? sub.scorePart2 : null,
+        scorePart3: gradesVisible ? sub.scorePart3 : null,
         internshipScore: sub.internshipScore,
-        finalScore: sub.finalScore,
-        totalScore: sub.totalScore,
-        maxScore,
-        scorePercent: finalDisplayScore,
-        maxPart1,
-        maxPart2,
-        maxPart3,
-        passed: finalDisplayScore >= passingScore,
+        finalScore: gradesVisible ? finalScore : null,
+        totalScore: gradesVisible ? sub.totalScore : null,
+        maxScore: entry.maxScore,
+        scorePercent: gradesVisible ? finalScore : null,
+        maxPart1: entry.maxPart1,
+        maxPart2: entry.maxPart2,
+        maxPart3: entry.maxPart3,
+        passed:
+          isDone && finalScore !== null && isPassed(finalScore, passingScore),
         completedAt: sub.gradedAt || sub.submittedAt,
+        submittedAt: sub.submittedAt,
+        showResults,
       };
     });
 
+    const corrected = scored.filter((entry) => entry.isDone);
     const stats = {
       totalExams: results.length,
-      passedExams: results.filter((r) => r.passed).length,
-      failedExams: results.filter((r) => !r.passed).length,
+      correctedExams: corrected.length,
+      passedExams: corrected.filter((entry) =>
+        isPassed(entry.finalScore ?? 0, entry.sub.exam?.passingScore),
+      ).length,
+      failedExams: corrected.filter(
+        (entry) =>
+          !isPassed(entry.finalScore ?? 0, entry.sub.exam?.passingScore),
+      ).length,
+      pendingReview: results.filter((r) => r.status === "PENDING_REVIEW").length,
       averageScore:
-        results.length > 0
+        corrected.length > 0
           ? Math.round(
-              results.reduce((sum, r) => sum + r.scorePercent, 0) /
-                results.length,
+              corrected.reduce(
+                (sum, entry) => sum + (entry.finalScore ?? 0),
+                0,
+              ) / corrected.length,
             )
           : 0,
       bestScore:
-        results.length > 0
-          ? Math.max(...results.map((r) => r.scorePercent))
+        corrected.length > 0
+          ? Math.max(...corrected.map((entry) => entry.finalScore ?? 0))
           : 0,
     };
 

@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import {
+  round2,
+  isCorrected,
+  resolveExamMax,
+  computeFinalScore,
+  isPassed,
+} from '@/lib/exams/scoring';
+
+interface CustomBareme {
+  totalMax?: number;
+  maxPart1?: number;
+  maxPart2?: number;
+  maxPart3?: number;
+}
 
 export async function GET(
   request: Request,
@@ -17,7 +31,20 @@ export async function GET(
     const examSession = await prisma.examSession.findUnique({
       where: { id: sessionId },
       include: {
-        exam: { select: { title: true } },
+        exam: {
+          select: {
+            title: true,
+            totalPoints: true,
+            part1Points: true,
+            part2Points: true,
+            part3Points: true,
+            part1Enabled: true,
+            part2Enabled: true,
+            part3Enabled: true,
+            passingScore: true,
+            showResults: true,
+          },
+        },
         candidate: { select: { name: true } }
       }
     });
@@ -26,7 +53,10 @@ export async function GET(
       return NextResponse.json({ error: 'Résultat non trouvé ou non autorisé' }, { status: 403 });
     }
 
-    if (examSession.status !== 'GRADED') {
+    const exam = examSession.exam;
+    const isDone = isCorrected(examSession.status);
+
+    if (!isDone) {
         return NextResponse.json({ error: 'Le relevé est en cours de correction' }, { status: 400 });
     }
 
@@ -37,8 +67,18 @@ export async function GET(
     });
 
     // Extraction du barème dynamique
-    const answers = (examSession.answers as any) || {};
-    const custom = answers._customBareme || {};
+    const rawAnswers = examSession.answers as { _customBareme?: CustomBareme } | null;
+    const custom = rawAnswers?._customBareme ?? {};
+
+    const maxScore = custom.totalMax ?? resolveExamMax(exam);
+    const passingScore = exam.passingScore ?? 65;
+    const hasFinalScore =
+      typeof examSession.finalScore === "number" && examSession.finalScore > 0;
+
+    // finalScore = pourcentage 0..100 ; fallback calculé sur les points bruts.
+    const finalScore = hasFinalScore
+      ? round2(examSession.finalScore)
+      : computeFinalScore(examSession.totalScore, maxScore);
 
     return NextResponse.json({
       id: examSession.id,
@@ -48,10 +88,15 @@ export async function GET(
       scorePart1: examSession.scorePart1,
       scorePart2: examSession.scorePart2,
       scorePart3: examSession.scorePart3,
-      maxPart1: custom.maxPart1 || 20,
-      maxPart2: custom.maxPart2 || 40,
-      maxPart3: custom.maxPart3 || 40,
+      maxPart1: custom.maxPart1 ?? exam.part1Points ?? 20,
+      maxPart2: custom.maxPart2 ?? exam.part2Points ?? 40,
+      maxPart3: custom.maxPart3 ?? exam.part3Points ?? 40,
       totalScore: examSession.totalScore,
+      maxScore,
+      totalPoints: maxScore,
+      finalScore,
+      passingScore,
+      passed: isPassed(finalScore, passingScore),
       status: examSession.status,
       issuedAt: examSession.submittedAt || examSession.updatedAt
     });

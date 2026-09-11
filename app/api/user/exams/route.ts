@@ -2,6 +2,24 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  autoOpenDueExams,
+  isExamAvailable,
+} from "@/lib/exams/availability";
+import {
+  round2,
+  isCorrected,
+  resolveExamMax,
+  computeFinalScore,
+  isPassed,
+} from "@/lib/exams/scoring";
+
+/** Mapping d'affichage canonique des statuts de session. */
+function displayStatus(status: string): "COMPLETED" | "SUBMITTED" | "IN_PROGRESS" {
+  if (isCorrected(status)) return "COMPLETED";
+  if (status === "PENDING_REVIEW") return "SUBMITTED";
+  return "IN_PROGRESS";
+}
 
 // Schéma de validation pour les examens
 const ExamsQuerySchema = z.object({
@@ -35,6 +53,9 @@ export async function GET(request: Request) {
       );
     }
 
+    // Ouvre paresseusement les examens SCHEDULED arrivés à échéance.
+    await autoOpenDueExams();
+
     // Requêtes PARALLÈLES (Gain de temps massif)
     const [user, availableExams, submissions] = await Promise.all([
       prisma.user.findUnique({
@@ -43,7 +64,7 @@ export async function GET(request: Request) {
       }),
       prisma.exam.findMany({
         where: {
-          status: "PUBLISHED",
+          status: { in: ["SCHEDULED", "PUBLISHED"] },
           type: params.data.type || undefined,
           // On pourrait ajouter des filtres ici basés sur params.data
         },
@@ -59,6 +80,8 @@ export async function GET(request: Request) {
           part2Questions: true,
           part3Enabled: true,
           type: true,
+          status: true,
+          scheduledAt: true,
         },
         ...(params.data.limit ? { take: params.data.limit } : {}),
       }),
@@ -73,6 +96,7 @@ export async function GET(request: Request) {
           id: true,
           examId: true,
           totalScore: true,
+          finalScore: true,
           submittedAt: true,
           status: true,
           answers: true,
@@ -82,11 +106,16 @@ export async function GET(request: Request) {
               name: true,
               description: true,
               totalPoints: true,
+              part1Points: true,
+              part2Points: true,
+              part3Points: true,
+              part1Enabled: true,
+              part2Enabled: true,
+              part3Enabled: true,
               passingScore: true,
               duration: true,
               part1Questions: true,
               part2Questions: true,
-              part3Enabled: true,
               type: true,
             },
           },
@@ -107,7 +136,7 @@ export async function GET(request: Request) {
     );
 
     // 1. Ajouter les examens complétés
-    const completedExams = submissions.map((sub: any) => {
+    const completedExams = submissions.map((sub) => {
       const exam = sub.exam;
       const qCount =
         exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0);
@@ -115,30 +144,36 @@ export async function GET(request: Request) {
       // Récupérer le barème personnalisé s'il existe
       const customBareme =
         sub.answers && typeof sub.answers === "object"
-          ? (sub.answers as any)._customBareme
+          ? (sub.answers as { _customBareme?: { totalMax?: number } })._customBareme
           : null;
 
-      const maxScore = customBareme?.totalMax ?? (exam.totalPoints || 100);
+      const maxScore = customBareme?.totalMax ?? resolveExamMax(exam);
+      const isDone = isCorrected(sub.status);
+      const hasFinalScore = typeof sub.finalScore === "number" && sub.finalScore > 0;
+      const finalScore = isDone
+        ? hasFinalScore
+          ? round2(sub.finalScore)
+          : computeFinalScore(sub.totalScore, maxScore)
+        : null;
+      const passingScore = exam.passingScore ?? 65;
 
       return {
         id: sub.examId,
         submissionId: sub.id,
         examName: exam.title || exam.name,
         examDescription: exam.description,
-        status:
-          sub.status === "IN_PROGRESS" || sub.status === "PENDING"
-            ? "IN_PROGRESS"
-            : sub.status === "PENDING_REVIEW"
-              ? "SUBMITTED"
-              : "COMPLETED",
+        status: displayStatus(sub.status),
         score: sub.totalScore,
         maxScore: maxScore,
-        passingScore: exam.passingScore || 65,
+        finalScore,
+        passingScore,
+        passed: isDone && finalScore !== null && isPassed(finalScore, passingScore),
         startedAt: sub.submittedAt,
         completedAt: sub.submittedAt,
         duration: `${Math.round(exam.duration / 60)} minutes`,
         questionCount: qCount,
         type: exam.type,
+        isAvailable: false,
       };
     });
 
@@ -156,9 +191,13 @@ export async function GET(request: Request) {
         status: "AVAILABLE",
         score: 0,
         maxScore: exam.totalPoints || 100,
-        passingScore: exam.passingScore || 65,
+        finalScore: null,
+        passingScore: exam.passingScore ?? 65,
+        passed: false,
         startedAt: null,
         completedAt: null,
+        scheduledAt: exam.scheduledAt,
+        isAvailable: isExamAvailable(exam),
         duration: `${Math.round(exam.duration / 60)} minutes`,
         questionCount:
           exam.part1Questions +
@@ -176,10 +215,7 @@ export async function GET(request: Request) {
       inProgress: examsResult.filter((e) => e.status === "IN_PROGRESS").length,
       available: examsResult.filter((e) => e.status === "AVAILABLE").length,
       passed: examsResult.filter(
-        (e) =>
-          e.status === "COMPLETED" &&
-          (e.maxScore > 0 ? (e.score / e.maxScore) * 100 : 0) >=
-            (e.passingScore || 65),
+        (e) => e.status === "COMPLETED" && e.passed === true,
       ).length,
     };
 

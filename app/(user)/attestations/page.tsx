@@ -133,7 +133,7 @@ export default function UserAttestationsPage() {
         scorePart1: transcript.part1Score || 0,
         scorePart2: transcript.part2Score || 0,
         scorePart3: transcript.part3Score || 0,
-        totalScore: transcript.finalScore || transcript.score,
+        totalScore: transcript.finalScore ?? transcript.totalScore,
         status: transcript.status,
         issuedAt: transcript.date
       };

@@ -29,13 +29,17 @@ interface ExamSessionDetail {
   id: string;
   examId: string;
   status: string;
-  scorePart1: number;
-  scorePart2: number;
-  scorePart3: number;
-  score: number;
-  totalScore: number;
+  scorePart1: number | null;
+  scorePart2: number | null;
+  scorePart3: number | null;
+  totalScore: number | null;
   internshipScore: number;
-  finalScore: number;
+  finalScore: number | null;
+  scorePercent: number | null;
+  maxScore: number;
+  passingScore: number;
+  passed: boolean;
+  showResults: boolean;
   gradedAt: string | null;
   startedAt: string;
   submittedAt: string | null;
@@ -136,15 +140,19 @@ export default function ResultDetailPage() {
   const maxPart1 = bareme.maxPart1 ?? data.exam.part1Points ?? 20;
   const maxPart2 = bareme.maxPart2 ?? data.exam.part2Points ?? 40;
   const maxPart3 = bareme.maxPart3 ?? data.exam.part3Points ?? 40;
-  const maxScore = bareme.totalMax ?? data.exam.totalPoints ?? 100;
-  const passingScore = data.exam.passingScore ?? 65;
+  const passingScore = data.passingScore ?? data.exam.passingScore ?? 65;
 
-  const scorePercent =
-    maxScore > 0 ? Math.round((data.totalScore / maxScore) * 100) : 0;
+  const isCorrected =
+    data.status === "GRADED" || data.status === "COMPLETED";
+  const showResults = data.showResults !== false;
+  const gradesVisible = isCorrected && showResults;
+  // Notes fournies par l'API (null tant que masquées / non corrigées).
+  const scorePercent = data.scorePercent ?? data.finalScore ?? null;
   const displayScore =
-    data.finalScore > 0 ? Math.round(data.finalScore) : scorePercent;
-  const isGraded = data.status === "GRADED" || data.status === "COMPLETED";
-  const passed = isGraded && displayScore >= passingScore;
+    scorePercent === null
+      ? 0
+      : Math.max(0, Math.min(100, Math.round(scorePercent)));
+  const passed = gradesVisible && data.passed;
 
   const parts = [
     { label: "Partie 1", score: data.scorePart1, max: maxPart1 },
@@ -179,14 +187,22 @@ export default function ResultDetailPage() {
                 <Badge
                   className={cn(
                     "rounded-full border-none text-[10px] font-black uppercase tracking-wider",
-                    !isGraded
+                    !isCorrected
                       ? "bg-slate-100 text-slate-600"
-                      : passed
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-rose-50 text-rose-700",
+                      : !showResults
+                        ? "bg-slate-100 text-slate-600"
+                        : passed
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-rose-50 text-rose-700",
                   )}
                 >
-                  {isGraded ? (passed ? "Réussi" : "Échoué") : "Non corrigé"}
+                  {!isCorrected
+                    ? "Non corrigé"
+                    : !showResults
+                      ? "Notes masquées"
+                      : passed
+                        ? "Réussi"
+                        : "Échoué"}
                 </Badge>
               </div>
               <h1 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight leading-tight">
@@ -199,7 +215,7 @@ export default function ResultDetailPage() {
             </div>
 
             <div className="text-center shrink-0">
-              {isGraded ? (
+              {gradesVisible ? (
                 <>
                   <p
                     className={cn(
@@ -218,14 +234,16 @@ export default function ResultDetailPage() {
                 <div className="flex flex-col items-center text-slate-400">
                   <Hourglass className="w-10 h-10 mb-1" />
                   <p className="text-[10px] font-bold uppercase tracking-widest">
-                    En correction
+                    {isCorrected && !showResults
+                      ? "Notes masquées"
+                      : "En correction"}
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          {isGraded && (
+          {gradesVisible && (
             <div className="mt-6 h-2.5 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className={cn(
@@ -243,46 +261,48 @@ export default function ResultDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Détail par partie */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {parts.map((part) => {
-          const pct =
-            part.max > 0 ? Math.round((part.score / part.max) * 100) : 0;
-          return (
-            <Card
-              key={part.label}
-              className="rounded-2xl border border-slate-100 bg-white shadow-sm"
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    {part.label}
-                  </span>
-                  <span className="text-xs font-bold text-slate-500">
-                    {pct}%
-                  </span>
-                </div>
-                <p className="text-2xl font-black text-slate-800">
-                  {part.score}
-                  <span className="text-base text-slate-400 font-bold">
-                    {" "}
-                    / {part.max}
-                  </span>
-                </p>
-                <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                    style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Détail par partie (masqué si notes non publiées) */}
+      {gradesVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {parts.map((part) => {
+            const score = part.score ?? 0;
+            const pct = part.max > 0 ? Math.round((score / part.max) * 100) : 0;
+            return (
+              <Card
+                key={part.label}
+                className="rounded-2xl border border-slate-100 bg-white shadow-sm"
+              >
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {part.label}
+                    </span>
+                    <span className="text-xs font-bold text-slate-500">
+                      {pct}%
+                    </span>
+                  </div>
+                  <p className="text-2xl font-black text-slate-800">
+                    {score}
+                    <span className="text-base text-slate-400 font-bold">
+                      {" "}
+                      / {part.max}
+                    </span>
+                  </p>
+                  <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                      style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Notes complémentaires */}
-      {isGraded && (data.internshipScore > 0 || data.finalScore > 0) && (
+      {gradesVisible && (data.internshipScore > 0 || (data.finalScore ?? 0) > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {data.internshipScore > 0 && (
             <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm">
@@ -301,7 +321,7 @@ export default function ResultDetailPage() {
               </CardContent>
             </Card>
           )}
-          {data.finalScore > 0 && (
+          {(data.finalScore ?? 0) > 0 && (
             <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm">
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -316,7 +336,7 @@ export default function ResultDetailPage() {
                     Moyenne globale
                   </p>
                   <p className="text-xl font-black text-slate-800">
-                    {Math.round(data.finalScore)}%
+                    {Math.round(data.finalScore ?? 0)}%
                   </p>
                 </div>
               </CardContent>

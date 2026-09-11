@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { ExamType, ExamSession, Attestation } from "@/types";
+import { ExamType } from "@/types";
+import {
+  round2,
+  isCorrected,
+  resolveExamMax,
+  computeFinalScore,
+  isPassed,
+} from "@/lib/exams/scoring";
+
+interface CustomBareme {
+  totalMax?: number;
+  maxPart1?: number;
+  maxPart2?: number;
+  maxPart3?: number;
+}
 
 interface ExamResult {
   id: string;
   examName: string;
+  /** Conservé pour compatibilité UI : points bruts (remplace l'ancien alias legacy). */
   score: number;
+  totalScore: number;
   totalPoints: number;
   internshipScore: number;
-  finalScore: number;
+  finalScore: number | null;
+  passingScore: number;
+  passed: boolean;
   status: string;
   type: ExamType;
   date: Date | string;
@@ -39,7 +57,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const targetUserId = searchParams.get("userId");
-    
+
     // Si un userId est fourni, on vérifie si l'utilisateur est admin ou s'il demande son propre relevé
     let userId = userSession.id;
     if (targetUserId && targetUserId !== userSession.id) {
@@ -77,6 +95,14 @@ export async function GET(request: Request) {
             name: true,
             title: true,
             totalPoints: true,
+            part1Points: true,
+            part2Points: true,
+            part3Points: true,
+            part1Enabled: true,
+            part2Enabled: true,
+            part3Enabled: true,
+            passingScore: true,
+            showResults: true,
             type: true,
           },
         },
@@ -84,32 +110,53 @@ export async function GET(request: Request) {
       orderBy: { submittedAt: "desc" },
     });
 
-    const examResults: ExamResult[] = examSessions.map((session: any) => {
-      const customBareme = session.answers && typeof session.answers === 'object' 
-        ? (session.answers as any)._customBareme 
-        : null;
-      
-      const totalPoints = customBareme?.totalMax ?? (session.exam.totalPoints || 100);
+    const enriched = examSessions.map((session) => {
+      const answers = session.answers as { _customBareme?: CustomBareme } | null;
+      const customBareme = answers?._customBareme ?? null;
 
-      return {
+      const maxScore = customBareme?.totalMax ?? resolveExamMax(session.exam);
+      const passingScore = session.exam.passingScore ?? 65;
+      const isDone = isCorrected(session.status);
+      const hasFinalScore =
+        typeof session.finalScore === "number" && session.finalScore > 0;
+
+      // finalScore = pourcentage 0..100 ; fallback calculé sur les points bruts.
+      const finalScore = isDone
+        ? hasFinalScore
+          ? round2(session.finalScore)
+          : computeFinalScore(session.totalScore, maxScore)
+        : null;
+
+      const passed =
+        isDone && finalScore !== null && isPassed(finalScore, passingScore);
+
+      return { session, customBareme, maxScore, passingScore, finalScore, isDone, passed };
+    });
+
+    const examResults: ExamResult[] = enriched.map(
+      ({ session, customBareme, maxScore, passingScore, finalScore, passed }) => ({
         id: session.id,
         examName: session.exam.title || session.exam.name,
-        score: session.score,
-        totalPoints,
+        // On ne lit plus le champ legacy `score` : on expose les points bruts canoniques.
+        score: session.totalScore,
+        totalScore: session.totalScore,
+        totalPoints: maxScore,
         internshipScore: session.internshipScore,
-        finalScore: session.finalScore,
+        finalScore,
+        passingScore,
+        passed,
         status: session.status,
         type: session.exam.type,
         date: session.submittedAt || session.startedAt,
-        part1Score: (session as any).scorePart1,
-        part2Score: (session as any).scorePart2,
-        part3Score: (session as any).scorePart3,
-        maxPart1: customBareme?.maxPart1 || 20,
-        maxPart2: customBareme?.maxPart2 || 40,
-        maxPart3: customBareme?.maxPart3 || 40,
+        part1Score: session.scorePart1,
+        part2Score: session.scorePart2,
+        part3Score: session.scorePart3,
+        maxPart1: customBareme?.maxPart1 ?? session.exam.part1Points ?? 20,
+        maxPart2: customBareme?.maxPart2 ?? session.exam.part2Points ?? 40,
+        maxPart3: customBareme?.maxPart3 ?? session.exam.part3Points ?? 40,
         transcriptDownloadedAt: session.transcriptDownloadedAt,
-      };
-    });
+      }),
+    );
 
     // Récupérer les attestations
     const attestations = await prisma.attestation.findMany({
@@ -131,34 +178,23 @@ export async function GET(request: Request) {
       score: att.certificationScore || att.stageScore || undefined,
     }));
 
-    // Calculer les statistiques (UNIQUEMENT sur les examens OFFICIELS)
-    const officialSessions = examSessions.filter((s: any) => s.exam.type === "OFFICIAL");
-    
-    const totalExams = officialSessions.length;
-    const passedExams = officialSessions.filter((s: any) => {
-      // On utilise le finalScore (moyenne exam+stage) si disponible
-      const customBareme = s.answers && typeof s.answers === 'object' 
-        ? (s.answers as any)._customBareme 
-        : null;
-      const maxPoints = customBareme?.totalMax ?? ((s.exam as any).totalPoints || 100);
-      const percentage = s.finalScore || (s.score / maxPoints) * 100;
-      return percentage >= 65; // Seuil FSA à 65%
-    }).length;
-    
+    // Statistiques (UNIQUEMENT sur les examens OFFICIELS corrigés)
+    const officialCorrected = enriched.filter(
+      (entry) => entry.session.exam.type === "OFFICIAL" && entry.isDone,
+    );
+
+    const totalExams = officialCorrected.length;
+    const passedExams = officialCorrected.filter((entry) => entry.passed).length;
+
     const successRate =
       totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
 
-    // Calculer la moyenne globale (sur 100) - UNIQUEMENT OFFICIELS
     const globalAverage =
-      officialSessions.length > 0
-        ? officialSessions.reduce((acc: number, session: any) => {
-            const customBareme = session.answers && typeof session.answers === 'object' 
-              ? (session.answers as any)._customBareme 
-              : null;
-            const maxPoints = customBareme?.totalMax ?? ((session.exam as any).totalPoints || 100);
-            const percentage = session.finalScore || (session.score / maxPoints) * 100;
-            return acc + percentage;
-          }, 0) / officialSessions.length
+      totalExams > 0
+        ? officialCorrected.reduce(
+            (acc, entry) => acc + (entry.finalScore ?? 0),
+            0,
+          ) / totalExams
         : 0;
 
     return NextResponse.json({

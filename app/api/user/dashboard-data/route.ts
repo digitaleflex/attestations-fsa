@@ -2,6 +2,53 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { AttestationStatus, AttestationType } from '@prisma/client';
+import {
+  round2,
+  isCorrected,
+  resolveExamMax,
+  computeFinalScore,
+  isPassed,
+} from '@/lib/exams/scoring';
+
+/** Mapping d'affichage canonique des statuts de session. */
+function displayStatus(status: string): 'COMPLETED' | 'SUBMITTED' | 'IN_PROGRESS' {
+  if (isCorrected(status)) return 'COMPLETED';
+  if (status === 'PENDING_REVIEW') return 'SUBMITTED';
+  return 'IN_PROGRESS';
+}
+
+interface ScoringExam {
+  totalPoints: number;
+  part1Points?: number | null;
+  part2Points?: number | null;
+  part3Points?: number | null;
+  part1Enabled?: boolean | null;
+  part2Enabled?: boolean | null;
+  part3Enabled?: boolean | null;
+  passingScore: number | null;
+}
+
+interface ScoringSession {
+  totalScore: number;
+  finalScore: number;
+  status: string;
+  exam: ScoringExam | null;
+}
+
+/** Pourcentage canonique d'une session corrigée (via finalScore, fallback points bruts). */
+function resolveSessionFinalScore(session: ScoringSession): number | null {
+  if (!isCorrected(session.status)) return null;
+  if (typeof session.finalScore === 'number' && session.finalScore > 0) {
+    return round2(session.finalScore);
+  }
+  const maxScore = resolveExamMax(session.exam ?? {});
+  return computeFinalScore(session.totalScore, maxScore);
+}
+
+function isSessionPassed(session: ScoringSession): boolean {
+  const finalScore = resolveSessionFinalScore(session);
+  return finalScore !== null && isPassed(finalScore, session.exam?.passingScore);
+}
 
 export async function GET(request: Request) {
   try {
@@ -65,8 +112,22 @@ export async function GET(request: Request) {
         where: { userId },
         select: {
           totalScore: true,
+          finalScore: true,
+          status: true,
           submittedAt: true,
-          exam: { select: { passingScore: true, totalPoints: true, type: true } },
+          exam: {
+            select: {
+              passingScore: true,
+              totalPoints: true,
+              part1Points: true,
+              part2Points: true,
+              part3Points: true,
+              part1Enabled: true,
+              part2Enabled: true,
+              part3Enabled: true,
+              type: true,
+            },
+          },
         },
       }),
       // 4. Examens disponibles
@@ -93,6 +154,7 @@ export async function GET(request: Request) {
           id: true,
           examId: true,
           totalScore: true,
+          finalScore: true,
           submittedAt: true,
           status: true,
           answers: true,
@@ -102,11 +164,16 @@ export async function GET(request: Request) {
               name: true,
               description: true,
               totalPoints: true,
+              part1Points: true,
+              part2Points: true,
+              part3Points: true,
+              part1Enabled: true,
+              part2Enabled: true,
+              part3Enabled: true,
               passingScore: true,
               duration: true,
               part1Questions: true,
               part2Questions: true,
-              part3Enabled: true,
               type: true,
             },
           },
@@ -185,21 +252,32 @@ export async function GET(request: Request) {
     // B. Formater les examens (disponibles et complétés)
     const submittedExamIds = new Set(detailedSubmissions.map(s => s.examId));
 
-    const completedExamsFormatted = detailedSubmissions.map((sub: any) => {
+    const completedExamsFormatted = detailedSubmissions.map((sub) => {
       const exam = sub.exam;
       const qCount = exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0);
       const customBareme = sub.answers && typeof sub.answers === 'object' ? (sub.answers as any)._customBareme : null;
-      const maxScore = customBareme?.totalMax ?? (exam.totalPoints || 100);
+      const maxScore = customBareme?.totalMax ?? resolveExamMax(exam);
+
+      const isDone = isCorrected(sub.status);
+      const hasFinalScore = typeof sub.finalScore === 'number' && sub.finalScore > 0;
+      const finalScore = isDone
+        ? hasFinalScore
+          ? round2(sub.finalScore)
+          : computeFinalScore(sub.totalScore, maxScore)
+        : null;
+      const passingScore = exam.passingScore ?? 65;
 
       return {
         id: sub.examId,
         submissionId: sub.id,
         examName: exam.title || exam.name,
         examDescription: exam.description,
-        status: sub.status === 'GRADED' ? 'COMPLETED' : 'IN_PROGRESS',
+        status: displayStatus(sub.status),
         score: sub.totalScore,
         maxScore: maxScore,
-        passingScore: exam.passingScore || 65,
+        finalScore,
+        passingScore,
+        passed: isDone && finalScore !== null && isPassed(finalScore, passingScore),
         startedAt: sub.submittedAt,
         completedAt: sub.submittedAt,
         duration: `${Math.round(exam.duration / 60)} minutes`,
@@ -218,7 +296,9 @@ export async function GET(request: Request) {
         status: 'AVAILABLE',
         score: 0,
         maxScore: exam.totalPoints || 100,
-        passingScore: exam.passingScore || 65,
+        finalScore: null,
+        passingScore: exam.passingScore ?? 65,
+        passed: false,
         startedAt: null,
         completedAt: null,
         duration: `${Math.round(exam.duration / 60)} minutes`,
@@ -233,7 +313,7 @@ export async function GET(request: Request) {
       completed: examsResult.filter(e => e.status === 'COMPLETED').length,
       inProgress: examsResult.filter(e => e.status === 'IN_PROGRESS').length,
       available: examsResult.filter(e => e.status === 'AVAILABLE').length,
-      passed: examsResult.filter(e => e.status === 'COMPLETED' && (e.maxScore > 0 ? (e.score / e.maxScore) * 100 : 0) >= (e.passingScore || 65)).length,
+      passed: examsResult.filter(e => e.status === 'COMPLETED' && e.passed === true).length,
     };
 
     // C. Calculer les statistiques globales
@@ -243,27 +323,23 @@ export async function GET(request: Request) {
     const officialExams = examSessions.filter(s => s.exam?.type === 'OFFICIAL');
     const mockExams = examSessions.filter(s => s.exam?.type === 'MOCK');
 
-    const examsCompletedCount = officialExams.length;
-    const examsPassedCount = officialExams.filter(sub => {
-      const maxPoints = sub.exam?.totalPoints || 100;
-      const scorePercent = maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
-      const passingScore = sub.exam?.passingScore || 60;
-      return scorePercent >= passingScore;
-    }).length;
+    // Seules les sessions corrigées comptent comme réussies/échouées.
+    const officialCorrected = officialExams.filter((s) => isCorrected(s.status));
+    const mockCorrected = mockExams.filter((s) => isCorrected(s.status));
 
-    const mockExamsCompletedCount = mockExams.length;
-    const mockExamsPassedCount = mockExams.filter(sub => {
-      const maxPoints = sub.exam?.totalPoints || 100;
-      const scorePercent = maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0;
-      const passingScore = sub.exam?.passingScore || 60;
-      return scorePercent >= passingScore;
-    }).length;
+    const examsCompletedCount = officialCorrected.length;
+    const examsPassedCount = officialCorrected.filter(isSessionPassed).length;
+
+    const mockExamsCompletedCount = mockCorrected.length;
+    const mockExamsPassedCount = mockCorrected.filter(isSessionPassed).length;
 
     const averageScore = examsCompletedCount > 0
-      ? Math.round(officialExams.reduce((sum, sub) => {
-          const maxPoints = sub.exam?.totalPoints || 100;
-          return sum + (maxPoints > 0 ? Math.round((sub.totalScore / maxPoints) * 100) : 0);
-        }, 0) / examsCompletedCount)
+      ? Math.round(
+          officialCorrected.reduce(
+            (sum, sub) => sum + (resolveSessionFinalScore(sub) ?? 0),
+            0,
+          ) / examsCompletedCount,
+        )
       : 0;
 
     const internshipsApplied = internshipApplications.length;

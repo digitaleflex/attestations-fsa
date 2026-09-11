@@ -57,6 +57,8 @@ export default function UserExamsPage() {
           duration: string;
           questionCount: number;
           type: string;
+          isAvailable: boolean;
+          scheduledAt: string | null;
         }>;
         stats: {
           total: number;
@@ -90,9 +92,18 @@ export default function UserExamsPage() {
     staleTime: 60 * 1000, // Update every minute for countdown
   });
 
+  // Examens déjà affichés par la section CountdownTimer (annonce à venir)
+  const scheduledIds = new Set(
+    (scheduledData?.exams ?? []).map((exam: { id: string }) => exam.id),
+  );
+
   const filteredExams = data?.exams?.filter((exam: any) => {
-    if (statusFilter === "all") return true;
-    return exam.status === statusFilter.toUpperCase();
+    if (statusFilter !== "all" && exam.status !== statusFilter.toUpperCase()) {
+      return false;
+    }
+    // Évite le doublon : les examens à venir officiels ont déjà leur carte countdown.
+    if (tab === "OFFICIAL" && scheduledIds.has(exam.id)) return false;
+    return true;
   });
 
   const getStatusBadgeColor = (status: string) => {
@@ -311,7 +322,10 @@ export default function UserExamsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredExams.map((exam: any) => (
+          {filteredExams.map((exam: any) => {
+            const notYetAvailable =
+              exam.status === "AVAILABLE" && exam.isAvailable === false;
+            return (
             <Card
               key={exam.id}
               className="p-6 bg-white shadow-sm hover:shadow-md transition-shadow"
@@ -335,9 +349,11 @@ export default function UserExamsPage() {
                   </div>
                   <div className="flex-shrink-0 sm:mt-1 flex flex-col gap-2 items-end">
                     <Badge
-                      className={`${getStatusBadgeColor(exam.status)} px-3 py-1 shadow-sm font-medium`}
+                      className={`${notYetAvailable ? "bg-blue-100 text-blue-700 border-blue-200" : getStatusBadgeColor(exam.status)} px-3 py-1 shadow-sm font-medium`}
                     >
-                      {getStatusLabel(exam.status)}
+                      {notYetAvailable
+                        ? "Bientôt disponible"
+                        : getStatusLabel(exam.status)}
                     </Badge>
                     <Badge
                       variant="outline"
@@ -359,6 +375,22 @@ export default function UserExamsPage() {
                     <span>{exam.questionCount || 0} questions</span>
                   </div>
                 </div>
+
+                {/* Date/heure planifiée (annonce à venir) */}
+                {exam.scheduledAt && (
+                  <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
+                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <span>
+                      {new Date(exam.scheduledAt).toLocaleString("fr-FR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                )}
 
                 {/* Score if completed */}
                 {exam.status === "COMPLETED" && (
@@ -396,6 +428,15 @@ export default function UserExamsPage() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-3 border-t">
+                  {notYetAvailable ? (
+                    <Button
+                      disabled
+                      className="w-full gap-2 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold"
+                    >
+                      <Clock className="w-4 h-4" />
+                      Bientôt disponible
+                    </Button>
+                  ) : (
                   <Link
                     href={
                       exam.status === "COMPLETED" || exam.status === "SUBMITTED"
@@ -455,10 +496,12 @@ export default function UserExamsPage() {
                       <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                     </Button>
                   </Link>
+                  )}
                 </div>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
