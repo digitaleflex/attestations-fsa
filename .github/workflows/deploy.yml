@@ -88,11 +88,8 @@ jobs:
             echo "==> Stopping old containers..."
             docker compose --env-file .env.production -f compose.prod.yml down
 
-            echo "==> Building & starting..."
-            docker compose --env-file .env.production -f compose.prod.yml up -d --build
-
-            echo "==> Waiting for health check..."
-            sleep 15
+            echo "==> Building & starting (attente du healthcheck via --wait)..."
+            docker compose --env-file .env.production -f compose.prod.yml up -d --build --wait
 
             echo "==> Container status:"
             docker compose --env-file .env.production -f compose.prod.yml ps
