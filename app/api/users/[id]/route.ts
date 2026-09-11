@@ -5,6 +5,8 @@ import { hashPassword } from "better-auth/crypto";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { createNotification } from "@/lib/notifications";
+import { VISIBLE_EXAM_STATUSES } from "@/lib/exams/availability";
 
 const UpdateUserSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères").optional(),
@@ -18,6 +20,17 @@ const UpdateUserSchema = z.object({
   status: z.enum(["ACTIVE", "BLOCKED", "SUSPENDED"]).optional(),
   resetPasswordRequired: z.boolean().optional(),
   blockedReason: z.string().optional(),
+  // Affectation à un examen (null = retirer l'affectation)
+  examId: z
+    .string()
+    .min(1, "Identifiant d'examen invalide")
+    .nullable()
+    .optional(),
+  examScheduledAt: z
+    .string()
+    .or(z.date())
+    .nullable()
+    .optional(),
 });
 
 // GET - Détails d'un utilisateur
@@ -51,6 +64,17 @@ export async function GET(
         status: true,
         lastBlockedAt: true,
         blockedReason: true,
+        examId: true,
+        examScheduledAt: true,
+        exam: {
+          select: {
+            id: true,
+            title: true,
+            name: true,
+            status: true,
+            scheduledAt: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },
@@ -117,10 +141,82 @@ export async function PATCH(
     // Récupérer l'utilisateur actuel avant modification pour le log d'audit
     const currentUser = await prisma.user.findUnique({ 
       where: { id },
-      select: { status: true, role: true, email: true }
+      select: {
+        status: true,
+        role: true,
+        email: true,
+        examId: true,
+        examScheduledAt: true,
+      }
     });
     if (!currentUser) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    }
+
+    // ── Affectation à un examen ────────────────────────────────────────────
+    // Calcule les valeurs cibles de examId / examScheduledAt avec validation :
+    //  - l'examen doit exister et être visible (SCHEDULED/PUBLISHED) ;
+    //  - un créneau ne peut être défini sans examen ;
+    //  - retirer l'affectation efface aussi le créneau.
+    const touchesExam =
+      data.examId !== undefined || data.examScheduledAt !== undefined;
+
+    let resolvedExamId: string | null | undefined;
+    let resolvedScheduledAt: Date | null | undefined;
+    let scheduledExam: { id: string; title: string } | null = null;
+
+    if (touchesExam) {
+      const targetExamId =
+        data.examId !== undefined ? data.examId : currentUser.examId;
+
+      if (targetExamId) {
+        const exam = await prisma.exam.findUnique({
+          where: { id: targetExamId },
+          select: { id: true, title: true, status: true, scheduledAt: true },
+        });
+
+        if (
+          !exam ||
+          !VISIBLE_EXAM_STATUSES.includes(
+            exam.status as (typeof VISIBLE_EXAM_STATUSES)[number],
+          )
+        ) {
+          return NextResponse.json(
+            { error: "Examen introuvable ou non disponible" },
+            { status: 400 },
+          );
+        }
+
+        resolvedExamId = exam.id;
+        scheduledExam = { id: exam.id, title: exam.title };
+
+        if (data.examScheduledAt !== undefined) {
+          if (data.examScheduledAt === null) {
+            resolvedScheduledAt = null;
+          } else {
+            const parsed = new Date(data.examScheduledAt);
+            if (Number.isNaN(parsed.getTime())) {
+              return NextResponse.json(
+                { error: "Date de créneau invalide" },
+                { status: 400 },
+              );
+            }
+            resolvedScheduledAt = parsed;
+          }
+        } else if (data.examId !== undefined) {
+          // Nouvelle affectation sans créneau → reprend la date planifiée de l'examen
+          resolvedScheduledAt = exam.scheduledAt ?? null;
+        }
+      } else {
+        if (data.examScheduledAt) {
+          return NextResponse.json(
+            { error: "Un créneau ne peut être défini sans examen" },
+            { status: 400 },
+          );
+        }
+        resolvedExamId = null;
+        resolvedScheduledAt = null;
+      }
     }
 
     // Préparer les données pour la mise à jour
@@ -140,6 +236,12 @@ export async function PATCH(
     }
     if (data.resetPasswordRequired !== undefined) updateData.resetPasswordRequired = data.resetPasswordRequired;
     if (data.blockedReason !== undefined) updateData.blockedReason = data.blockedReason;
+    if (touchesExam) {
+      if (resolvedExamId !== undefined) updateData.examId = resolvedExamId;
+      if (resolvedScheduledAt !== undefined) {
+        updateData.examScheduledAt = resolvedScheduledAt;
+      }
+    }
 
     // Hacher le mot de passe si fourni
     let hashedPassword = "";
@@ -164,6 +266,8 @@ export async function PATCH(
           address: true,
           status: true,
           resetPasswordRequired: true,
+          examId: true,
+          examScheduledAt: true,
           updatedAt: true,
         },
       });
@@ -191,10 +295,48 @@ export async function PATCH(
       action: (data.status ? (data.status === 'ACTIVE' ? 'ACCOUNT_UNBLOCKED' : 'ACCOUNT_BLOCKED') : 'ADMIN_UPDATE_PROFILE') as "ACCOUNT_UNBLOCKED" | "ACCOUNT_BLOCKED" | "ADMIN_UPDATE_PROFILE",
       resource: 'USER',
       resourceId: id,
-      oldValue: { status: currentUser.status, role: currentUser.role },
-      newValue: { status: user.status, role: user.role, resetPasswordRequired: user.resetPasswordRequired },
+      oldValue: {
+        status: currentUser.status,
+        role: currentUser.role,
+        examId: currentUser.examId,
+        examScheduledAt: currentUser.examScheduledAt,
+      },
+      newValue: {
+        status: user.status,
+        role: user.role,
+        resetPasswordRequired: user.resetPasswordRequired,
+        examId: user.examId,
+        examScheduledAt: user.examScheduledAt,
+      },
       ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
+
+    // Notification in-app lors d'une nouvelle affectation à un examen
+    if (scheduledExam && data.examId !== undefined) {
+      try {
+        const scheduledLabel = user.examScheduledAt
+          ? new Date(user.examScheduledAt).toLocaleString("fr-FR")
+          : null;
+
+        await createNotification({
+          userId: id,
+          type: "GENERAL",
+          title: "Affectation à un examen",
+          message: `Vous avez été affecté à l'examen « ${scheduledExam.title} »${
+            scheduledLabel ? ` prévu le ${scheduledLabel}` : ""
+          }.`,
+          link: "/exams",
+          metadata: {
+            examId: scheduledExam.id,
+            examScheduledAt: user.examScheduledAt
+              ? new Date(user.examScheduledAt).toISOString()
+              : null,
+          },
+        });
+      } catch (notifyError) {
+        console.error("[USER_EXAM_ASSIGN_NOTIFY_ERROR]", notifyError);
+      }
+    }
 
     return NextResponse.json(
       { message: "Utilisateur modifié avec succès", user },

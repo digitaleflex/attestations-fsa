@@ -33,6 +33,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import Link from "next/link";
 import { UserExamResults } from "@/components/exams/user-exam-results";
@@ -56,7 +63,8 @@ import {
   AlertTriangle,
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CalendarClock
 } from "lucide-react";
 
 type UserForm = {
@@ -68,6 +76,26 @@ type UserForm = {
   birthPlace?: string;
   phone?: string;
   address?: string;
+};
+
+type AdminExamOption = {
+  id: string;
+  title: string;
+  name: string;
+  status: string;
+  scheduledAt?: string | null;
+};
+
+const toDatetimeLocal = (
+  value: Date | string | null | undefined,
+): string => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
 };
 
 export default function AdminUsersPage() {
@@ -100,6 +128,18 @@ export default function AdminUsersPage() {
   const [viewTab, setViewTab] = useState<"INFO" | "AUDIT">("INFO");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Affectation à un examen
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assigningUser, setAssigningUser] = useState<User | null>(null);
+  const [exams, setExams] = useState<AdminExamOption[]>([]);
+  const [examsLoading, setExamsLoading] = useState(false);
+  const [assignForm, setAssignForm] = useState<{
+    examId: string;
+    examScheduledAt: string;
+  }>({ examId: "", examScheduledAt: "" });
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [assignRemoving, setAssignRemoving] = useState(false);
 
   // Mettre à jour l'URL quand les filtres changent
   const updateFilters = useCallback((newPage: number, newSearch: string) => {
@@ -280,8 +320,113 @@ export default function AdminUsersPage() {
     }
   };
 
+  const fetchExams = async () => {
+    setExamsLoading(true);
+    try {
+      const res = await fetch("/api/admin/exams");
+      if (!res.ok) throw new Error("Erreur lors du chargement des examens");
+      const data = await res.json();
+      setExams(Array.isArray(data) ? (data as AdminExamOption[]) : []);
+    } catch {
+      toast.error("Échec du chargement des examens");
+    } finally {
+      setExamsLoading(false);
+    }
+  };
+
+  const handleOpenAssignDialog = (user: User) => {
+    setAssigningUser(user);
+    setAssignForm({
+      examId: user.examId || "",
+      examScheduledAt: toDatetimeLocal(user.examScheduledAt),
+    });
+    setAssignDialogOpen(true);
+    if (exams.length === 0 && !examsLoading) {
+      fetchExams();
+    }
+  };
+
+  const handleExamSelect = (value: string) => {
+    setAssignForm((prev) => {
+      if (!value) return { examId: "", examScheduledAt: "" };
+      const selected = exams.find((e) => e.id === value);
+      return {
+        examId: value,
+        examScheduledAt:
+          prev.examScheduledAt || toDatetimeLocal(selected?.scheduledAt ?? null),
+      };
+    });
+  };
+
+  const handleSaveAssignment = async () => {
+    if (!assigningUser) return;
+    if (!assignForm.examId) {
+      toast.error("Sélectionnez un examen à affecter");
+      return;
+    }
+    setAssignSaving(true);
+    try {
+      const res = await fetch(`/api/users/${assigningUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          examId: assignForm.examId,
+          examScheduledAt: assignForm.examScheduledAt
+            ? new Date(assignForm.examScheduledAt).toISOString()
+            : null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.message || "Erreur");
+      }
+      toast.success("Affectation enregistrée !");
+      setAssignDialogOpen(false);
+      fetchUsers(queryPage, querySearch);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(message);
+    } finally {
+      setAssignSaving(false);
+    }
+  };
+
+  const handleRemoveAssignment = async () => {
+    if (!assigningUser) return;
+    setAssignRemoving(true);
+    try {
+      const res = await fetch(`/api/users/${assigningUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examId: null, examScheduledAt: null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.message || "Erreur");
+      }
+      toast.success("Affectation retirée !");
+      setAssignDialogOpen(false);
+      fetchUsers(queryPage, querySearch);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(message);
+    } finally {
+      setAssignRemoving(false);
+    }
+  };
+
   // Le filtrage se fait maintenant côté serveur via fetchUsers(queryPage, querySearch)
   const displayUsers = users;
+  const visibleExams = exams.filter(
+    (e) => e.status === "SCHEDULED" || e.status === "PUBLISHED",
+  );
+  const assignedExam = exams.find((e) => e.id === assigningUser?.examId);
+  const currentExamLabel =
+    assigningUser?.exam?.title ||
+    assignedExam?.title ||
+    assignedExam?.name ||
+    assigningUser?.examId ||
+    null;
 
   return (
     <div className="p-6 space-y-6">
@@ -292,9 +437,6 @@ export default function AdminUsersPage() {
         </Link>
         <Link href="/admin/internships" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
           Demandes de stage
-        </Link>
-        <Link href="/admin/waitlist" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          Liste d'attente
         </Link>
       </div>
 
@@ -526,6 +668,14 @@ export default function AdminUsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleOpenAssignDialog(u)}
+                          title="Affecter un examen"
+                        >
+                          <CalendarClock className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleOpenDialog(u)}
                           title="Modifier"
                         >
@@ -603,6 +753,14 @@ export default function AdminUsersPage() {
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => handleViewDetails(u)}>
                       <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenAssignDialog(u)}
+                      title="Affecter un examen"
+                    >
+                      <CalendarClock className="w-4 h-4 text-blue-600" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
                       <Edit className="w-4 h-4 text-slate-600" />
@@ -830,6 +988,134 @@ export default function AdminUsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Affecter un examen</DialogTitle>
+          </DialogHeader>
+
+          {assigningUser && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">
+                Candidat :{" "}
+                <span className="font-medium text-slate-800">
+                  {assigningUser.name || assigningUser.email || assigningUser.id}
+                </span>
+              </p>
+
+              <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  Affectation actuelle
+                </p>
+                {assigningUser.examId ? (
+                  <>
+                    <p className="font-medium text-slate-800">
+                      {currentExamLabel}
+                    </p>
+                    <p className="text-slate-500">
+                      {assigningUser.examScheduledAt
+                        ? new Date(assigningUser.examScheduledAt).toLocaleString(
+                            "fr-FR",
+                          )
+                        : "Aucun créneau défini"}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-slate-500 italic">
+                    Aucun examen affecté
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="assign-exam">Examen</Label>
+                <Select
+                  value={assignForm.examId}
+                  onValueChange={handleExamSelect}
+                >
+                  <SelectTrigger id="assign-exam" className="mt-1">
+                    <SelectValue
+                      placeholder={
+                        examsLoading
+                          ? "Chargement..."
+                          : "Sélectionner un examen"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {visibleExams.map((exam) => (
+                      <SelectItem key={exam.id} value={exam.id}>
+                        {exam.title || exam.name} (
+                        {exam.status === "PUBLISHED" ? "Publié" : "Planifié"})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {visibleExams.length === 0 && !examsLoading && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Aucun examen visible (SCHEDULED / PUBLISHED).
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="assign-scheduled">
+                  Créneau (date et heure) — optionnel
+                </Label>
+                <Input
+                  id="assign-scheduled"
+                  type="datetime-local"
+                  value={assignForm.examScheduledAt}
+                  onChange={(e) =>
+                    setAssignForm((prev) => ({
+                      ...prev,
+                      examScheduledAt: e.target.value,
+                    }))
+                  }
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleRemoveAssignment}
+                  disabled={assignRemoving || !assigningUser.examId}
+                  className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                >
+                  {assignRemoving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  Retirer l&apos;affectation
+                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAssignDialogOpen(false)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSaveAssignment}
+                    disabled={assignSaving}
+                  >
+                    {assignSaving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    Enregistrer
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
           <AlertDialogHeader>

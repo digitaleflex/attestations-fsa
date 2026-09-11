@@ -89,12 +89,6 @@ export default function AdminFormationsPage() {
           <Link href="/admin/exams" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
             Examens
           </Link>
-          <Link href="/admin/resources" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-            Ressources
-          </Link>
-          <Link href="/admin/tasks" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-            Missions Portfolios
-          </Link>
         </div>
 
         {/* Header */}

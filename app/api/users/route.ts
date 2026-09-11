@@ -59,6 +59,17 @@ export async function GET(request: Request) {
           phone: true,
           address: true,
           status: true,
+          examId: true,
+          examScheduledAt: true,
+          exam: {
+            select: {
+              id: true,
+              title: true,
+              name: true,
+              status: true,
+              scheduledAt: true,
+            },
+          },
           createdAt: true,
           updatedAt: true,
         },
