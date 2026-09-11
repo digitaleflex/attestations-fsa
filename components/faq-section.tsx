@@ -40,18 +40,18 @@ export function FaqSection() {
     ];
 
     return (
-        <div className="w-full max-w-3xl mx-auto my-16 px-4 animate-fade-in-up delay-400">
-            <h2 className="text-2xl font-bold text-center text-gray-800 mb-8 font-display">
+        <div className="w-full max-w-3xl mx-auto my-16 px-4">
+            <h2 className="text-3xl font-extrabold text-center text-ink mb-10 tracking-tight">
                 Questions Fréquentes
             </h2>
-            <div className="bg-white/60 backdrop-blur-sm border border-gray-100 rounded-xl shadow-sm p-6">
+            <div className="bg-surface border border-line rounded-panel shadow-soft p-6 md:p-8">
                 <Accordion type="single" collapsible className="w-full">
                     {faqs.map((faq, index) => (
                         <AccordionItem key={index} value={`item-${index}`}>
-                            <AccordionTrigger className="text-left font-semibold text-gray-800">
+                            <AccordionTrigger className="text-left font-bold text-ink hover:text-brand-strong transition-colors">
                                 {faq.question}
                             </AccordionTrigger>
-                            <AccordionContent className="text-gray-600">
+                            <AccordionContent className="text-ink-muted leading-relaxed">
                                 {faq.answer}
                             </AccordionContent>
                         </AccordionItem>

@@ -2,14 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { 
-  Sprout, 
-  Search, 
-  ArrowRight, 
-  CheckCircle, 
+import {
+  Search,
+  ArrowRight,
+  CheckCircle,
   Sparkles,
   Target,
-  X,
   Activity
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -33,9 +31,9 @@ interface FormationsClientProps {
 // Helper pour associer le format de formation de manière réaliste
 const getFormationFormat = (name: string) => {
   const nameLower = name.toLowerCase();
-  
+
   let format = "90% Pratique";
-  
+
   if (nameLower.includes("court") || nameLower.includes("accélér") || nameLower.includes("intens")) {
     format = "Pratique Intensive";
   } else if (nameLower.includes("week-end") || nameLower.includes("samedi")) {
@@ -43,7 +41,7 @@ const getFormationFormat = (name: string) => {
   } else if (nameLower.includes("spécial") || nameLower.includes("expert")) {
     format = "Immersion Professionnelle";
   }
-  
+
   return format;
 };
 
@@ -52,37 +50,37 @@ const getCategoryStyle = (category: string) => {
   const cat = category.toLowerCase();
   if (cat.includes("pisciculture") || cat.includes("aqua")) {
     return {
-      bg: "bg-blue-50/80 text-blue-700 border-blue-100/50",
-      accent: "text-blue-500",
-      cardBg: "from-blue-500/[0.015] to-transparent",
+      bg: "bg-blue-50/80 text-ocean-strong border-blue-100/50",
+      accent: "text-ocean",
+      cardBg: "from-ocean/[0.03] to-transparent",
       badge: "bg-blue-100 text-blue-800",
-      btnHover: "hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/20"
+      btnHover: "hover:bg-ocean-strong hover:shadow-lifted"
     };
   }
   if (cat.includes("agri") || cat.includes("mara")) {
     return {
-      bg: "bg-emerald-50/80 text-emerald-700 border-emerald-100/50",
-      accent: "text-emerald-500",
-      cardBg: "from-emerald-500/[0.015] to-transparent",
-      badge: "bg-emerald-100 text-emerald-800",
-      btnHover: "hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20"
+      bg: "bg-brand-soft text-brand-strong border-emerald-100/50",
+      accent: "text-brand",
+      cardBg: "from-brand/[0.03] to-transparent",
+      badge: "bg-brand-soft text-brand-strong",
+      btnHover: "hover:bg-brand-strong hover:shadow-lifted"
     };
   }
   if (cat.includes("elevage") || cat.includes("élevage") || cat.includes("avi")) {
     return {
       bg: "bg-amber-50/80 text-amber-700 border-amber-100/50",
       accent: "text-amber-500",
-      cardBg: "from-amber-500/[0.015] to-transparent",
+      cardBg: "from-harvest/[0.04] to-transparent",
       badge: "bg-amber-100 text-amber-800",
-      btnHover: "hover:bg-amber-600 hover:shadow-lg hover:shadow-amber-500/20"
+      btnHover: "hover:bg-amber-600 hover:shadow-lifted"
     };
   }
   return {
-    bg: "bg-slate-50/80 text-slate-700 border-slate-100/50",
-    accent: "text-emerald-500",
-    cardBg: "from-slate-500/[0.015] to-transparent",
-    badge: "bg-slate-100 text-slate-800",
-    btnHover: "hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20"
+    bg: "bg-surface-muted text-slate-700 border-line",
+    accent: "text-brand",
+    cardBg: "from-slate-500/[0.02] to-transparent",
+    badge: "bg-surface-muted text-slate-800",
+    btnHover: "hover:bg-brand-strong hover:shadow-lifted"
   };
 };
 
@@ -105,57 +103,57 @@ export default function FormationsClient({ initialFormations }: FormationsClient
   const categories = ["Toutes", ...Array.from(new Set(initialFormations.map(f => f.category)))];
 
   const filteredFormations = initialFormations.filter(f => {
-    const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          f.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = activeCategory === "Toutes" || f.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] selection:bg-emerald-100 selection:text-emerald-900 pb-24 overflow-x-hidden w-full font-sans">
-      
+    <div className="min-h-screen bg-canvas selection:bg-brand-soft selection:text-brand-strong pb-24 overflow-x-hidden w-full font-sans">
+
       {/* Arrière-plan épuré */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-emerald-500/[0.02] rounded-full blur-[140px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-blue-500/[0.015] rounded-full blur-[120px]" />
+        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-brand/[0.04] rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-ocean/[0.03] rounded-full blur-[120px]" />
       </div>
 
       {/* --- HERO SECTION --- */}
       <section className="relative pt-24 md:pt-32 pb-8 px-4 md:px-6 z-10">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="flex flex-col items-center text-center space-y-6"
           >
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] text-emerald-600">
-               <Sparkles className="w-4 h-4 fill-emerald-500" />
-               <span className="text-[10px] font-black uppercase tracking-[0.25em]">Excellence FSA</span>
+            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-pill bg-white border border-line shadow-soft text-brand-strong">
+               <Sparkles className="w-4 h-4 text-brand" />
+               <span className="text-[10px] font-extrabold uppercase tracking-[0.25em]">Excellence FSA</span>
             </div>
-            
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 leading-[0.95] tracking-tight max-w-4xl">
+
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-ink leading-[0.95] tracking-[-0.03em] max-w-4xl">
               Devenez un expert de <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-500 to-blue-600">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand via-teal-500 to-ocean">
                 l'Or Vert & Bleu.
               </span>
             </h1>
 
-            <p className="text-slate-500 text-sm md:text-base max-w-xl font-medium leading-relaxed px-4">
-              Explorez nos programmes d'élite conçus pour transformer votre vision 
+            <p className="text-ink-muted text-sm md:text-base max-w-xl font-medium leading-relaxed px-4">
+              Explorez nos programmes d'élite conçus pour transformer votre vision
               en entreprise agro-piscicole prospère et durable.
             </p>
 
             {/* Barre de recherche minimaliste */}
             <div className="w-full max-w-xl mx-auto pt-6 px-2 md:px-0">
-              <div className="bg-white rounded-2xl border border-slate-200/60 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-300">
+              <div className="bg-white rounded-panel border border-line p-1.5 shadow-soft focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10 transition-all duration-300">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1 flex items-center">
-                    <Search className="w-5 h-5 text-slate-400 absolute left-4" />
-                    <Input 
+                    <Search className="w-5 h-5 text-ink-muted absolute left-4" />
+                    <Input
                       ref={searchInputRef}
                       placeholder="Rechercher une formation ou une compétence..."
-                      className="w-full h-12 pl-12 pr-4 bg-transparent border-none focus:ring-0 text-base font-bold tracking-wide text-slate-800 placeholder:text-slate-300 placeholder:font-normal"
+                      className="w-full h-12 pl-12 pr-4 bg-transparent border-none focus:ring-0 text-base font-bold tracking-wide text-ink placeholder:text-slate-400 placeholder:font-normal shadow-none"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -171,10 +169,10 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                     <button
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
-                      className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap border transition-all duration-300 shrink-0 ${
+                      className={`px-5 py-2.5 rounded-pill text-[10px] font-extrabold uppercase tracking-widest whitespace-nowrap border transition-all duration-300 shrink-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20 ${
                         isActive
-                          ? "bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/10 scale-105"
-                          : "bg-white text-slate-500 border-slate-200/80 hover:text-slate-800 hover:border-slate-300 shadow-sm"
+                          ? "bg-brand text-white border-brand shadow-soft scale-[1.03]"
+                          : "bg-white text-ink-muted border-line hover:text-ink hover:border-brand/40 shadow-sm"
                       }`}
                     >
                       {cat}
@@ -190,14 +188,14 @@ export default function FormationsClient({ initialFormations }: FormationsClient
       {/* --- FORMATIONS GRID --- */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 mt-8 pb-20">
         <AnimatePresence mode="popLayout">
-          <motion.div 
+          <motion.div
             layout
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
           >
             {filteredFormations.map((f, idx) => {
               const style = getCategoryStyle(f.category);
               const format = getFormationFormat(f.name);
-              
+
               return (
                 <motion.div
                   key={f.id}
@@ -205,44 +203,44 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
-                  transition={{ 
-                    duration: 0.4, 
+                  transition={{
+                    duration: 0.4,
                     delay: idx * 0.05,
                     ease: "easeOut"
                   }}
                   className="group"
                 >
-                  <Card className={`h-full relative flex flex-col p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.015)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-500 overflow-hidden bg-gradient-to-br ${style.cardBg}`}>
-                    
+                  <Card className={`h-full relative flex flex-col p-8 rounded-panel bg-white border border-line shadow-soft hover:shadow-lifted hover:-translate-y-1 transition-all duration-500 overflow-hidden bg-gradient-to-br ${style.cardBg}`}>
+
                     {/* Badge catégorie */}
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-6 relative z-10">
-                      <Badge variant="outline" className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest uppercase border-none ${style.bg}`}>
+                      <Badge variant="outline" className={`px-4 py-1.5 rounded-pill text-[9px] font-extrabold tracking-widest uppercase border-none ${style.bg}`}>
                         {f.category}
                       </Badge>
                     </div>
-                    
-                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-3 tracking-tight leading-snug relative z-10">
+
+                    <h3 className="text-xl md:text-2xl font-extrabold text-ink mb-3 tracking-tight leading-snug relative z-10">
                       {f.name}
                     </h3>
-                    
-                    <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6 line-clamp-3 relative z-10">
+
+                    <p className="text-ink-muted text-sm font-medium leading-relaxed mb-6 line-clamp-3 relative z-10">
                       {f.description}
                     </p>
 
                     {/* Badge Format d'apprentissage */}
-                    <div className="flex items-center gap-2 mb-8 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50 w-fit relative z-10">
-                      <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{format}</span>
+                    <div className="flex items-center gap-2 mb-8 bg-surface-muted p-3 rounded-action border border-line w-fit relative z-10">
+                      <Activity className={`w-4 h-4 ${style.accent} animate-pulse`} />
+                      <span className="text-[9px] font-extrabold uppercase tracking-widest text-ink-muted">{format}</span>
                     </div>
 
                     {/* Compétences clés */}
                     <div className="grid grid-cols-1 gap-3 mb-8 relative z-10">
                       {f.skills.slice(0, 3).map((skill, sIdx) => (
                         <div key={sIdx} className="flex items-center gap-3.5 group/skill">
-                          <div className={`w-5.5 h-5.5 rounded-lg flex items-center justify-center bg-slate-50/50 border border-slate-100 group-hover/skill:${style.bg} transition-colors duration-300`}>
-                            <CheckCircle className="w-3.5 h-3.5 text-slate-200 group-hover/skill:text-inherit transition-colors duration-300" />
+                          <div className={`w-6 h-6 rounded-control flex items-center justify-center bg-surface-muted border border-line group-hover/skill:${style.bg} transition-colors duration-300`}>
+                            <CheckCircle className="w-3.5 h-3.5 text-slate-300 group-hover/skill:text-inherit transition-colors duration-300" />
                           </div>
-                          <span className="text-xs font-semibold text-slate-600 group-hover/skill:text-slate-900 transition-colors duration-300">{skill}</span>
+                          <span className="text-xs font-semibold text-slate-600 group-hover/skill:text-ink transition-colors duration-300">{skill}</span>
                         </div>
                       ))}
                     </div>
@@ -250,7 +248,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                     {/* Bouton d'action */}
                     <div className="mt-auto relative z-10">
                       <Link href={`/formations/inscription?formationId=${f.id}`} className="block">
-                        <Button className={`w-full h-14 rounded-2xl bg-slate-900 text-white font-black hover:text-white transition-all duration-500 group/btn active:scale-[0.98] text-xs uppercase tracking-widest shadow-lg shadow-slate-100 ${style.btnHover}`}>
+                        <Button className={`w-full h-14 rounded-action bg-ink text-white font-extrabold hover:text-white transition-all duration-500 group/btn active:scale-[0.98] text-xs uppercase tracking-widest shadow-soft ${style.btnHover}`}>
                           <span className="flex items-center justify-center gap-2">
                             S'inscrire
                             <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1.5" />
@@ -267,19 +265,19 @@ export default function FormationsClient({ initialFormations }: FormationsClient
 
         {/* Empty State */}
         {filteredFormations.length === 0 && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20 rounded-[3rem] bg-white border border-dashed border-slate-200 shadow-sm"
+            className="text-center py-20 rounded-panel bg-white border border-dashed border-line shadow-soft"
           >
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-20 h-20 bg-surface-muted rounded-pill flex items-center justify-center mx-auto mb-6">
                 <Target className="w-8 h-8 text-slate-300" />
             </div>
-            <h3 className="text-xl font-black text-slate-800 mb-2 tracking-tight">Aucune spécialité trouvée</h3>
-            <p className="text-slate-400 max-w-sm mx-auto font-medium text-sm">Recherchez avec d'autres termes ou parcourez une autre catégorie.</p>
-            <Button 
-                variant="link" 
-                className="mt-6 text-emerald-600 font-bold hover:text-emerald-700 transition-all text-sm"
+            <h3 className="text-xl font-extrabold text-ink mb-2 tracking-tight">Aucune spécialité trouvée</h3>
+            <p className="text-ink-muted max-w-sm mx-auto font-medium text-sm">Recherchez avec d'autres termes ou parcourez une autre catégorie.</p>
+            <Button
+                variant="link"
+                className="mt-6 text-brand-strong font-bold hover:text-brand transition-all text-sm"
                 onClick={() => {setSearchTerm(""); setActiveCategory("Toutes");}}
             >
               Réinitialiser la recherche
