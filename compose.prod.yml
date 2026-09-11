@@ -72,6 +72,15 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # Limites de ressources (hôte mutualisé) + durcissement
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 512
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   fsa-postgres:
     image: postgres:17-alpine
@@ -100,6 +109,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # Limites de ressources : hôte mutualisé + shm pour Postgres
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    shm_size: 256mb
+    stop_grace_period: 60s
+    security_opt:
+      - no-new-privileges:true
     # DB isolée du proxy : jamais exposée à Traefik, uniquement joignable via backend par fsa-app.
     # Débug local uniquement, ne jamais décommenter sur VPS public :
     # ports:
