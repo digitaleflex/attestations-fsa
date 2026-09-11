@@ -7,7 +7,15 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, ShieldCheck, Copy, CheckCircle, AlertTriangle, QrCode } from "lucide-react";
+import {
+  Loader2,
+  Shield,
+  ShieldCheck,
+  Copy,
+  CheckCircle,
+  AlertTriangle,
+  QrCode,
+} from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import QRCode from "react-qr-code";
@@ -43,9 +51,11 @@ export default function Admin2FASetupPage() {
         return;
       }
 
-      if (data?.totpURI) {
-        setTotpURI(data.totpURI);
-        setBackupCodes(data.backupCodes || []);
+      if (data) {
+        if (data.method === "totp") {
+          setTotpURI(data.totpURI);
+          setBackupCodes(data.backupCodes || []);
+        }
         setStep("verify");
         toast.success("2FA activée ! Vérifiez le code.");
       }
@@ -107,11 +117,14 @@ export default function Admin2FASetupPage() {
               2FA Configurée avec Succès !
             </h1>
             <p className="text-slate-500 mb-8">
-              Votre compte administrateur est maintenant protégé par la vérification en deux étapes
+              Votre compte administrateur est maintenant protégé par la
+              vérification en deux étapes
             </p>
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 mb-6">
-              <h3 className="font-semibold text-emerald-900 mb-2">🔐 Méthodes de vérification disponibles :</h3>
+              <h3 className="font-semibold text-emerald-900 mb-2">
+                🔐 Méthodes de vérification disponibles :
+              </h3>
               <ul className="text-left text-sm text-emerald-800 space-y-1">
                 <li>✅ Application d'authentification (TOTP)</li>
                 <li>✅ Code par email</li>
@@ -126,9 +139,7 @@ export default function Admin2FASetupPage() {
                 </Button>
               </Link>
               <Link href="/admin/settings">
-                <Button variant="outline">
-                  Paramètres
-                </Button>
+                <Button variant="outline">Paramètres</Button>
               </Link>
             </div>
           </div>
@@ -164,7 +175,10 @@ export default function Admin2FASetupPage() {
           <div className="space-y-6">
             {/* Password Input */}
             <div>
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <Label
+                htmlFor="password"
+                className="text-sm font-medium text-gray-700"
+              >
                 Mot de passe actuel
               </Label>
               <Input
@@ -201,8 +215,9 @@ export default function Admin2FASetupPage() {
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertTitle className="text-amber-900">Important</AlertTitle>
               <AlertDescription className="text-amber-800">
-                Après activation, vous devrez vérifier le code pour compléter la configuration.
-                Sauvegardez vos codes de secours dans un endroit sécurisé.
+                Après activation, vous devrez vérifier le code pour compléter la
+                configuration. Sauvegardez vos codes de secours dans un endroit
+                sécurisé.
               </AlertDescription>
             </Alert>
 
@@ -231,12 +246,15 @@ export default function Admin2FASetupPage() {
             {/* QR Code */}
             {method === "totp" && totpURI && (
               <div className="text-center">
-                <h3 className="text-lg font-semibold mb-4">Scannez ce QR Code</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                  Scannez ce QR Code
+                </h3>
                 <div className="bg-white p-6 inline-block rounded-xl border-2 border-indigo-200 mb-4">
                   <QRCode value={totpURI} size={200} />
                 </div>
                 <p className="text-sm text-slate-600">
-                  Ouvrez Google Authenticator, Authy ou une application similaire et scannez le code
+                  Ouvrez Google Authenticator, Authy ou une application
+                  similaire et scannez le code
                 </p>
               </div>
             )}
@@ -255,7 +273,10 @@ export default function Admin2FASetupPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 font-mono text-sm">
                   {backupCodes.map((code, i) => (
-                    <div key={i} className="bg-white px-3 py-2 rounded border border-slate-200">
+                    <div
+                      key={i}
+                      className="bg-white px-3 py-2 rounded border border-slate-200"
+                    >
                       {code}
                     </div>
                   ))}
@@ -263,7 +284,9 @@ export default function Admin2FASetupPage() {
                 <Alert className="mt-4 bg-red-50 border-red-200">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-800">
-                    Ces codes ne s'afficheront qu'une seule fois. Sauvegardez-les dans un gestionnaire de mots de passe ou imprimez-les.
+                    Ces codes ne s'afficheront qu'une seule fois.
+                    Sauvegardez-les dans un gestionnaire de mots de passe ou
+                    imprimez-les.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -271,7 +294,10 @@ export default function Admin2FASetupPage() {
 
             {/* Verification Code Input */}
             <div>
-              <Label htmlFor="code" className="text-sm font-medium text-gray-700">
+              <Label
+                htmlFor="code"
+                className="text-sm font-medium text-gray-700"
+              >
                 Code de vérification (6 chiffres)
               </Label>
               <Input
@@ -279,7 +305,9 @@ export default function Admin2FASetupPage() {
                 type="text"
                 maxLength={6}
                 value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) =>
+                  setVerificationCode(e.target.value.replace(/\D/g, ""))
+                }
                 placeholder="000000"
                 className="mt-1.5 h-11 text-center text-2xl tracking-widest font-mono"
               />
