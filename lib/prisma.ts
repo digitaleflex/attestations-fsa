@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 import { toEmailVerifiedDate } from "@/lib/email-verified";
 
 declare global {
@@ -16,9 +15,10 @@ const clientOptions: any = {
   log: process.env.NODE_ENV === "development" ? ["error"] : ["error"],
 };
 
-if (!isAccelerateUrl) {
-  const pool = new Pool({ connectionString });
-  clientOptions.adapter = new PrismaPg(pool);
+if (!isAccelerateUrl && connectionString) {
+  // config (et non un pg.Pool) : évite le double module `pg` sous bundling
+  // (pnpm) où l'adapter ne reconnaît pas l'instance Pool et retombe sur localhost.
+  clientOptions.adapter = new PrismaPg({ connectionString });
 }
 
 const prismaClient =
