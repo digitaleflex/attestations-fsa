@@ -1,8 +1,8 @@
-import { withBotId } from 'botid/next/config';
+import { withBotId } from "botid/next/config";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: "standalone",
   turbopack: {},
   webpack: (config, { isServer }) => {
     if (!isServer && config.resolve) {
@@ -17,8 +17,8 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: '**' },
-      { protocol: 'http', hostname: '**' },
+      { protocol: "https", hostname: "**" },
+      { protocol: "http", hostname: "**" },
     ],
   },
   // Exclude global-error from static generation

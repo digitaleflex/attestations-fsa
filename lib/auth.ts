@@ -80,7 +80,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
-    requireEmailVerification: true, // ✅ Mandatory OTP for registration (Re-enabled protection)
+    requireEmailVerification: process.env.NODE_ENV === "production",
   },
   databaseHooks: {
     user: {
@@ -110,7 +110,6 @@ export const auth = betterAuth({
     nextCookies(),
     admin({
       adminUserIds: [
-        // IDs loaded from env var ADMIN_USER_IDS (comma-separated)
         ...(process.env.ADMIN_USER_IDS
           ? process.env.ADMIN_USER_IDS.split(",")
               .map((id) => id.trim())
@@ -135,15 +134,16 @@ export const auth = betterAuth({
         },
         period: 5,
         allowedAttempts: 5,
-        storeOTP: "encrypted",
+        storeOTP: process.env.NODE_ENV === "production" ? "encrypted" : "plain",
       },
       backupCodeOptions: {
         amount: 10,
         length: 10,
-        storeBackupCodes: "encrypted",
+        storeBackupCodes:
+          process.env.NODE_ENV === "production" ? "encrypted" : "plain",
       },
-      twoFactorCookieMaxAge: 600, // 10 minutes
-      trustDeviceMaxAge: 30 * 24 * 60 * 60, // 30 days
+      twoFactorCookieMaxAge: 600,
+      trustDeviceMaxAge: 30 * 24 * 60 * 60,
     }),
     emailOTP({
       otpLength: 6,
