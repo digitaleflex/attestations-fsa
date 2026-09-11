@@ -163,10 +163,7 @@ export default function ExamSessionPage() {
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) { handleSubmit(); return 0; }
-        return prev - 1;
-      });
+      setTimeRemaining((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
   };
 
@@ -212,9 +209,20 @@ export default function ExamSessionPage() {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    submitMutation.mutate(answers);
+    submitMutation.mutate(answersRef.current);
     if (timerRef.current) clearInterval(timerRef.current);
   };
+
+  // Toujours pointer vers le dernier handleSubmit (évite la closure périmée du timer).
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+
+  // Soumission automatique à l'expiration du temps, après rendu : utilise les dernières réponses.
+  useEffect(() => {
+    if (!showInstructions && timeRemaining <= 0 && !isSubmitting) {
+      handleSubmitRef.current();
+    }
+  }, [timeRemaining, showInstructions, isSubmitting]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
