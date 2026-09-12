@@ -130,8 +130,9 @@ export async function PATCH(
         session,
         duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,
         passingScore: (passingScore !== undefined && passingScore !== null) ? parseInt(passingScore.toString()) : undefined,
-        randomizeQuestions: randomizeQuestions === true,
-        showResults: showResults === true,
+        // #130 m6 — PATCH partiel : ne pas écraser les booléens absents du body
+        randomizeQuestions: randomizeQuestions === undefined ? undefined : randomizeQuestions === true,
+        showResults: showResults === undefined ? undefined : showResults === true,
         type: type || undefined,
         totalPoints: Math.round(totalPoints),
         part1Enabled: enabledParts.some((p: ExamPartPayload) => p.type === "QCM"),

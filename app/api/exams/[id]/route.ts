@@ -132,6 +132,7 @@ export async function PATCH(
       where: { id },
       data: {
         title,
+        name: title, // #130 m8 — title et name restent synchronisés
         description,
         status,
         scheduledAt: isValidDate ? scheduledAtDate : null,

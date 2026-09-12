@@ -93,10 +93,11 @@ export async function GET(
       maxScore,
       passingScore,
       scorePercent: gradesVisible ? finalScoreValue : null,
-      passed:
-        isDone &&
-        finalScoreValue !== null &&
-        isPassed(finalScoreValue, passingScore),
+      passed: gradesVisible
+        ? isDone &&
+          finalScoreValue !== null &&
+          isPassed(finalScoreValue, passingScore)
+        : null,
       submittedAt: submission.submittedAt,
       showResults,
     });

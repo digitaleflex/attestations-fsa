@@ -32,7 +32,8 @@ interface ExamResult {
   maxPart1: number;
   maxPart2: number;
   maxPart3: number;
-  passed: boolean;
+  passed: boolean | null;
+  internshipScore: number | null;
   completedAt: Date | string | null;
   submittedAt: Date | string | null;
   showResults: boolean;
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
         scorePart1: gradesVisible ? sub.scorePart1 : null,
         scorePart2: gradesVisible ? sub.scorePart2 : null,
         scorePart3: gradesVisible ? sub.scorePart3 : null,
-        internshipScore: sub.internshipScore,
+        internshipScore: gradesVisible ? sub.internshipScore : null,
         finalScore: gradesVisible ? finalScore : null,
         totalScore: gradesVisible ? sub.totalScore : null,
         maxScore: entry.maxScore,
@@ -148,8 +149,9 @@ export async function GET(request: Request) {
         maxPart1: entry.maxPart1,
         maxPart2: entry.maxPart2,
         maxPart3: entry.maxPart3,
-        passed:
-          isDone && finalScore !== null && isPassed(finalScore, passingScore),
+        passed: gradesVisible
+          ? isDone && finalScore !== null && isPassed(finalScore, passingScore)
+          : null,
         completedAt: sub.gradedAt || sub.submittedAt,
         submittedAt: sub.submittedAt,
         showResults,

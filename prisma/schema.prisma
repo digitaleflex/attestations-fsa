@@ -278,7 +278,7 @@ model ExamSession {
   scorePart2      Float? // raw Part 2 admin-grade — null = partie non corrigée
   scorePart3      Float? // raw Part 3 admin-grade — null = partie non corrigée
   score           Float @default(0) // legacy Part 1 score alias — prefer scorePart1
-  totalScore      Float @default(0) // (scorePart1+2+3)/5 → /20 after grading
+  totalScore      Float @default(0) // somme brute des points (scorePart1+2+3) — pas de division par 5
   internshipScore Float @default(0) // internship component score
   finalScore      Float @default(0) // pourcentage examen 0..100 (totalScore / maxPoints * 100) — #124 : internshipScore est un composant SÉPARÉ (note de stage), il n'entre pas dans finalScore
   gradedBy    String?
