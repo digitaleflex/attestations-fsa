@@ -169,12 +169,14 @@ export async function POST(
       },
     });
 
-    // Attestation (hub unique) si réussi et examen officiel
+    // Attestation (hub unique) : émise si réussi, mise à jour ou révoquée sinon.
+    // Appelée pour tout examen OFFICIAL — issueExamAttestation gère la
+    // re-correction (upsert score/mention) et la révocation (REJECTED si !passed).
     let attestationGenerated = false;
     let attestationCode: string | undefined;
     let attestationError: string | undefined;
 
-    if (passed && exam.type === 'OFFICIAL') {
+    if (exam.type === 'OFFICIAL') {
       const attestation = await issueExamAttestation(id);
       attestationGenerated = attestation.created;
       attestationCode = attestation.code;

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   attestationFindFirst: vi.fn(),
   attestationCount: vi.fn(),
   attestationCreate: vi.fn(),
+  attestationUpdate: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -16,6 +17,7 @@ vi.mock("@/lib/prisma", () => ({
       findFirst: mocks.attestationFindFirst,
       count: mocks.attestationCount,
       create: mocks.attestationCreate,
+      update: mocks.attestationUpdate,
     },
   },
 }));
@@ -30,7 +32,7 @@ function baseSession(overrides: Record<string, unknown> = {}) {
     internshipScore: 90,
     startedAt: new Date("2026-01-01T10:00:00Z"),
     submittedAt: new Date("2026-01-01T11:00:00Z"),
-    exam: { id: "exam-1", formationId: "formation-1" },
+    exam: { id: "exam-1", formationId: "formation-1", passingScore: 65 },
     candidate: {
       name: "Alice Candidat",
       birthDate: new Date("2000-05-05"),
@@ -44,6 +46,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.attestationCount.mockResolvedValue(0 as never);
   mocks.attestationCreate.mockResolvedValue({} as never);
+  mocks.attestationUpdate.mockResolvedValue({} as never);
 });
 
 describe("issueExamAttestation", () => {
@@ -55,19 +58,88 @@ describe("issueExamAttestation", () => {
     expect(mocks.attestationCreate).not.toHaveBeenCalled();
   });
 
-  it("est idempotent : ne recrée pas une attestation existante", async () => {
+  it("est idempotent par session : ne recrée pas une attestation existante", async () => {
     mocks.sessionFindUnique.mockResolvedValue(baseSession() as never);
-    mocks.attestationFindFirst.mockResolvedValue({ id: "existing" } as never);
+    mocks.attestationFindFirst.mockResolvedValue({
+      id: "existing",
+      status: "VALIDATED",
+    } as never);
+
+    const result = await issueExamAttestation("session-1");
+
+    expect(result.created).toBe(false);
+    expect(result.updated).toBe(true);
+    expect(mocks.attestationCreate).not.toHaveBeenCalled();
+    expect(mocks.attestationUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("met à jour score/mention/status lors d'une re-correction à la hausse", async () => {
+    mocks.sessionFindUnique.mockResolvedValue(
+      baseSession({ finalScore: 95 }) as never,
+    );
+    mocks.attestationFindFirst.mockResolvedValue({
+      id: "existing",
+      status: "VALIDATED",
+    } as never);
+
+    const result = await issueExamAttestation("session-1");
+
+    expect(result.updated).toBe(true);
+    const arg = mocks.attestationUpdate.mock.calls[0][0] as {
+      data: {
+        certificationScore: number;
+        certificationMention: string;
+        status: string;
+      };
+    };
+    expect(arg.data.certificationScore).toBe(95);
+    expect(arg.data.certificationMention).toBe("EXCELLENCE");
+    expect(arg.data.status).toBe("VALIDATED");
+  });
+
+  it("révoque (REJECTED) lors d'une re-correction à la baisse sous le seuil", async () => {
+    mocks.sessionFindUnique.mockResolvedValue(
+      baseSession({ finalScore: 40 }) as never,
+    );
+    mocks.attestationFindFirst.mockResolvedValue({
+      id: "existing",
+      status: "VALIDATED",
+    } as never);
+
+    const result = await issueExamAttestation("session-1");
+
+    expect(result.created).toBe(false);
+    expect(result.revoked).toBe(true);
+    const arg = mocks.attestationUpdate.mock.calls[0][0] as {
+      data: {
+        certificationScore: number;
+        certificationMention: string;
+        status: string;
+      };
+    };
+    expect(arg.data.certificationScore).toBe(40);
+    expect(arg.data.certificationMention).toBe("PASSABLE");
+    expect(arg.data.status).toBe("REJECTED");
+  });
+
+  it("n'émet rien si la session échoue et qu'aucune attestation n'existe", async () => {
+    mocks.sessionFindUnique.mockResolvedValue(
+      baseSession({ finalScore: 40 }) as never,
+    );
+    mocks.attestationFindFirst.mockResolvedValue(null as never);
 
     const result = await issueExamAttestation("session-1");
 
     expect(result.created).toBe(false);
     expect(mocks.attestationCreate).not.toHaveBeenCalled();
+    expect(mocks.attestationUpdate).not.toHaveBeenCalled();
   });
 
   it("échoue proprement si aucune formation n'est disponible", async () => {
     mocks.sessionFindUnique.mockResolvedValue(
-      baseSession({ exam: { id: "exam-1", formationId: null } }) as never,
+      baseSession({
+        exam: { id: "exam-1", formationId: null, passingScore: 65 },
+      }) as never,
     );
     mocks.formationFindFirst.mockResolvedValue(null as never);
 
@@ -90,12 +162,18 @@ describe("issueExamAttestation", () => {
     expect(mocks.attestationCreate).toHaveBeenCalledTimes(1);
 
     const arg = mocks.attestationCreate.mock.calls[0][0] as {
-      data: { certificationMention: string; status: string; type: string };
+      data: {
+        certificationMention: string;
+        status: string;
+        type: string;
+        sessionId: string;
+      };
     };
     // finalScore = 88 -> TRES_BIEN sur l'échelle des mentions
     expect(arg.data.certificationMention).toBe("TRES_BIEN");
     expect(arg.data.status).toBe("VALIDATED");
     expect(arg.data.type).toBe("CERTIFICATION");
+    expect(arg.data.sessionId).toBe("session-1");
   });
 
   it("ne throw jamais : capture les erreurs Prisma", async () => {
