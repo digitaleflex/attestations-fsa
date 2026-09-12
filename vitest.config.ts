@@ -24,10 +24,10 @@ export default defineConfig({
       // filet de sécurité atterrissent (cf. #66 puis #133-#141).
       // Ne jamais baisser ces valeurs.
       thresholds: {
-        statements: 6,
-        branches: 6,
-        functions: 9,
-        lines: 6,
+        statements: 10,
+        branches: 9,
+        functions: 12,
+        lines: 10,
       },
     },
   },
