@@ -129,7 +129,7 @@ export async function PATCH(
         formation: formationId ? { connect: { id: formationId } } : undefined,
         session,
         duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,
-        passingScore: (passingScore !== undefined && passingScore !== null) ? parseInt(passingScore.toString()) : undefined,
+        passingScore: (passingScore !== undefined && passingScore !== null) ? Math.round(Number(passingScore)) : undefined,
         randomizeQuestions: randomizeQuestions === true,
         showResults: showResults === true,
         type: type || undefined,

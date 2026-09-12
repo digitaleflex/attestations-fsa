@@ -46,9 +46,9 @@ export function StepSummary({ formData, saving, onSave }: Props) {
             <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Durée Totale:</span> <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-none font-bold">{formatSeconds(formData.duration || 0)}</Badge></div>
             <div className="text-sm flex items-center gap-2">
               <span className="text-slate-400">Seuil de Réussite:</span>
-              <span className="font-bold text-emerald-600">{formData.passingScore || 60}%</span>
+              <span className="font-bold text-emerald-600">{formData.passingScore || 65}%</span>
               <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-black border border-emerald-100">
-                ({((formData.passingScore || 60) * 20) / 100}/20)
+                ({((formData.passingScore || 65) * 20) / 100}/20)
               </span>
             </div>
             <div className="flex gap-2 pt-1">
