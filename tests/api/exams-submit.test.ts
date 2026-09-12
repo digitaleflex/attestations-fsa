@@ -272,4 +272,40 @@ describe("POST /api/exams/[id]/submit", () => {
     expect(body.maxScore).toBe(100);
     expect(body.scorePart1).toBe(20);
   });
+
+  it("119 — rejette une soumission après expiration de la durée", async () => {
+    stubAuthorized();
+    // Session démarrée il y a duration + tolérance + 1s → délai dépassé
+    db.sessionFindFirst.mockResolvedValueOnce({
+      startedAt: new Date(Date.now() - (3600 + 60 + 1) * 1000),
+      status: "IN_PROGRESS",
+    } as never);
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
+    } as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      part2Points: 0,
+      part3Points: 0,
+      part1Enabled: true,
+      part2Enabled: false,
+      part3Enabled: false,
+      totalPoints: 20,
+      type: "OFFICIAL",
+      passingScore: 65,
+      formationId: "formation-1",
+      duration: 3600,
+    } as never);
+    db.examPartFindMany.mockResolvedValue([
+      { order: 1, type: "QCM", points: 20 },
+    ] as never);
+
+    const res = await callSubmit({ q1: "o1" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Temps écoulé");
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
+  });
 });
