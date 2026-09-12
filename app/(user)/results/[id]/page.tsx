@@ -136,7 +136,11 @@ export default function ResultDetailPage() {
     );
   }
 
-  const bareme: ExamBareme = (data.answers as ExamBareme | null) ?? {};
+  // #120 — le barème snapshoté est imbriqué sous answers._customBareme
+  // (pas à la racine de answers) : sinon on retombe sur la config live
+  // de l'examen et score/max devient faux après édition.
+  const rawAnswers = data.answers as { _customBareme?: ExamBareme } | null;
+  const bareme: ExamBareme = rawAnswers?._customBareme ?? {};
   const maxPart1 = bareme.maxPart1 ?? data.exam.part1Points ?? 20;
   const maxPart2 = bareme.maxPart2 ?? data.exam.part2Points ?? 40;
   const maxPart3 = bareme.maxPart3 ?? data.exam.part3Points ?? 40;
