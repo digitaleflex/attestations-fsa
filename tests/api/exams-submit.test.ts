@@ -221,4 +221,55 @@ describe("POST /api/exams/[id]/submit", () => {
     // Pas d'attestation pour un examen en attente de correction
     expect(deps.issueExamAttestation).not.toHaveBeenCalled();
   });
+
+  it("parties multiples — max dérivé des ExamPart réels (2 QCM + OPEN)", async () => {
+    stubAuthorized();
+    db.sessionFindFirst
+      .mockResolvedValueOnce({
+        startedAt: new Date(Date.now() - 600_000),
+        status: "IN_PROGRESS",
+      } as never)
+      .mockResolvedValueOnce({
+        id: "session-1",
+        status: "PENDING_REVIEW",
+        scorePart1: 20,
+        totalScore: 20,
+        finalScore: 0,
+      } as never);
+
+    // Première partie QCM (order 1) : 20 pts — c'est elle qui est notée
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
+    } as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20, // legacy : première QCM seulement
+      part2Points: 50, // legacy : première OPEN seulement
+      part3Points: 0,
+      part1Enabled: true,
+      part2Enabled: true,
+      part3Enabled: false,
+      totalPoints: 100,
+      type: "OFFICIAL",
+      passingScore: 65,
+      formationId: "formation-1",
+    } as never);
+    // 2 parties QCM (20+30) + 1 OPEN (50) → max réel = 100
+    db.examPartFindMany.mockResolvedValue([
+      { order: 1, type: "QCM", points: 20 },
+      { order: 2, type: "QCM", points: 30 },
+      { order: 3, type: "OPEN", points: 50 },
+    ] as never);
+    db.sessionUpdateMany.mockResolvedValue({ count: 1 } as never);
+
+    const res = await callSubmit({ q1: "o1" });
+    expect(res.status).toBe(201);
+
+    const body = await res.json();
+    expect(body.status).toBe("PENDING_REVIEW");
+    // maxScore = 100 (somme des ExamPart réels), pas 70 (legacy 20+50)
+    expect(body.maxScore).toBe(100);
+    expect(body.scorePart1).toBe(20);
+  });
 });

@@ -154,15 +154,16 @@ export async function POST(request: Request) {
         type: (body.type as ExamType) || "OFFICIAL",
         scheduledAt: (scheduledAt && !isNaN(new Date(scheduledAt).getTime())) ? new Date(scheduledAt) : null,
         
-        // Legacy summary fields
+        // Legacy summary fields — partNPoints = somme de TOUTES les parties
+        // du type (cohérent avec totalPoints, même à parties multiples).
         part1Enabled: enabledParts.some((p) => p.type === "QCM"),
         part2Enabled: enabledParts.some((p) => p.type === "OPEN"),
         part3Enabled: enabledParts.some((p) => p.type === "CASE_STUDY"),
-        part1Questions: enabledParts.find((p) => p.type === "QCM")?.questions?.length || 0,
-        part2Questions: enabledParts.find((p) => p.type === "OPEN")?.questions?.length || 0,
-        part1Points: Math.round(enabledParts.find((p) => p.type === "QCM")?.points || 0),
-        part2Points: Math.round(enabledParts.find((p) => p.type === "OPEN")?.points || 0),
-        part3Points: Math.round(enabledParts.find((p) => p.type === "CASE_STUDY")?.points || 0),
+        part1Questions: enabledParts.filter((p) => p.type === "QCM").reduce((n, p) => n + (p.questions?.length || 0), 0),
+        part2Questions: enabledParts.filter((p) => p.type === "OPEN").reduce((n, p) => n + (p.questions?.length || 0), 0),
+        part1Points: Math.round(enabledParts.filter((p) => p.type === "QCM").reduce((n, p) => n + (p.points || 0), 0)),
+        part2Points: Math.round(enabledParts.filter((p) => p.type === "OPEN").reduce((n, p) => n + (p.points || 0), 0)),
+        part3Points: Math.round(enabledParts.filter((p) => p.type === "CASE_STUDY").reduce((n, p) => n + (p.points || 0), 0)),
         part3Mode: enabledParts.find((p) => p.type === "CASE_STUDY")?.mode as string || "digital",
         part3Subject: enabledParts.find((p) => p.type === "CASE_STUDY")?.scenario || enabledParts.find((p) => p.type === "CASE_STUDY")?.subject,
 

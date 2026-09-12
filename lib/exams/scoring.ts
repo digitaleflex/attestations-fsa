@@ -17,7 +17,7 @@ export function round2(value: number): number {
 
 /** A session is "corrected" only once its score is final. */
 export function isCorrected(status: string | null | undefined): boolean {
-  return status === 'COMPLETED' || status === 'GRADED';
+  return status === "COMPLETED" || status === "GRADED";
 }
 
 export interface ExamPointConfig {
@@ -35,9 +35,9 @@ export interface ExamPointConfig {
  * Sums the enabled parts' points; falls back to `totalPoints`, then 100.
  */
 export function resolveExamMax(exam: ExamPointConfig): number {
-  const part1 = exam.part1Enabled === false ? 0 : exam.part1Points ?? 0;
-  const part2 = exam.part2Enabled === false ? 0 : exam.part2Points ?? 0;
-  const part3 = exam.part3Enabled === false ? 0 : exam.part3Points ?? 0;
+  const part1 = exam.part1Enabled === false ? 0 : (exam.part1Points ?? 0);
+  const part2 = exam.part2Enabled === false ? 0 : (exam.part2Points ?? 0);
+  const part3 = exam.part3Enabled === false ? 0 : (exam.part3Points ?? 0);
 
   const sum = part1 + part2 + part3;
   if (sum > 0) return sum;
@@ -45,11 +45,33 @@ export function resolveExamMax(exam: ExamPointConfig): number {
   return exam.totalPoints && exam.totalPoints > 0 ? exam.totalPoints : 100;
 }
 
+export interface ExamPartMaxConfig {
+  points: number;
+}
+
+/**
+ * Maximum reachable raw score derived from the REAL ExamPart rows.
+ * Single source of truth for exams with multiple/renamed parts:
+ * sums every part's points (legacy `partNPoints` only captured the
+ * first part of each type, making `resolveExamMax` diverge from
+ * `totalPoints`). Falls back to `resolveExamMax` when no parts exist.
+ */
+export function resolveExamMaxFromParts(
+  parts: ExamPartMaxConfig[] | null | undefined,
+  exam?: ExamPointConfig,
+): number {
+  if (parts && parts.length > 0) {
+    const sum = parts.reduce((acc, p) => acc + (p.points || 0), 0);
+    if (sum > 0) return sum;
+  }
+  return exam ? resolveExamMax(exam) : 100;
+}
+
 /** Raw points for an auto-graded QCM part. */
 export function computePart1Score(
   correctAnswers: number,
   totalQuestions: number,
-  part1Points: number
+  part1Points: number,
 ): number {
   if (totalQuestions <= 0 || part1Points <= 0) return 0;
   const clamped = Math.min(Math.max(correctAnswers, 0), totalQuestions);
@@ -57,7 +79,10 @@ export function computePart1Score(
 }
 
 /** Convert a raw total score to a 0..100 percentage. */
-export function computeFinalScore(totalScore: number, totalPoints: number): number {
+export function computeFinalScore(
+  totalScore: number,
+  totalPoints: number,
+): number {
   if (totalPoints <= 0) return 0;
   return round2((totalScore / totalPoints) * 100);
 }
@@ -65,18 +90,14 @@ export function computeFinalScore(totalScore: number, totalPoints: number): numb
 /** Whether a percentage score reaches the exam passing threshold (default 65). */
 export function isPassed(
   finalScore: number,
-  passingScore: number | null | undefined
+  passingScore: number | null | undefined,
 ): boolean {
   return finalScore >= (passingScore ?? 65);
 }
 
 /** Canonical certification mentions (mirrors the Prisma `CertificationMention` enum). */
 export type CertificationMention =
-  | "PASSABLE"
-  | "ASSEZ_BIEN"
-  | "BIEN"
-  | "TRES_BIEN"
-  | "EXCELLENCE";
+  "PASSABLE" | "ASSEZ_BIEN" | "BIEN" | "TRES_BIEN" | "EXCELLENCE";
 
 /**
  * Single source of truth for certification mentions, from a 0..100 percentage.
