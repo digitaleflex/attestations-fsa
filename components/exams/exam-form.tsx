@@ -156,7 +156,11 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
           description: formData.description,
           status: formData.status,
           type: formData.type || "OFFICIAL",
-          scheduledAt: formData.scheduledAt,
+          // #126 — convertir en ISO UTC côté navigateur : le serveur stocke
+          // l'instant exact, plus d'interprétation dans le fuseau du serveur.
+          scheduledAt: formData.scheduledAt
+            ? new Date(formData.scheduledAt).toISOString()
+            : undefined,
           formationId: formData.formationId,
           session: formData.session,
           duration: formData.duration,
