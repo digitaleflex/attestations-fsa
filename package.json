@@ -16,7 +16,8 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "verify": "tsc --noEmit && eslint . && vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
