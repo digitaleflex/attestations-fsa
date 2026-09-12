@@ -32,8 +32,8 @@ interface ExamResult {
   type: ExamType;
   date: Date | string;
   part1Score?: number;
-  part2Score?: number;
-  part3Score?: number;
+  part2Score?: number | null;
+  part3Score?: number | null;
   maxPart1?: number;
   maxPart2?: number;
   maxPart3?: number;

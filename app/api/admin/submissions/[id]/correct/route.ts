@@ -18,8 +18,8 @@ import { issueExamAttestation } from '@/lib/attestations/issue';
 
 const CorrectBodySchema = z.object({
   part1Score: z.coerce.number().min(0).optional(),
-  part2Score: z.coerce.number().min(0).optional(),
-  part3Score: z.coerce.number().min(0).optional(),
+  part2Score: z.coerce.number().min(0).nullable().optional(),
+  part3Score: z.coerce.number().min(0).nullable().optional(),
   internshipScore: z.coerce.number().min(0).max(100).optional(),
   observations: z.string().optional(),
 });
@@ -79,14 +79,32 @@ export async function POST(
     if (part1Score !== undefined && part1Enabled && (part1Score < 0 || part1Score > mP1)) {
       throw new ApiErrorImpl('VALIDATION', `Le score Partie 1 doit être entre 0 et ${mP1}`);
     }
-    if (part2Score !== undefined && part2Enabled && (part2Score < 0 || part2Score > mP2)) {
+    if (part2Score != null && part2Enabled && (part2Score < 0 || part2Score > mP2)) {
       throw new ApiErrorImpl('VALIDATION', `Le score Partie 2 doit être entre 0 et ${mP2}`);
     }
-    if (part3Score !== undefined && part3Enabled && (part3Score < 0 || part3Score > mP3)) {
+    if (part3Score != null && part3Enabled && (part3Score < 0 || part3Score > mP3)) {
       throw new ApiErrorImpl('VALIDATION', `Le score Partie 3 doit être entre 0 et ${mP3}`);
     }
 
     // Parts désactivées ignorées ; sinon valeur fournie > valeur stockée > 0.
+    // Sentinelle « non corrigé » : null (ou undefined) sur une partie activée
+    // en PREMIÈRE correction → refus de passer GRADED (pas de fausse réussite).
+    const isFirstGrading = submission.status !== 'GRADED';
+    if (isFirstGrading) {
+      if (part2Enabled && part2Score == null) {
+        throw new ApiErrorImpl(
+          'VALIDATION',
+          'Partie 2 non corrigée : saisissez un score avant de valider'
+        );
+      }
+      if (part3Enabled && part3Score == null) {
+        throw new ApiErrorImpl(
+          'VALIDATION',
+          'Partie 3 non corrigée : saisissez un score avant de valider'
+        );
+      }
+    }
+
     const scorePart1 = round2(
       part1Enabled ? part1Score ?? submission.scorePart1 ?? 0 : 0
     );
