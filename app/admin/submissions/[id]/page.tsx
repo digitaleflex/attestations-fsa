@@ -79,8 +79,8 @@ interface Submission {
   id: string;
   status: string;
   scorePart1: number;
-  scorePart2: number;
-  scorePart3: number;
+  scorePart2: number | null;
+  scorePart3: number | null;
   totalScore: number;
   finalScore: number;
   internshipScore: number;
@@ -167,15 +167,15 @@ export default function AdminSubmissionDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [deletingScanId, setDeletingScanId] = useState<string | null>(null);
 
-  const [part2Score, setPart2Score] = useState("0");
-  const [part3Score, setPart3Score] = useState("0");
+  const [part2Score, setPart2Score] = useState("");
+  const [part3Score, setPart3Score] = useState("");
   const [internshipScore, setInternshipScore] = useState("0");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const applyScores = useCallback((data: Submission) => {
-    setPart2Score(String(data.scorePart2 ?? 0));
-    setPart3Score(String(data.scorePart3 ?? 0));
+    setPart2Score(data.scorePart2 == null ? "" : String(data.scorePart2));
+    setPart3Score(data.scorePart3 == null ? "" : String(data.scorePart3));
     setInternshipScore(String(data.internshipScore ?? 0));
   }, []);
 
@@ -205,14 +205,14 @@ export default function AdminSubmissionDetailPage() {
     if (!id || !submission) return;
     setSaving(true);
     try {
-      const payload: Record<string, number> = {
+      const payload: Record<string, number | null> = {
         internshipScore: Number(internshipScore) || 0,
       };
       if (submission.exam.part2Enabled) {
-        payload.part2Score = Number(part2Score) || 0;
+        payload.part2Score = part2Score === "" ? null : Number(part2Score);
       }
       if (submission.exam.part3Enabled) {
-        payload.part3Score = Number(part3Score) || 0;
+        payload.part3Score = part3Score === "" ? null : Number(part3Score);
       }
 
       const res = await fetch(`/api/admin/submissions/${id}/correct`, {
@@ -424,7 +424,7 @@ export default function AdminSubmissionDetailPage() {
                 Partie 2
               </p>
               <p className="text-lg font-black text-slate-900">
-                {submission.scorePart2}
+                {submission.scorePart2 == null ? "—" : submission.scorePart2}
                 <span className="text-slate-400 text-sm">/{exam.part2Points}</span>
               </p>
               <p className="text-[10px] text-slate-400 mt-1">
@@ -436,7 +436,7 @@ export default function AdminSubmissionDetailPage() {
                 Partie 3
               </p>
               <p className="text-lg font-black text-slate-900">
-                {submission.scorePart3}
+                {submission.scorePart3 == null ? "—" : submission.scorePart3}
                 <span className="text-slate-400 text-sm">/{exam.part3Points}</span>
               </p>
               <p className="text-[10px] text-slate-400 mt-1">

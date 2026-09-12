@@ -189,8 +189,8 @@ export async function POST(
         answers: answers,
         scorePart1: roundedPart1,
         score: roundedPart1, // legacy alias = Part 1 raw score
-        scorePart2: 0,
-        scorePart3: 0,
+        scorePart2: null, // sentinelle « non corrigé » — noté par l'admin
+        scorePart3: null, // sentinelle « non corrigé » — noté par l'admin
         totalScore: roundedPart1,
         finalScore,
       },
