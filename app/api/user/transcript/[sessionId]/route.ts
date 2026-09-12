@@ -80,23 +80,26 @@ export async function GET(
       ? round2(examSession.finalScore)
       : computeFinalScore(examSession.totalScore, maxScore);
 
+    // #122 — showResults : masquer les notes tant que l'examen ne les expose pas.
+    const gradesVisible = exam.showResults !== false;
+
     return NextResponse.json({
       id: examSession.id,
       fullName: examSession.candidate?.name || user.name || "Candidat",
       formationName: userData?.formation?.name || "Formation Professionnelle",
       sessionName: examSession.exam?.title || "Session Standard",
-      scorePart1: examSession.scorePart1,
-      scorePart2: examSession.scorePart2,
-      scorePart3: examSession.scorePart3,
+      scorePart1: gradesVisible ? examSession.scorePart1 : null,
+      scorePart2: gradesVisible ? examSession.scorePart2 : null,
+      scorePart3: gradesVisible ? examSession.scorePart3 : null,
       maxPart1: custom.maxPart1 ?? exam.part1Points ?? 20,
       maxPart2: custom.maxPart2 ?? exam.part2Points ?? 40,
       maxPart3: custom.maxPart3 ?? exam.part3Points ?? 40,
-      totalScore: examSession.totalScore,
+      totalScore: gradesVisible ? examSession.totalScore : null,
       maxScore,
       totalPoints: maxScore,
-      finalScore,
+      finalScore: gradesVisible ? finalScore : null,
       passingScore,
-      passed: isPassed(finalScore, passingScore),
+      passed: gradesVisible ? isPassed(finalScore, passingScore) : null,
       status: examSession.status,
       issuedAt: examSession.submittedAt || examSession.updatedAt
     });
