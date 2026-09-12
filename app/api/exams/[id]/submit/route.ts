@@ -100,11 +100,26 @@ export async function POST(
         type: true,
         passingScore: true,
         formationId: true,
+        duration: true,
       },
     });
 
     if (!exam) {
       return NextResponse.json({ error: 'Examen non trouvé' }, { status: 404 });
+    }
+
+    // #119 — Contrainte serveur de durée : rejeter si le délai est dépassé.
+    // Le chrono client n'a aucune autorité ; seule la date serveur compte.
+    if (existingSession?.startedAt && exam.duration > 0) {
+      const deadlineMs =
+        existingSession.startedAt.getTime() + exam.duration * 1000;
+      const toleranceMs = 60_000; // tolérance réseau / horloge raisonnable
+      if (Date.now() > deadlineMs + toleranceMs) {
+        return NextResponse.json(
+          { error: 'Temps écoulé : la durée de l\'examen est dépassée' },
+          { status: 400 },
+        );
+      }
     }
 
     // Calculate Part 1 score BEFORE the update (we have all needed data)
