@@ -78,6 +78,14 @@ export async function POST(request: NextRequest) {
         status,
         type,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        // #130 m5 — champs legacy calculés depuis les parts réelles (pas 20/40/40)
+        part1Enabled: parts.some((p) => p.type === "QCM"),
+        part2Enabled: parts.some((p) => p.type === "OPEN"),
+        part3Enabled: parts.some((p) => p.type === "CASE_STUDY"),
+        part1Points: Math.round(parts.filter((p) => p.type === "QCM").reduce((n, p) => n + (p.points || 0), 0)),
+        part2Points: Math.round(parts.filter((p) => p.type === "OPEN").reduce((n, p) => n + (p.points || 0), 0)),
+        part3Points: Math.round(parts.filter((p) => p.type === "CASE_STUDY").reduce((n, p) => n + (p.points || 0), 0)),
+        totalPoints: Math.round(parts.reduce((n, p) => n + (p.points || 0), 0)),
         parts: {
           create: parts.map((part) => ({
             title: part.title,

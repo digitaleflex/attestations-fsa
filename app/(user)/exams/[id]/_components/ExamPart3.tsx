@@ -129,7 +129,9 @@ export function ExamPart3({
             <Button
               onClick={onSubmit}
               className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 h-12 sm:h-10 text-base sm:text-sm flex-1 sm:flex-none"
-              disabled={isSubmitting || !answers.part3?.trim()}
+              // #130 m10 — une partie 3 vide reste soumissible (l'admin note 0) :
+              // bloquer ici empêcherait tout candidat sans composition de terminer.
+              disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>
