@@ -116,6 +116,9 @@ export async function POST(
     );
 
     // Échelle canonique : totalScore = somme brute, finalScore = pourcentage.
+    // #124 — DÉCISION PRODUIT : internshipScore (note de stage) est un composant
+    // SÉPARÉ qui alimente stageScore de l'attestation ; il n'entre PAS dans
+    // finalScore (pourcentage de l'examen). Pas de moyenne pondérée composite.
     const totalScore = round2(scorePart1 + scorePart2 + scorePart3);
     const finalScore = Math.min(computeFinalScore(totalScore, totalPoints), 100);
     const passed = isPassed(finalScore, exam.passingScore);

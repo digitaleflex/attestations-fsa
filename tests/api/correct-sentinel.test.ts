@@ -152,6 +152,38 @@ describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#
     expect(deps.issueExamAttestation).toHaveBeenCalledWith("sub-1");
   });
 
+  it("124 — internshipScore (note de stage) n'affecte PAS finalScore", async () => {
+    // Décision produit documentée : internshipScore est un composant séparé
+    // (stageScore de l'attestation), il n'entre pas dans le pourcentage examen.
+    db.sessionFindUnique.mockResolvedValue(
+      makeSubmission({ internshipScore: 18, finalScore: 60 }),
+    );
+    db.sessionUpdate.mockResolvedValue(
+      makeSubmission({ status: "GRADED", scorePart2: 20, scorePart3: 20, internshipScore: 18 }),
+    );
+
+    const res = await callCorrect({
+      part1Score: 60,
+      part2Score: 20,
+      part3Score: 20,
+      internshipScore: 18,
+    });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    // finalScore = 100/100 = 100 % (internshipScore ignoré dans le calcul)
+    expect(json.submission.finalScore).toBe(100);
+    // internshipScore reste stocké tel quel (préservé, pas modifié par la correction)
+    expect(db.sessionUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          internshipScore: 18,
+          finalScore: 100,
+        }),
+      }),
+    );
+  });
+
   it("autorise la re-correction partielle d'une session déjà GRADED (sans null)", async () => {
     db.sessionFindUnique.mockResolvedValue(
       makeSubmission({
