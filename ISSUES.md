@@ -1,45 +1,108 @@
 # Issues — attestations-fsa
 
-## 🔴 Critique (sécurité / bugs fonctionnels)
-
-- [x] **#1** `app/api/temp-setup/route.ts` — neutralisé (retourne 404). **Action manuelle requise : `rm -rf app/api/temp-setup`**
-- [x] **#2** `lib/auth.ts:219` — `getAdminUser` corrigé : retourne `null` si `role` n'est pas `"ADMIN"` au lieu de defaulter
-- [ ] **#3** `adminUserIds` vide en attente des vrais UUIDs — bloqué par Prisma Postgres billing hold. Voir section "Migration VPS" ci-dessous.
-- [x] **#4** `middleware.ts:6` — `USER_ROUTES` complétée : `/courses`, `/mock-exams`, `/notifications`, `/portfolio`, `/support`, `/transcript`
-
-## 🟠 Architecture (duplication / design)
-
-- [x] **#5** Routes dupliquées auditées — frontend utilise uniquement : `/api/exams`, `/api/users`, `/api/submissions` (top-level). `/api/admin/users` et `/api/admin/submissions` sont morts. Déduplication complète = refactor frontend, déféré.
-- [x] **#6** `Admin` model supprimé du schema → **migration requise : `npx prisma migrate dev --name remove_legacy_models`**
-- [x] **#7** `Exam.title` et `Exam.name` — confirmé que les deux routes de création set `title: name`. Pas de bug actif. Suppression d'un champ = migration future après VPS.
-- [x] **#8** Scores `ExamSession` documentés dans le schema (commentaires par champ)
-- [x] **#9** `VerificationToken` supprimé du schema → **migration requise (même commande que #6)**
-
-## 🟡 Mineur / code smell
-
-- [x] **#10** Rôles normalisés lowercase partout : `getCurrentUser` retourne le rôle brut DB, `getAdminUser` vérifie `.toLowerCase() === 'admin'`, toutes les comparaisons API/composants alignées. `proxy.ts` (doublon pré-rename) vidé → **`git rm proxy.ts`**
-- [x] **#11** `pages.signIn` corrigé → `/auth` (était `/admin/login`)
-- [x] **#12** `submittedAt @default(now())` supprimé — migration requise (même commande que #6)
-- [x] **#13** Non-issue — `app/admin/page.tsx` est un simple redirect vers `/admin/dashboard`
-- [x] **#14** `/portfolios/[slug]` = placeholder statique sans data. Route canonique = `/p/[slug]`. Corrigé dans 3 fichiers : `api/user/portfolio`, `api/public/portfolios`, `app/p/[slug]` (URL hardcodée → `NEXT_PUBLIC_APP_URL`)
+> **Source de vérité : GitHub Issues** (`gh issue list`). Ce fichier est un miroir
+> de suivi local, mis à jour après chaque merge. Dernière synchro : **2026-09-12**.
 
 ---
 
-## Migration VPS (Prisma Postgres → self-hosted)
+## ✅ Résolues (fermées sur GitHub, code mergé sur `main`)
 
-**Situation :** `DATABASE_URL` pointe vers Prisma Postgres (`prisma+postgres://`) avec un hold de facture — aucune requête possible.
+### Sprint stabilité / infra (sept. 2026)
 
-**Étapes :**
-1. Payer la facture OU contacter support@prisma.io pour export de données
-2. `pg_dump "postgresql://..." > backup.sql` (une fois accès rétabli)
-3. Installer PostgreSQL sur VPS, `psql ... < backup.sql`
-4. Mettre `.env` → `DATABASE_URL=postgresql://user:pass@vps:5432/dbname`
-5. `npx prisma migrate deploy` (applique les migrations en attente : suppression Admin + VerificationToken)
-6. Récupérer les UUIDs des admins → compléter `lib/auth.ts` `adminUserIds`
-7. `npm uninstall @prisma/extension-accelerate` (déjà retiré du package.json)
+| Issue | Titre                                                           | Fix (commit / PR)                          |
+| :---- | :-------------------------------------------------------------- | :----------------------------------------- |
+| #20   | Sécurité : trier les 161 alertes Dependabot                     | `9134fdc`, `48777b0`, `5fb5eb1`, `b357304` |
+| #24   | Observabilité : endpoints `/api/health` et `/api/ready`         | PR #169 (`8978d95`)                        |
+| #30   | Prisma : index unique sur `TwoFactor.userId`                    | PR #170 (`75b882f`)                        |
+| #31   | Route `/portfolios` manquante — lien footer 404                 | PR #166 (`80f1c82`)                        |
+| #32   | `pnpm lint` cassé : `next lint` retiré dans Next 16             | PR #165 (`6eebf8b`)                        |
+| #66   | Tests d'or du cœur (scoring, submit, attestation, vérification) | PR #172 (`9a6a2ad`)                        |
+| #79   | Migrer `middleware.ts` → `proxy.ts` (Next.js 16)                | PR #167 (`89c854e`)                        |
+| #80   | Supprimer le lockfile npm obsolète (`package-lock.json`)        | PR #168 (`ec659a3`)                        |
+| #132  | Infrastructure de test & CI (vitest unifié, coverage, gate PR)  | PR #171 (`b0d096c`)                        |
 
-**Code déjà migré :** `lib/prisma.ts` ne dépend plus d'Accelerate.
+### Cœur métier (bugs critiques / majeurs)
 
-## Résolu
+| Issue | Titre                                                             | Fix (commit)                                           |
+| :---- | :---------------------------------------------------------------- | :----------------------------------------------------- |
+| #114  | [CRITIQUE] Le chrono soumet `{}` — perte de toutes les réponses   | `e42dc24` (merge `fix/issue-114-exam-timer-submit-v2`) |
+| #115  | [CRITIQUE] Mention du certificat calculée sur la mauvaise échelle | `1d6d096` (cherry-pick `6c8c15f`)                      |
+| #127  | [MAJEUR] Trois règles de mention divergentes                      | `1d6d096` (cherry-pick `6c8c15f`)                      |
 
-<!-- déplacer ici après fix -->
+### Anciennes issues locales (numérotation legacy, toutes vérifiées dans le code)
+
+Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le code** :
+
+- ✅ #1 `app/api/temp-setup` — supprimé (n'existe plus)
+- ✅ #2 `getAdminUser` — retourne `null` si rôle ≠ `ADMIN` (`lib/auth.ts:230`)
+- ✅ #3 `adminUserIds` — alimenté via `ADMIN_USER_IDS` (env), plus de placeholder vide
+- ✅ #4 `USER_ROUTES` — complétée dans `proxy.ts` (ex-`middleware.ts`)
+- ✅ #5 Routes API dupliquées — audit fait, frontend sur les routes top-level
+- ✅ #6 `Admin` model — supprimé du schéma Prisma
+- ✅ #7 `Exam.title` / `Exam.name` — pas de bug actif (les deux routes set `title: name`)
+- ✅ #8 Scores `ExamSession` — documentés dans le schéma
+- ✅ #9 `VerificationToken` — supprimé du schéma
+- ✅ #10 Rôles normalisés lowercase partout
+- ✅ #11 `pages.signIn` → `/auth`
+- ✅ #12 `submittedAt @default(now())` — supprimé
+- ✅ #13 `app/admin/page.tsx` — simple redirect, non-issue
+- ✅ #14 `/portfolios/[slug]` — corrigé (URL → `NEXT_PUBLIC_APP_URL`)
+
+---
+
+## 🔴 Ouvertes — Cœur métier (EPIC #112)
+
+| Issue | Sévérité | Titre                                                  |
+| :---- | :------- | :----------------------------------------------------- |
+| #113  | CRITIQUE | Anti-triche client désactivé (userId manquant)         |
+| #116  | CRITIQUE | Attestation jamais mise à jour ni révoquée             |
+| #117  | CRITIQUE | Examen GRADED avec parties 2/3 non corrigées           |
+| #118  | MAJEUR   | Dénominateur / sélection de la partie QCM incohérents  |
+| #119  | MAJEUR   | Aucune contrainte serveur de durée d'examen            |
+| #120  | MAJEUR   | Snapshot `_customBareme` non lu sur le détail résultat |
+| #121  | MAJEUR   | Unicité `ExamSession(userId, examId)` manquante        |
+| #122  | MAJEUR   | `showResults` contourné par le transcript              |
+| #123  | MAJEUR   | `passingScore` entier / défaut UI 60 vs backend 65     |
+| #124  | MAJEUR   | `internshipScore` exclu de la moyenne/réussite         |
+| #125  | MAJEUR   | Admin : corrigé = GRADED seulement (pas COMPLETED)     |
+| #126  | MAJEUR   | Fuseau horaire de `scheduledAt`                        |
+| #128  | MAJEUR   | Réponse partie 3 inaccessible pour la correction       |
+| #129  | MAJEUR   | Faux positifs anti-triche                              |
+| #130  | MINEUR   | Schéma, API & affichage (m1–m12)                       |
+
+## 🟠 Ouvertes — Dégraissage v2 (EPIC #87)
+
+- #88–#111 : lots A→M (routes mortes, composants orphelins, Pusher→polling,
+  anti-triche, Prisma, feedback 4→2, QA non-régression)
+
+## 🟡 Ouvertes — Qualité / tests / audits (EPIC #131)
+
+- #133–#141 : tests T2→T10 (unitaires cœur, libs, intégration API, E2E Playwright, documents)
+- #142–#146 : audits A1→A5 (sécurité OWASP, deps/SCA, a11y, perf, intégrité données)
+
+## 🎨 Ouvertes — Design (EPIC #42) & Responsive (#34)
+
+- #35–#41 : responsive (CRITIQUE → MINEUR)
+- #43–#64 : refonte V0→V3 (tokens, primitives, layouts, écrans, documents imprimables)
+
+## 🚀 Ouvertes — Production M8 (EPIC #148)
+
+- #149–#160 : stockage objet, reprise données, observabilité, runbook, conformité RGPD,
+  SMS, valeur probante certificat, staging, restauration, KPI, décisions, livrable vertical
+
+## 📋 Ouvertes — Backlog (EPIC #78)
+
+- #7–#14 : features fantômes / auto-save / monitoring / PDF / graphiques / tests / types
+- #19, #21, #22, #23, #81–#86 : CI/CD, secrets, backup, QR public, PPR, dark mode, etc.
+
+---
+
+## Prochaines actions de synchronisation
+
+1. Traiter l'EPIC #112 (cœur métier) — 15 issues ouvertes, dont 3 CRITIQUES (#113, #116, #117)
+2. Poursuivre le dégraissage v2 (EPIC #87)
+3. Monter la couverture tests (EPIC #131) — 101 tests actuellement, ratchet `10/9/12/10`
+4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
+
+> ⚠️ La branche `fix/issue-115-mention-unique` contient le pilote design (PR #33)
+> **non mergé** — le fix #115/#127 a été cherry-pické sur main (`1d6d096`).
