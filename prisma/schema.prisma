@@ -157,11 +157,13 @@ model Attestation {
   stageObservations         String?
   stageScore                Float?
   userId                    String?
+  sessionId                 String?
   formation                 Formation             @relation(fields: [formationId], references: [id])
   user                      User?                 @relation(fields: [userId], references: [id])
   correctionRequests        CorrectionRequest[]
 
   @@index([userId])
+  @@index([sessionId])
   @@index([status])
   @@index([userId, status])
   @@index([formationId])
