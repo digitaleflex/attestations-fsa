@@ -10,7 +10,7 @@ import {
   computeFinalScore,
   computePart1Score,
   isPassed,
-  resolveExamMax,
+  resolveExamMaxFromParts,
   round2,
 } from '@/lib/exams/scoring';
 import { issueExamAttestation } from '@/lib/attestations/issue';
@@ -70,8 +70,9 @@ export async function POST(
     const qcmPart = await prisma.examPart.findFirst({
       where: {
         examId,
-        OR: [{ order: 1 }, { type: 'QCM' }],
+        type: 'QCM',
       },
+      orderBy: { order: 'asc' },
       include: {
         questions: {
           orderBy: { order: 'asc' },
@@ -105,9 +106,6 @@ export async function POST(
     if (!exam) {
       return NextResponse.json({ error: 'Examen non trouvé' }, { status: 404 });
     }
-
-    // Canonical max raw score for this exam (enabled parts, fallback totalPoints).
-    const totalPoints = resolveExamMax(exam);
 
     // Calculate Part 1 score BEFORE the update (we have all needed data)
     let scorePart1 = 0;
@@ -153,14 +151,14 @@ export async function POST(
       scorePart1 = computePart1Score(
         correctAnswersCount,
         totalQuestions,
-        exam.part1Points || 20,
+        qcmPart.points || 20,
       );
     }
 
     // ✅ Detect if exam has manual grading parts (Part 2/3+, OPEN or CASE_STUDY)
     const allExamParts = await prisma.examPart.findMany({
       where: { examId },
-      select: { order: true, type: true }
+      select: { order: true, type: true, points: true }
     });
     const hasManualGrading = allExamParts.some(
       (p: { order: number; type: string }) =>
@@ -170,6 +168,8 @@ export async function POST(
 
     // Canonical scale: scorePartN = raw points, totalScore = raw sum,
     // finalScore = percentage (only meaningful once fully corrected).
+    // Max dérivé des ExamPart réels (pas des champs legacy partNPoints).
+    const totalPoints = resolveExamMaxFromParts(allExamParts, exam);
     const roundedPart1 = round2(scorePart1);
     const finalScore =
       finalStatus === 'COMPLETED'

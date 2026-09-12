@@ -3,6 +3,7 @@ import {
   round2,
   isCorrected,
   resolveExamMax,
+  resolveExamMaxFromParts,
   computePart1Score,
   computeFinalScore,
   isPassed,
@@ -54,6 +55,30 @@ describe("scoring.resolveExamMax", () => {
 
   it("retombe sur 100 par défaut", () => {
     expect(resolveExamMax({})).toBe(100);
+  });
+});
+
+describe("scoring.resolveExamMaxFromParts", () => {
+  it("somme les points des ExamPart réels (parties multiples)", () => {
+    expect(
+      resolveExamMaxFromParts([{ points: 20 }, { points: 30 }, { points: 50 }]),
+    ).toBe(100);
+  });
+
+  it("reste identique quelle que soit la structure (2 QCM + 1 OPEN)", () => {
+    // 2 parties QCM (20+30) + 1 OPEN (50) : le max doit être 100,
+    // pas 70 (20+50) comme avec les champs legacy partNPoints.
+    expect(
+      resolveExamMaxFromParts([{ points: 20 }, { points: 30 }, { points: 50 }]),
+    ).toBe(100);
+  });
+
+  it("retombe sur resolveExamMax si aucune partie", () => {
+    expect(
+      resolveExamMaxFromParts([], { part1Points: 20, part2Points: 30 }),
+    ).toBe(50);
+    expect(resolveExamMaxFromParts(null, { totalPoints: 80 })).toBe(80);
+    expect(resolveExamMaxFromParts(undefined, undefined)).toBe(100);
   });
 });
 
