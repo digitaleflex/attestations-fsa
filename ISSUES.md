@@ -29,6 +29,17 @@
 | #116  | [CRITIQUE] Attestation jamais mise à jour ni révoquée            | PR #174 (`4655169`)                                    |
 | #117  | [CRITIQUE] Examen GRADED avec parties 2/3 non corrigées         | PR #175 (`issue-117-graded-parts-sentinel`)            |
 | #118  | [MAJEUR] Dénominateur / sélection de la partie QCM incohérents  | PR #176 (`issue-118-qcm-denominator`)                  |
+| #121  | [MAJEUR] Unicité `ExamSession(userId, examId)` manquante        | PR #177 (`issue-121-exam-session-unique`)              |
+| #119  | [MAJEUR] Aucune contrainte serveur de durée d'examen            | PR #178 (`issue-119-exam-duration`)                    |
+| #123  | [MAJEUR] `passingScore` entier / défaut UI 60 vs backend 65     | PR #179 (`issue-123-passing-score`)                    |
+| #126  | [MAJEUR] Fuseau horaire de `scheduledAt`                        | PR #180 (`issue-126-scheduled-tz`)                     |
+| #122  | [MAJEUR] `showResults` contourné par le transcript              | PR #181 (`issue-122-transcript-showresults`)           |
+| #120  | [MAJEUR] Snapshot `_customBareme` non lu sur le détail résultat | PR #182 (`issue-120-custom-bareme`)                    |
+| #125  | [MAJEUR] Admin : corrigé = GRADED seulement (pas COMPLETED)     | PR #183 (`issue-125-graded-completed`)                 |
+| #128  | [MAJEUR] Réponse partie 3 inaccessible pour la correction       | PR #184 (`issue-128-part3-answers`)                    |
+| #124  | [MAJEUR] `internshipScore` exclu de la moyenne/réussite         | PR #185 (`issue-124-internship-score`)                 |
+| #129  | [MAJEUR] Faux positifs anti-triche                              | PR #186 (`issue-129-anti-cheat`)                       |
+| #130  | [MINEUR] Schéma, API & affichage (m1–m12)                       | PR #187 (`issue-130-schema-api-display`)               |
 | #114  | [CRITIQUE] Le chrono soumet `{}` — perte de toutes les réponses   | `e42dc24` (merge `fix/issue-114-exam-timer-submit-v2`) |
 | #115  | [CRITIQUE] Mention du certificat calculée sur la mauvaise échelle | `1d6d096` (cherry-pick `6c8c15f`)                      |
 | #127  | [MAJEUR] Trois règles de mention divergentes                      | `1d6d096` (cherry-pick `6c8c15f`)                      |
@@ -53,22 +64,6 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 - ✅ #14 `/portfolios/[slug]` — corrigé (URL → `NEXT_PUBLIC_APP_URL`)
 
 ---
-
-## 🔴 Ouvertes — Cœur métier (EPIC #112)
-
-| Issue | Sévérité | Titre                                                  |
-| :---- | :------- | :----------------------------------------------------- |
-| #119  | MAJEUR   | Aucune contrainte serveur de durée d'examen            |
-| #120  | MAJEUR   | Snapshot `_customBareme` non lu sur le détail résultat |
-| #121  | MAJEUR   | Unicité `ExamSession(userId, examId)` manquante        |
-| #122  | MAJEUR   | `showResults` contourné par le transcript              |
-| #123  | MAJEUR   | `passingScore` entier / défaut UI 60 vs backend 65     |
-| #124  | MAJEUR   | `internshipScore` exclu de la moyenne/réussite         |
-| #125  | MAJEUR   | Admin : corrigé = GRADED seulement (pas COMPLETED)     |
-| #126  | MAJEUR   | Fuseau horaire de `scheduledAt`                        |
-| #128  | MAJEUR   | Réponse partie 3 inaccessible pour la correction       |
-| #129  | MAJEUR   | Faux positifs anti-triche                              |
-| #130  | MINEUR   | Schéma, API & affichage (m1–m12)                       |
 
 ## 🟠 Ouvertes — Dégraissage v2 (EPIC #87)
 
@@ -99,9 +94,9 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 ## Prochaines actions de synchronisation
 
-1. Traiter l'EPIC #112 (cœur métier) — 11 issues ouvertes, plus aucune CRITIQUE
+1. ~~Traiter l'EPIC #112 (cœur métier)~~ — **TERMINÉ** : les 11 issues (#119-#130) sont corrigées et mergées (PR #177-#187)
 2. Poursuivre le dégraissage v2 (EPIC #87)
-3. Monter la couverture tests (EPIC #131) — 117 tests actuellement, ratchet `10/9/12/10`
+3. Monter la couverture tests (EPIC #131) — 144 tests actuellement, ratchet `10/9/12/10`
 4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
 
 > ⚠️ La branche `fix/issue-115-mention-unique` contient le pilote design (PR #33)
