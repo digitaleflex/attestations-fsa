@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { useSession } from "@/lib/auth-client";
 import { useExamMonitoring } from "@/lib/useExamMonitoring";
 import type { EnforcementAction } from "@/lib/exam-enforcement";
 
@@ -51,8 +52,12 @@ export default function ExamSessionPage() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
   const mon = useExamMonitoring({
     examId: id,
+    userId,
     maxTabSwitches: 3,
     onEnforcement: (action: EnforcementAction) => {
       if (action.warnUser && action.reason) {
