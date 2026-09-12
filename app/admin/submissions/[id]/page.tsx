@@ -552,7 +552,14 @@ export default function AdminSubmissionDetailPage() {
                       .slice()
                       .sort((a, b) => a.order - b.order)
                       .map((question) => {
-                        const selectedIds = normalizeAnswer(answers[question.id]);
+                        // #128 — partie 3 : la composition est stockée sous la clé
+                        // "part3" (une zone de rédaction pour tout le cas pratique),
+                        // pas sous l'id de chaque question → fallback pour que
+                        // l'admin voie la réponse à corriger.
+                        const rawAnswer =
+                          answers[question.id] ??
+                          (part.type === "CASE_STUDY" ? answers.part3 : undefined);
+                        const selectedIds = normalizeAnswer(rawAnswer);
                         const answerText =
                           selectedIds.length === 0
                             ? "—"
