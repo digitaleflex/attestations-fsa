@@ -25,6 +25,7 @@
 
 | Issue | Titre                                                             | Fix (commit)                                           |
 | :---- | :---------------------------------------------------------------- | :----------------------------------------------------- |
+| #113  | [CRITIQUE] Anti-triche client désactivé (userId manquant)         | PR #173 (`b450076`)                                    |
 | #114  | [CRITIQUE] Le chrono soumet `{}` — perte de toutes les réponses   | `e42dc24` (merge `fix/issue-114-exam-timer-submit-v2`) |
 | #115  | [CRITIQUE] Mention du certificat calculée sur la mauvaise échelle | `1d6d096` (cherry-pick `6c8c15f`)                      |
 | #127  | [MAJEUR] Trois règles de mention divergentes                      | `1d6d096` (cherry-pick `6c8c15f`)                      |
@@ -54,7 +55,6 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 | Issue | Sévérité | Titre                                                  |
 | :---- | :------- | :----------------------------------------------------- |
-| #113  | CRITIQUE | Anti-triche client désactivé (userId manquant)         |
 | #116  | CRITIQUE | Attestation jamais mise à jour ni révoquée             |
 | #117  | CRITIQUE | Examen GRADED avec parties 2/3 non corrigées           |
 | #118  | MAJEUR   | Dénominateur / sélection de la partie QCM incohérents  |
@@ -99,7 +99,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 ## Prochaines actions de synchronisation
 
-1. Traiter l'EPIC #112 (cœur métier) — 15 issues ouvertes, dont 3 CRITIQUES (#113, #116, #117)
+1. Traiter l'EPIC #112 (cœur métier) — 14 issues ouvertes, dont 2 CRITIQUES (#116, #117)
 2. Poursuivre le dégraissage v2 (EPIC #87)
 3. Monter la couverture tests (EPIC #131) — 101 tests actuellement, ratchet `10/9/12/10`
 4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
