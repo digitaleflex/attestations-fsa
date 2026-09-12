@@ -21,17 +21,17 @@ interface ExamResult {
   id: string;
   examName: string;
   /** Conservé pour compatibilité UI : points bruts (remplace l'ancien alias legacy). */
-  score: number;
-  totalScore: number;
+  score: number | null;
+  totalScore: number | null;
   totalPoints: number;
-  internshipScore: number;
+  internshipScore: number | null;
   finalScore: number | null;
   passingScore: number;
-  passed: boolean;
+  passed: boolean | null;
   status: string;
   type: ExamType;
   date: Date | string;
-  part1Score?: number;
+  part1Score?: number | null;
   part2Score?: number | null;
   part3Score?: number | null;
   maxPart1?: number;
@@ -130,27 +130,32 @@ export async function GET(request: Request) {
       const passed =
         isDone && finalScore !== null && isPassed(finalScore, passingScore);
 
-      return { session, customBareme, maxScore, passingScore, finalScore, isDone, passed };
+      // #122 — showResults : masquer les notes tant que l'examen ne les
+      // expose pas (même règle que /api/user/results).
+      const showResults = session.exam.showResults !== false;
+      const gradesVisible = isDone && showResults;
+
+      return { session, customBareme, maxScore, passingScore, finalScore, isDone, passed, gradesVisible };
     });
 
     const examResults: ExamResult[] = enriched.map(
-      ({ session, customBareme, maxScore, passingScore, finalScore, passed }) => ({
+      ({ session, customBareme, maxScore, passingScore, finalScore, passed, gradesVisible }) => ({
         id: session.id,
         examName: session.exam.title || session.exam.name,
         // On ne lit plus le champ legacy `score` : on expose les points bruts canoniques.
-        score: session.totalScore,
-        totalScore: session.totalScore,
+        score: gradesVisible ? session.totalScore : null,
+        totalScore: gradesVisible ? session.totalScore : null,
         totalPoints: maxScore,
-        internshipScore: session.internshipScore,
-        finalScore,
+        internshipScore: gradesVisible ? session.internshipScore : null,
+        finalScore: gradesVisible ? finalScore : null,
         passingScore,
-        passed,
+        passed: gradesVisible ? passed : null,
         status: session.status,
         type: session.exam.type,
         date: session.submittedAt || session.startedAt,
-        part1Score: session.scorePart1,
-        part2Score: session.scorePart2,
-        part3Score: session.scorePart3,
+        part1Score: gradesVisible ? session.scorePart1 : null,
+        part2Score: gradesVisible ? session.scorePart2 : null,
+        part3Score: gradesVisible ? session.scorePart3 : null,
         maxPart1: customBareme?.maxPart1 ?? session.exam.part1Points ?? 20,
         maxPart2: customBareme?.maxPart2 ?? session.exam.part2Points ?? 40,
         maxPart3: customBareme?.maxPart3 ?? session.exam.part3Points ?? 40,
