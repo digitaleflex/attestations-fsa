@@ -24,6 +24,18 @@ interface UseExamMonitoringProps {
   onEnforcement?: (action: EnforcementAction) => void;
 }
 
+/**
+ * Logique pure du seuil de changements d'onglet.
+ * Une violation est déclenchée dès que le nombre de tab switches
+ * atteint (ou dépasse) la limite configurée.
+ */
+export function shouldTriggerViolation(
+  tabSwitches: number,
+  maxTabSwitches: number,
+): boolean {
+  return tabSwitches >= maxTabSwitches;
+}
+
 export function useExamMonitoring({
   examId,
   userId,
@@ -61,10 +73,12 @@ export function useExamMonitoring({
         isCurrentlyFocused: type === 'FOCUS' ? true : (isBlur ? false : prev.isCurrentlyFocused),
       };
 
-      if (onViolation) onViolation(newEvent, newState);
+      if (onViolation && shouldTriggerViolation(newState.tabSwitches, maxTabSwitches)) {
+        onViolation(newEvent, newState);
+      }
       return newState;
     });
-  }, [onViolation]);
+  }, [onViolation, maxTabSwitches]);
 
   // Fullscreen enforcement
   const enterFullscreen = useCallback(async () => {
