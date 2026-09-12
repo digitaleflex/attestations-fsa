@@ -103,15 +103,21 @@ export async function POST(
       });
     }
 
-    // 3. Créer une nouvelle session
-    const session = await prisma.examSession.create({
-      data: {
+    // 3. Créer une nouvelle session — upsert transactionnel (anti-race #121) :
+    //    deux POST /start simultanés ne peuvent plus créer deux sessions,
+    //    la contrainte @@unique([userId, examId]) garantit une seule ligne.
+    const session = await prisma.examSession.upsert({
+      where: { userId_examId: { userId: user.id, examId } },
+      create: {
         examId,
         userId: user.id,
         status: "IN_PROGRESS",
         startedAt: new Date(),
         type: exam.type,
       },
+      // Une session concurrente a pu être créée entre le findFirst et ici :
+      // on la reprend telle quelle (elle est IN_PROGRESS, déjà vérifiée).
+      update: {},
     });
 
     // Enregistrer le log d'audit

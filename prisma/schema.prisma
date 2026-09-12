@@ -294,7 +294,7 @@ model ExamSession {
   exam        Exam              @relation(fields: [examId], references: [id])
   candidate   User              @relation(fields: [userId], references: [id])
 
-  @@index([userId, examId])
+  @@unique([userId, examId])
   @@index([status])
   @@index([examId, status])
   @@index([userId, status])
