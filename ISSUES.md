@@ -84,11 +84,11 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 | #144  | [A3] Audit a11y (skip-link WCAG 2.4.1) | #194 |
 
 ### 🟠 Partielles / ouvertes
-- **#137 [T6]** : 2 incréments mergés (PR #195 + #196 — 34 tests : actions attestation, settings, profil, examens détail, corrections) ; couverture admin **24,92 %** vs objectif 70 % — reste scans, notifications, bulk-actions, internships, dashboard.
-- **#138 [T7]** : incrément mergé (PR #197 — notifications in-app + stages public/user, 13 tests) ; reste admin/internships, feedback, réclamations, settings public.
+- **#137 [T6]** : 3 incréments mergés (PR #195 + #196 + #200 — 39 tests) ; couverture admin **31,15 %** vs objectif 70 % — reste scans (upload), notifications/results, dashboard, stats, export.
+- **#138 [T7]** : 2 incréments mergés (PR #197 + #200 — notifications in-app, stages public/user/admin, réclamations, 23 tests) ; reste feedback, settings public.
 - #139–#141 : tests T8→T10
 - **#145 [A4]** : ✅ **corrigée** (PR #198 — N+1 monitoring → createMany + rapport perf rafraîchi). Dette documentée : `force-dynamic` global, ratio client components 60/65.
-- #146 : audit A5 (intégrité données)
+- **#146 [A5]** : ✅ **corrigée** (PR #199 — script `check-data-integrity.ts` + rapport `docs/data_integrity_audit.md`).
 
 ## 🎨 Ouvertes — Design (EPIC #42) & Responsive (#34)
 
@@ -111,7 +111,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 1. ~~Traiter l'EPIC #112 (cœur métier)~~ — **TERMINÉ** : les 11 issues (#119-#130) sont corrigées et mergées (PR #177-#187)
 2. Poursuivre le dégraissage v2 (EPIC #87)
-3. Monter la couverture tests (EPIC #131) — **241 tests** actuellement, ratchet `10/9/12/10`
+3. Monter la couverture tests (EPIC #131) — **256 tests** actuellement, ratchet `10/9/12/10`
 4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
 
 > ⚠️ La branche `fix/issue-115-mention-unique` contient le pilote design (PR #33)
