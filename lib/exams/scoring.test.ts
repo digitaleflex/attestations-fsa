@@ -7,6 +7,7 @@ import {
   computePart1Score,
   computeFinalScore,
   isPassed,
+  resolveMention,
 } from "./scoring";
 
 describe("scoring.round2", () => {
@@ -121,5 +122,32 @@ describe("scoring.isPassed", () => {
   it("respecte un seuil personnalisé", () => {
     expect(isPassed(70, 80)).toBe(false);
     expect(isPassed(80, 80)).toBe(true);
+  });
+});
+
+describe("scoring.resolveMention", () => {
+  it("90+ → EXCELLENCE", () => {
+    expect(resolveMention(90)).toBe("EXCELLENCE");
+    expect(resolveMention(100)).toBe("EXCELLENCE");
+  });
+
+  it("80-89 → TRES_BIEN", () => {
+    expect(resolveMention(80)).toBe("TRES_BIEN");
+    expect(resolveMention(89.9)).toBe("TRES_BIEN");
+  });
+
+  it("70-79 → BIEN", () => {
+    expect(resolveMention(70)).toBe("BIEN");
+    expect(resolveMention(79.9)).toBe("BIEN");
+  });
+
+  it("65-69 → ASSEZ_BIEN", () => {
+    expect(resolveMention(65)).toBe("ASSEZ_BIEN");
+    expect(resolveMention(69.9)).toBe("ASSEZ_BIEN");
+  });
+
+  it("< 65 → PASSABLE", () => {
+    expect(resolveMention(64.9)).toBe("PASSABLE");
+    expect(resolveMention(0)).toBe("PASSABLE");
   });
 });
