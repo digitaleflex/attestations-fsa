@@ -4,6 +4,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     securityLog: {
       create: vi.fn().mockResolvedValue({ id: 1 }),
+      createMany: vi.fn().mockResolvedValue({ count: 2 }),
       findMany: vi.fn().mockResolvedValue([]),
     },
   },
