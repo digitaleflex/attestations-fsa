@@ -84,7 +84,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 | #144  | [A3] Audit a11y (skip-link WCAG 2.4.1) | #194 |
 
 ### 🟠 Partielles / ouvertes
-- **#137 [T6]** : incrément mergé (PR #195 — actions attestation + settings, 10 tests) ; couverture admin 12,56 % vs objectif 70 % — reste Users/Formations CRUD, Attestations export, Audits.
+- **#137 [T6]** : 2 incréments mergés (PR #195 + #196 — 34 tests : actions attestation, settings, profil, examens détail, corrections) ; couverture admin **24,92 %** vs objectif 70 % — reste scans, notifications, bulk-actions, internships, dashboard.
 - #138–#141 : tests T7→T10 (E2E Playwright, documents, etc.)
 - #145–#146 : audits A4→A5 (perf, intégrité données)
 
@@ -109,7 +109,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 1. ~~Traiter l'EPIC #112 (cœur métier)~~ — **TERMINÉ** : les 11 issues (#119-#130) sont corrigées et mergées (PR #177-#187)
 2. Poursuivre le dégraissage v2 (EPIC #87)
-3. Monter la couverture tests (EPIC #131) — **204 tests** actuellement, ratchet `10/9/12/10`
+3. Monter la couverture tests (EPIC #131) — **228 tests** actuellement, ratchet `10/9/12/10`
 4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
 
 > ⚠️ La branche `fix/issue-115-mention-unique` contient le pilote design (PR #33)
