@@ -91,4 +91,11 @@ describe("GET /api/user/results/[id] — snapshot _customBareme (#120)", () => {
     const body = await res.json();
     expect(body.maxScore).toBe(100); // totalPoints live
   });
+
+  it("isolation des données : un autre user → 403 (#135)", async () => {
+    // La session appartient à user-2, l'appelant est user-1
+    stubSubmission({ userId: "user-2" });
+    const res = await callResult();
+    expect(res.status).toBe(403);
+  });
 });
