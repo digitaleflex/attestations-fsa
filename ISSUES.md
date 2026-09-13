@@ -84,7 +84,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 | #144  | [A3] Audit a11y (skip-link WCAG 2.4.1) | #194 |
 
 ### 🟠 Partielles / ouvertes
-- **#137 [T6]** : 3 incréments mergés (PR #195 + #196 + #200 — 39 tests) ; couverture admin **31,15 %** vs objectif 70 % — reste scans (upload), notifications/results, dashboard, stats, export.
+- **#137 [T6]** : ✅ **corrigée** (PR #195-#206, 9 incréments — couverture admin **12,56 % → 69,15 % stmts / 70,53 % lignes**, objectif ≥70 % atteint).
 - **#138 [T7]** : 2 incréments mergés (PR #197 + #200 — notifications in-app, stages public/user/admin, réclamations, 23 tests) ; reste feedback, settings public.
 - #139–#141 : tests T8→T10
 - **#145 [A4]** : ✅ **corrigée** (PR #198 — N+1 monitoring → createMany + rapport perf rafraîchi). Dette documentée : `force-dynamic` global, ratio client components 60/65.
@@ -111,7 +111,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 1. ~~Traiter l'EPIC #112 (cœur métier)~~ — **TERMINÉ** : les 11 issues (#119-#130) sont corrigées et mergées (PR #177-#187)
 2. Poursuivre le dégraissage v2 (EPIC #87)
-3. Monter la couverture tests (EPIC #131) — **256 tests** actuellement, ratchet `10/9/12/10`
+3. Monter la couverture tests (EPIC #131) — **330 tests** actuellement, ratchet `10/9/12/10`
 4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
 
 > ⚠️ La branche `fix/issue-115-mention-unique` contient le pilote design (PR #33)
