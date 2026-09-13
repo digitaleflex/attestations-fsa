@@ -17,7 +17,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <PublicHeader />
 
       {/* Contenu Principal */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center pt-4 md:pt-8 bg-grid-slate-100 bg-[size:40px_40px] relative isolate overflow-hidden">
+      <main id="contenu-principal" className="flex-1 w-full flex flex-col items-center justify-center pt-4 md:pt-8 bg-grid-slate-100 bg-[size:40px_40px] relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,theme(colors.white),transparent)] opacity-70" />
         {children}
       </main>

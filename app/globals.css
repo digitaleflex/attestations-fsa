@@ -145,6 +145,24 @@
   }
 }
 
+/* #144 A3 — Skip link a11y (WCAG 2.4.1) : visible uniquement au focus clavier */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 9999;
+}
+.skip-link:focus {
+  left: 0;
+  padding: 0.75rem 1.25rem;
+  background: #16a34a;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0 0 0.75rem 0;
+  outline: 2px solid #fff;
+  outline-offset: -4px;
+}
+
 @layer base {
   :root {
     --background: 210 40% 98%;
