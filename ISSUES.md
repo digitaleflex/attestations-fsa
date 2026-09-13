@@ -87,7 +87,8 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 - **#137 [T6]** : 2 incréments mergés (PR #195 + #196 — 34 tests : actions attestation, settings, profil, examens détail, corrections) ; couverture admin **24,92 %** vs objectif 70 % — reste scans, notifications, bulk-actions, internships, dashboard.
 - **#138 [T7]** : incrément mergé (PR #197 — notifications in-app + stages public/user, 13 tests) ; reste admin/internships, feedback, réclamations, settings public.
 - #139–#141 : tests T8→T10
-- #145–#146 : audits A4→A5 (perf, intégrité données)
+- **#145 [A4]** : ✅ **corrigée** (PR #198 — N+1 monitoring → createMany + rapport perf rafraîchi). Dette documentée :  global, ratio client components.
+- #146 : audit A5 (intégrité données)
 
 ## 🎨 Ouvertes — Design (EPIC #42) & Responsive (#34)
 
