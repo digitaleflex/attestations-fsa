@@ -24,18 +24,11 @@ export async function apiFetch<T = unknown>(
   options: RequestInit = {},
   notify: boolean = true,
 ): Promise<T> {
-  const getCSRFToken = () => {
-    if (typeof document === "undefined") return undefined;
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; csrf_token=`);
-    if (parts.length === 2) return parts.pop()?.split(";").shift();
-    return undefined;
-  };
-
-  const csrfToken = getCSRFToken();
+  // #142 A1 — couche CSRF factice retirée : le cookie csrf_token n'était
+  // jamais posé ni validé côté serveur. La protection réelle = SameSite=Lax
+  // (Better Auth) + BotID sur /api/exams/*/submit.
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
     ...((options.headers as Record<string, string>) || {}),
   };
 
