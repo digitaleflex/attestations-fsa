@@ -35,9 +35,10 @@ export async function POST(request: Request) {
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
     const ua = request.headers.get('user-agent') || 'unknown';
 
-    await Promise.all(payload.events.map(event => 
-      prisma.securityLog.create({
-        data: {
+    // #145 A4 — N+1 évité : un seul insert groupé au lieu d'un par événement.
+    if (payload.events.length > 0) {
+      await prisma.securityLog.createMany({
+        data: payload.events.map((event) => ({
           userId: payload.userId,
           eventType: 'EXAM_MONITORING',
           severity: 'INFO',
@@ -48,9 +49,9 @@ export async function POST(request: Request) {
           ipAddress: ip,
           userAgent: ua,
           timestamp: new Date(event.timestamp),
-        }
-      })
-    ));
+        })),
+      });
+    }
 
     const enforcement = await evaluateEnforcement(payload.examId, payload.userId);
 
