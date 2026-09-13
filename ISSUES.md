@@ -70,10 +70,22 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 - #88–#111 : lots A→M (routes mortes, composants orphelins, Pusher→polling,
   anti-triche, Prisma, feedback 4→2, QA non-régression)
 
-## 🟡 Ouvertes — Qualité / tests / audits (EPIC #131)
+## 🟡 Qualité / tests / audits (EPIC #131)
 
-- #133–#141 : tests T2→T10 (unitaires cœur, libs, intégration API, E2E Playwright, documents)
-- #142–#146 : audits A1→A5 (sécurité OWASP, deps/SCA, a11y, perf, intégrité données)
+### ✅ Corrigées (7)
+| Issue | Titre | PR |
+| :---- | :---- | :- |
+| #133  | [T2] Tests unitaires cœur (scoring, availability, issue) | #188 |
+| #134  | [T3] Tests libs support (sanitization XSS, audit) | #191 |
+| #135  | [T4] Isolation des données (403) + transcript détail | #190 |
+| #136  | [T5] Parcours cœur submit→correct→attestation | #193 |
+| #142  | [A1] Audit sécurité OWASP (headers CSP/HSTS, CSRF factice retiré) | #189 |
+| #143  | [A2] Audit deps SCA (deps inutilisées + job CI SCA) | #192 |
+| #144  | [A3] Audit a11y (skip-link WCAG 2.4.1) | #194 |
+
+### 🔴 Ouvertes
+- #137–#141 : tests T6→T10 (E2E Playwright, documents, etc.)
+- #145–#146 : audits A4→A5 (perf, intégrité données)
 
 ## 🎨 Ouvertes — Design (EPIC #42) & Responsive (#34)
 
@@ -96,7 +108,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 1. ~~Traiter l'EPIC #112 (cœur métier)~~ — **TERMINÉ** : les 11 issues (#119-#130) sont corrigées et mergées (PR #177-#187)
 2. Poursuivre le dégraissage v2 (EPIC #87)
-3. Monter la couverture tests (EPIC #131) — 144 tests actuellement, ratchet `10/9/12/10`
+3. Monter la couverture tests (EPIC #131) — **194 tests** actuellement, ratchet `10/9/12/10`
 4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
 
 > ⚠️ La branche `fix/issue-115-mention-unique` contient le pilote design (PR #33)
