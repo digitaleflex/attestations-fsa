@@ -7,22 +7,19 @@ import { prisma } from "@/lib/prisma";
 export const VISIBLE_EXAM_STATUSES = ["SCHEDULED", "PUBLISHED"] as const;
 
 /**
- * Un examen est DISPONIBLE (démarrable) si :
- * - il est PUBLISHED, ou
- * - il est SCHEDULED avec une date planifiée déjà atteinte.
+ * Un examen est ACCESSIBLE (démarrable) uniquement si :
+ * - son statut est PUBLISHED ou SCHEDULED, ET
+ * - `scheduledAt` est défini et déjà atteint.
+ * Un examen PUBLISHED sans date, ou avec une date future, reste verrouillé.
+ * DRAFT / ARCHIVED ne sont jamais accessibles.
  */
 export function isExamAvailable(
   exam: { status: string; scheduledAt: Date | null },
   now: Date = new Date(),
 ): boolean {
-  if (exam.status === "PUBLISHED") return true;
-  if (exam.status === "SCHEDULED") {
-    return (
-      exam.scheduledAt != null &&
-      new Date(exam.scheduledAt).getTime() <= now.getTime()
-    );
-  }
-  return false;
+  if (exam.status !== "PUBLISHED" && exam.status !== "SCHEDULED") return false;
+  if (exam.scheduledAt == null) return false;
+  return new Date(exam.scheduledAt).getTime() <= now.getTime();
 }
 
 /**

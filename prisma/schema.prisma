@@ -108,12 +108,17 @@ model User {
 }
 
 // better-auth `twoFactor` plugin storage (TOTP secret + backup codes).
+// Champs `verified` / `failedVerificationCount` / `lockedUntil` requis par
+// better-auth >= 1.7 (verrouillage après trop d'échecs de vérification).
 model TwoFactor {
-  id          String @id @default(cuid())
-  secret      String
-  backupCodes String
-  userId      String @unique
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String    @id @default(cuid())
+  secret                  String
+  backupCodes             String
+  userId                  String    @unique
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // VerificationToken removed — NextAuth legacy, unused. Better Auth uses `Verification` model.

@@ -53,7 +53,9 @@ function stubExam() {
     status: "PUBLISHED",
     duration: 3600,
     type: "OFFICIAL",
-    scheduledAt: null,
+    // Verrouillage : un examen n'est disponible que si sa programmation est
+    // atteinte. On simule un examen publié et déjà échu.
+    scheduledAt: new Date(Date.now() - 60_000),
   } as never);
 }
 

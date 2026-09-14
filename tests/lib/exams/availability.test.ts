@@ -29,16 +29,28 @@ describe("availability.VISIBLE_EXAM_STATUSES", () => {
 });
 
 describe("availability.isExamAvailable", () => {
-  it("PUBLISHED → toujours disponible", () => {
+  it("PUBLISHED avec date passée → disponible", () => {
+    expect(
+      isExamAvailable(
+        { status: "PUBLISHED", scheduledAt: new Date("2026-09-01T08:00:00Z") },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("PUBLISHED sans date → indisponible", () => {
     expect(
       isExamAvailable({ status: "PUBLISHED", scheduledAt: null }, NOW),
-    ).toBe(true);
+    ).toBe(false);
+  });
+
+  it("PUBLISHED avec date future → indisponible", () => {
     expect(
       isExamAvailable(
         { status: "PUBLISHED", scheduledAt: new Date("2099-01-01") },
         NOW,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("SCHEDULED passé → disponible", () => {

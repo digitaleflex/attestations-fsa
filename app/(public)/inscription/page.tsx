@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
   GraduationCap,
+  Info,
   Loader2,
   Lock,
   LogIn,
@@ -589,6 +590,16 @@ export default function InscriptionPage() {
                   <span className="rounded-full border border-emerald-100/60 bg-emerald-50 px-4 py-1.5 text-xs font-bold tracking-wider text-emerald-700 shadow-sm">
                     {email}
                   </span>
+                  <p className="mt-1 flex max-w-xs items-start justify-center gap-2 text-[11px] font-medium leading-relaxed text-slate-500">
+                    <Info
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Vous ne voyez pas le code ? Pensez à vérifier vos spams /
+                      courriers indésirables.
+                    </span>
+                  </p>
                 </div>
               )}
             </div>
