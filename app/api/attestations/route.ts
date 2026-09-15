@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
 import { getAdminUser } from '@/lib/auth';
+import { sealCertificate } from '@/lib/crypto/seal';
 import { z } from 'zod';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
@@ -178,9 +179,22 @@ export async function POST(request: Request) {
       attestationData.certificationObservations = certificationObservations;
     }
 
+    // Scellement HMAC-SHA256 (#155) : empreinte des données gravées.
+    const seal = sealCertificate({
+      code,
+      fullName,
+      formationName: formationRecord.name,
+      certificationScore: type === 'CERTIFICATION' ? certificationScore ?? null : null,
+      certificationMention: type === 'CERTIFICATION' ? certificationMention ?? null : null,
+      endDate: new Date(endDate),
+    });
+
     // Création de l'attestation
     await prisma.attestation.create({
-      data: attestationData as import('@prisma/client').Prisma.AttestationCreateInput
+      data: {
+        ...attestationData,
+        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
+      } as import('@prisma/client').Prisma.AttestationCreateInput
     })
     console.log('[POST /api/attestations] Success');
     return NextResponse.json({ message: 'Attestation créée', code }, { status: 201 })

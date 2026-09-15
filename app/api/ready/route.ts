@@ -32,7 +32,7 @@ export async function GET() {
       status: ready ? "ready" : "unready",
       checks: {
         database: databaseOk ? "ok" : "error",
-        seal: sealOk ? "ok" : sealRequired ? "missing" : "disabled",
+        seal: seal.configured ? "ok" : sealRequired ? "missing" : "disabled",
         sealReason: seal.reason ?? null,
         sealRequired,
       },
