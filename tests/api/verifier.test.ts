@@ -1,5 +1,44 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
+import { sealCertificate } from "@/lib/crypto/seal";
+
+const SEAL_SECRET = "verifier-test-secret-0123456789abcdef";
+
+function sealedAttestation() {
+  const endDate = new Date("2026-01-02");
+  const base = {
+    id: "a1",
+    code: "FSA-2026-M01-00001-abcde",
+    fullName: "Alice",
+    type: "CERTIFICATION",
+    status: "VALIDATED",
+    certificationScore: 88,
+    certificationMention: "TRES_BIEN",
+    stageScore: 90,
+    issuedAt: new Date("2026-01-02"),
+    startDate: new Date("2026-01-01"),
+    endDate,
+    location: "En ligne",
+    instructor: "FSA",
+    formation: { name: "Pisciculture", category: "AGRICULTURE" },
+  };
+  const seal = sealCertificate(
+    {
+      code: base.code,
+      fullName: base.fullName,
+      formationName: base.formation.name,
+      certificationScore: base.certificationScore,
+      certificationMention: base.certificationMention,
+      endDate,
+    },
+    SEAL_SECRET,
+  )!;
+  return {
+    ...base,
+    sealHash: seal.sealHash,
+    sealedAt: seal.sealedAt,
+  };
+}
 
 const db = vi.hoisted(() => ({
   attestationFindFirst: vi.fn(),
@@ -29,6 +68,7 @@ function req(code?: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.CERT_SEAL_SECRET = SEAL_SECRET;
   db.applyRateLimit.mockResolvedValue({ allowed: true } as never);
 });
 
@@ -70,6 +110,35 @@ describe("GET /api/verifier", () => {
     const body = await res.json();
     expect(body.attestation.score).toBe(88);
     expect(body.attestation.code).toBe("FSA-2026-M01-00001-abcde");
+  });
+
+  it("expose une preuve de scellement valide (#155)", async () => {
+    db.attestationFindFirst.mockResolvedValue(sealedAttestation() as never);
+
+    const res = await GET(req("FSA-2026-M01-00001-abcde"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.attestation.proof.sealed).toBe(true);
+    expect(body.attestation.proof.valid).toBe(true);
+    expect(body.attestation.proof.algorithm).toBe("HMAC-SHA256");
+    expect(body.attestation.proof.revoked).toBe(false);
+    expect(typeof body.attestation.proof.checkedAt).toBe("string");
+  });
+
+  it("signale une preuve invalide si le certificat a été retouché (#155)", async () => {
+    // Le score en base a changé mais l'empreinte d'origine est conservée.
+    db.attestationFindFirst.mockResolvedValue({
+      ...sealedAttestation(),
+      certificationScore: 100,
+    } as never);
+
+    const res = await GET(req("FSA-2026-M01-00001-abcde"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.attestation.proof.sealed).toBe(true);
+    expect(body.attestation.proof.valid).toBe(false);
   });
 
   it("respecte le rate limiting (renvoie la réponse 429)", async () => {
