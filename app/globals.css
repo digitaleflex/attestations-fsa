@@ -96,6 +96,56 @@
   --color-rose-800: hsl(353.4 79.4% 45.9%);
   --color-rose-900: hsl(354.7 73.2% 39.6%);
 
+  /* ============================================================
+     Refonte v2 FSA — tokens additifs (voir docs/design/refonte-v2.md)
+     Aucun token existant n'est supprimé ou renommé.
+     ============================================================ */
+
+  /* Primaires & accents */
+  --color-brand: hsl(161.4 93.5% 30.4%);
+  /* Emeraude-600 : identité FSA, CTA, liens */
+  --color-brand-strong: hsl(162.9 93.5% 24.3%);
+  /* Hover / pressed */
+  --color-brand-soft: hsl(149.3 80.4% 90%);
+  /* Fonds de badge, halos */
+  --color-ocean: hsl(217.2 91.2% 59.8%);
+  /* Secondaire froid : examens, données */
+  --color-ocean-strong: hsl(221.2 83.2% 53.3%);
+  /* Hover du secondaire */
+  --color-harvest: hsl(37.7 92.9% 54.1%);
+  /* Accent chaud : mises en avant */
+
+  /* Neutres & surfaces */
+  --color-canvas: hsl(140 14% 97%);
+  /* Fond de page blanc cassé légèrement vert */
+  --color-surface: hsl(0 0% 100%);
+  /* Cartes */
+  --color-surface-muted: hsl(150 12% 96%);
+  /* Zones secondaires */
+  --color-ink: hsl(222.2 47.4% 11.2%);
+  /* Titres et texte principal */
+  --color-ink-muted: hsl(215.4 16.3% 46.9%);
+  /* Texte secondaire */
+  --color-line: hsl(150 12% 90%);
+  /* Bordures et séparateurs */
+
+  /* Radius hiérarchisés */
+  --radius-control: 0.75rem;
+  --radius-action: 1rem;
+  --radius-card: 1.75rem;
+  --radius-panel: 2.25rem;
+  --radius-pill: 9999px;
+
+  /* Ombres teintées (jamais noir pur) */
+  --shadow-soft: 0 10px 30px -14px rgb(6 78 59 / 0.14);
+  --shadow-lifted: 0 24px 50px -20px rgb(6 78 59 / 0.22);
+  --shadow-float: 0 32px 70px -28px rgb(15 23 42 / 0.28);
+
+  /* Animations d'apparition orchestrées */
+  --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-rise-slow: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-float-soft: float-soft 9s ease-in-out infinite;
+
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-gradient-x: gradient-x 15s ease infinite;
@@ -133,6 +183,24 @@
     }
     50% {
       transform: translateY(-20px);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes float-soft {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-12px) scale(1.02);
     }
   }
   @keyframes vortex-spin {
@@ -304,4 +372,16 @@ html, body {
   top: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* Refonte v2 : respect des préférences de mouvement réduit */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+type ScenarioKey = 'internships' | 'exams' | 'verification';
+
 const CONTENT = {
   internships: {
     title: "Stages & Formations",
@@ -78,7 +80,7 @@ const CONTENT = {
 };
 
 export function HowItWorks() {
-    const [activeTab, setActiveTab] = useState<'internships' | 'exams' | 'verification'>('internships');
+    const [activeTab, setActiveTab] = useState<ScenarioKey>('internships');
     const current = CONTENT[activeTab];
     const [activeStepIndex, setActiveStepIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
@@ -97,34 +99,58 @@ export function HowItWorks() {
 
     const getColorClass = (type: string) => {
       switch(type) {
-        case 'emerald': return 'bg-emerald-500 text-white shadow-emerald-500/25';
-        case 'blue': return 'bg-blue-600 text-white shadow-blue-600/25';
-        case 'amber': return 'bg-amber-500 text-white shadow-amber-500/25';
-        default: return 'bg-slate-900 text-white';
+        case 'emerald': return 'bg-brand text-white shadow-brand/25';
+        case 'blue': return 'bg-ocean text-white shadow-ocean/25';
+        case 'amber': return 'bg-harvest text-white shadow-harvest/25';
+        default: return 'bg-ink text-white';
+      }
+    };
+
+    const getIconClass = () => {
+      switch(activeTab) {
+        case 'internships': return 'bg-brand-soft text-brand-strong';
+        case 'exams': return 'bg-blue-100 text-ocean-strong';
+        default: return 'bg-amber-100 text-amber-600';
+      }
+    };
+
+    const getDotClass = () => {
+      switch(activeTab) {
+        case 'internships': return 'w-5 bg-brand';
+        case 'exams': return 'w-5 bg-ocean';
+        default: return 'w-5 bg-harvest';
+      }
+    };
+
+    const getAccentTextClass = () => {
+      switch(activeTab) {
+        case 'internships': return 'text-brand-strong';
+        case 'exams': return 'text-ocean-strong';
+        default: return 'text-amber-600';
       }
     };
 
     return (
         <div className="w-full max-w-6xl mx-auto my-24 px-6 min-h-[600px]">
             <div className="text-center mb-16 space-y-4">
-                <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                    Comment ça <span className="text-emerald-600">marche ?</span>
+                <h2 className="text-4xl font-extrabold text-ink tracking-tight leading-tight">
+                    Comment ça <span className="text-brand">marche ?</span>
                 </h2>
-                <p className="text-slate-500 font-medium max-w-xl mx-auto">
+                <p className="text-ink-muted font-medium max-w-xl mx-auto leading-relaxed">
                     Que vous soyez candidat à un stage, étudiant prêt pour l'examen ou une entité vérificatrice, nous avons simplifié chaque étape.
                 </p>
             </div>
 
-            {/* Tab Swiitcher */}
-            <div className="flex flex-wrap justify-center gap-3 mb-16 p-2 bg-slate-100 rounded-[2rem] w-fit mx-auto border border-slate-200/50">
+            {/* Tab Switcher */}
+            <div className="flex flex-wrap justify-center gap-2 mb-16 p-2 bg-surface-muted rounded-pill w-fit mx-auto border border-line">
                 {Object.entries(CONTENT).map(([key, value]) => (
                     <button
                         key={key}
-                        onClick={() => setActiveTab(key as any)}
-                        className={`px-8 py-4 rounded-full text-xs md:text-sm font-bold transition-all flex items-center gap-2 relative z-10 ${
+                        onClick={() => setActiveTab(key as ScenarioKey)}
+                        className={`px-7 py-3.5 rounded-pill text-xs md:text-sm font-bold transition-all flex items-center gap-2 relative z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20 ${
                             activeTab === key
-                            ? `${getColorClass(value.color)} scale-105`
-                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/80'
+                            ? `${getColorClass(value.color)} shadow-soft scale-[1.03]`
+                            : 'text-ink-muted hover:text-ink hover:bg-white'
                         }`}
                     >
                         {key === 'internships' && <Briefcase className="w-4 h-4" />}
@@ -152,18 +178,15 @@ export function HowItWorks() {
                               <div key={index} className="relative group">
                                   <div className="flex flex-col items-center text-center space-y-6">
                                       {/* Icon with Circle */}
-                                      <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center transition-all duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm ${
-                                          activeTab === 'internships' ? 'bg-emerald-100 text-emerald-600' :
-                                          activeTab === 'exams' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
-                                      }`}>
+                                      <div className={`w-20 h-20 rounded-action flex items-center justify-center transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 shadow-soft ${getIconClass()}`}>
                                           {step.icon}
                                       </div>
 
                                       <div className="space-y-3">
-                                          <h3 className="text-xl font-extrabold text-slate-800">
+                                          <h3 className="text-xl font-extrabold text-ink">
                                               {index + 1}. {step.title}
                                           </h3>
-                                          <p className="text-slate-500 text-sm leading-relaxed font-semibold">
+                                          <p className="text-ink-muted text-sm leading-relaxed font-medium">
                                               {step.description}
                                           </p>
                                       </div>
@@ -171,14 +194,14 @@ export function HowItWorks() {
 
                                   {/* Connector (Desktop Only) */}
                                   {index < 2 && (
-                                      <div className="hidden lg:block absolute top-10 -right-6 w-12 h-[2px] bg-slate-200/60" />
+                                      <div className="hidden lg:block absolute top-10 -right-6 w-12 h-[2px] bg-line" />
                                   )}
                               </div>
                           ))}
                       </div>
 
                       {/* ================= LAYOUT MOBILE (Carrousel avec flèches absolues) ================= */}
-                      <div 
+                      <div
                         className="block md:hidden relative w-full py-4"
                         onTouchStart={() => setIsPaused(true)}
                         onTouchEnd={() => setIsPaused(false)}
@@ -195,7 +218,7 @@ export function HowItWorks() {
                               setIsPaused(true);
                               setTimeout(() => setIsPaused(false), 6000);
                             }}
-                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm"
+                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-pill bg-surface-muted border border-line flex items-center justify-center text-ink-muted hover:bg-white hover:text-ink transition-colors shadow-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20"
                             aria-label="Étape précédente"
                           >
                             <ChevronLeft className="w-5 h-5" />
@@ -210,22 +233,19 @@ export function HowItWorks() {
                                 animate={{ opacity: 1, scale: 1, x: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, x: -15 }}
                                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                                className="w-full max-w-xs mx-auto p-6 rounded-[2rem] bg-white border border-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.05)]"
+                                className="w-full max-w-xs mx-auto p-6 rounded-card bg-surface border border-line shadow-soft"
                               >
                                 <div className="flex flex-col items-center text-center space-y-4">
                                   {/* Icône */}
-                                  <div className={`w-14 h-14 rounded-[1.2rem] flex items-center justify-center shadow-inner ${
-                                      activeTab === 'internships' ? 'bg-emerald-100 text-emerald-600' :
-                                      activeTab === 'exams' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
-                                  }`}>
+                                  <div className={`w-14 h-14 rounded-action flex items-center justify-center shadow-inner ${getIconClass()}`}>
                                       {current.steps[activeStepIndex].icon}
                                   </div>
 
                                   <div className="space-y-2">
-                                      <h3 className="text-lg font-black text-slate-800">
+                                      <h3 className="text-lg font-extrabold text-ink">
                                           {activeStepIndex + 1}. {current.steps[activeStepIndex].title}
                                       </h3>
-                                      <p className="text-slate-500 text-xs leading-relaxed font-bold px-2">
+                                      <p className="text-ink-muted text-xs leading-relaxed font-medium px-2">
                                           {current.steps[activeStepIndex].description}
                                       </p>
                                   </div>
@@ -242,7 +262,7 @@ export function HowItWorks() {
                               setIsPaused(true);
                               setTimeout(() => setIsPaused(false), 6000);
                             }}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-slate-50 border border-slate-100/80 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors shadow-sm"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-pill bg-surface-muted border border-line flex items-center justify-center text-ink-muted hover:bg-white hover:text-ink transition-colors shadow-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20"
                             aria-label="Étape suivante"
                           >
                             <ChevronRight className="w-5 h-5" />
@@ -260,11 +280,10 @@ export function HowItWorks() {
                                 setIsPaused(true);
                                 setTimeout(() => setIsPaused(false), 6000);
                               }}
-                              className={`h-1.5 rounded-full transition-all duration-300 ${
-                                activeStepIndex === index 
-                                  ? activeTab === 'internships' ? 'w-5 bg-emerald-600' :
-                                    activeTab === 'exams' ? 'w-5 bg-blue-600' : 'w-5 bg-amber-600'
-                                  : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                              className={`h-1.5 rounded-pill transition-all duration-300 ${
+                                activeStepIndex === index
+                                  ? getDotClass()
+                                  : 'w-1.5 bg-line hover:bg-slate-300'
                               }`}
                               aria-label={`Aller à l'étape ${index + 1}`}
                             />
@@ -276,14 +295,11 @@ export function HowItWorks() {
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="mt-20 p-8 rounded-[2.5rem] bg-white border border-slate-100 text-center shadow-xl shadow-slate-200/20"
+                        className="mt-20 p-8 rounded-panel bg-surface border border-line text-center shadow-soft"
                       >
-                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
-                            activeTab === 'internships' ? 'text-emerald-600' :
-                            activeTab === 'exams' ? 'text-blue-600' : 'text-amber-600'
-                          }`}>Section {current.title}</span>
+                          <span className={`text-[10px] font-extrabold uppercase tracking-[0.2em] ${getAccentTextClass()}`}>Section {current.title}</span>
                           <p className="text-base italic font-bold text-slate-700 mt-2">
-                              "{current.subtitle}"
+                              &laquo; {current.subtitle} &raquo;
                           </p>
                       </motion.div>
                   </motion.div>
@@ -292,4 +308,3 @@ export function HowItWorks() {
         </div>
     );
 }
-
