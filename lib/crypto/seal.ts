@@ -14,6 +14,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 /** Longueur minimale exigée pour la clé serveur (anti-clé faible). */
 const MIN_SECRET_LENGTH = 16;
 
+/** Commande à communiquer à l'exploitant quand la clé de scellement manque. */
+export const SEAL_SECRET_GENERATION_ACTION = "openssl rand -base64 48";
+
 /** Données canoniques scellées : ce qui est gravé dans l'empreinte. */
 export interface CertificateSealPayload {
   code: string;
@@ -41,6 +44,10 @@ export interface SealVerification {
 /**
  * Lit la clé de scellement. Renvoie null si absente ou trop courte : le
  * scellement est alors désactivé (jamais d'exception à l'émission).
+ *
+ * Cette fonction reste volontairement tolérante : c'est aux points d'appel
+ * critiques (émission, sonde de disponibilité) de décider si l'absence de clé
+ * est un incident — voir reportSealDisabledIfProduction / getSealConfigStatus.
  */
 export function getSealSecret(
   env: string | undefined = process.env.CERT_SEAL_SECRET,
@@ -48,6 +55,53 @@ export function getSealSecret(
   const secret = env?.trim();
   if (!secret || secret.length < MIN_SECRET_LENGTH) return null;
   return secret;
+}
+
+/** État de configuration du scellement (jamais la valeur de la clé). */
+export interface SealConfigStatus {
+  /** Une clé exploitable est présente. */
+  configured: boolean;
+  algorithm: "HMAC-SHA256";
+  /** Cause de l'indisponibilité (diagnostic) quand non configurée. */
+  reason?: string;
+}
+
+/**
+ * Diagnostic de configuration du scellement, sans exception et sans exposer la
+ * clé : destiné à la sonde de disponibilité /api/ready.
+ */
+export function getSealConfigStatus(
+  env: string | undefined = process.env.CERT_SEAL_SECRET,
+): SealConfigStatus {
+  if (getSealSecret(env)) {
+    return { configured: true, algorithm: "HMAC-SHA256" };
+  }
+  const reason = env?.trim()
+    ? `CERT_SEAL_SECRET trop court (minimum ${MIN_SECRET_LENGTH} caractères)`
+    : "CERT_SEAL_SECRET absent ou vide";
+  return { configured: false, algorithm: "HMAC-SHA256", reason };
+}
+
+/**
+ * En production, une clé de scellement absente/invalide est un INCIDENT : les
+ * attestations émises perdraient silencieusement leur valeur probante. On le
+ * trace explicitement au niveau error au lieu de dégrader sans bruit. En
+ * dev/test, le scellement reste optionnel et cette fonction est muette.
+ *
+ * @returns true si un incident de configuration a été signalé.
+ */
+export function reportSealDisabledIfProduction(
+  env: string | undefined = process.env.CERT_SEAL_SECRET,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): boolean {
+  if (nodeEnv !== "production" || getSealSecret(env)) return false;
+  console.error(
+    `[SEAL] scellement désactivé : ${getSealConfigStatus(env).reason}. ` +
+      `Action requise — générez une clé (${SEAL_SECRET_GENERATION_ACTION}) ` +
+      `puis définissez CERT_SEAL_SECRET. Sans sceau, les attestations émises ` +
+      `perdent leur valeur probante.`,
+  );
+  return true;
 }
 
 function toIsoDate(value: Date | string): string {
@@ -78,6 +132,12 @@ export function computeSealHash(canonicalPayload: string, secret: string): strin
 
 /**
  * Calcule le scellement d'une attestation.
+ *
+ * Ne lève jamais : si la clé est indisponible, renvoie null (émission
+ * préservée). Toutefois, en production, cet état est signalé au niveau error
+ * — centralisé ici pour couvrir TOUS les points d'émission, pas seulement
+ * lib/attestations/issue.ts.
+ *
  * @returns null si la clé est indisponible (fonctionnalité dégradée, non bloquante).
  */
 export function sealCertificate(
@@ -85,7 +145,10 @@ export function sealCertificate(
   secret: string | null = getSealSecret(),
   now: Date = new Date(),
 ): CertificateSeal | null {
-  if (!secret) return null;
+  if (!secret) {
+    reportSealDisabledIfProduction();
+    return null;
+  }
   const sealHash = computeSealHash(canonicalizeSealPayload(payload), secret);
   return { sealHash, sealedAt: now };
 }
