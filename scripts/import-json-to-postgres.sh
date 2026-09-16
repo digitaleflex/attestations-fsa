@@ -98,16 +98,14 @@ const pool = new Pool({
 const client = await pool.connect();
 
 const tableOrder = [
-  { table: "User", data: dump.tables.users, fields: ["id","name","email","emailVerified","image","role","createdAt","updatedAt","banned","banReason","banExpires","address","birthDate","birthPlace","phone","attestationCode","attestationStatus","enrolledAt","examId","examScheduledAt","formationId","gender","portfolioEnabled","portfolioSlug","blockedReason","lastBlockedAt","resetPasswordRequired","status","portfolioStatus"] },
+  { table: "User", data: dump.tables.users, fields: ["id","name","email","emailVerified","image","role","createdAt","updatedAt","banned","banReason","banExpires","address","birthDate","birthPlace","phone","attestationCode","attestationStatus","enrolledAt","examId","examScheduledAt","formationId","gender","blockedReason","lastBlockedAt","resetPasswordRequired","status"] },
   { table: "Account", data: dump.tables.accounts, fields: ["id","userId","scope","accessToken","accessTokenExpiresAt","accountId","createdAt","idToken","providerId","refreshToken","refreshTokenExpiresAt","updatedAt"] },
   { table: "Session", data: dump.tables.sessions, fields: ["id","userId","createdAt","expiresAt","ipAddress","updatedAt","userAgent","impersonatedBy"] },
   { table: "Verification", data: dump.tables.verifications, fields: ["id","identifier","value","expiresAt","createdAt","updatedAt"] },
   { table: "Formation", data: dump.tables.formations, fields: ["id","name","category","description","skills","createdAt"] },
   { table: "Settings", data: dump.tables.settings, fields: ["id","institutionName","replyTo","updatedAt","targetAttestations","targetInscriptions","targetValidations","institutionLogo","instructorName","instructorTitle","location","signatureUrl","supportEmail"] },
   { table: "Report", data: dump.tables.reports, fields: ["id","codeAttestation","motif","message","email","createdAt","status"] },
-  { table: "Waitlist", data: dump.tables.waitlist, fields: ["id","email","name","message","status","source","createdAt","updatedAt"] },
   { table: "Contact", data: dump.tables.contacts, fields: ["id","name","email","phone","subject","message","status","type","createdAt","updatedAt"] },
-  { table: "Resource", data: dump.tables.resources, fields: ["id","title","description","type","url","thumbnail","category","isPublished","createdAt","updatedAt"] },
   { table: "Exam", data: dump.tables.exams, fields: ["id","title","description","status","totalPoints","createdAt","updatedAt","formationId","duration","name","part1Enabled","part1Points","part1Questions","part2Enabled","part2Points","part2Questions","part3Enabled","part3Mode","part3Points","part3Subject","passingScore","randomizeQuestions","showResults","scheduledAt","session","type"] },
   { table: "ExamPart", data: dump.tables.examParts, fields: ["id","examId","title","type","duration","points","order","scenario"] },
   { table: "Attestation", data: dump.tables.attestations, fields: ["id","code","issuedAt","type","fullName","email","birthDate","birthPlace","formationId","startDate","endDate","location","instructor","issuingCompany","status","pdfUrl","certificationHours","certificationMention","certificationObservations","certificationScore","gender","stageHours","stageObservations","stageScore","userId"] },
@@ -117,14 +115,10 @@ const tableOrder = [
   { table: "SecurityLog", data: dump.tables.securityLogs, fields: ["id","eventType","userId","ipAddress","userAgent","resource","resourceId","action","status","severity","details","timestamp"] },
   { table: "AuditLog", data: dump.tables.auditLogs, fields: ["id","userId","action","resource","resourceId","oldValue","newValue","ipAddress","timestamp"] },
   { table: "Notification", data: dump.tables.notifications, fields: ["id","userId","type","title","message","isRead","link","metadata","createdAt"] },
-  { table: "ChatMessage", data: dump.tables.chatMessages, fields: ["id","content","senderId","senderRole","userId","isRead","createdAt","attachments","userPortfolioMissionId"] },
   { table: "Reclamation", data: dump.tables.reclamations, fields: ["id","userId","submissionId","subject","message","status","adminReply","createdAt","updatedAt"] },
   { table: "Question", data: dump.tables.questions, fields: ["id","partId","text","type","points","order"] },
   { table: "QuestionOption", data: dump.tables.questionOptions, fields: ["id","questionId","text","isCorrect","feedback"] },
   { table: "CompositionScan", data: dump.tables.compositionScans, fields: ["id","submissionId","url","pageNumber","fileName","fileSize","uploadedBy","uploadedAt"] },
-  { table: "PortfolioMission", data: dump.tables.portfolioMissions, fields: ["id","title","description","type","guideMarkdown","requiredExamId","minScoreRequired","order","dueDate","createdAt","formationId"] },
-  { table: "UserPortfolioMission", data: dump.tables.userPortfolioMissions, fields: ["id","userId","missionId","status","unlockedLevel","submissionProof","adminComment","completedAt"] },
-  { table: "PortfolioProof", data: dump.tables.portfolioProofs, fields: ["id","userMissionId","url","label","type","createdAt"] },
 ];
 
 console.log("\nStarting import...\n");
