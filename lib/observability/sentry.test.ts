@@ -75,12 +75,16 @@ describe("Sentry optionnel — avec SENTRY_DSN (#151)", () => {
     process.env.SENTRY_TRACES_SAMPLE_RATE = "0.25";
 
     expect(isSentryEnabled()).toBe(true);
-    expect(buildSentryOptions("server")).toEqual({
+
+    const options = buildSentryOptions("server");
+    expect(options).toMatchObject({
       dsn: "https://key@example.ingest.sentry.io/1",
       environment: "production",
       release: "attestation-fsa@3.0.1",
       tracesSampleRate: 0.25,
+      sendDefaultPii: false,
     });
+    expect(typeof options?.beforeSend).toBe("function");
   });
 
   it("remonte l'erreur au SDK avec son contexte", async () => {

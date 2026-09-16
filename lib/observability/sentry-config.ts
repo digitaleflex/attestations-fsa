@@ -7,6 +7,14 @@
  * vit ici afin d'être testable sans charger le SDK (coûteux à importer).
  */
 
+import type { ErrorEvent, EventHint } from "@sentry/nextjs";
+
+import {
+  scrubSentryEvent,
+  scrubSentryTransaction,
+  type SentryTransactionEvent,
+} from "./sentry-scrub";
+
 export type SentryRuntime = "server" | "edge" | "client";
 
 export interface SentryOptions {
@@ -14,6 +22,15 @@ export interface SentryOptions {
   environment?: string;
   release?: string;
   tracesSampleRate: number;
+  /** Explicite, pour ne pas dépendre du défaut de version (#153). */
+  sendDefaultPii: boolean;
+  /** Scrubbing PII avant envoi des erreurs (#153). */
+  beforeSend: (event: ErrorEvent, hint?: EventHint) => Promise<ErrorEvent>;
+  /** Scrubbing PII avant envoi des transactions/traces (#153). */
+  beforeSendTransaction: (
+    event: SentryTransactionEvent,
+    hint?: EventHint,
+  ) => Promise<SentryTransactionEvent>;
 }
 
 function readEnv(value: string | undefined): string | undefined {
@@ -80,5 +97,10 @@ export function buildSentryOptions(
     environment: resolveSentryEnvironment(),
     release: resolveSentryRelease(),
     tracesSampleRate: resolveSentryTracesSampleRate(),
+    // #153 — confidentialité : aucune donnée personnelle par défaut, et
+    // scrubing systématique avant envoi (cf. lib/observability/sentry-scrub.ts).
+    sendDefaultPii: false,
+    beforeSend: scrubSentryEvent,
+    beforeSendTransaction: scrubSentryTransaction,
   };
 }
