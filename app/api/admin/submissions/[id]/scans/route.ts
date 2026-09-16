@@ -1,14 +1,15 @@
 // app/api/admin/submissions/[id]/scans/route.ts
 // Route sécurisée pour l'upload de scans d'examens
 // Protection : authentification Better Auth, validation type/taille, magic bytes
+// Stockage : abstraction objet `lib/storage` (S3/R2/MinIO en production,
+// fichiers locaux en développement) — plus aucune écriture dans le conteneur.
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { randomUUID } from 'crypto'
-import { basename, join, resolve, sep } from 'path'
-import { writeFile, mkdir, unlink } from 'fs/promises'
-import { existsSync } from 'fs'
 import { handleApiError, ApiErrorImpl } from '@/lib/error-handler'
 import { getAdminUser } from '@/lib/auth'
+import { getStorage } from '@/lib/storage'
+import { buildScanObjectKey, resolveScanObjectKey } from './scan-storage'
 
 // ============================================================================
 // CONFIGURATION DE SÉCURITÉ
@@ -64,64 +65,6 @@ function detectFileType(buffer: ArrayBuffer): string | null {
 function isValidExtension(filename: string): boolean {
   const ext = '.' + filename.split('.').pop()?.toLowerCase()
   return ALLOWED_EXTENSIONS.includes(ext as any)
-}
-
-/**
- * Extrait l'extension autorisée d'un nom de fichier (fallback .pdf).
- * @param originalName - Nom original du fichier
- * @returns Extension normalisée (lowercase) parmis .pdf/.jpg/.png
- */
-function safeExtension(originalName: string): string {
-  const ext = '.' + (originalName.split('.').pop() || '').toLowerCase()
-  return ALLOWED_EXTENSIONS.includes(ext as (typeof ALLOWED_EXTENSIONS)[number])
-    ? ext
-    : '.pdf'
-}
-
-/**
- * Génère un nom de fichier physique déterministe à partir de l'id du scan.
- * Le nom physique `${scanId}${ext}` permet à la route de lecture et au
- * DELETE de retrouver le fichier sans colonne dédiée en base.
- * @param scanId - Id du CompositionScan (UUID)
- * @param originalName - Nom original (pour l'extension)
- */
-function generateSafeFilename(scanId: string, originalName: string): string {
-  return `${scanId}${safeExtension(originalName)}`
-}
-
-/**
- * Résout le chemin physique d'un scan en le confinant au dossier d'upload
- * de sa soumission. Gère les anciens scans dont l'URL `/secure-files/...`
- * contenait le nom de fichier.
- * @returns Chemin absolu sûr ou null si le nom est invalide.
- */
-function resolveScanFilePath(
-  submissionId: string,
-  scan: { id: string; url: string; fileName: string }
-): string | null {
-  const storedName = scan.url.startsWith('/secure-files/scans/')
-    ? basename(scan.url)
-    : generateSafeFilename(scan.id, scan.fileName)
-
-  if (
-    !storedName ||
-    storedName === '.' ||
-    storedName === '..' ||
-    storedName.includes('/') ||
-    storedName.includes('\\')
-  ) {
-    return null
-  }
-
-  const uploadDir = resolve(join(process.cwd(), 'private', 'uploads', 'scans', submissionId))
-  const filePath = resolve(uploadDir, storedName)
-
-  // Empêche toute traversée de chemin hors du dossier de la soumission.
-  if (!filePath.startsWith(uploadDir + sep)) {
-    return null
-  }
-
-  return filePath
 }
 
 // ============================================================================
@@ -219,12 +162,11 @@ export async function POST(
     }
 
     const scans = []
-    const uploadDir = join(process.cwd(), 'private', 'uploads', 'scans', id)
 
-    // Créer le dossier d'upload s'il n'existe pas (hors webroot)
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true })
-    }
+    // Driver de stockage objet (S3/R2/MinIO en production, local en dev).
+    // La perte au redéploiement est éliminée : les objets ne vivent plus
+    // dans le filesystem du conteneur.
+    const storage = getStorage()
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -272,13 +214,12 @@ export async function POST(
       }
 
       // ✅ Génération de l'id AVANT l'insert : il est connu côté serveur et
-      // sert de nom de fichier physique + segment de l'URL servie.
+      // sert de nom d'objet physique + segment de l'URL servie.
       const scanId = randomUUID()
-      const safeFileName = generateSafeFilename(scanId, file.name)
-      const filePath = join(uploadDir, safeFileName)
+      const key = buildScanObjectKey(id, scanId, file.name)
 
-      // ✅ Sauvegarde hors webroot (dossier private)
-      await writeFile(filePath, Buffer.from(arrayBuffer))
+      // ✅ Sauvegarde dans le stockage objet (survit au redéploiement)
+      await storage.put(key, Buffer.from(arrayBuffer), detectedType)
 
       // Création de l'entrée en base de données
       const scan = await prisma.compositionScan.create({
@@ -356,16 +297,14 @@ export async function DELETE(
       )
     }
 
-    // Supprimer le fichier physique (sans throw si absent)
-    const filePath = resolveScanFilePath(id, scan)
-    if (filePath) {
+    // Supprimer l'objet (idempotent côté driver : pas d'erreur si absent).
+    // Une erreur de stockage ne doit pas empêcher la suppression de la ligne.
+    const key = resolveScanObjectKey(id, scan)
+    if (key) {
       try {
-        await unlink(filePath)
+        await getStorage().delete(key)
       } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code
-        if (code !== 'ENOENT') {
-          console.warn('Impossible de supprimer le fichier physique:', err)
-        }
+        console.warn('Impossible de supprimer l\'objet scan:', err)
       }
     }
 
