@@ -34,7 +34,6 @@ import {
   Megaphone,
   Loader2 as LoaderIcon,
   Play,
-  Rocket,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -53,10 +52,6 @@ interface UserStatistics {
     totalMockExams: number;
     mockExamsPassed: number;
     averageScore: number;
-  };
-  portfolio: {
-    completedMissions: number;
-    totalMissions: number;
   };
 }
 
@@ -188,81 +183,6 @@ export default function UserDashboardPage() {
               <Trophy className="w-10 h-10 text-amber-400" />
             </div>
           </div>
-        </div>
-      </Card>
-
-      {/* Portfolio Journey (New) */}
-      <Card className="p-6 border-none shadow-premium bg-white relative overflow-hidden">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
-              <Rocket className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-black text-slate-900 tracking-tight">
-                VOTRE PARCOURS PROFESSIONNEL
-              </h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                Missions validées :{" "}
-                {statsData?.portfolio?.completedMissions || 0} /{" "}
-                {statsData?.portfolio?.totalMissions || 0}
-              </p>
-            </div>
-          </div>
-
-          {/* Badge Display */}
-          {(statsData?.portfolio?.completedMissions || 0) > 0 && (
-            <div
-              className={cn(
-                "px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm border animate-in zoom-in duration-500",
-                (statsData?.portfolio?.completedMissions || 0) >= 6
-                  ? "bg-amber-400 border-amber-500 text-amber-950"
-                  : (statsData?.portfolio?.completedMissions || 0) >= 3
-                    ? "bg-slate-200 border-slate-300 text-slate-800"
-                    : "bg-orange-200 border-orange-300 text-orange-950",
-              )}
-            >
-              <Trophy className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase">
-                {(statsData?.portfolio?.completedMissions || 0) >= 6
-                  ? "Rang Or"
-                  : (statsData?.portfolio?.completedMissions || 0) >= 3
-                    ? "Rang Argent"
-                    : "Rang Bronze"}
-              </span>
-            </div>
-          )}
-
-          <div className="flex-1 max-w-md w-full">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-indigo-600">
-                PROGRESSION
-              </span>
-              <span className="text-[10px] font-black text-indigo-600">
-                {statsData?.portfolio?.totalMissions
-                  ? Math.round(
-                      ((statsData?.portfolio?.completedMissions || 0) /
-                        statsData.portfolio.totalMissions) *
-                        100,
-                    )
-                  : 0}
-                %
-              </span>
-            </div>
-            <div className="h-2 bg-indigo-50 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-1000"
-                style={{
-                  width: `${statsData?.portfolio?.totalMissions ? Math.round(((statsData?.portfolio?.completedMissions || 0) / statsData.portfolio.totalMissions) * 100) : 0}%`,
-                }}
-              />
-            </div>
-          </div>
-          <Link href="/internships">
-            <Button className="bg-indigo-600 hover:bg-indigo-700 h-10 px-6 rounded-xl font-black text-[10px] uppercase tracking-wider">
-              Continuer mes missions
-            </Button>
-          </Link>
         </div>
       </Card>
 
@@ -922,25 +842,6 @@ export default function UserDashboardPage() {
               )}
             </div>
           </Card>
-
-          {/* Portfolio Public Preview (New) */}
-          {(statsData?.portfolio?.completedMissions || 0) > 0 && (
-            <Card className="p-6 bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-none shadow-xl relative overflow-hidden">
-              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-3">
-                Votre Vitrine est active
-              </h4>
-              <p className="text-[11px] text-indigo-100/80 mb-4 leading-relaxed font-medium">
-                Partagez votre portfolio officiel avec des recruteurs pour
-                booster votre carrière.
-              </p>
-              <Link href={`/p/${user?.email?.split("@")[0] || "anonymous"}`}>
-                <Button className="w-full bg-white text-indigo-600 hover:bg-indigo-50 font-black text-[10px] uppercase h-10 rounded-xl shadow-lg border-none">
-                  Voir mon site public
-                </Button>
-              </Link>
-            </Card>
-          )}
 
           {/* Profile Card */}
           <Card className="p-8 border-none shadow-premium bg-white space-y-6">
