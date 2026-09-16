@@ -212,12 +212,11 @@ attestations-fsa/
 │   │   ├── attestations/         # Gestion attestations
 │   │   ├── corrections/          # Corrections manuelles
 │   │   └── logs/                 # Audit logs
-│   ├── api/                      # Routes API
-│   │   ├── auth/                 # Authentification
-│   │   ├── admin/                # API admin
-│   │   ├── exams/                # API examens
-│   │   └── public/               # API publique
-│   └── p/                        # Portfolios publics
+│   └── api/                      # Routes API
+│       ├── auth/                 # Authentification
+│       ├── admin/                # API admin
+│       ├── exams/                # API examens
+│       └── public/               # API publique
 ├── components/                   # Composants React
 ├── lib/                          # Utilitaires
 │   ├── auth.ts                   # Better Auth config

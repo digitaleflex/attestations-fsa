@@ -4,6 +4,12 @@
 **Progression Globale** : **~79%** (+1%)  
 **Statut Production** : ✅ Prêt (avec réserves)
 
+> ⚠️ **Réalignement 2026-09-16 (issue #86)** : les modules **Chat, Ressources
+> pédagogiques, Portfolio et Waitlist** ont été **retirés du produit le 2026-06-22**
+> (commit `960852f`). Les pourcentages ci-dessous sont un instantané du 9 avril 2026
+> qui incluait ces modules ; la « Progression Globale ~79 % » n'est donc plus
+> représentative et n'a **pas été recalculée** (aucun chiffre alternatif vérifiable).
+
 ---
 
 ## 🎯 Résumé par Catégorie
@@ -18,18 +24,18 @@
 | 📝 Gestion des Examens | 90% | ✅ Complet |
 | ⚙️ Paramètres | 90% | ✅ Complet |
 | 📜 Gestion des Attestations | 85% | ✅ Complet |
-| ⏳ Waitlist | 85% | ✅ Complet |
+| ⏳ Waitlist | — | 🗑️ Retiré (2026-06-22, `960852f`) — 0 modèle, 0 page, 0 API |
 | 🎓 Résultats & Transcripts | 80% | ✅ Complet |
 | 📞 Contact & Support | 80% | ✅ Complet |
 | 🔒 Sécurité | 95% | ✅ Complet |
 | ✏️ Demandes de Correction | 80% | ✅ Complet |
 | 💼 Gestion des Stages | 75% | ⚠️ Améliorable |
-| 📚 Ressources | 75% | ⚠️ Améliorable |
+| 📚 Ressources pédagogiques | — | 🗑️ Retiré (2026-06-22, `960852f`) — 0 modèle `Resource`, 0 page, 0 API |
 | 🔔 Notifications | 70% | ⚠️ Améliorable |
 | 🛡️ Anti-Triche | 70% | ⚠️ Améliorable |
 | 📋 Audit Logging | 65% | ⚠️ Améliorable |
-| 💬 Chat System | 60% | 🔧 Partiel |
-| 📁 Portfolio | 60% | 🔧 Partiel |
+| 💬 Chat System | — | 🗑️ Retiré (2026-06-22, `960852f`) — 0 modèle, 0 route, 0 page |
+| 📁 Portfolio | — | 🗑️ Retiré (2026-06-22, `960852f`) — 0 modèle, 0 route, 0 page |
 | 📹 Monitoring Examen | 40% | 🔧 Partiel |
 | 🧪 Tests | 15% | 🔴 Insuffisant |
 
@@ -59,9 +65,8 @@
 
 1. **369 utilisations de `any`** - Sécurité des types compromise
 2. **Tests insuffisants (15%)** - Couverture très faible
-3. **Modèle `Admin` legacy** dans Prisma (transition en cours)
-4. **Origines de confiance trop permissives** (`*.vercel.app`)
-5. **Session longue** (30 jours)
+3. **Origines de confiance trop permissives** (`*.vercel.app`, `lib/auth.ts:65`)
+4. **Session longue** (30 jours)
 
 ---
 
@@ -104,7 +109,7 @@
 - **Lignes de code** : ~41,634 TypeScript/TSX
 - **Routes API** : 80+ endpoints
 - **Pages** : 50+ (public + admin + user)
-- **Modèles Prisma** : 25+ tables
+- **Modèles Prisma** : 22 modèles dans `prisma/schema.prisma` (compté ; les modèles des modules retirés n'y figurent plus)
 - **Dépendances** : Next.js 16, Better Auth, Prisma, Pusher, Upstash Redis, Resend
 
 ---
@@ -118,14 +123,12 @@
 
 ### Priorité Moyenne (Qualité)
 4. Réduire les `any` vers types génériques
-5. Documentation complète portfolio
-6. Finaliser système de chat
 
 ### Priorité Basse (Améliorations)
-7. Monitoring examen côté client
-8. Notifications email/SMS
-9. Anti-triche avancé
+5. Monitoring examen côté client
+6. Notifications email/SMS
+7. Anti-triche avancé
 
 ---
 
-**Documentation détaillée** : [`doc/README.md`](./doc/README.md)
+**Documentation détaillée** : [`docs/README.md`](./docs/README.md)

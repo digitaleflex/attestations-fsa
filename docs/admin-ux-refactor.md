@@ -1,5 +1,10 @@
 # Plan de Refonte Neuro-Ergonomique (Admin UI)
 
+> ⚠️ **Réaligné le 2026-09-16 (issue #86)** : ce plan a été rédigé avant le retrait
+> des modules Portfolio, Ressources et Waitlist (2026-06-22, `960852f`). Les items
+> qui les citaient ont été nettoyés — on ne peut pas « fusionner » des vues qui
+> n'existent plus.
+
 Objectif : Éliminer la surcharge cognitive (Loi de Hick), fusionner les vues par intention utilisateur (Action vs Analyse), et nettoyer le dashboard des métriques non-actionnables.
 
 ## 👥 Force de Frappe Recommandée (Agents)
@@ -29,7 +34,7 @@ Pour exécuter cette refonte efficacement et en parallèle, voici la répartitio
 ### PHASE 3 : Fusion des Outils (Inbox Zero)
 - [ ] **UX-3 : Création du Action Center ("À Traiter")**
   - Créer une nouvelle page `/admin/tasks` (ou fusionner dans `/admin/dashboard`).
-  - Regrouper visuellement : Copies à corriger + Portfolios à valider + Demandes de correction profil.
+  - Regrouper visuellement : Copies à corriger + Demandes de correction profil. *(« Portfolios à valider » retiré de ce plan : le module n'existe plus — `960852f`.)*
   
 - [ ] **UX-4 : Création de la Boîte de Réception Unique ("Messagerie")**
   - Créer une vue unifiée pour les Messages internes, les Contacts (RDV) et les Signalements.
@@ -37,10 +42,10 @@ Pour exécuter cette refonte efficacement et en parallèle, voici la répartitio
 
 ### PHASE 4 : Restructuration des Données
 - [ ] **UX-5 : Fusion Apprenants / CRM**
-  - Intégrer les vues "Liste d'attente" et "Stages" sous forme de filtres/onglets dans la page principale "Utilisateurs".
+  - Intégrer la vue « Stages » sous forme de filtre/onglet dans la page principale « Utilisateurs ». *(« Liste d'attente » retiré de ce plan : la waitlist n'existe plus — `960852f`.)*
   
 - [ ] **UX-6 : Regroupement Pédagogique**
-  - Intégrer la gestion des Examens, Ressources et Configurations de missions à l'intérieur de la vue "Formations".
+  - Intégrer la gestion des Examens à l'intérieur de la vue « Formations ». *(« Ressources » et « Configurations de missions » retirés de ce plan : modules supprimés — `960852f`.)*
 
 ### PHASE 5 : Nettoyage du Code Mort
 - [ ] **UX-7 : Suppression des Routes Orphelines**
