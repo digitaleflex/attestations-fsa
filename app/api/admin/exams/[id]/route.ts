@@ -129,9 +129,11 @@ export async function PATCH(
         formation: formationId ? { connect: { id: formationId } } : undefined,
         session,
         duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,
+        // #123 — arrondi serveur (Math.round) et non troncature (parseInt)
         passingScore: (passingScore !== undefined && passingScore !== null) ? Math.round(Number(passingScore)) : undefined,
-        randomizeQuestions: randomizeQuestions === true,
-        showResults: showResults === true,
+        // #130 m6 — PATCH partiel : ne pas écraser les booléens absents du body
+        randomizeQuestions: randomizeQuestions === undefined ? undefined : randomizeQuestions === true,
+        showResults: showResults === undefined ? undefined : showResults === true,
         type: type || undefined,
         totalPoints: Math.round(totalPoints),
         part1Enabled: enabledParts.some((p: ExamPartPayload) => p.type === "QCM"),

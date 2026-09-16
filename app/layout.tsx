@@ -28,6 +28,9 @@ export default function RootLayout({
         <meta name="theme-color" content="#16a34a" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
+        <a href="#contenu-principal" className="skip-link">
+          Aller au contenu principal
+        </a>
         <BotIdClient protect={[{ path: "/api/exams/*/submit", method: "POST" }]} />
         <Script
           id="sw-cleanup"

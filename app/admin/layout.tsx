@@ -72,7 +72,7 @@ export default async function AdminLayout({
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main id="contenu-principal" className="flex-1 overflow-y-auto">{children}</main>
       </SidebarInset>
 
       <PusherAdminListener />

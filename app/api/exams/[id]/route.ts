@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
+import { isExamAvailable } from "@/lib/exams/availability";
 
 export async function GET(
   request: NextRequest,
@@ -82,6 +83,19 @@ export async function GET(
       );
     }
 
+    // Verrou candidat : un examen non encore ouvert n'est lisible que par un admin.
+    if (!adminUser && !isExamAvailable(exam)) {
+      return NextResponse.json(
+        {
+          error: "Examen verrouillé",
+          code: "EXAM_LOCKED",
+          message:
+            "Cet examen sera disponible à sa prochaine programmation.",
+        },
+        { status: 423 },
+      );
+    }
+
     return NextResponse.json(exam);
   } catch (error) {
     console.error(error);
@@ -132,6 +146,7 @@ export async function PATCH(
       where: { id },
       data: {
         title,
+        name: title, // #130 m8 — title et name restent synchronisés
         description,
         status,
         scheduledAt: isValidDate ? scheduledAtDate : null,

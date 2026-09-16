@@ -40,6 +40,10 @@ export type DetectionType =
   | "COPY_DETECTED"
   | "STATISTICAL_ANOMALY";
 
+// #129 — échantillon minimum de réponses communes avant de comparer la
+// similarité entre deux copies (évite les faux positifs sur petits échantillons).
+const MIN_SIMILARITY_SAMPLE = 5;
+
 type SessionData = {
   userId: string;
   answers: Prisma.JsonValue;
@@ -98,14 +102,8 @@ export async function analyzeAnswerPattern(
     });
   }
 
-  const totalAnswers = Object.keys(currentAnswers).length;
-  if (totalAnswers > 10) {
-    flags.push({
-      type: "STATISTICAL_ANOMALY",
-      severity: "LOW",
-      details: `Submission with ${totalAnswers} answers - pattern will be monitored`,
-    });
-  }
+  // #129 — le seuil « >10 réponses » générait un STATISTICAL_ANOMALY sur
+  // presque tout examen normal (isSuspicious=true à tort) : supprimé.
 
   return {
     isSuspicious: flags.length > 0,
@@ -133,6 +131,9 @@ function checkIdenticalAnswers(
     const currentKeys = Object.keys(currentAnswers);
     const otherKeys = Object.keys(otherAnswers);
 
+    // #129 — deux copies vides (0 clé) ne sont PAS « 100 % identiques » :
+    // exiger un échantillon réel avant comparaison.
+    if (currentKeys.length === 0 || otherKeys.length === 0) continue;
     if (currentKeys.length !== otherKeys.length) continue;
 
     const allMatch = currentKeys.every(
@@ -165,7 +166,9 @@ function checkHighSimilarity(
       (key) => currentAnswers[key] === otherAnswers[key],
     ).length;
 
-    if (commonKeys.length > 0) {
+    // #129 — similarité > 0.9 sans échantillon minimum = faux positif
+    // (2 réponses communes sur 2 suffisaient). Exiger un échantillon réel.
+    if (commonKeys.length >= MIN_SIMILARITY_SAMPLE) {
       const similarity = matchingAnswers / commonKeys.length;
       if (similarity > 0.9) {
         similarities.push({ userId: session.userId, score: similarity });

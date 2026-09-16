@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
-import { isPassed, resolveExamMax } from "@/lib/exams/scoring";
+import { isCorrected, isPassed, resolveExamMax } from "@/lib/exams/scoring";
 
 // GET /api/admin/submissions - Récupérer toutes les soumissions
 export async function GET(request: Request) {
@@ -47,15 +47,17 @@ export async function GET(request: Request) {
     // Champs calculés par soumission (format tableau conservé).
     const submissions = rawSubmissions.map((sub) => {
       const maxScore = resolveExamMax(sub.exam);
+      // #125 — une copie auto-corrigée (COMPLETED) est aussi « corrigée » :
+      // isCorrected = COMPLETED || GRADED (même règle que les routes user).
       const passed =
-        sub.status === "GRADED" &&
+        isCorrected(sub.status) &&
         isPassed(sub.finalScore, sub.exam.passingScore);
 
       return {
         ...sub,
         maxScore,
         passed,
-        completed: sub.status === "GRADED",
+        completed: isCorrected(sub.status),
         pendingReview: sub.status === "PENDING_REVIEW",
       };
     });
@@ -66,7 +68,7 @@ export async function GET(request: Request) {
       pendingReview: submissions.filter((s) => s.status === "PENDING_REVIEW")
         .length,
       inProgress: submissions.filter((s) => s.status === "IN_PROGRESS").length,
-      completed: submissions.filter((s) => s.status === "GRADED").length,
+      completed: submissions.filter((s) => isCorrected(s.status)).length,
       passed: submissions.filter((s) => s.passed).length,
     };
 

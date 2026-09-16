@@ -403,7 +403,7 @@ export default function UserExamsPage() {
                         </span>
                       </div>
                       <span
-                        className={`text-2xl font-bold ${(exam.maxScore > 0 ? (exam.score / exam.maxScore) * 100 : 0) >= 70 ? "text-emerald-600" : "text-rose-600"}`}
+                        className={`text-2xl font-bold ${(exam.maxScore > 0 ? (exam.score / exam.maxScore) * 100 : 0) >= (exam.passingScore ?? 65) ? "text-emerald-600" : "text-rose-600"}`}
                       >
                         {exam.maxScore > 0
                           ? Math.round((exam.score / exam.maxScore) * 100)

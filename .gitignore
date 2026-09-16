@@ -66,3 +66,6 @@ db-dump-*.json
 .env.reset.env.deploy
 # npm lockfile (le projet utilise pnpm)
 package-lock.json
+
+# Outillage local opencode (config/skills perso)
+.opencode/

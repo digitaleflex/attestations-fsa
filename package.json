@@ -16,7 +16,8 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "verify": "tsc --noEmit && eslint . && vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -51,7 +52,6 @@
     "bcryptjs": "^3.0.2",
     "better-auth": "^1.7.4",
     "botid": "^1.5.11",
-    "chart.js": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -74,7 +74,6 @@
     "pusher-js": "^8.5.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
-    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.59.0",
     "react-markdown": "^10.1.0",

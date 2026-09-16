@@ -272,4 +272,88 @@ describe("POST /api/exams/[id]/submit", () => {
     expect(body.maxScore).toBe(100);
     expect(body.scorePart1).toBe(20);
   });
+
+  it("119 — rejette une soumission après expiration de la durée", async () => {
+    stubAuthorized();
+    // Session démarrée il y a duration + tolérance + 1s → délai dépassé
+    db.sessionFindFirst.mockResolvedValueOnce({
+      startedAt: new Date(Date.now() - (3600 + 60 + 1) * 1000),
+      status: "IN_PROGRESS",
+    } as never);
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
+    } as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      part2Points: 0,
+      part3Points: 0,
+      part1Enabled: true,
+      part2Enabled: false,
+      part3Enabled: false,
+      totalPoints: 20,
+      type: "OFFICIAL",
+      passingScore: 65,
+      formationId: "formation-1",
+      duration: 3600,
+    } as never);
+    db.examPartFindMany.mockResolvedValue([
+      { order: 1, type: "QCM", points: 20 },
+    ] as never);
+
+    const res = await callSubmit({ q1: "o1" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Temps écoulé");
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("128 — la réponse partie 3 est stockée sous answers.part3 (visible admin)", async () => {
+    stubAuthorized();
+    db.sessionFindFirst
+      .mockResolvedValueOnce({
+        startedAt: new Date(Date.now() - 600_000),
+        status: "IN_PROGRESS",
+      } as never)
+      .mockResolvedValueOnce({
+        id: "session-1",
+        status: "PENDING_REVIEW",
+        scorePart1: 0,
+        totalScore: 0,
+        finalScore: 0,
+      } as never);
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
+    } as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      part2Points: 0,
+      part3Points: 40,
+      part1Enabled: true,
+      part2Enabled: false,
+      part3Enabled: true,
+      totalPoints: 60,
+      type: "OFFICIAL",
+      passingScore: 65,
+      formationId: "formation-1",
+    } as never);
+    // Partie 3 (CASE_STUDY) présente → PENDING_REVIEW
+    db.examPartFindMany.mockResolvedValue([
+      { order: 1, type: "QCM", points: 20 },
+      { order: 3, type: "CASE_STUDY", points: 40 },
+    ] as never);
+    db.sessionUpdateMany.mockResolvedValue({ count: 1 } as never);
+
+    const composition = "Analyse du cas : le candidat propose...";
+    const res = await callSubmit({ q1: "o1", part3: composition });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.status).toBe("PENDING_REVIEW");
+    // La composition est bien persistée sous answers.part3
+    const updateCall = db.sessionUpdateMany.mock.calls[0][0];
+    expect(updateCall.data.answers.part3).toBe(composition);
+  });
 });

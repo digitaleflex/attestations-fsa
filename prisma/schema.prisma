@@ -108,12 +108,17 @@ model User {
 }
 
 // better-auth `twoFactor` plugin storage (TOTP secret + backup codes).
+// Champs `verified` / `failedVerificationCount` / `lockedUntil` requis par
+// better-auth >= 1.7 (verrouillage après trop d'échecs de vérification).
 model TwoFactor {
-  id          String @id @default(cuid())
-  secret      String
-  backupCodes String
-  userId      String @unique
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String    @id @default(cuid())
+  secret                  String
+  backupCodes             String
+  userId                  String    @unique
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // VerificationToken removed — NextAuth legacy, unused. Better Auth uses `Verification` model.
@@ -278,9 +283,9 @@ model ExamSession {
   scorePart2      Float? // raw Part 2 admin-grade — null = partie non corrigée
   scorePart3      Float? // raw Part 3 admin-grade — null = partie non corrigée
   score           Float @default(0) // legacy Part 1 score alias — prefer scorePart1
-  totalScore      Float @default(0) // (scorePart1+2+3)/5 → /20 after grading
+  totalScore      Float @default(0) // somme brute des points (scorePart1+2+3) — pas de division par 5
   internshipScore Float @default(0) // internship component score
-  finalScore      Float @default(0) // weighted avg of totalScore + internshipScore
+  finalScore      Float @default(0) // pourcentage examen 0..100 (totalScore / maxPoints * 100) — #124 : internshipScore est un composant SÉPARÉ (note de stage), il n'entre pas dans finalScore
   gradedBy    String?
   gradedAt    DateTime?
   startedAt   DateTime          @default(now())
@@ -294,7 +299,7 @@ model ExamSession {
   exam        Exam              @relation(fields: [examId], references: [id])
   candidate   User              @relation(fields: [userId], references: [id])
 
-  @@index([userId, examId])
+  @@unique([userId, examId])
   @@index([status])
   @@index([examId, status])
   @@index([userId, status])

@@ -214,7 +214,7 @@ export default function UserLayout({
         <EmailVerificationBanner user={user} />
 
         {/* Page Content area */}
-        <main className="flex-1 overflow-y-auto bg-slate-50/50 p-6 lg:p-10 relative scrollbar-hide pb-24 lg:pb-10">
+        <main id="contenu-principal" className="flex-1 overflow-y-auto bg-slate-50/50 p-6 lg:p-10 relative scrollbar-hide pb-24 lg:pb-10">
           <div className="mx-auto max-w-6xl animate-in slide-in-from-bottom-4 fade-in duration-500 ease-out pb-20">
             {children}
           </div>

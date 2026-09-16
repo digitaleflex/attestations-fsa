@@ -81,6 +81,13 @@ export default function ExamSessionPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Examen verrouillé (423) ou introuvable : retour à la liste.
+  useEffect(() => {
+    if (!examLoading && !exam) {
+      router.push("/exams");
+    }
+  }, [examLoading, exam, router]);
+
   const startMutation = useMutation<ExamSessionResponse, Error, void>({
     mutationFn: () => apiFetch<ExamSessionResponse>(`/api/exams/${id}/start`, { method: "POST" }),
     onSuccess: (data) => {
@@ -254,6 +261,14 @@ export default function ExamSessionPage() {
         onAgreedChange={setAgreedToRules}
         onStart={() => { setShowInstructions(false); startMutation.mutate(); }}
       />
+    );
+  }
+
+  if (!exam) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-slate-500">Redirection...</p>
+      </div>
     );
   }
 
