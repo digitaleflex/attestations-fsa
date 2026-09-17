@@ -8,6 +8,6 @@ jobs:
   env-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check for forbidden .env files
         run: bash ./scripts/check-env-files.sh
