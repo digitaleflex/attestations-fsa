@@ -129,7 +129,8 @@ export async function PATCH(
         formation: formationId ? { connect: { id: formationId } } : undefined,
         session,
         duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,
-        passingScore: (passingScore !== undefined && passingScore !== null) ? parseInt(passingScore.toString()) : undefined,
+        // #123 — arrondi serveur (Math.round) et non troncature (parseInt)
+        passingScore: (passingScore !== undefined && passingScore !== null) ? Math.round(Number(passingScore)) : undefined,
         // #130 m6 — PATCH partiel : ne pas écraser les booléens absents du body
         randomizeQuestions: randomizeQuestions === undefined ? undefined : randomizeQuestions === true,
         showResults: showResults === undefined ? undefined : showResults === true,

@@ -310,9 +310,9 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                       type="number"
                       min="0"
                       max="20"
-                      step="0.5"
-                      placeholder="12"
-                      value={((formData.passingScore || 60) * 20) / 100}
+                      step="1"
+                      placeholder="13"
+                      value={((formData.passingScore || 65) * 20) / 100}
                       onChange={(e) => {
                         const noteSur20 = parseFloat(e.target.value) || 0;
                         updateFormData({ passingScore: (noteSur20 * 100) / 20 });
@@ -324,7 +324,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
 
                   <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 shadow-sm">
                     <span className="text-xs font-bold text-emerald-500">Soit</span>
-                    <span className="text-sm font-black text-emerald-700">{Math.round(formData.passingScore || 60)}%</span>
+                    <span className="text-sm font-black text-emerald-700">{Math.round(formData.passingScore || 65)}%</span>
                   </div>
                 </div>
               </div>
