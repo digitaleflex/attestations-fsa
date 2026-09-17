@@ -80,16 +80,10 @@ async function main() {
       },
     });
 
-    // Créer le compte 'credential' pour Better Auth dans le seed
-    await prisma.account.create({
-      data: {
-        userId: newUser.id,
-        providerId: 'credential',
-        accountId: 'admin@fsa.bj',
-        password: hashedAdminPassword,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+    // Compte 'credential' Better Auth : accountId === user.id (helper idempotent).
+    await ensureCredentialAccount(prisma, {
+      userId: newUser.id,
+      passwordHash: hashedAdminPassword,
     });
 
     console.log('✅ Compte administrateur unifié créé avec succès (Better Auth Ready)');

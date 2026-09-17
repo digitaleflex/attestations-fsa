@@ -163,7 +163,8 @@ export async function POST(request: Request) {
         data: {
           userId: user.id,
           providerId: 'credential',
-          accountId: sanitizedEmail,
+          // Better Auth 1.7 : accountId d'un compte credential = user.id (jamais l'email).
+          accountId: user.id,
           password: hashedPassword,
         },
       });
