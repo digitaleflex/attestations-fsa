@@ -16,7 +16,7 @@
  *  5. une sortie RÉELLE du plein écran reste signalée (anti-triche préservé).
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { act, createElement } from "react";
+import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { EnforcementAction } from "@/lib/exam-enforcement";
 import {
@@ -34,6 +34,7 @@ type MutableBox = { current: HookApi };
 interface HookProps {
   examId?: string;
   userId?: string;
+  maxTabSwitches?: number;
   onViolation?: (event: MonitoringEvent, state: MonitoringState) => void;
   onEnforcement?: (action: EnforcementAction) => void;
 }
@@ -45,13 +46,17 @@ function Probe({ box, ...props }: HookProps & { box: MutableBox }): null {
   box.current = useExamMonitoring({
     examId: props.examId ?? "exam-1",
     userId: props.userId ?? "user-1",
+    maxTabSwitches: props.maxTabSwitches,
     onViolation: props.onViolation,
     onEnforcement: props.onEnforcement,
   });
   return null;
 }
 
-function renderHook(props: HookProps = {}): {
+function renderHook(
+  props: HookProps = {},
+  options: { strict?: boolean } = {},
+): {
   box: MutableBox;
   rerender: (next?: HookProps) => void;
 } {
@@ -60,15 +65,17 @@ function renderHook(props: HookProps = {}): {
   document.body.appendChild(container);
   root = createRoot(container);
 
+  const element = createElement(Probe, { ...props, box });
   act(() => {
-    root!.render(createElement(Probe, { ...props, box }));
+    root!.render(options.strict ? createElement(StrictMode, null, element) : element);
   });
 
   return {
     box,
     rerender(next: HookProps = props) {
+      const nextElement = createElement(Probe, { ...next, box });
       act(() => {
-        root!.render(createElement(Probe, { ...next, box }));
+        root!.render(options.strict ? createElement(StrictMode, null, nextElement) : nextElement);
       });
     },
   };
@@ -229,5 +236,94 @@ describe("useExamMonitoring — régression #220", () => {
     expect(box.current.totalSuspiciousEvents).toBe(1);
     expect(box.current.events[0]?.type).toBe("WINDOW_RESIZE");
     expect(box.current.events[0]?.details).toBe("Sortie du mode plein écran");
+  });
+});
+
+describe("useExamMonitoring — pureté de l'updater (#225)", () => {
+  /** Force l état caché/visible du document : jsdom ne permet pas de la piloter autrement. */
+  function setDocumentHidden(hidden: boolean): void {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => (hidden ? "hidden" : "visible"),
+    });
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => hidden,
+    });
+  }
+
+  afterEach(() => {
+    // Retire les propriétés propres posées par ces tests : les getters natifs de
+    // Document.prototype reprennent la main pour les tests suivants.
+    delete (document as unknown as Record<string, unknown>).visibilityState;
+    delete (document as unknown as Record<string, unknown>).hidden;
+  });
+
+  it("un seul événement déclencheur n'appelle onViolation qu'une fois (StrictMode)", async () => {
+    stubRequestFullscreen(() => Promise.resolve());
+    stubFetch({ ok: true, json: async () => ({}) });
+    const onViolation = vi.fn();
+
+    // StrictMode invoque délibérément les updaters de `setState` deux fois en
+    // développement : ce test échouerait si un effet de bord y subsistait.
+    renderHook({ maxTabSwitches: 1, onViolation }, { strict: true });
+
+    await act(async () => {
+      setDocumentHidden(true);
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(onViolation).toHaveBeenCalledTimes(1);
+    expect(onViolation.mock.calls[0]?.[0]).toMatchObject({ type: "VISIBILITY_CHANGE" });
+    expect(onViolation.mock.calls[0]?.[1]).toMatchObject({ tabSwitches: 1 });
+  });
+
+  it("deux événements déclencheurs distincts → deux appels, pas quatre (StrictMode)", async () => {
+    stubRequestFullscreen(() => Promise.resolve());
+    stubFetch({ ok: true, json: async () => ({}) });
+    const onViolation = vi.fn();
+
+    renderHook({ maxTabSwitches: 1, onViolation }, { strict: true });
+
+    for (let i = 0; i < 2; i += 1) {
+      await act(async () => {
+        setDocumentHidden(true);
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    }
+
+    expect(onViolation).toHaveBeenCalledTimes(2);
+  });
+
+  it("le franchissement du seuil produit toujours une seule action d'enforcement (StrictMode)", async () => {
+    vi.useFakeTimers();
+    stubRequestFullscreen(() => Promise.resolve());
+    const enforcement: EnforcementAction = {
+      lockAnswers: true,
+      forceSubmit: false,
+      warnUser: true,
+      reason: "Triche détectée",
+    };
+    const fetchSpy = stubFetch({ ok: true, json: async () => ({ enforcement }) });
+    const onViolation = vi.fn();
+    const onEnforcement = vi.fn();
+
+    const { box } = renderHook({ maxTabSwitches: 1, onViolation, onEnforcement }, { strict: true });
+
+    await act(async () => {
+      setDocumentHidden(true);
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(onViolation).toHaveBeenCalledTimes(1);
+    expect(box.current.tabSwitches).toBe(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(onEnforcement).toHaveBeenCalledTimes(1);
+    expect(onEnforcement).toHaveBeenCalledWith(enforcement);
   });
 });

@@ -55,6 +55,13 @@ export function useExamMonitoring({
   const eventQueue = useRef<MonitoringEvent[]>([]);
   const isFullscreen = useRef(false);
 
+  // #225 — L'état courant est doublé dans une ref pour permettre de calculer le
+  // prochain état HORS de l'updater de `setState`. Un updater doit rester pur :
+  // React peut l'invoquer deux fois (StrictMode en développement, rendus
+  // concurrents en production), ce qui dupliquait `onViolation` et gonflait les
+  // compteurs suspects. La ref est la source de vérité synchrone pour le calcul.
+  const stateRef = useRef(state);
+
   // #220 — L'effet de surveillance ne doit pas se rejouer quand le parent
   // recrée ses callbacks à chaque rendu (fonctions inline). On conserve donc
   // la dernière version de chaque callback dans une ref : l'effet lit toujours
@@ -67,31 +74,36 @@ export function useExamMonitoring({
   useEffect(() => {
     onViolationRef.current = onViolation;
     onEnforcementRef.current = onEnforcement;
+    stateRef.current = state;
   });
 
   const addEvent = useCallback((type: MonitoringEvent['type'], details?: string) => {
     const newEvent: MonitoringEvent = { type, timestamp: Date.now(), details };
     eventQueue.current.push(newEvent);
 
-    setState((prev) => {
-      const isHidden = type === 'VISIBILITY_CHANGE' && document.visibilityState === 'hidden';
-      const isBlur = type === 'BLUR';
+    const prev = stateRef.current;
+    const isHidden = type === 'VISIBILITY_CHANGE' && document.visibilityState === 'hidden';
+    const isBlur = type === 'BLUR';
 
-      const newState = {
-        ...prev,
-        events: [...prev.events, newEvent],
-        tabSwitches: isHidden ? prev.tabSwitches + 1 : prev.tabSwitches,
-        blurCount: isBlur ? prev.blurCount + 1 : prev.blurCount,
-        totalSuspiciousEvents: prev.totalSuspiciousEvents + 1,
-        isCurrentlyVisible: document.visibilityState === 'visible',
-        isCurrentlyFocused: type === 'FOCUS' ? true : (isBlur ? false : prev.isCurrentlyFocused),
-      };
+    const newState: MonitoringState = {
+      ...prev,
+      events: [...prev.events, newEvent],
+      tabSwitches: isHidden ? prev.tabSwitches + 1 : prev.tabSwitches,
+      blurCount: isBlur ? prev.blurCount + 1 : prev.blurCount,
+      totalSuspiciousEvents: prev.totalSuspiciousEvents + 1,
+      isCurrentlyVisible: document.visibilityState === 'visible',
+      isCurrentlyFocused: type === 'FOCUS' ? true : (isBlur ? false : prev.isCurrentlyFocused),
+    };
 
-      if (onViolationRef.current && shouldTriggerViolation(newState.tabSwitches, maxTabSwitches)) {
-        onViolationRef.current(newEvent, newState);
-      }
-      return newState;
-    });
+    stateRef.current = newState;
+    setState(newState);
+
+    // #225 — L'effet de bord est déclenché une seule fois, APRÈS le calcul de
+    // l'état, donc hors de tout updater. Sémantique inchangée : mêmes arguments,
+    // même seuil ; seule la duplication en cas de double invocation disparaît.
+    if (onViolationRef.current && shouldTriggerViolation(newState.tabSwitches, maxTabSwitches)) {
+      onViolationRef.current(newEvent, newState);
+    }
   }, [maxTabSwitches]);
 
   // Fullscreen enforcement.
