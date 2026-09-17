@@ -37,7 +37,8 @@ async function main() {
     data: {
       userId: user.id,
       providerId: 'credential',
-      accountId: email,
+      // Better Auth 1.7 : accountId d'un compte credential = user.id (jamais l'email).
+      accountId: user.id,
       password: hashedPassword,
       createdAt: new Date(),
       updatedAt: new Date(),

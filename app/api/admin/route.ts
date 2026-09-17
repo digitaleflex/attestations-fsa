@@ -111,7 +111,8 @@ export async function PATCH(request: Request) {
         where: { userId: currentUser.id, providerId: 'credential' },
         data: {
           ...(newHashedPassword ? { password: newHashedPassword } : {}),
-          ...(email ? { accountId: email } : {})
+          // Better Auth 1.7 : accountId d'un compte credential = user.id (jamais l'email).
+          accountId: currentUser.id
         }
       });
     }
