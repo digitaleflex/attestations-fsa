@@ -5,6 +5,11 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // #139 — les tests E2E démarrent leur propre `next dev` sur un port dédié.
+  // Next verrouille `<distDir>/dev/lock` : sans distDir séparé, un second
+  // serveur de dev refuse de démarrer tant que celui de l'utilisateur tourne.
+  // Défaut inchangé (`.next`) hors E2E.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   output: "standalone",
   turbopack: {},
   webpack: (config, { isServer }) => {

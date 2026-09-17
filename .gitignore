@@ -13,8 +13,15 @@
 # testing
 /coverage
 
+# tests E2E Playwright (rapports + artefacts d'exécution)
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+
 # next.js
 /.next/
+/.next-e2e/
 /out/
 
 # production
