@@ -369,12 +369,3 @@ export interface NotificationEvent {
   isRead: boolean;
   createdAt: Date;
 }
-
-export interface ChatEvent {
-  id: string;
-  content: string;
-  senderId: string;
-  senderRole: string;
-  userId: string;
-  createdAt: Date;
-}

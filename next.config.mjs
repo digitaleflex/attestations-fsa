@@ -1,7 +1,15 @@
 import { withBotId } from "botid/next/config";
+// @sentry/nextjs v10 : `withSentryConfig` s'importe depuis le sous-chemin
+// `@sentry/nextjs/config` (l'export racine est déprécié et disparaît en v11).
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // #139 — les tests E2E démarrent leur propre `next dev` sur un port dédié.
+  // Next verrouille `<distDir>/dev/lock` : sans distDir séparé, un second
+  // serveur de dev refuse de démarrer tant que celui de l'utilisateur tourne.
+  // Défaut inchangé (`.next`) hors E2E.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   output: "standalone",
   turbopack: {},
   webpack: (config, { isServer }) => {
@@ -45,4 +53,17 @@ const nextConfig = {
   },
 };
 
-export default withBotId(nextConfig);
+// #151 — Sentry est 100 % OPTIONNEL.
+// - Aucune variable SENTRY_* n'est requise : sans SENTRY_DSN, l'instrumentation
+//   runtime (instrumentation.ts) est totalement inerte.
+// - Sans SENTRY_AUTH_TOKEN, l'upload des sourcemaps est désactivé : un build de
+//   production ne peut donc jamais échouer faute de credentials Sentry.
+export default withSentryConfig(withBotId(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  silent: true,
+});

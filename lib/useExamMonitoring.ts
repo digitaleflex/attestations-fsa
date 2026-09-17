@@ -55,32 +55,68 @@ export function useExamMonitoring({
   const eventQueue = useRef<MonitoringEvent[]>([]);
   const isFullscreen = useRef(false);
 
+  // #225 — L'état courant est doublé dans une ref pour permettre de calculer le
+  // prochain état HORS de l'updater de `setState`. Un updater doit rester pur :
+  // React peut l'invoquer deux fois (StrictMode en développement, rendus
+  // concurrents en production), ce qui dupliquait `onViolation` et gonflait les
+  // compteurs suspects. La ref est la source de vérité synchrone pour le calcul.
+  const stateRef = useRef(state);
+
+  // #220 — L'effet de surveillance ne doit pas se rejouer quand le parent
+  // recrée ses callbacks à chaque rendu (fonctions inline). On conserve donc
+  // la dernière version de chaque callback dans une ref : l'effet lit toujours
+  // la version à jour sans en dépendre. Le comportement observable est
+  // identique (mêmes appels, mêmes arguments), seule la fréquence de
+  // (re)montage de l'effet change.
+  const onViolationRef = useRef(onViolation);
+  const onEnforcementRef = useRef(onEnforcement);
+
+  useEffect(() => {
+    onViolationRef.current = onViolation;
+    onEnforcementRef.current = onEnforcement;
+    stateRef.current = state;
+  });
+
   const addEvent = useCallback((type: MonitoringEvent['type'], details?: string) => {
     const newEvent: MonitoringEvent = { type, timestamp: Date.now(), details };
     eventQueue.current.push(newEvent);
 
-    setState((prev) => {
-      const isHidden = type === 'VISIBILITY_CHANGE' && document.visibilityState === 'hidden';
-      const isBlur = type === 'BLUR';
+    const prev = stateRef.current;
+    const isHidden = type === 'VISIBILITY_CHANGE' && document.visibilityState === 'hidden';
+    const isBlur = type === 'BLUR';
 
-      const newState = {
-        ...prev,
-        events: [...prev.events, newEvent],
-        tabSwitches: isHidden ? prev.tabSwitches + 1 : prev.tabSwitches,
-        blurCount: isBlur ? prev.blurCount + 1 : prev.blurCount,
-        totalSuspiciousEvents: prev.totalSuspiciousEvents + 1,
-        isCurrentlyVisible: document.visibilityState === 'visible',
-        isCurrentlyFocused: type === 'FOCUS' ? true : (isBlur ? false : prev.isCurrentlyFocused),
-      };
+    const newState: MonitoringState = {
+      ...prev,
+      events: [...prev.events, newEvent],
+      tabSwitches: isHidden ? prev.tabSwitches + 1 : prev.tabSwitches,
+      blurCount: isBlur ? prev.blurCount + 1 : prev.blurCount,
+      totalSuspiciousEvents: prev.totalSuspiciousEvents + 1,
+      isCurrentlyVisible: document.visibilityState === 'visible',
+      isCurrentlyFocused: type === 'FOCUS' ? true : (isBlur ? false : prev.isCurrentlyFocused),
+    };
 
-      if (onViolation && shouldTriggerViolation(newState.tabSwitches, maxTabSwitches)) {
-        onViolation(newEvent, newState);
-      }
-      return newState;
-    });
-  }, [onViolation, maxTabSwitches]);
+    stateRef.current = newState;
+    setState(newState);
 
-  // Fullscreen enforcement
+    // #225 — L'effet de bord est déclenché une seule fois, APRÈS le calcul de
+    // l'état, donc hors de tout updater. Sémantique inchangée : mêmes arguments,
+    // même seuil ; seule la duplication en cas de double invocation disparaît.
+    if (onViolationRef.current && shouldTriggerViolation(newState.tabSwitches, maxTabSwitches)) {
+      onViolationRef.current(newEvent, newState);
+    }
+  }, [maxTabSwitches]);
+
+  // Fullscreen enforcement.
+  //
+  // #220 — Deux situations très différentes aboutissent ici :
+  //  1. La DEMANDE de plein écran échoue (pas d'activation utilisateur
+  //     transitoire après un rechargement, API indisponible, permission
+  //     refusée…) : c'est une contrainte d'environnement, PAS une action du
+  //     candidat. Elle ne doit donc produire aucun événement suspect ni
+  //     requête de monitoring, sous peine de compter un faux positif.
+  //  2. Le candidat QUITTE réellement le plein écran après y être entré :
+  //     détecté par `fullscreenchange` plus bas, qui continue de journaliser
+  //     l'événement légitime (anti-triche inchangé).
   const enterFullscreen = useCallback(async () => {
     try {
       if (document.documentElement.requestFullscreen) {
@@ -88,9 +124,10 @@ export function useExamMonitoring({
         isFullscreen.current = true;
       }
     } catch {
-      addEvent('WINDOW_RESIZE', 'Impossible de passer en plein écran');
+      // Échec de demande : environnement, pas une violation. Intentionnellement
+      // silencieux (aucun `addEvent`).
     }
-  }, [addEvent]);
+  }, []);
 
   const exitFullscreen = useCallback(() => {
     if (document.fullscreenElement && document.exitFullscreen) {
@@ -153,7 +190,7 @@ export function useExamMonitoring({
         try {
           const enforcement = await reportMonitoringEvents(eventsToReport, examId, userId);
           if (enforcement && (enforcement.lockAnswers || enforcement.warnUser)) {
-            onEnforcement?.(enforcement);
+            onEnforcementRef.current?.(enforcement);
           }
         } catch {
           eventQueue.current.unshift(...eventsToReport);
@@ -175,7 +212,12 @@ export function useExamMonitoring({
         reportMonitoringEvents(eventQueue.current, examId, userId);
       }
     };
-  }, [addEvent, examId, userId, enterFullscreen, exitFullscreen, onEnforcement]);
+  // `onEnforcement`/`onViolation` sont volontairement ABSENTS des dépendances :
+  // ils sont lus via leurs refs (cf. #220), ce qui évite que l'effet se
+  // démonte/remonte à chaque rendu du parent. `addEvent`, `enterFullscreen` et
+  // `exitFullscreen` sont stables (mémorisés) tant que `maxTabSwitches` ne
+  // change pas.
+  }, [addEvent, examId, userId, enterFullscreen, exitFullscreen]);
 
   return { ...state, enterFullscreen, exitFullscreen };
 }

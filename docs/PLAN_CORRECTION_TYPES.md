@@ -140,9 +140,12 @@ submissions.map((sub: ExamSession) => ({
 | Fichier                | Occurrences | Action            |
 | ---------------------- | ----------- | ----------------- |
 | `NotificationBell.tsx` | 3           | Type notification |
-| `ChatBubble.tsx`       | 1           | Type message      |
 | `OfficialDocument.tsx` | 3           | Type données      |
 | `ui/chart.tsx`         | 4           | Type props        |
+
+> _Note (réalignement #86, 2026-09-16) : `ChatBubble.tsx` figurait dans ce tableau ;_
+> _le composant a été supprimé du code le 2026-06-22 (`960852f`, retrait du module_
+> _Chat). Les occurrences d'`any` restantes sont à re-mesurer avant exécution._
 
 ---
 

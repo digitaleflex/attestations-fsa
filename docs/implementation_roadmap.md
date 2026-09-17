@@ -8,7 +8,7 @@ Nous avons finalisé la mise en conformité de l'API avec le middleware de sécu
 
 ### Modifications Majeures :
 *   **Standardisation de l'Auth :** Toutes les routes sous `/api/` (plus de 30 fichiers mis à jour) injectent désormais systématiquement l'objet `request` dans les helpers `isAdminAuthenticated(request)` et `getAdminUser(request)`.
-*   **Correction TypeScript :** Résolution des erreurs de typage sur les modèles de données `User` et `PortfolioMission`.
+*   **Correction TypeScript :** Résolution des erreurs de typage sur les modèles de données `User` et `PortfolioMission` (modèle `PortfolioMission` depuis retiré du schéma Prisma le 2026-06-22, `960852f`).
 *   **Audit Trail :** Intégration de `createAuditLog` sur toutes les actions administratives critiques (blocage de compte, validation d'attestation, correction de copie).
 
 ---
@@ -18,7 +18,7 @@ Nous avons finalisé la mise en conformité de l'API avec le middleware de sécu
 L'objectif est de rendre la plateforme utilisable sur smartphone par l'équipe administrative.
 
 ### Étape 1 : Interface Adaptative (Responsive Tables)
-*   [x] **Transformation des tables :** Utilisation du composant `CardView` sur mobile pour `/admin/users`, `/admin/submissions`, `/admin/logs`, `/admin/waitlist` et `/admin/attestations`. ✅
+*   [x] **Transformation des tables :** Utilisation du composant `CardView` sur mobile pour `/admin/users`, `/admin/submissions`, `/admin/logs` et `/admin/attestations`. ✅ *(La page `/admin/waitlist` figurait aussi dans cette liste ; le module Waitlist a été retiré du produit le 2026-06-22 par `960852f` et la page n'existe plus.)*
 *   [x] **Actions Contextuelles :** Déplacement des boutons d'action vers un menu "Dropdown" ou des cartes étalées pour faciliter le clic au pouce. ✅
 
 ### Étape 2 : Module de Correction Optimisé
