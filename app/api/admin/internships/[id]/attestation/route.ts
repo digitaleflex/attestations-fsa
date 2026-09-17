@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
 import { createAuditLog } from '@/lib/audit';
+import { sealCertificate } from '@/lib/crypto/seal';
 import { customAlphabet } from 'nanoid';
 
 const nanoid = customAlphabet('1234567890abcdef', 5);
@@ -73,6 +74,14 @@ export async function POST(
     const attestationCode = `FSA-${year}-${month}-${seq}-${hash}`;
 
     // 5. Créer l'attestation
+    // Scellement HMAC-SHA256 (#155) : empreinte des données gravées.
+    const seal = sealCertificate({
+      code: attestationCode,
+      fullName: internship.fullName,
+      formationName: formation.name,
+      endDate: new Date(endDate),
+    });
+
     const attestation = await prisma.attestation.create({
       data: {
         code: attestationCode,
@@ -90,6 +99,7 @@ export async function POST(
         stageScore: parseFloat(stageScore || "100"),
         stageObservations: stageObservations || "Stage terminé avec succès.",
         userId: internship.userId,
+        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
       }
     });
 

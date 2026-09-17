@@ -93,4 +93,35 @@ describe("POST /api/admin/internships/[id]/attestation (#137)", () => {
     expect(db.attestationCreate).toHaveBeenCalled();
     expect(db.internshipUpdate).toHaveBeenCalled();
   });
+
+  it("scelle l'attestation STAGE (sealHash + sealedAt) quand clé configurée (#155)", async () => {
+    process.env.CERT_SEAL_SECRET = "internship-test-secret-0123456789abcdef";
+    const res = await callPost({
+      startDate: "2026-01-01",
+      endDate: "2026-06-01",
+      stageScore: 15,
+    });
+    expect([200, 201]).toContain(res.status);
+
+    const createArgs = db.attestationCreate.mock.calls[0][0] as {
+      data: { sealHash?: string; sealedAt?: Date };
+    };
+    expect(createArgs.data.sealHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
+  });
+
+  it("ne scelle pas sans clé (dégradé, non bloquant) (#155)", async () => {
+    delete process.env.CERT_SEAL_SECRET;
+    const res = await callPost({
+      startDate: "2026-01-01",
+      endDate: "2026-06-01",
+      stageScore: 15,
+    });
+    expect([200, 201]).toContain(res.status);
+
+    const createArgs = db.attestationCreate.mock.calls[0][0] as {
+      data: { sealHash?: string };
+    };
+    expect(createArgs.data.sealHash).toBeUndefined();
+  });
 });
