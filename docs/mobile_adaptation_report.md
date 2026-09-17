@@ -10,7 +10,7 @@ L'objectif principal était de remplacer les tableaux de données denses (DataTa
 | :--- | :--- | :--- |
 | **Utilisateurs** | ✅ Terminé | Passage automatique en cartes sur mobile avec actions rapides via Dropdown. |
 | **Journaux (Logs)** | ✅ Terminé | Affichage compact des événements d'audit en mode vertical sur smartphone. |
-| **Waitlist** | ✅ Terminé | Gestion des prospects optimisée pour le défilement au pouce. |
+| **Waitlist** | ✅ Terminé (à la date du rapport) | Gestion des prospects optimisée pour le défilement au pouce. — **Module retiré du produit le 2026-06-22 (`960852f`) : la page `/admin/waitlist` n'existe plus.** |
 | **Examens** | ✅ Terminé | Vue liste transformée en cartes ; structure de grille maintenue et espacée. |
 | **Attestations** | ✅ Terminé | Vue liste refactorisée en flex-stacking pour éviter le débordement horizontal. |
 

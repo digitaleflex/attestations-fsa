@@ -61,7 +61,7 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 - ✅ #11 `pages.signIn` → `/auth`
 - ✅ #12 `submittedAt @default(now())` — supprimé
 - ✅ #13 `app/admin/page.tsx` — simple redirect, non-issue
-- ✅ #14 `/portfolios/[slug]` — corrigé (URL → `NEXT_PUBLIC_APP_URL`)
+- ✅ #14 `/portfolios/[slug]` — corrigé (URL → `NEXT_PUBLIC_APP_URL`) — **obsolète depuis : la page `/portfolios/[slug]` a été supprimée du produit le 2026-06-22 (`960852f`) et n'existe plus**
 
 ---
 

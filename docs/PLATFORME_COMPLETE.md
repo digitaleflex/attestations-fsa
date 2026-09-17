@@ -1,8 +1,14 @@
 # 📘 FSA - Documentation Complète de la Plateforme
 
 > **Ferme Saint André - Plateforme Technologique d'Attestations & Examens**  
-> **Dernière mise à jour :** Avril 2026  
+> **Dernière mise à jour :** 16 septembre 2026 (réalignement sur le code réel — issue #86)  
 > **Version :** 2.0.0
+
+> ⚠️ **Réalignement (issue #86)** : les modules **Portfolio, Chat, Ressources
+> pédagogiques, Waitlist et Annuaire** ont été **retirés du produit le 2026-06-22**
+> (commit `960852f`, 44 fichiers, 5 348 lignes). Les sections de ce document qui les
+> décrivaient comme existants (§6, §7, §11) ont été corrigées. Aucune des routes,
+> pages ou modèles Prisma de ces modules ne subsiste dans le schéma ni dans `app/`.
 
 ---
 
@@ -13,8 +19,8 @@
 3. [Système Anti-Triche](#3-système-anti-triche)
 4. [Programmation d'Examens & Compte à Rebours](#4-programmation-dexamens--compte-à-rebours)
 5. [Système de Monitoring Admin](#5-système-de-monitoring-admin)
-6. [Gestion des Emails & Waitlist](#6-gestion-des-emails--waitlist)
-7. [Système de Portfolios](#7-système-de-portfolios)
+6. [Gestion des Emails](#6-gestion-des-emails)
+7. [Système de Portfolios (retiré)](#7-système-de-portfolios-retiré)
 8. [Sécurité & Headers](#8-sécurité--headers)
 9. [Police & Design](#9-police--design)
 10. [Roadmap Future](#10-roadmap-future)
@@ -29,14 +35,13 @@ Plateforme de gestion des attestations de formation avec :
 - Création et gestion d'examens (QCM, questions ouvertes, études de cas)
 - Génération d'attestations certifiées avec codes de vérification
 - Surveillance anti-triche intelligente
-- Portfolios numériques publics pour diplômés
 
 ### 👥 Utilisateurs
 | Rôle | Accès | Fonctionnalités |
 |------|-------|-----------------|
 | **Admin** | `/admin/*` | Créer examens, valider attestations, voir monitoring, gérer users |
 | **Candidat** | `/exams`, `/attestations` | Passer examens, voir résultats, télécharger attestations |
-| **Public** | `/portfolios`, `/verifier` | Voir portfolios, vérifier authenticité attestations |
+| **Public** | `/verifier`, `/formations`, `/contact` | Vérifier l'authenticité des attestations, consulter les formations |
 
 ---
 
@@ -44,7 +49,7 @@ Plateforme de gestion des attestations de formation avec :
 
 ### Stack Technologique
 ```
-Frontend:    Next.js 15 (App Router) + React 19 + TypeScript
+Frontend:    Next.js 16 (App Router) + React 19 + TypeScript
 Styling:     Tailwind CSS 4 + shadcn/ui + Framer Motion
 Backend:     Next.js API Routes + Better Auth
 Database:    PostgreSQL + Prisma ORM
@@ -61,10 +66,10 @@ attestations-fsa/
 ├── app/
 │   ├── (public)/          # Pages publiques (FAQ, signalement, verifier)
 │   ├── (user)/            # Espace candidat (exams, attestations, dashboard)
-│   ├── admin/             # Dashboard admin (exams, users, monitoring, waitlist)
+│   ├── admin/             # Dashboard admin (exams, users, monitoring, attestations)
 │   └── api/               # Routes API (auth, exams, submissions, monitoring)
 ├── components/            # UI Components (exams, auth, anti-cheat)
-├── lib/                   # Utilities (auth, rate-limit, anti-cheat, email, csrf)
+├── lib/                   # Utilities (auth, rate-limit, anti-cheat, email)
 ├── prisma/                # Schema Prisma + migrations
 └── docs/                  # Documentation
 ```
@@ -74,13 +79,16 @@ attestations-fsa/
 ## 3. Système Anti-Triche
 
 ### 3.1 Protection CSRF
-| Détail | Valeur |
+
+> ⚠️ **Corrigé (issue #86)** : la couche CSRF décrite ici (cookie `csrf_token` +
+> header `x-csrf-token`, fichiers `middleware.ts` et `lib/csrf.ts`) **n'existe pas**.
+> Elle a été retirée comme « factice » par #142 A1 (PR #189) : le cookie n'était
+> jamais posé ni validé côté serveur (voir `lib/api-client.ts:27-29`).
+
+| Détail | Valeur (état réel vérifié dans le code) |
 |--------|--------|
-| **Fichier** | `middleware.ts`, `lib/csrf.ts` |
-| **Tokens** | 32 bytes cryptographiques via `crypto.getRandomValues()` |
-| **Validation** | Cookie `csrf_token` vs header `x-csrf-token` |
-| **Expiration** | 24 heures |
-| **Endpoints protégés** | Tous les POST/PUT/DELETE/PATCH (sauf public/auth) |
+| **Protection CSRF réelle** | Cookie de session `SameSite=Lax` (Better Auth) + BotID sur `/api/exams/*/submit` |
+| **Garde d'accès** | `proxy.ts` (ex-`middleware.ts`, migré Next 16 par #79) : pré-filtre du cookie de session sans DB, validation réelle en aval (`lib/api-auth`) |
 
 ### 3.2 Rate Limiting (Double Couche)
 | Type | Limite | Fenêtre | Fichier |
@@ -89,7 +97,6 @@ attestations-fsa/
 | Register | 3 | 1 heure | `lib/rate-limit.ts` |
 | Submission | 5 | 1 heure | `lib/rate-limit.ts` |
 | Verify | 10 | 1 heure | `lib/rate-limit.ts` |
-| Waitlist | 5 | 1 heure | `lib/rate-limit.ts` |
 | Internship | 3 | 1 heure | `lib/rate-limit.ts` |
 
 **Double vérification:** IP **ET** userId (empêche contournement via VPN)
@@ -180,80 +187,63 @@ attestations-fsa/
 
 ---
 
-## 6. Gestion des Emails & Waitlist
+## 6. Gestion des Emails
 
-### 6.1 Modèle Waitlist (NOUVEAU)
-```prisma
-model Waitlist {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  message   String?
-  status    String   @default("PENDING")
-  source    String   @default("PORTFOLIO")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-```
+> ⚠️ **Module Waitlist retiré (issue #86)** : la waitlist a été supprimée du produit
+> le 2026-06-22 (commit `960852f`). À ce jour, il n'existe **aucun** modèle Prisma
+> `Waitlist` (schéma vérifié : 22 modèles, aucun `Waitlist`), **aucune** page
+> `app/admin/waitlist/`, **aucune** API `app/api/waitlist` ni
+> `app/api/admin/waitlist`, et **aucune** clé `waitlist` dans `lib/rate-limit.ts`.
+> Les anciennes sections 6.1 (« Modèle Waitlist (NOUVEAU) ») et 6.2 (« Page Admin
+> Waitlist ») de ce document décrivaient du code inexistant ; elles ont été retirées.
 
-### 6.2 Page Admin Waitlist
-| Détail | Valeur |
-|--------|--------|
-| **URL** | `/admin/waitlist` |
-| **Fichier** | `app/admin/waitlist/page.tsx` |
-| **API** | `app/api/admin/waitlist/route.ts` |
-| **Fonctionnalités** | Liste, filtres, changement statut, suppression |
-| **Statuts** | PENDING, CONTACTED, CONVERTED, REJECTED |
+### 6.1 Vérification Email à l'Inscription
 
-### 6.3 Vérification Email à l'Inscription
-**CORRIGÉ:** Les nouveaux inscrits reçoient automatiquement un email de vérification avec :
-- Token unique (32 bytes random)
-- Expiration: 24 heures
-- Lien: `/api/user/verify-email?token=xxx`
+- Demande d'envoi : `app/api/user/send-verification/route.ts` (authentifié,
+  rate limit `emailVerification` 5/heure — `lib/rate-limit.ts:196`)
+- Token unique : `randomBytes(32)` hexadécimal, stocké dans le modèle `Verification`,
+  expiration 24 heures (`send-verification/route.ts:48-49`)
+- Lien envoyé : `/api/user/verify-email?token=xxx`
+  (`app/api/user/verify-email/route.ts`)
 
 ---
 
-## 7. Système de Portfolios
+## 7. Système de Portfolios (retiré)
 
-### 7.1 API Publique
-| Route | Méthode | Description |
-|-------|---------|-------------|
-| `/api/public/portfolios` | GET | Lister les portfolios activés (recherche, pagination) |
-| `/api/public/portfolios/[slug]` | GET | Détails d'un portfolio spécifique (attestations, examens) |
-
-### 7.2 API Utilisateur
-| Route | Méthode | Description |
-|-------|---------|-------------|
-| `/api/user/portfolio` | GET | Récupérer ses infos portfolio |
-| `/api/user/portfolio` | PATCH | Configurer slug + activation |
-
-### 7.3 API Admin
-| Route | Méthode | Description |
-|-------|---------|-------------|
-| `/api/admin/users/portfolio` | GET | Lister users avec portfolios |
-| `/api/admin/users/portfolio` | PATCH | Modifier slug/enable d'un user |
-
-### 7.4 Page Publique
-| Détail | Valeur |
-|--------|--------|
-| **URL** | `/portfolios` |
-| **Fichier** | `app/(public)/portfolios/page.tsx` |
-| **Fonctionnalités** | Recherche en temps réel, grille de portfolios, modal waitlist |
+> ⚠️ **Module Portfolio retiré (issue #86)** : supprimé du produit le 2026-06-22
+> (commit `960852f`). Les anciennes sections 7.1 à 7.4 de ce document listaient des
+> API et une page qui **n'existent plus** :
+> - `/api/public/portfolios`, `/api/public/portfolios/[slug]`, `/api/user/portfolio`,
+>   `/api/admin/users/portfolio` : aucune de ces routes n'est présente dans `app/api/` ;
+> - page publique `/portfolios` (`app/(public)/portfolios/`) et espace `app/p/` :
+>   inexistants ;
+> - aucun modèle Prisma lié aux portfolios dans le schéma ;
+> - le lien footer `/portfolios` a été retiré par `80f1c82` (PR #166, issue #31) et
+>   la page n'a jamais été recréée.
+>
+> Les compteurs d'API encore compatibles renvoient explicitement 0 avec la mention
+> « fonctionnalité Portfolio non déployée »
+> (`app/api/admin/dashboard/overview/route.ts:29`,
+> `app/api/admin/sidebar-counts/route.ts:12`).
 
 ---
 
 ## 8. Sécurité & Headers
 
-### 8.1 Headers de Sécurité (middleware.ts)
-| Header | Valeur | Protection |
+### 8.1 Headers de Sécurité (`next.config.mjs`)
+
+> **Corrigé (issue #86)** : les en-têtes sont posés par le bloc `headers()` de
+> `next.config.mjs` (implémenté par #142 A1), et non par un `middleware.ts`
+> (fichier migré en `proxy.ts` par #79, dédié à l'authentification).
+
+| Header | Valeur (vérifiée dans `next.config.mjs:31-45`) | Protection |
 |--------|--------|------------|
 | `X-Frame-Options` | `DENY` | Clickjacking |
 | `X-Content-Type-Options` | `nosniff` | MIME sniffing |
-| `X-XSS-Protection` | `1; mode=block` | XSS legacy |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Referrer control |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | APIs dangereuses |
-| `HSTS` | `max-age=31536000; includeSubDomains; preload` | Force HTTPS (prod) |
-| `CSP` | `default-src 'self'`, restricted sources | XSS + injection |
+| `HSTS` | `max-age=63072000; includeSubDomains; preload` | Force HTTPS |
+| `CSP` | `default-src 'self'` ; scripts `'unsafe-inline' 'unsafe-eval'` + `api.vercel.com` (BotID) ; `frame-ancestors 'none'` | XSS + injection |
 
 ### 8.2 Sanitisation d'Entrées
 | Fonction | Fichier | Usage |
@@ -320,50 +310,56 @@ model Waitlist {
 
 ## 11. Audit & Correctifs Appliqués
 
+> ⚠️ **Tableaux historiques (audit d'avril 2026) — corrigés le 2026-09-16 (issue #86).**
+> Les lignes concernant **Waitlist** et **Portfolios** décrivent des fichiers
+> **depuis supprimés** par `960852f` (2026-06-22) ; elles ne décrivent plus l'état
+> actuel du code.
+
 ### 11.1 Problèmes Critiques Corrigés
 
 | # | Problème | Fichier | Solution |
 |---|----------|---------|----------|
-| **1** | Emails waitlist NON sauvegardés en base | `app/api/waitlist/route.ts` | Ajout modèle Waitlist + `prisma.waitlist.create()` |
-| **2** | Pas de rate limiting waitlist | `lib/rate-limit.ts` | Ajout clé `waitlist` (5/heure) |
-| **3** | Email auto-vérifié sans vérification | `app/api/auth/register/route.ts` | `emailVerified: null` + envoi email vérification |
-| **4** | Pas de sanitization admin users | `app/api/users/route.ts` | Ajout `sanitizeInput()` |
-| **5** | Pas de rate limit internship | `app/api/public/internships/route.ts` | Ajout `applyRateLimit()` + Zod schema |
+| **1** | Emails waitlist NON sauvegardés en base | `app/api/waitlist/route.ts` | Ajout modèle Waitlist + `prisma.waitlist.create()` — **module et fichier depuis supprimés (`960852f`)** |
+| **2** | Pas de rate limiting waitlist | `lib/rate-limit.ts` | Ajout clé `waitlist` (5/heure) — **clé depuis retirée (`960852f`)** |
+| **3** | Email auto-vérifié sans vérification | `app/api/auth/register/route.ts` | `emailVerified: null` + envoi email vérification — **fichier depuis supprimé ; l'inscription passe par Better Auth (`app/api/auth/[...better-auth]/route.ts`)** |
+| **4** | Pas de sanitization admin users | `app/api/users/route.ts` | Ajout `sanitizeInput()` (toujours présent, `app/api/users/route.ts:134`) |
+| **5** | Pas de rate limit internship | `app/api/public/internships/route.ts` | Ajout `applyRateLimit()` + Zod schema (toujours présents, `app/api/public/internships/route.ts:10,24`) |
 
 ### 11.2 Fichiers Créés/Modifiés
 
 | Fichier | Action | Description |
 |---------|--------|-------------|
-| `prisma/schema.prisma` | ✏️ Modifié | Ajout modèle Waitlist |
-| `lib/rate-limit.ts` | ✏️ Modifié | +waitlist, +internship |
-| `app/api/waitlist/route.ts` | ✏️ Modifié | Sauvegarde DB + doublons |
-| `app/api/auth/register/route.ts` | ✏️ Modifié | Email vérification auto |
-| `app/api/users/route.ts` | ✏️ Modifié | Sanitization email |
-| `app/api/public/internships/route.ts` | ✏️ Modifié | Rate limit + validation |
-| `app/api/admin/waitlist/route.ts` | ✨ Créé | API admin waitlist (GET, PATCH, DELETE) |
-| `app/admin/waitlist/page.tsx` | ✨ Créé | Interface admin waitlist |
-| `app/api/public/portfolios/route.ts` | ✨ Créé | API publique portfolios |
-| `app/api/public/portfolios/[slug]/route.ts` | ✨ Créé | API portfolio par slug |
-| `app/api/user/portfolio/route.ts` | ✨ Créé | Config portfolio utilisateur |
-| `app/api/admin/users/portfolio/route.ts` | ✨ Créé | Admin gestion portfolios |
-| `app/(public)/portfolios/page.tsx` | ✏️ Modifié | Fetch API + grille dynamique |
-| `middleware.ts` | ✏️ Modifié | CSRF activé |
-| `lib/csrf.ts` | ✨ Créé | Utilitaires CSRF |
-| `lib/anti-cheat.ts` | ✨ Créé | Analyse patterns réponses |
-| `lib/useExamMonitoring.ts` | ✨ Créé | Hook surveillance examen |
-| `app/api/exams/monitoring/route.ts` | ✨ Créé | API monitoring |
-| `components/CountdownTimer.tsx` | ✨ Créé | Compte à rebours examens |
-| `components/AttestationWatermark.tsx` | ✨ Créé | Watermark anti-falsification |
-| `components/exams/form-steps/step-general.tsx` | ✏️ Modifié | Datetime picker + SCHEDULED |
-| `components/OfficialDocument.tsx` | ✏️ Modifié | Intégration watermark |
+| `prisma/schema.prisma` | ✏️ Modifié | Ajout modèle Waitlist — **modèle retiré depuis (`960852f`)** |
+| `lib/rate-limit.ts` | ✏️ Modifié | +internship (toujours présent) ; +waitlist — **clé retirée depuis (`960852f`)** |
+| `app/api/waitlist/route.ts` | 🗑️ Créé puis supprimé | Sauvegarde DB + doublons — **supprimé par `960852f`** |
+| `app/api/auth/register/route.ts` | 🗑️ Modifié puis supprimé | Email vérification auto — **supprimé ; inscription via Better Auth** |
+| `app/api/users/route.ts` | ✏️ Modifié | Sanitization email (toujours présente) |
+| `app/api/public/internships/route.ts` | ✏️ Modifié | Rate limit + validation (toujours présents) |
+| `app/api/admin/waitlist/route.ts` | 🗑️ Créé puis supprimé | API admin waitlist — **supprimé par `960852f`** |
+| `app/admin/waitlist/page.tsx` | 🗑️ Créé puis supprimé | Interface admin waitlist — **supprimée par `960852f`** |
+| `app/api/public/portfolios/route.ts` | 🗑️ Créé puis supprimé | API publique portfolios — **supprimée par `960852f`** |
+| `app/api/public/portfolios/[slug]/route.ts` | 🗑️ Créé puis supprimé | API portfolio par slug — **supprimée par `960852f`** |
+| `app/api/user/portfolio/route.ts` | 🗑️ Créé puis supprimé | Config portfolio utilisateur — **supprimée par `960852f`** |
+| `app/api/admin/users/portfolio/route.ts` | 🗑️ Créé puis supprimé | Admin gestion portfolios — **supprimée par `960852f`** |
+| `app/(public)/portfolios/page.tsx` | 🗑️ Supprimé | Page portfolios — **supprimée par `960852f`, jamais recréée** |
+| `middleware.ts` | ✏️ Modifié | CSRF activé — **couche retirée depuis (#142 A1) ; fichier migré en `proxy.ts` (#79)** |
+| `lib/csrf.ts` | 🗑️ Créé puis supprimé | Utilitaires CSRF — **retiré comme « factice » (#142 A1)** |
+| `lib/anti-cheat.ts` | ✨ Créé | Analyse patterns réponses (toujours présent) |
+| `lib/useExamMonitoring.ts` | ✨ Créé | Hook surveillance examen (toujours présent) |
+| `app/api/exams/monitoring/route.ts` | ✨ Créé | API monitoring (toujours présente) |
+| `components/CountdownTimer.tsx` | ✨ Créé | Compte à rebours examens (toujours présent) |
+| `components/AttestationWatermark.tsx` | ✨ Créé | Watermark anti-falsification (toujours présent) |
+| `components/exams/form-steps/step-general.tsx` | ✏️ Modifié | Datetime picker + SCHEDULED (toujours présent) |
+| `components/OfficialDocument.tsx` | ✏️ Modifié | Intégration watermark (toujours présent) |
 
 ### 11.3 Prochaines Étapes Requises
 
-```bash
-# 1. Pousser le modèle Waitlist en base de données
-npx prisma db push
+> ⚠️ **Corrigé (issue #86)** : cette procédure demandait de pousser le modèle
+> `Waitlist` en base (`npx prisma db push`). Ce modèle a été **retiré** du schéma
+> Prisma par `960852f` (2026-06-22) : il n'y a plus rien à pousser. Étapes
+> effectivement applicables pour valider un build local :
 
-# 2. Vérifier que tout fonctionne
+```bash
 npm run build
 npm run dev
 ```
@@ -375,11 +371,10 @@ npm run dev
 | Besoin | Action |
 |--------|--------|
 | Voir les logs de triche | `/admin/monitoring` |
-| Gérer la waitlist | `/admin/waitlist` |
 | Ajuster les seuils anti-triche | `lib/anti-cheat.ts`, `app/api/exams/[id]/submit/route.ts` |
 | Modifier les rate limits | `lib/rate-limit.ts` |
 | Changer les emails | `lib/email.ts` |
 
 ---
 
-**📄 Document généré automatiquement. Dernière mise à jour : Avril 2026**
+**📄 Document réaligné manuellement sur le code le 16 septembre 2026 (issue #86).**

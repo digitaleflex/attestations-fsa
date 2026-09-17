@@ -1,5 +1,12 @@
 # 🔴 Audit Complet du Projet - Points d'Attention
 
+> ⚠️ **Réaligné le 2026-09-16 (issue #86)** : cet audit date du 7 avril 2026. Depuis,
+> les modules **Chat, Ressources pédagogiques, Portfolio, Waitlist et Annuaire** ont
+> été **retirés du produit** (2026-06-22, commit `960852f`). Les lignes qui les
+> concernaient dans « État des Fonctionnalités » et dans la checklist ont été
+> corrigées ; les autres chiffres (lignes de code, versions, nombre de `any`) sont
+> ceux de l'instantané d'avril 2026 et n'ont pas été re-mesurés.
+
 ## Résumé Général
 
 - **Total de code**: ~41,634 lignes (TypeScript/TSX)
@@ -80,8 +87,8 @@ Le code contient 369 utilisations de `any` qui nuisent à la sécurité des type
 | Pages Publiques              | 90%        | ✅ Production  |
 | Notifications                | 70%        | ⚠️ Partiel     |
 | Contact/Support              | 80%        | ✅ Production  |
-| Chat                         | 60%        | 🔴 Incomplet   |
-| Ressources                   | 75%        | ✅ Production  |
+| Chat                         | —          | 🗑️ Retiré (2026-06-22, `960852f`) |
+| Ressources                   | —          | 🗑️ Retiré (2026-06-22, `960852f`) |
 | Anti-Cheat                   | 70%        | ⚠️ Partiel     |
 | Audit Logging                | 65%        | 🔴 Partiel     |
 | Sécurité                     | 80%        | ✅ Production  |
@@ -154,7 +161,6 @@ Le code contient 369 utilisations de `any` qui nuisent à la sécurité des type
 
 - [ ] Implémenter un dashboard de sécurité
 - [ ] Compléter le système d'audit logging automatique
-- [ ] Terminer le système de chat
 - [ ] Améliorer la détection de triche (coté client)
 
 ---
@@ -208,7 +214,7 @@ attestations-fsa/
 
 1. Le projet est bien structuré et fonctionne en production
 2. La documentation vient d'être créée dans `doc/`
-3. Certaines fonctionnalités sont partiellement implémentées (chat, audit)
+3. Certaines fonctionnalités sont partiellement implémentées (audit logging) — le module chat, un temps cité ici, a été retiré du produit (`960852f`)
 4. Le type安全工作 est le plus grand challenge (369 x `any`)
 
 ---
