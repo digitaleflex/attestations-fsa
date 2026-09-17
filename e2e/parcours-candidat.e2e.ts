@@ -113,7 +113,24 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
     await loginAsCandidate(page);
 
     // Détail du résultat (page /results/[id]) accessible depuis la session.
+    // `next dev` compile cette route dynamique et son API à la PREMIÈRE visite :
+    // le rendu reste en `isLoading` tant que `GET /api/user/results/[id]` n'a pas
+    // répondu. On attend donc explicitement cette réponse (200) avant d'assertir
+    // l'UI, pour ne jamais échouer sur une compilation lente (#139).
+    const detailUrl = `/api/user/results/${certification!.sessionId}`;
+    const detailResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === "GET" &&
+        response.url().includes(detailUrl),
+      { timeout: 90_000 },
+    );
     await page.goto(`/results/${certification!.sessionId}`);
+    const detailResponse = await detailResponsePromise;
+    expect(
+      detailResponse.status(),
+      `GET ${detailUrl} n'a jamais abouti (page bloquée en chargement)`,
+    ).toBe(200);
+
     await expect(page.getByText("Réussi", { exact: true })).toBeVisible();
 
     // L'attestation apparaît dans l'espace candidat avec son code réel.
