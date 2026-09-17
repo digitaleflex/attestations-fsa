@@ -51,8 +51,8 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      // ⚠️ Exécuté en DERNIER : ce parcours reproduit un bug applicatif qui
-      // finit par faire tomber le serveur de test (cf. e2e/ui-examen.e2e.ts).
+      // Parcours 100 % interface, exécuté en dernier (projet dédié) : c'est le
+      // scénario navigateur complet, le plus long de la suite.
       name: "chromium-ui-examen",
       testMatch: /ui-examen\.e2e\.ts/,
       use: { ...devices["Desktop Chrome"] },

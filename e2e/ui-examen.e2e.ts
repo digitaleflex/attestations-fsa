@@ -1,27 +1,21 @@
 /**
  * Parcours candidat via l'INTERFACE (issue #139).
  *
- * ⚠️ CE TEST ÉCHOUE ET DOIT RESTER VISIBLE : il reproduit un défaut applicatif
- * réel et bloquant. Le rapport #139 documente symptôme / attendu / observé /
- * localisation.
+ * Prouve qu'un candidat réel, depuis l'interface seule, démarre un examen
+ * officiel (`/exams/[id]`), répond au QCM puis soumet ; `/results` affiche
+ * alors le résultat réussi.
  *
- * Symptôme : dès l'ouverture de `/exams/[id]`, la page déclenche un déluge de
- * `POST /api/exams/monitoring` (mesuré : 64 requêtes en 8 s, sans aucune
- * interaction), la page se fige puis le serveur meurt (`memory allocation of
- * 1048576 bytes failed`). Le clic sur « Soumettre » ne se termine jamais.
+ * Historique : ce test reproduisait un défaut applicatif réel — dès l'ouverture
+ * de `/exams/[id]`, une boucle de `POST /api/exams/monitoring` saturait la page
+ * puis tuait le serveur (`memory allocation of 1048576 bytes failed`). Ce
+ * défaut a été corrigé (cf. #220). Restait alors une ambiguïté de test :
+ * `/results` liste TOUS les résultats du candidat, donc plusieurs badges
+ * « Réussi » coexistent légitimement (celui du parcours API de
+ * `parcours-candidat.e2e.ts` et celui-ci). L'assertion est scopée sur la carte
+ * du bon examen, sans affaiblir ce qu'elle prouve.
  *
- * Cause probable (fichier:ligne) :
- *  - `app/(user)/exams/[id]/page.tsx:58-76` : la prop `onEnforcement` est une
- *    fonction inline, recréée à chaque rendu, donc l'effet de
- *    `lib/useExamMonitoring.ts:102-178` est re-monté à chaque rendu ;
- *  - `lib/useExamMonitoring.ts:105` : `enterFullscreen()` échoue (pas
- *    d'activation utilisateur au montage) → `lib/useExamMonitoring.ts:90-92`
- *    pousse un événement → `setState` → nouveau rendu → nouvel effet → boucle ;
- *  - `lib/useExamMonitoring.ts:174-176` : le nettoyage de l'effet poste les
- *    événements en attente à chaque démontage, soit une requête par boucle.
- *
- * Ce fichier est exécuté en DERNIER (projet Playwright dédié) car la boucle
- * finit par faire tomber le serveur de test.
+ * Exécuté en DERNIER (projet Playwright dédié) : parcours navigateur complet,
+ * le plus long de la suite.
  */
 import { test, expect } from "@playwright/test";
 import { loginAsCandidate } from "./support/auth";
@@ -75,5 +69,15 @@ test("parcours interface : démarrer l'examen, répondre au QCM, soumettre", asy
   // 3) La soumission doit aboutir et mener aux résultats.
   await page.getByRole("button", { name: "Soumettre" }).click();
   await page.waitForURL(/\/results$/, { timeout: 30_000 });
-  await expect(page.getByText("Réussi", { exact: true })).toBeVisible();
+
+  // La page /results liste TOUS les résultats du candidat : l'examen UI mais
+  // aussi celui déjà produit par `parcours-candidat.e2e.ts`. Deux cartes
+  // réussies portent donc légitimement le badge « Réussi ». On scrope sur la
+  // carte de l'examen qui vient d'être passé (même motif que
+  // `parcours-candidat.e2e.ts`), sinon l'assertion n'identifierait pas le bon
+  // résultat et masquerait un éventuel échec.
+  const resultCard = page
+    .locator("div.rounded-2xl")
+    .filter({ has: page.getByRole("heading", { name: exam.name }) });
+  await expect(resultCard.getByText("Réussi", { exact: true })).toBeVisible();
 });
