@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { E2E_APP_PORT, E2E_BASE_URL, getE2eDatabaseUrl } from "./e2e/setup/env";
+import { E2E_DIST_DIR, snapshotTsconfig } from "./e2e/setup/tsconfig-restore";
 
 /**
  * Configuration Playwright — parcours candidat E2E (issue #139).
@@ -9,6 +10,12 @@ import { E2E_APP_PORT, E2E_BASE_URL, getE2eDatabaseUrl } from "./e2e/setup/env";
  * La `DATABASE_URL` de la base E2E (conteneur Docker, port 5434) est
  * injectée par l'environnement : `.env.local` n'est jamais modifié.
  */
+// `next dev` réécrit `tsconfig.json` dès son démarrage (reformatage + ajout
+// des chemins de types de `.next-e2e`). Le `webServer` étant démarré AVANT
+// `globalSetup`, on capture l'état initial ici, au chargement de la config ;
+// `globalTeardown` le restaure après le run (voir tsconfig-restore.ts).
+snapshotTsconfig();
+
 const databaseUrl = getE2eDatabaseUrl();
 
 export default defineConfig({
@@ -28,6 +35,7 @@ export default defineConfig({
   timeout: 150_000,
   expect: { timeout: 20_000 },
   globalSetup: "./e2e/setup/global-setup.ts",
+  globalTeardown: "./e2e/setup/global-teardown.ts",
   use: {
     baseURL: E2E_BASE_URL,
     trace: "retain-on-failure",
@@ -69,7 +77,7 @@ export default defineConfig({
       BETTER_AUTH_URL: E2E_BASE_URL,
       // distDir dédié : permet de cohabiter avec le `next dev` de l'utilisateur
       // (Next verrouille `<distDir>/dev/lock`). Voir next.config.mjs.
-      NEXT_DIST_DIR: ".next-e2e",
+      NEXT_DIST_DIR: E2E_DIST_DIR,
       // Rate limiting : on force le fallback mémoire (cf. lib/rate-limit.ts)
       // pour que les quotas (5 soumissions/h, 10 vérifs/h) se réinitialisent
       // à chaque démarrage du serveur de test et ne dépendent pas d'un Redis
