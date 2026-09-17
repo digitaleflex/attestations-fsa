@@ -5,7 +5,7 @@ import pluginReact from "eslint-plugin-react";
 
 export default tseslint.config(
   { 
-    ignores: [".next/", "node_modules/", "tmp/", "dist/", "public/"] 
+    ignores: [".next/", ".next-e2e/", "node_modules/", "tmp/", "dist/", "public/"] 
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
