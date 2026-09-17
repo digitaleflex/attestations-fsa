@@ -3,6 +3,8 @@
 // Masque les détails sensibles en production
 import { NextResponse } from "next/server";
 
+import { captureServerError } from "./observability/sentry-capture";
+
 interface ApiError {
   message: string;
   code?: string;
@@ -76,6 +78,20 @@ export function handleApiError(
   };
 
   console.error("[API ERROR SEV-1]", JSON.stringify(errorDetails, null, 2));
+
+  // #151 — remontée Sentry des seules erreurs 5xx (no-op total sans SENTRY_DSN).
+  // Indispensable : ces erreurs sont rattrapées ici et n'atteignent donc jamais
+  // le hook `onRequestError` de Next — sans ce point d'accroche, un 500 reste
+  // invisible en production.
+  const errorStatus = error instanceof ApiErrorImpl ? error.status : 500;
+  if (errorStatus >= 500) {
+    captureServerError(error, {
+      route: context?.route,
+      operation: context?.operation,
+      userId: context?.userId,
+      status: errorStatus,
+    });
+  }
 
   // 1. Erreurs métier connues (Toujours sécurisées à renvoyer)
   if (error instanceof ApiErrorImpl) {

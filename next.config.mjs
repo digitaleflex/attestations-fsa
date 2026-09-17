@@ -1,4 +1,7 @@
 import { withBotId } from "botid/next/config";
+// @sentry/nextjs v10 : `withSentryConfig` s'importe depuis le sous-chemin
+// `@sentry/nextjs/config` (l'export racine est déprécié et disparaît en v11).
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -50,4 +53,17 @@ const nextConfig = {
   },
 };
 
-export default withBotId(nextConfig);
+// #151 — Sentry est 100 % OPTIONNEL.
+// - Aucune variable SENTRY_* n'est requise : sans SENTRY_DSN, l'instrumentation
+//   runtime (instrumentation.ts) est totalement inerte.
+// - Sans SENTRY_AUTH_TOKEN, l'upload des sourcemaps est désactivé : un build de
+//   production ne peut donc jamais échouer faute de credentials Sentry.
+export default withSentryConfig(withBotId(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  silent: true,
+});

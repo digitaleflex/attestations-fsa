@@ -1,5 +1,10 @@
 # Tableau de Bord Administrateur
 
+> ⚠️ **Réaligné le 2026-09-16 (issue #86)** : l'ancienne section « Waitlist » a été
+> retirée de ce document — le module a été supprimé du produit le 2026-06-22 (commit
+> `960852f`) : il n'existe ni page `app/admin/waitlist/`, ni API admin waitlist, ni
+> modèle Prisma `Waitlist`.
+
 ## Description
 
 Interface complète de gestion et de monitoring pour les administrateurs du système.
@@ -40,12 +45,7 @@ Interface complète de gestion et de monitoring pour les administrateurs du syst
 - Traitement des signalements
 - Historique
 
-### 6. Waitlist
-
-- Gestion des demandes d'inscription en attente
-- Approbation ou rejet
-
-### 7. Monitoring temps réel
+### 6. Monitoring temps réel
 
 - Utilisateurs actifs
 - Sessions en cours
@@ -61,7 +61,7 @@ Interface complète de gestion et de monitoring pour les administrateurs du syst
 - `app/admin/users/page.tsx` - Gestion utilisateurs
 - `app/admin/formations/page.tsx` - Formations
 - `app/admin/contacts/page.tsx` - Messages
-- `app/admin/stats/page.tsx` - Statistiques détaillées
+- `app/admin/monitoring/page.tsx` - Monitoring temps réel
 
 ## Suggestions d'amélioration
 

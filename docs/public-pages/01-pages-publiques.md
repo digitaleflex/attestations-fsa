@@ -1,5 +1,10 @@
 # Pages Publiques
 
+> ⚠️ **Réaligné le 2026-09-16 (issue #86)** : les pages `/ressources`, `/portfolios`,
+> `/annuaire` et `/signup` (waitlist) annoncées ici **n'existent pas / n'ont jamais
+> été recréées**. Les modules correspondants ont été retirés du produit le 2026-06-22
+> (commit `960852f`). L'inscription publique réelle se fait sur `/inscription`.
+
 ## Description
 
 Ensemble des pages accessibles sans authentification pour le grand public.
@@ -24,40 +29,35 @@ Ensemble des pages accessibles sans authentification pour le grand public.
 - Détails par formation
 - Lien vers inscription
 
-### 4. Ressources (`/ressources`)
-
-- Documents et ressources publiques
-- Téléchargement de documents
-
-### 5. FAQ (`/faq`)
+### 4. FAQ (`/faq`)
 
 - Questions fréquentes
 - Réponses structurées
 
-### 6. Contact (`/contact`)
+### 5. Contact (`/contact`)
 
 - Formulaire de contact
 - Envoi aux administrateurs
 - Gestion côté admin
 
-### 7. Inscription waitlist (`/signup`)
+### 6. Inscription (`/inscription`)
 
-- Demande d'inscription
-- Validation par admin (waitlist)
+- Création de compte public (email + mot de passe, Better Auth)
+- Vérification d'email par OTP après inscription
 
-### 8. Mentions légales
+### 7. Mentions légales
 
 - CGU (`/legal/cgu`)
 - Confidentialité (`/legal/confidentialite`)
 - Cookies (`/legal/cookies`)
 - Mentions légales (`/legal/mentions-legales`)
 
-### 9. Pages externes
+### 8. Autres pages publiques
 
+- Examens (`/examens`)
 - Demande de stage (`/demande-stage`)
-- Portfolios (`/portfolios`)
-- Annuaire alumni (`/annuaire`)
 - Signalement (`/signalement`)
+- Authentification (`/auth`), mot de passe oublié / réinitialisation
 
 ## Niveau d'avancement
 

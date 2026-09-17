@@ -27,7 +27,9 @@ const ExamSchema = z.object({
   description: z.string().optional(),
   formationId: z.string(),
   duration: z.coerce.number().default(3600),
-  passingScore: z.coerce.number().default(65),
+  // #123 — seuil en entier (le formulaire envoie un % ; on arrondit
+  // pour éviter 62.5 → erreur Prisma Int).
+  passingScore: z.coerce.number().transform((n) => Math.round(n)).default(65),
   randomizeQuestions: z.boolean().default(false),
   showResults: z.boolean().default(false),
   status: z.string().default("DRAFT"),

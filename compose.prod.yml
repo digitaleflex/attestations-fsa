@@ -14,6 +14,8 @@ services:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         NEXT_PUBLIC_PUSHER_KEY: ${NEXT_PUBLIC_PUSHER_KEY}
         NEXT_PUBLIC_PUSHER_CLUSTER: ${NEXT_PUBLIC_PUSHER_CLUSTER}
+        # #151 — DSN navigateur Sentry (optionnel, vide = désactivé).
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
     container_name: attestations-fsa-prod
     hostname: fsa-app
     expose:
@@ -50,6 +52,12 @@ services:
       BOTID_SECRET: ${BOTID_SECRET}
       # Plugin admin Better Auth : IDs des utilisateurs promus admin
       ADMIN_USER_IDS: ${ADMIN_USER_IDS}
+      # #151 — Observabilité Sentry, OPTIONNELLE. Sans SENTRY_DSN : no-op total,
+      # l'application démarre normalement. Le healthcheck /api/health est inchangé.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
     restart: unless-stopped
     depends_on:
       fsa-postgres:

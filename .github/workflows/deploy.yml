@@ -13,6 +13,16 @@ on:
         default: "false"
         type: boolean
 
+# Sérialise les déploiements : deux push rapprochés sur main ne doivent JAMAIS
+# construire en parallèle sur le même VPS. Incident du 2026-09-17 : 4 builds
+# concurrents ont saturé la machine, le build survivant a dépassé le timeout SSH
+# et a laissé la production hors ligne ~70 minutes.
+# cancel-in-progress: false → on met en file au lieu d'interrompre. Couper un
+# `up --build` en cours laisserait le VPS dans un état intermédiaire.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -29,6 +39,10 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
+          # Le défaut est de 10 minutes, insuffisant pour un build Docker complet.
+          # Mesuré lors de l'incident du 2026-09-17 : 601 s (10 min pile) atteintes
+          # pendant l'export de l'image, build tué, conteneurs déjà arrêtés.
+          command_timeout: 30m
           script: |
             set -e
 
@@ -85,9 +99,14 @@ jobs:
             fi
 
             # ── 5. Build & déploiement de l'app ──
-            echo "==> Stopping old containers..."
-            docker compose --env-file .env.production -f compose.prod.yml down
-
+            # Volontairement AUCUN `down` préalable : `up -d --build` construit
+            # d'abord, PUIS recrée le conteneur. L'ancien continue donc de servir
+            # pendant toute la durée du build et seules quelques secondes sont
+            # perdues à la bascule. Si le build échoue, l'ancien conteneur survit
+            # et la production reste en ligne.
+            # Un `down` avant garantissait au contraire plusieurs minutes
+            # d'indisponibilité et, en cas d'échec ou d'interruption, laissait la
+            # production à terre (incident du 2026-09-17).
             echo "==> Building & starting (attente du healthcheck via --wait)..."
             docker compose --env-file .env.production -f compose.prod.yml up -d --build --wait
 

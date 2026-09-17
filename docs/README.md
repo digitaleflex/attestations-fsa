@@ -82,6 +82,11 @@ attestations-fsa/
 
 La plateforme FSA est structurée en modules fonctionnels indépendants et hautement sécurisés :
 
+> ⚠️ **Réaligné le 2026-09-16 (issue #86)** : les modules **Waitlist**, **Ressources
+> pédagogiques** et **Chat** (ainsi que **Portfolio** et **Annuaire**) ont été retirés
+> du produit le 2026-06-22 (commit `960852f`). Ils figurent ci-dessous avec leur statut
+> réel ; les pourcentages restants sont un instantané d'avril 2026 non recalculé.
+
 | Module | Progression | Statut | Documentation |
 |--------|-------------|--------|---------------|
 | 🔐 Authentification (Better Auth) | 100% | ✅ Complet | [docs/AUTH-COMPTES.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/AUTH-COMPTES.md) |
@@ -90,13 +95,13 @@ La plateforme FSA est structurée en modules fonctionnels indépendants et haute
 | 🌐 Pages Publiques | 90% | ✅ Complet | [docs/public-pages/01-pages-publiques.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/public-pages/01-pages-publiques.md) |
 | 📝 Gestion des Examens | 90% | ✅ Complet | [docs/exam-management/01-creation-examens.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/exam-management/01-creation-examens.md) |
 | 📜 Gestion des Attestations | 85% | ✅ Complet | [docs/attestation-management/01-creation-attestations.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/attestation-management/01-creation-attestations.md) |
-| ⏳ Waitlist d'inscription | 85% | ✅ Complet | Enregistre les inscriptions en attente d'approbation administrative. |
+| ⏳ Waitlist d'inscription | — | 🗑️ Retiré (2026-06-22, `960852f`) | Module supprimé du produit : aucun modèle Prisma, aucune page, aucune API. |
 | 🎓 Résultats & Transcripts | 80% | ✅ Complet | [docs/results-transcripts/01-consultation-resultats.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/results-transcripts/01-consultation-resultats.md) |
 | ✏️ Demandes de Correction | 80% | ✅ Complet | Permet aux candidats de modifier leurs données personnelles d'identité sous validation admin. |
 | 💼 Gestion des Stages | 75% | ⚠️ Améliorable | [docs/internship-management/01-demandes-stage.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/internship-management/01-demandes-stage.md) |
-| 📚 Ressources pédagogiques | 75% | ⚠️ Améliorable | [docs/resources-management/01-ressources.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/resources-management/01-ressources.md) |
+| 📚 Ressources pédagogiques | — | 🗑️ Retiré (2026-06-22, `960852f`) | Module supprimé du produit ; doc conservée à titre d'historique : [docs/resources-management/01-ressources.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/resources-management/01-ressources.md) |
 | 🔔 Notifications (Pusher) | 70% | ⚠️ Améliorable | [docs/notifications/01-notifications.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/notifications/01-notifications.md) |
-| 💬 Système de Chat | 60% | 🔧 Partiel | [docs/chat-system/01-chat.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/chat-system/01-chat.md) |
+| 💬 Système de Chat | — | 🗑️ Retiré (2026-06-22, `960852f`) | Module supprimé du produit ; doc conservée à titre d'historique : [docs/chat-system/01-chat.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/chat-system/01-chat.md) |
 | 📋 Audit Logging | 65% | ⚠️ Améliorable | [docs/audit-logging/01-journal-audit.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/audit-logging/01-journal-audit.md) |
 | 📹 Suivi d'Examen | 40% | 🔧 Partiel | [docs/EXAM_MONITORING.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/EXAM_MONITORING.md) |
 
