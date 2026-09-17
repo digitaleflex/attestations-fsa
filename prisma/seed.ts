@@ -3,6 +3,61 @@ import { hashPassword } from 'better-auth/crypto';
 
 const prisma = new PrismaClient();
 
+export type CredentialAccountClient = Pick<PrismaClient, 'account'>;
+
+/**
+ * Garantit qu'un utilisateur possède un enregistrement `Account`
+ * `providerId: "credential"` exploitable par Better Auth, sans doublon.
+ *
+ * Better Auth 1.7 authentifie un mot de passe via cet enregistrement et exige
+ * `accountId === user.id` (cf. better-auth/dist/api/routes/sign-in.mjs).
+ *
+ * Idempotent : un second passage sur une donnée saine renvoie "exists" sans
+ * aucune écriture ; une donnée absente ou désalignée est créée / réparée.
+ */
+export async function ensureCredentialAccount(
+  client: CredentialAccountClient,
+  params: { userId: string; passwordHash: string },
+): Promise<'created' | 'repaired' | 'exists'> {
+  const existing = await client.account.findFirst({
+    where: { userId: params.userId, providerId: 'credential' },
+  });
+
+  if (existing) {
+    const isUsable =
+      existing.accountId === params.userId && Boolean(existing.password);
+
+    if (isUsable) {
+      return 'exists';
+    }
+
+    await client.account.update({
+      where: { id: existing.id },
+      data: {
+        accountId: params.userId,
+        password: params.passwordHash,
+        updatedAt: new Date(),
+      },
+    });
+
+    return 'repaired';
+  }
+
+  await client.account.create({
+    data: {
+      userId: params.userId,
+      providerId: 'credential',
+      accountId: params.userId,
+      password: params.passwordHash,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  return 'created';
+}
+
+
 async function main() {
   // Vérifier si un admin existe déjà
   const adminExists = await prisma.user.findUnique({
@@ -46,16 +101,19 @@ async function main() {
   }
   
   // Créer un utilisateur de test (candidat)
+  const candidateEmail = 'candidat@example.com';
+  const candidatePassword = 'Candidat123!';
+
   const userExists = await prisma.user.findUnique({
-    where: { email: 'candidat@example.com' },
+    where: { email: candidateEmail },
   });
-  
+
   if (!userExists) {
-    const hashedPassword = await hashPassword('Candidat123!');
-    
-    await prisma.user.create({
+    const hashedPassword = await hashPassword(candidatePassword);
+
+    const candidate = await prisma.user.create({
       data: {
-        email: 'candidat@example.com',
+        email: candidateEmail,
         password: hashedPassword,
         role: 'USER',
         name: 'Jean Koffi',
@@ -65,12 +123,33 @@ async function main() {
         emailVerified: new Date()
       },
     });
-    
-    console.log('✅ Compte candidat de test créé avec succès');
+
+    // Better Auth authentifie un mot de passe via l'enregistrement `Account`
+    // "credential" (accountId = user.id), pas via `User.password` seul.
+    await ensureCredentialAccount(prisma, {
+      userId: candidate.id,
+      passwordHash: hashedPassword,
+    });
+
+    console.log('✅ Compte candidat de test créé avec succès (Better Auth Ready)');
     console.log('📧 Email: candidat@example.com');
     console.log('🔑 Mot de passe: Candidat123!');
   } else {
-    console.log('ℹ️ Un compte candidat de test existe déjà');
+    // Idempotent : répare un `Account` manquant ou désaligné (ancien seed,
+    // import partiel) sans créer de doublon.
+    const hashedPassword = await hashPassword(candidatePassword);
+    const accountState = await ensureCredentialAccount(prisma, {
+      userId: userExists.id,
+      passwordHash: hashedPassword,
+    });
+
+    if (accountState === 'exists') {
+      console.log('ℹ️ Un compte candidat de test existe déjà (Account credential présent)');
+    } else {
+      console.log('✅ Compte candidat de test réparé : Account credential créé');
+      console.log('📧 Email: candidat@example.com');
+      console.log('🔑 Mot de passe: Candidat123!');
+    }
   }
 
   // Seeder les formations
