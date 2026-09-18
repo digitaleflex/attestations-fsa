@@ -1,4 +1,4 @@
-FROM node:22-alpine AS deps
+FROM node:26-alpine AS deps
 
 # libc6-compat : compat glibc ; openssl : requis par le moteur Prisma
 RUN apk add --no-cache libc6-compat openssl
@@ -11,7 +11,7 @@ COPY prisma ./prisma/
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate && \
     pnpm install --frozen-lockfile
 
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
@@ -57,7 +57,7 @@ RUN set -eux; \
     cp -a "$engine" /app/prisma-runtime/engine; \
     ls -la /app/prisma-runtime /app/prisma-runtime/engine
 
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 
 WORKDIR /app
 
