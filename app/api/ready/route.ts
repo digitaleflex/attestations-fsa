@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSealConfigStatus } from "@/lib/crypto/seal";
+import { getSealConfigStatus, getSealFingerprintStatus } from "@/lib/crypto/seal";
 
 // Readiness probe : vérifie la connectivité à la base de données ainsi que,
 // en production, la configuration du scellement (#155).
@@ -16,6 +16,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const seal = getSealConfigStatus();
+  const sealFingerprint = getSealFingerprintStatus();
   const sealRequired = process.env.NODE_ENV === "production";
   const sealOk = seal.configured || !sealRequired;
 
@@ -35,6 +36,11 @@ export async function GET() {
         seal: seal.configured ? "ok" : sealRequired ? "missing" : "disabled",
         sealReason: seal.reason ?? null,
         sealRequired,
+        // Empreinte non secrète (12 hex d'un digest SHA-256) : seul moyen de
+        // vérifier à distance la clé de production. Jamais la clé elle-même.
+        sealFingerprint: sealFingerprint.fingerprint,
+        sealFingerprintExpected: sealFingerprint.expected,
+        sealFingerprintMatch: sealFingerprint.matches,
       },
     },
     { status: ready ? 200 : 503 },
