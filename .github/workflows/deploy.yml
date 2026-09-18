@@ -52,6 +52,25 @@ jobs:
             echo "==> Pulling latest code..."
             git pull origin $(git rev-parse --abbrev-ref HEAD)
 
+            # ── 0. Libérer de l'espace disque (AVANT tout le reste) ──
+            # Le pipeline ne purgeait RIEN : chaque déploiement laissait une
+            # image applicative et son cache de build, sans rétention. Sur un
+            # VPS à disque réduit, ça finit par saturer.
+            # Incident du 2026-09-18 : `ENOSPC: no space left on device` pendant
+            # `pnpm build` -> build impossible. Le correctif « pas de down avant
+            # up » a évité la panne complète (l'ancien conteneur a continué de
+            # servir), mais l'application a brièvement perdu la capacité
+            # d'écrire tant que le disque était plein.
+            # `-f` : sans confirmation interactive. L'image du conteneur EN
+            # COURS n'est jamais supprimée (prune ne touche qu'aux inutilisées).
+            echo "==> Espace disque AVANT nettoyage :"
+            df -h / | tail -1
+            echo "==> Purge des images inutilisées et du cache de build..."
+            docker image prune -af || true
+            docker builder prune -af || true
+            echo "==> Espace disque APRÈS nettoyage :"
+            df -h / | tail -1
+
             SKIP_DB="${{ github.event.inputs.skip_db || 'false' }}"
 
             # ── 1. Démarrer la base ──
