@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   canonicalizeSealPayload,
+  compareSealFingerprint,
+  computeSealFingerprint,
   computeSealHash,
   getSealConfigStatus,
+  getSealFingerprint,
+  getSealFingerprintStatus,
   getSealSecret,
   reportSealDisabledIfProduction,
+  reportSealFingerprintMismatchIfProduction,
   sealCertificate,
+  SEAL_FINGERPRINT_LENGTH,
   verifyCertificateSeal,
   SEAL_SECRET_GENERATION_ACTION,
   type CertificateSealPayload,
@@ -163,3 +169,113 @@ describe("seal — dégradation bruyante en production (#155)", () => {
     expect(errorSpy).not.toHaveBeenCalled();
   });
 });
+
+describe("seal — empreinte de clé (#155)", () => {
+  it("empreinte déterministe, stable et de longueur fixe", () => {
+    const fp = computeSealFingerprint(SECRET);
+    expect(fp).toMatch(/^[0-9a-f]{12}$/);
+    expect(fp).toHaveLength(SEAL_FINGERPRINT_LENGTH);
+    expect(fp).toBe(computeSealFingerprint(SECRET));
+    expect(fp).not.toBe(computeSealFingerprint(`${SECRET}x`));
+    // L'empreinte n'est pas la clé et ne la contient pas.
+    expect(fp).not.toContain(SECRET);
+  });
+
+  it("empreinte absente quand la clé manque ou est trop courte", () => {
+    expect(getSealFingerprint(undefined)).toBeNull();
+    expect(getSealFingerprint("")).toBeNull();
+    expect(getSealFingerprint("trop-court")).toBeNull();
+    expect(getSealFingerprint(SECRET)).toBe(computeSealFingerprint(SECRET));
+  });
+
+  it("compareSealFingerprint : ok / non épinglée", () => {
+    const fp = computeSealFingerprint(SECRET);
+    expect(compareSealFingerprint(SECRET, fp)).toEqual({
+      state: "ok",
+      fingerprint: fp,
+      expected: fp,
+      matches: true,
+    });
+    expect(compareSealFingerprint(SECRET, null)).toEqual({
+      state: "non_epinglee",
+      fingerprint: fp,
+      expected: null,
+      matches: null,
+    });
+  });
+
+  it("compareSealFingerprint : mismatch = rotation détectée", () => {
+    const fp = computeSealFingerprint(SECRET);
+    const other = computeSealFingerprint("autre-secret-0123456789abcdef");
+    const status = compareSealFingerprint(SECRET, other);
+    expect(status.state).toBe("mismatch");
+    expect(status.matches).toBe(false);
+    expect(status.fingerprint).toBe(fp);
+    expect(status.expected).toBe(other);
+  });
+
+  it("compareSealFingerprint : absent (clé manquante)", () => {
+    const pinnedOnly = compareSealFingerprint(null, "abcdef123456");
+    expect(pinnedOnly.state).toBe("absent");
+    expect(pinnedOnly.fingerprint).toBeNull();
+    expect(pinnedOnly.matches).toBe(false);
+    expect(compareSealFingerprint(null, null).matches).toBeNull();
+  });
+
+  it("getSealFingerprintStatus lit l'environnement sans exposer la clé", () => {
+    const fp = computeSealFingerprint(SECRET);
+    const status = getSealFingerprintStatus(SECRET, fp);
+    expect(status.state).toBe("ok");
+    expect(JSON.stringify(status)).not.toContain(SECRET);
+  });
+
+  it("dev : un mismatch d'empreinte reste silencieux", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(
+      reportSealFingerprintMismatchIfProduction(SECRET, "deadbeef1234", "test"),
+    ).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("prod : un mismatch d'empreinte est un incident bruyant, sans la clé", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const wrong = "deadbeef1234";
+    const reported = reportSealFingerprintMismatchIfProduction(
+      SECRET,
+      wrong,
+      "production",
+    );
+    expect(reported).toBe(true);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const message = String(errorSpy.mock.calls[0][0]);
+    expect(message).toContain("rotation");
+    expect(message).toContain(wrong);
+    expect(message).not.toContain(SECRET);
+  });
+
+  it("prod : clé conforme à l'empreinte épinglée → silencieux", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fp = computeSealFingerprint(SECRET);
+    expect(
+      reportSealFingerprintMismatchIfProduction(SECRET, fp, "production"),
+    ).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("prod : empreinte divergente → log error mais scellement préservé", () => {
+    vi.stubEnv("CERT_SEAL_SECRET", SECRET);
+    vi.stubEnv("CERT_SEAL_FINGERPRINT", "deadbeef1234");
+    vi.stubEnv("NODE_ENV", "production");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const seal = sealCertificate(basePayload);
+
+    expect(seal).not.toBeNull();
+    expect(seal!.sealHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const message = String(errorSpy.mock.calls[0][0]);
+    expect(message).toContain("rotation");
+    expect(message).not.toContain(SECRET);
+  });
+});
+

@@ -9,10 +9,13 @@
 // Portée honnête : ce scellement garantit l'INTÉGRITÉ CÔTÉ SERVEUR (valeur
 // probante interne). Il ne constitue pas une signature légale qualifiée —
 // voir docs/certificate-probative-value.md.
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+
+/** Longueur (caractères hexadécimaux) de l'empreinte d'identification d'une clé. */
+export const SEAL_FINGERPRINT_LENGTH = 12;
 
 /** Longueur minimale exigée pour la clé serveur (anti-clé faible). */
-const MIN_SECRET_LENGTH = 16;
+export const MIN_SECRET_LENGTH = 16;
 
 /** Commande à communiquer à l'exploitant quand la clé de scellement manque. */
 export const SEAL_SECRET_GENERATION_ACTION = "openssl rand -base64 48";
@@ -82,6 +85,83 @@ export function getSealConfigStatus(
   return { configured: false, algorithm: "HMAC-SHA256", reason };
 }
 
+export type SealFingerprintState = "ok" | "absent" | "mismatch" | "non_epinglee";
+
+/** État de l'empreinte d'identification d'une clé (jamais la clé elle-même). */
+export interface SealFingerprintStatus {
+  state: SealFingerprintState;
+  /** Empreinte réelle de la clé configurée, ou null si aucune clé exploitable. */
+  fingerprint: string | null;
+  /** Empreinte attendue épinglée, ou null si CERT_SEAL_FINGERPRINT n'est pas défini. */
+  expected: string | null;
+  /** true/false, ou null si aucune empreinte attendue n'est épinglée. */
+  matches: boolean | null;
+}
+
+/**
+ * Calcule l'empreinte d'identification d'une clé : sha256(secret) en hexadécimal,
+ * tronqué aux SEAL_FINGERPRINT_LENGTH premiers caractères.
+ *
+ * Ce N'EST PAS la clé : 12 caractères hex = 48 bits d'un digest SHA-256, non
+ * réversibles et inexploitables pour forger un HMAC. C'est un identifiant
+ * comparable entre environnements, destiné à être affiché/loggué.
+ */
+export function computeSealFingerprint(secret: string): string {
+  return createHash("sha256")
+    .update(secret, "utf8")
+    .digest("hex")
+    .slice(0, SEAL_FINGERPRINT_LENGTH);
+}
+
+/** Empreinte de la clé configurée, ou null si aucune clé exploitable. */
+export function getSealFingerprint(
+  env: string | undefined = process.env.CERT_SEAL_SECRET,
+): string | null {
+  const secret = getSealSecret(env);
+  return secret ? computeSealFingerprint(secret) : null;
+}
+
+/**
+ * Compare une clé (déjà validée) à l'empreinte attendue. Fonction pure, sans
+ * accès à l'environnement, réutilisée par le diagnostic local.
+ */
+export function compareSealFingerprint(
+  secret: string | null,
+  expected: string | null,
+): SealFingerprintStatus {
+  const normalizedExpected = expected?.trim() || null;
+  if (!secret) {
+    return {
+      state: "absent",
+      fingerprint: null,
+      expected: normalizedExpected,
+      matches: normalizedExpected ? false : null,
+    };
+  }
+  const fingerprint = computeSealFingerprint(secret);
+  if (!normalizedExpected) {
+    return { state: "non_epinglee", fingerprint, expected: null, matches: null };
+  }
+  const matches = fingerprint === normalizedExpected;
+  return {
+    state: matches ? "ok" : "mismatch",
+    fingerprint,
+    expected: normalizedExpected,
+    matches,
+  };
+}
+
+/**
+ * État de l'empreinte de la clé configurée, sans jamais exposer la clé :
+ * destiné à la sonde de disponibilité /api/ready.
+ */
+export function getSealFingerprintStatus(
+  env: string | undefined = process.env.CERT_SEAL_SECRET,
+  expectedEnv: string | undefined = process.env.CERT_SEAL_FINGERPRINT,
+): SealFingerprintStatus {
+  return compareSealFingerprint(getSealSecret(env), expectedEnv ?? null);
+}
+
 /**
  * En production, une clé de scellement absente/invalide est un INCIDENT : les
  * attestations émises perdraient silencieusement leur valeur probante. On le
@@ -100,6 +180,32 @@ export function reportSealDisabledIfProduction(
       `Action requise — générez une clé (${SEAL_SECRET_GENERATION_ACTION}) ` +
       `puis définissez CERT_SEAL_SECRET. Sans sceau, les attestations émises ` +
       `perdent leur valeur probante.`,
+  );
+  return true;
+}
+
+/**
+ * En production, une empreinte différente de l'attendue signifie qu'une ROTATION
+ * de clé a eu lieu : les certificats DÉJÀ scellés seront signalés comme altérés
+ * par verifyCertificateSeal (faux positifs de falsification). On le trace au
+ * niveau error, sans bloquer l'émission — bloquer serait pire (perte
+ * d'attestations). Muet hors production.
+ *
+ * @returns true si une rotation a été signalée.
+ */
+export function reportSealFingerprintMismatchIfProduction(
+  secret: string | null = getSealSecret(),
+  expectedEnv: string | undefined = process.env.CERT_SEAL_FINGERPRINT,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): boolean {
+  if (nodeEnv !== "production") return false;
+  const status = compareSealFingerprint(secret, expectedEnv ?? null);
+  if (status.state !== "mismatch") return false;
+  console.error(
+    `[SEAL] ALERTE rotation de clé : l'empreinte réelle (${status.fingerprint}) ` +
+      `diffère de CERT_SEAL_FINGERPRINT (${status.expected}). La clé de scellement ` +
+      `a changé : les attestations déjà scellées seront signalées « empreinte ` +
+      `incohérente : données altérées ». Cette clé ne doit pas être rotationnée.`,
   );
   return true;
 }
@@ -149,6 +255,7 @@ export function sealCertificate(
     reportSealDisabledIfProduction();
     return null;
   }
+  reportSealFingerprintMismatchIfProduction(secret);
   const sealHash = computeSealHash(canonicalizeSealPayload(payload), secret);
   return { sealHash, sealedAt: now };
 }

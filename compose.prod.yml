@@ -50,6 +50,11 @@ services:
       BOTID_SECRET: ${BOTID_SECRET}
       # Scellement HMAC-SHA256 des certificats (#155) — valeur probante
       CERT_SEAL_SECRET: ${CERT_SEAL_SECRET}
+      # Empreinte attendue de la cle (sha256 hex tronque a 12) — NON secrete.
+      # Sans cette ligne, l'epinglage est inerte en production : une rotation
+      # de CERT_SEAL_SECRET ne serait pas detectee, et les certificats deja
+      # scelles seraient signales comme "donnees alterees" sans alerte.
+      CERT_SEAL_FINGERPRINT: ${CERT_SEAL_FINGERPRINT}
       # Plugin admin Better Auth : IDs des utilisateurs promus admin
       ADMIN_USER_IDS: ${ADMIN_USER_IDS}
     restart: unless-stopped

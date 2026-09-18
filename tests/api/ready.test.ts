@@ -15,6 +15,7 @@ import { GET as readyGET } from "../../app/api/ready/route";
 import { GET as healthGET } from "../../app/api/health/route";
 import {
   canonicalizeSealPayload,
+  computeSealFingerprint,
   computeSealHash,
   getSealSecret,
   sealCertificate,
@@ -40,6 +41,9 @@ interface ReadyBody {
     seal: string;
     sealReason: string | null;
     sealRequired: boolean;
+    sealFingerprint: string | null;
+    sealFingerprintExpected: string | null;
+    sealFingerprintMatch: boolean | null;
   };
 }
 
@@ -51,12 +55,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.queryRaw.mockResolvedValue([{ "?column?": 1 }]);
   delete process.env.CERT_SEAL_SECRET;
+  delete process.env.CERT_SEAL_FINGERPRINT;
 });
 
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
   delete process.env.CERT_SEAL_SECRET;
+  delete process.env.CERT_SEAL_FINGERPRINT;
 });
 
 describe("GET /api/ready — sonde de scellement (#155)", () => {
@@ -273,3 +279,61 @@ describe("sonde indépendante — déterminisme de l'empreinte (#155)", () => {
     expect(computeSealHash(a, VALID_SECRET)).toBe(computeSealHash(b, VALID_SECRET));
   });
 });
+
+describe("GET /api/ready — empreinte de scellement (#155)", () => {
+  const secret = "ready-fingerprint-secret-0123456789abcdef";
+
+  it("expose l'empreinte et la correspondance sans jamais la clé", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CERT_SEAL_SECRET", secret);
+    const fp = computeSealFingerprint(secret);
+    vi.stubEnv("CERT_SEAL_FINGERPRINT", fp);
+
+    const res = await readyGET();
+    const body = await readyBody(res);
+
+    expect(res.status).toBe(200);
+    expect(body.checks.sealFingerprint).toBe(fp);
+    expect(body.checks.sealFingerprintExpected).toBe(fp);
+    expect(body.checks.sealFingerprintMatch).toBe(true);
+    expect(JSON.stringify(body)).not.toContain(secret);
+  });
+
+  it("empreinte divergente → 200 quand même, match=false (émission non bloquée)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CERT_SEAL_SECRET", secret);
+    vi.stubEnv("CERT_SEAL_FINGERPRINT", "deadbeef1234");
+
+    const res = await readyGET();
+    const body = await readyBody(res);
+
+    expect(res.status).toBe(200);
+    expect(body.checks.seal).toBe("ok");
+    expect(body.checks.sealFingerprint).toBe(computeSealFingerprint(secret));
+    expect(body.checks.sealFingerprintMatch).toBe(false);
+    expect(JSON.stringify(body)).not.toContain(secret);
+  });
+
+  it("empreinte non épinglée → match=null mais empreinte exposée", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CERT_SEAL_SECRET", secret);
+
+    const res = await readyGET();
+    const body = await readyBody(res);
+
+    expect(body.checks.sealFingerprint).toBe(computeSealFingerprint(secret));
+    expect(body.checks.sealFingerprintExpected).toBeNull();
+    expect(body.checks.sealFingerprintMatch).toBeNull();
+  });
+
+  it("sans clé → empreinte null, jamais de valeur", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    const res = await readyGET();
+    const body = await readyBody(res);
+
+    expect(body.checks.sealFingerprint).toBeNull();
+    expect(body.checks.sealFingerprintMatch).toBeNull();
+  });
+});
+
