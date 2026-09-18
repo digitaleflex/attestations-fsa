@@ -81,6 +81,17 @@ COPY --from=builder /app/node_modules/pg ./node_modules/pg
 # Cache ISR/Next inscriptible par l'utilisateur non-root (sinon EACCES sur /app/.next/cache)
 RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next
 
+# Répertoires d'upload : CV/images (public) et scans d'examen (private).
+# Créés DANS l'image et cédés à l'utilisateur applicatif, pour deux raisons :
+#   1. `public/` est copié en root et `private/` n'existe pas du tout dans
+#      l'image : sans cela, le `mkdir` fait par l'app en uid 1001 lève EACCES
+#      et l'upload échoue (le fichier n'est jamais écrit).
+#   2. Un volume NOMMÉ monté sur un dossier existant hérite de son contenu ET
+#      de sa propriété au premier montage : l'écriture reste donc possible.
+# Les volumes sont déclarés dans compose.prod.yml (fsa-uploads-public/private).
+RUN mkdir -p /app/public/uploads /app/private/uploads/scans \
+    && chown -R nextjs:nodejs /app/public/uploads /app/private/uploads
+
 USER nextjs
 
 EXPOSE 3000
