@@ -30,9 +30,7 @@ export default async function AdminLayout({
 
   const isLoginPage =
     pathname === "/admin/login" ||
-    pathname.startsWith("/admin/login/") ||
-    pathname === "/admin/register" ||
-    pathname === "/admin/signup";
+    pathname.startsWith("/admin/login/");
 
   // Sécurité Stricte (RSC Validation)
   if (!isLoginPage) {
