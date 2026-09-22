@@ -188,7 +188,7 @@ revoked  : publiée avec statut révoqué ; les vérificateurs signalent « clé
 ```
 
 **Procédure de rotation** (planned, additive) :
-1. Générer la nouvelle paire (cérémonie §6.1), insérer dans `SigningKey` (`active`), rétrograder l'ancienne (`retired`).
+1. Générer la nouvelle paire (cérémonie §6.1), puis dans **une transaction atomique** : rétrograder l'ancienne clé (`retired`) **avant** d'insérer la nouvelle (`active`). L'index unique partiel (un seul `active` à la fois) impose cet ordre ; sérialiser les émissions (verrou applicatif ou transaction) pour empêcher deux rotations concurrentes.
 2. Déployer ; le JWKS expose les deux clés.
 3. **Gates de vérification** : un ancien certificat valide toujours (kid ancien) ; un nouveau certificate porte le kid nouveau.
 4. Escrow de la nouvelle clé (§6.5). Les clés publiques `retired` ne sont **jamais supprimées**.
@@ -214,7 +214,7 @@ revoked  : publiée avec statut révoqué ; les vérificateurs signalent « clé
 
 ### 6.6 Interface `KeyProvider`
 
-Le code de signature dépend d'une interface (`getActiveKey(): {privateKey, keyId}`), pas d'un accès direct à l'environnement. v1 : implémentation « fichier monté ». v2 possible : « KMS » sans toucher au métier. Coût : ~20 lignes d'indirection, payées une fois.
+Le code de signature dépend d'une interface (`getActiveKey(): {privateKey, keyId}`), pas d'un accès direct à l'environnement. **Validation avant signature** : dériver la clé publique de la clé privée montée et la confronter à (1) `SigningKey.publicKeyJwk` du registre, (2) son empreinte, (3) `CERT_SIGN_ACTIVE_FINGERPRINT` (env). Tout écart → **refus de signer** (erreur explicite, jamais de signature divergente) et `/api/ready` renvoie 503. v1 : implémentation « fichier monté ». v2 possible : « KMS » sans toucher au métier. Coût : ~20 lignes d'indirection + la validation, payées une fois.
 
 ---
 
@@ -239,6 +239,7 @@ Contenu proposé : `https://<domaine>/verifier#<JWS>`.
 - **Règle de repli au rendu** : si le token dépasse le budget (noms longs), le QR retombe sur l'URL seule et le bloc texte porte la signature. Seuil documenté, décision automatique, jamais d'échec silencieux.
 - **QA obligatoire** (action humaine, phase 2) : impression réelle, scan par 2–3 téléphones, une photocopie, une photo de travers.
 - **Le fragment `#` n'est jamais envoyé au serveur** (les fragments restent côté client) : le token n'apparaît pas dans les logs, et la page peut vérifier la signature **localement** avant tout appel réseau.
+- **Minimisation des données personnelles** : le JWS du QR porte la charge canonique complète (fullName, score, mention, endDate) — ces données sont **déjà imprimées sur le certificat** : le QR n'expose rien de plus que le document lui-même. La page de vérification n'affiche que les champs nécessaires à la comparaison visuelle. **Option v2 documentée** : charge minimale (référence opaque = code seul) dans le QR + signature complète dans le bloc texte, si un besoin de minimisation apparaît (ex. QR scanné hors du contexte du document). Ne pas l'implémenter en v1 : elle casserait la vérification hors ligne autonome du QR (le vérificateur n'aurait plus les données à comparer).
 
 ### 7.3 Bloc texte sous le certificat
 
@@ -261,6 +262,18 @@ Trois sites rendent des certificats (`OfficialDocument.tsx` — pas de QR aujour
 ## 8. Vérification
 
 ### 8.1 Côté API — forme de la réponse (additive)
+
+**Contrat de migration** : la réponse conserve **intégralement** l'objet `attestation` existant consommé par le frontend (aucun champ remplacé ni déplacé) ; `proof` est une **extension additive**. Mapping exact des nouveaux champs :
+
+| Champ | Type | Sémantique |
+|---|---|---|
+| `proof.signature.present` | `boolean` | `true` si une signature existe pour ce certificat |
+| `proof.signature.valid` | `boolean` | validité cryptographique contre la clé publique du `keyId` |
+| `proof.signature.algorithm` | `string` | `Ed25519` |
+| `proof.signature.keyId` | `string` | identifiant de clé (ex. `fsa-k1`) |
+| `proof.signature.keyStatus` | `string` | `active` / `retired` / `revoked` (du registre) |
+| `proof.signature.signedAt` | `string` | métadonnée non authentifiée (date de signature/backfill) |
+| `proof.jws` | `string` | token JWS complet — le frontend rend QR/texte sans faire de crypto |
 
 `GET /api/verifier?code=…` — les champs existants de `proof` sont conservés (compat frontend), ajout de :
 
@@ -376,12 +389,12 @@ L'intention « marquer tous nos documents » est satisfaite par : QR (≥ 28 mm,
 | `docs/signature-ed25519.md` | Doc d'exploitation (cérémonie, escrow, rotation, compromission) |
 
 **Règles d'implémentation** :
-- Clé absente en production → **même philosophie que le sceau** : émission non bloquée, log `error`, `/api/ready` 503. La signature est **rétrofittable** (backfill possible après coup) — c'est ce qui autorise le non-blocage.
+- Clé absente en production → **émission non bloquée mais signature explicitement absente** : `proof.signature.present = false`, aucun bloc QR/texte de signature rendu sur le document (le certificat s'affiche « non signé »), log `error`, `/api/ready` 503. La signature est **rétrofittable** (backfill possible après coup) — c'est ce qui autorise le non-blocage.
 - Jamais de clé privée : en base, dans `NEXT_PUBLIC_*`, dans une réponse API, dans un log.
 - Le token JWS est reconstruit (header déterministe), jamais stocké en colonne.
 
 **Critères d'acceptation** (à faire prouver par le gate `npm run verify` + sondes) :
-1. Émission d'une attestation → `sealHash` ET `signature`/`signatureKeyId`/`signedAt` non nuls.
+1. Émission d'une attestation → `sealHash` non nul ; `signature`/`signatureKeyId`/`signedAt` non nuls **si la clé est présente**, sinon `proof.signature.present = false` et document rendu sans bloc de signature.
 2. `GET /api/verifier` → `proof.seal.valid = true` ET `proof.signature.valid = true` + `jws` vérifiable par `jose` en script autonome.
 3. Altération du score en base → les deux preuves échouent.
 4. Rotation simulée (2 clés au registre) → certificat signé par `fsa-k1` **valide** alors que `fsa-k2` est active. **C'est le test qui prouve la fin de l'incident #155.**
