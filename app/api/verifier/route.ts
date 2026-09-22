@@ -37,11 +37,13 @@ export async function GET(request: Request) {
     const validCode = sanitizeInput(parse.data.trim())
 
     // ✅ RECHERCHE SÉCURISÉE : Correspondance exacte uniquement
-    // On ne permet la vérification que pour les attestations VALIDÉES ou RÉCUPÉRÉES
+    // On expose la vérification pour les attestations VALIDÉES / RÉCUPÉRÉES,
+    // et on charge aussi les attestations REJETÉES pour pouvoir signaler une
+    // révocation explicite au lieu de la déclarer introuvable (#224).
     const attestation = await prisma.attestation.findFirst({
       where: {
         code: { equals: validCode, mode: 'insensitive' },
-        status: { in: ['VALIDATED', 'CLAIMED'] }
+        status: { in: ['VALIDATED', 'CLAIMED', 'REJECTED'] }
       },
       select: {
         id: true,
@@ -87,6 +89,30 @@ export async function GET(request: Request) {
       sealHash: attestation.sealHash,
     });
 
+    // Révocation (#224) : le code existe mais l'attestation a été rejetée.
+    // On le déclare explicitement — un vérificateur public doit pouvoir
+    // constater une révocation, sinon le champ `revoked` ment. On ne republie
+    // pas pour autant les données personnelles du titulaire rejeté : seul le
+    // statut de révocation est exposé.
+    if (attestation.status === 'REJECTED') {
+      return NextResponse.json({
+        attestation: {
+          code: attestation.code,
+          status: attestation.status,
+          proof: {
+            algorithm: seal.algorithm,
+            sealed: seal.sealed,
+            valid: false,
+            reason: "certificat révoqué : l'attestation a été rejetée et n'est plus valable",
+            revoked: true,
+            status: attestation.status,
+            sealedAt: attestation.sealedAt,
+            checkedAt: new Date().toISOString(),
+          },
+        },
+      })
+    }
+
     // Mapper certificationScore vers score pour la compatibilité frontend
     const responseData = {
       ...attestation,
@@ -96,7 +122,9 @@ export async function GET(request: Request) {
         sealed: seal.sealed,
         valid: seal.valid,
         reason: seal.reason ?? null,
-        revoked: attestation.status === 'REJECTED',
+        // Seules les attestations VALIDATED / CLAIMED atteignent ce point
+        // (les REJECTED ont été traitées ci-dessus) : aucune révocation ici.
+        revoked: false,
         status: attestation.status,
         sealedAt: attestation.sealedAt,
         checkedAt: new Date().toISOString(),
