@@ -51,6 +51,14 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
+      // Versant ADMIN du cœur métier (issue #140) : connexion par mot de passe
+      // (#230), consultation et révocation d'attestation. Dépend de l'attestation
+      // émise par le parcours candidat → déclaré APRÈS `chromium`.
+      name: "chromium-admin",
+      testMatch: /parcours-admin\.e2e\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
       // Parcours 100 % interface, exécuté en dernier (projet dédié) : c'est le
       // scénario navigateur complet, le plus long de la suite.
       name: "chromium-ui-examen",
