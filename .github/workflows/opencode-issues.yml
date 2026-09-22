@@ -1,0 +1,54 @@
+# =====================================================================
+# Auto-fix d'issues — autonomie totale
+# ---------------------------------------------------------------------
+# Une issue labelée "agent" est automatiquement analysée, corrigée,
+# testée (pnpm verify) et transformée en PR. Aucune supervision humaine
+# avant la PR — l'humain ne fait que relire et merger.
+#
+# Déclencheurs : issue ouverte AVEC le label "agent", ou label "agent"
+# ajouté à une issue existante.
+#
+# Setup : identique à opencode.yml (secret OPENCODE_AUTH_JSON).
+# =====================================================================
+name: opencode-issues
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  opencode:
+    if: >-
+      github.event.issue.pull_request == null &&
+      contains(github.event.issue.labels.*.name, 'agent')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run OpenCode (auto-fix)
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_JSON }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          model: ${{ vars.OPENCODE_MODEL || 'opencode-go/deepseek-v4.1-flash' }}
+          agent: ${{ vars.OPENCODE_AGENT || 'ci' }}
+          use_github_token: true
+          share: false
+          prompt: |
+            Résous l'issue GitHub suivante (le contexte de l'issue est fourni automatiquement).
+
+            Règles impératives :
+            1. Analyse le problème, implémente la correction, écris ou adapte les tests.
+            2. Lance `pnpm verify` et corrige jusqu'à ce que tout passe (tsc + eslint + vitest).
+            3. Ne touche JAMAIS à : .env*, prisma/migrations/**, fichiers de secrets/clés, .github/workflows/**.
+            4. Ne fais AUCUN git push ni commit : l'infrastructure s'en charge.
+            5. Termine par un résumé en français : changements, fichiers touchés, tests, points d'attention.
