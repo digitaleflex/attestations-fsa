@@ -1,61 +1,15 @@
 // app/api/admin/submissions/[id]/scans/[scanId]/route.ts
 // Sert un scan de composition en streaming, protégé admin.
-// Le chemin physique est dérivé de l'id du scan et confiné au dossier
-// d'upload de la soumission (protection contre la traversée de chemin).
+// La lecture passe par l'abstraction de stockage `lib/storage` : le serveur
+// récupère l'objet puis le re-sert lui-même (proxy). On n'expose jamais
+// d'URL d'objet au client — les scans sont des preuves légales, ils doivent
+// rester derrière le contrôle d'accès admin et conserver les en-têtes de
+// sécurité (`Content-Disposition: inline`, `Cache-Control`, `nosniff`).
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { basename, extname, join, resolve, sep } from 'path'
-import { createReadStream } from 'fs'
-import { stat } from 'fs/promises'
-import { Readable } from 'stream'
 import { getAdminUser } from '@/lib/auth'
-
-const MIME_BY_EXTENSION: Record<string, string> = {
-  '.pdf': 'application/pdf',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-}
-
-/**
- * Résout le chemin physique d'un scan en le confinant au dossier d'upload
- * de sa soumission. Gère les anciens scans dont l'URL `/secure-files/...`
- * contenait le nom de fichier.
- */
-function resolveScanFilePath(
-  submissionId: string,
-  scan: { id: string; url: string; fileName: string }
-): string | null {
-  let storedName: string
-  if (scan.url.startsWith('/secure-files/scans/')) {
-    storedName = basename(scan.url)
-  } else {
-    const ext = '.' + (scan.fileName.split('.').pop() || '').toLowerCase()
-    storedName = `${scan.id}${MIME_BY_EXTENSION[ext] ? ext : '.pdf'}`
-  }
-
-  if (
-    !storedName ||
-    storedName === '.' ||
-    storedName === '..' ||
-    storedName.includes('/') ||
-    storedName.includes('\\')
-  ) {
-    return null
-  }
-
-  const uploadDir = resolve(
-    join(process.cwd(), 'private', 'uploads', 'scans', submissionId)
-  )
-  const filePath = resolve(uploadDir, storedName)
-
-  // Empêche toute traversée de chemin hors du dossier de la soumission.
-  if (!filePath.startsWith(uploadDir + sep)) {
-    return null
-  }
-
-  return filePath
-}
+import { getStorage } from '@/lib/storage'
+import { contentTypeForScanKey, resolveScanObjectKey } from '../scan-storage'
 
 // GET /api/admin/submissions/[id]/scans/[scanId] - Servir un scan
 export async function GET(
@@ -82,44 +36,68 @@ export async function GET(
       return NextResponse.json({ error: 'Scan non trouvé' }, { status: 404 })
     }
 
-    const filePath = resolveScanFilePath(id, scan)
-    if (!filePath) {
+    const key = resolveScanObjectKey(id, scan)
+    if (!key) {
       return NextResponse.json({ error: 'Scan non trouvé' }, { status: 404 })
     }
 
-    let fileStats
+    const storage = getStorage()
+
+    // Objet absent côté stockage alors que la ligne existe → 404, pas 500.
+    let signedUrl: string
     try {
-      fileStats = await stat(filePath)
-    } catch {
+      if (!(await storage.exists(key))) {
+        return NextResponse.json(
+          { error: 'Fichier scan introuvable' },
+          { status: 404 }
+        )
+      }
+      signedUrl = await storage.getSignedUrl(key)
+    } catch (error) {
+      console.error('Erreur accès stockage scan:', error)
       return NextResponse.json(
-        { error: 'Fichier scan introuvable sur le disque' },
+        { error: 'Erreur lors de la lecture du scan' },
+        { status: 500 }
+      )
+    }
+
+    // Récupération serveur-à-serveur : l'URL signée n'est jamais renvoyée au
+    // client, l'objet ne sort pas du contrôle d'accès.
+    let upstream: Response
+    try {
+      upstream = await fetch(new URL(signedUrl, request.url))
+    } catch (error) {
+      console.error('Erreur récupération scan:', error)
+      return NextResponse.json(
+        { error: 'Erreur lors de la lecture du scan' },
+        { status: 500 }
+      )
+    }
+
+    if (!upstream.ok || !upstream.body) {
+      return NextResponse.json(
+        { error: 'Fichier scan introuvable' },
         { status: 404 }
       )
     }
 
-    if (!fileStats.isFile()) {
-      return NextResponse.json({ error: 'Scan non trouvé' }, { status: 404 })
-    }
-
-    const contentType =
-      MIME_BY_EXTENSION[extname(filePath).toLowerCase()] ||
-      'application/octet-stream'
-
-    const stream = Readable.toWeb(
-      createReadStream(filePath)
-    ) as unknown as ReadableStream<Uint8Array>
-
     const safeDownloadName = scan.fileName.replace(/["\\\r\n]/g, '_')
 
-    return new NextResponse(stream, {
+    const headers: Record<string, string> = {
+      // Type de confiance (déduit de la clé), jamais renvoyé par le stockage.
+      'Content-Type': contentTypeForScanKey(key),
+      'Content-Disposition': `inline; filename="${safeDownloadName}"`,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    }
+    const contentLength = upstream.headers.get('content-length')
+    if (contentLength) {
+      headers['Content-Length'] = contentLength
+    }
+
+    return new NextResponse(upstream.body, {
       status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Length': String(fileStats.size),
-        'Content-Disposition': `inline; filename="${safeDownloadName}"`,
-        'Cache-Control': 'private, no-store',
-        'X-Content-Type-Options': 'nosniff',
-      },
+      headers,
     })
   } catch (error: unknown) {
     console.error('Erreur lecture scan:', error)
