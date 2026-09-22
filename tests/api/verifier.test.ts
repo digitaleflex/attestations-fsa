@@ -87,6 +87,53 @@ describe("GET /api/verifier", () => {
     expect(res.status).toBe(404);
   });
 
+  it("interroge aussi le statut REJECTED, sinon `revoked` mentirait (#224)", async () => {
+    db.attestationFindFirst.mockResolvedValue(null as never);
+    await GET(req("FSA-2026-M01-00001-abcde"));
+
+    expect(db.attestationFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: expect.arrayContaining(["REJECTED"]) },
+        }),
+      }),
+    );
+  });
+
+  it("déclare explicitement la révocation d'une attestation REJECTED (#224)", async () => {
+    db.attestationFindFirst.mockResolvedValue({
+      id: "a2",
+      code: "FSA-2026-M01-00002-abcde",
+      fullName: "Bob",
+      type: "CERTIFICATION",
+      status: "REJECTED",
+      certificationScore: null,
+      stageScore: null,
+      certificationMention: null,
+      sealHash: null,
+      sealedAt: null,
+      issuedAt: new Date("2026-02-01"),
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-02-01"),
+      location: "En ligne",
+      instructor: "FSA",
+      formation: { name: "Pisciculture", category: "AGRICULTURE" },
+    } as never);
+
+    const res = await GET(req("FSA-2026-M01-00002-abcde"));
+    // Le certificat existe : on ne renvoie PAS un 404 « introuvable ».
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.attestation.status).toBe("REJECTED");
+    expect(body.attestation.proof.revoked).toBe(true);
+    expect(body.attestation.proof.valid).toBe(false);
+    expect(typeof body.attestation.proof.reason).toBe("string");
+    expect(body.attestation.proof.reason.length).toBeGreaterThan(0);
+    // Divulgation minimale : pas de données personnelles d'un titulaire rejeté.
+    expect(body.attestation.fullName).toBeUndefined();
+  });
+
   it("200 et mappe certificationScore -> score quand trouvé", async () => {
     db.attestationFindFirst.mockResolvedValue({
       id: "a1",
