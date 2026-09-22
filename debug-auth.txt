@@ -1,6 +1,0 @@
-[2026-04-04T17:56:05.177Z] 🚀 Début de la procédure d'urgence...
-[2026-04-04T17:56:06.565Z] 👥 Utilisateurs actuels : [{"email":"candidat@example.com","id":"eaa8b82d-6a95-41c4-93cc-75a41372d204"},{"email":"rootmarvet@gmail.com","id":"f5367974-884d-4fbf-82f6-9010842d0e5e"}]
-[2026-04-04T17:56:06.995Z] 📝 Tentative de signUpEmail...
-[2026-04-04T17:56:11.761Z] ❌ Erreur API Better Auth : Failed to create user - {"status":"UNPROCESSABLE_ENTITY","body":{"message":"Failed to create user","code":"FAILED_TO_CREATE_USER"},"headers":{},"statusCode":422,"name":"APIError"}
-[2026-04-04T17:56:11.762Z] 💥 CRASH FATAL : Failed to create user
-APIError: Failed to create user

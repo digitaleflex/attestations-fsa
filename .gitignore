@@ -76,3 +76,6 @@ package-lock.json
 
 # Outillage local opencode (config/skills perso)
 .opencode/
+
+# Fichiers temporaires / scripts one-shot
+/tmp/
