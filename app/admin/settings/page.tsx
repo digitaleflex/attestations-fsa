@@ -165,7 +165,7 @@ export default function SettingsPage() {
       {showPreview && (
         <div className="relative group animate-in slide-in-from-top-4 duration-500">
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2.5rem] blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
-            <Card className="relative p-12 border-none shadow-2xl bg-slate-950 overflow-hidden rounded-[2.5rem]">
+            <Card className="relative p-6 sm:p-12 border-none shadow-2xl bg-slate-950 overflow-hidden rounded-[2.5rem]">
                 <div className="flex flex-col items-center">
                     <div className="w-full flex items-center justify-between mb-8 text-white/40 px-4">
                         <span className="text-[10px] font-black uppercase tracking-[0.3em]">Simulation Certificat Officiel v4.2.0</span>
@@ -206,7 +206,7 @@ export default function SettingsPage() {
       <form className="grid gap-10 lg:grid-cols-2" onSubmit={handleSave}>
 
         {/* Section 1 : Identité & Contact */}
-        <Card className="p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
+        <Card className="p-6 sm:p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50 group-hover:scale-110 transition-transform duration-700" />
 
             <div className="flex items-center gap-4 relative z-10 pb-6 border-b border-slate-50">
@@ -274,7 +274,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Section 2 : Autorité de Signature */}
-        <Card className="p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
+        <Card className="p-6 sm:p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
             <div className="absolute bottom-0 right-0 w-40 h-40 bg-emerald-50 rounded-full -mr-20 -mb-20 opacity-40 group-hover:scale-110 transition-transform duration-1000" />
 
             <div className="flex items-center gap-4 relative z-10 pb-6 border-b border-slate-50">
@@ -336,7 +336,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Section 3 : Objectifs Strategiques KPIs */}
-        <Card className="p-12 border-none shadow-2xl bg-slate-900 rounded-[3rem] lg:col-span-2 space-y-12 relative overflow-hidden group">
+        <Card className="p-6 sm:p-12 border-none shadow-2xl bg-slate-900 rounded-[3rem] lg:col-span-2 space-y-12 relative overflow-hidden group">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.1),transparent)] pointer-events-none" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.1),transparent)] pointer-events-none" />
 
@@ -407,7 +407,7 @@ export default function SettingsPage() {
       {/* Confirmation Modale Ultra-Design */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent className="bg-white border-none shadow-2xl rounded-[3rem] max-w-[500px] p-0 overflow-hidden">
-          <div className="bg-slate-900 p-12 text-white flex flex-col items-center">
+          <div className="bg-slate-900 p-6 sm:p-12 text-white flex flex-col items-center">
              <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center mb-6 backdrop-blur-xl ring-1 ring-white/20">
                 <Save className="w-10 h-10 text-emerald-400" />
              </div>
@@ -417,7 +417,7 @@ export default function SettingsPage() {
              <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mt-2">DÉPLOIEMENT_CONFIG_v4</p>
           </div>
 
-          <div className="p-12 space-y-8">
+          <div className="p-6 sm:p-12 space-y-8">
             <AlertDialogDescription className="text-slate-500 font-medium text-lg text-center leading-relaxed">
                 Appliquer ces paramètres modifiera irrémédiablement l'identité visuelle de <span className="text-slate-900 font-bold">tous les futurs documents</span>.
             </AlertDialogDescription>

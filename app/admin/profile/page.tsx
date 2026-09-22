@@ -128,18 +128,18 @@ export default function AdminProfilePage() {
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-800">👤 Mon Profil</h1>
             <p className="text-slate-500 mt-1">Gérez vos informations personnelles</p>
           </div>
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)} className="gap-2">
+            <Button onClick={() => setIsEditing(true)} className="gap-2 w-full sm:w-auto">
               <Edit2 className="w-4 h-4" />
               Modifier
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => setIsEditing(false)} className="gap-2">
+            <Button variant="outline" onClick={() => setIsEditing(false)} className="gap-2 w-full sm:w-auto">
               <X className="w-4 h-4" />
               Annuler
             </Button>

@@ -107,8 +107,8 @@ export default function EditFormationPage() {
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
             <Link href="/admin/formations">
               <Button variant="outline" size="sm" className="gap-2">
                 <ArrowLeft className="w-4 h-4" />

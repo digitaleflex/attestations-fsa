@@ -321,7 +321,7 @@ export default function AdminSubmissionDetailPage() {
 
   if (!submission) {
     return (
-      <div className="p-10">
+      <div className="p-4 sm:p-10">
         <Card className="p-16 text-center border-dashed border-2 border-slate-200 bg-slate-50">
           <AlertTriangle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-500 font-bold mb-6">Copie introuvable.</p>
@@ -643,7 +643,7 @@ export default function AdminSubmissionDetailPage() {
         </div>
 
         {scans.length === 0 ? (
-          <div className="p-12 text-center border-dashed border-2 border-slate-200 rounded-2xl bg-slate-50">
+          <div className="p-6 sm:p-12 text-center border-dashed border-2 border-slate-200 rounded-2xl bg-slate-50">
             <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-500 font-bold text-sm">Aucun scan pour cette copie.</p>
           </div>

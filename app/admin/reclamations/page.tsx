@@ -84,7 +84,7 @@ export default function AdminReclamationsPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-500">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-500">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
           <Badge className="bg-rose-500 text-white border-none px-3 py-1 text-[10px] font-black uppercase tracking-widest">
@@ -125,7 +125,7 @@ export default function AdminReclamationsPage() {
           </Card>
         ) : (
           filtered.map((reclamation: Reclamation) => (
-            <Card key={reclamation.id} className="p-8 border-none shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all rounded-[32px] bg-white group overflow-hidden relative">
+            <Card key={reclamation.id} className="p-4 sm:p-8 border-none shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all rounded-[32px] bg-white group overflow-hidden relative">
               <div className={cn(
                 "absolute top-0 left-0 w-2 h-full",
                 reclamation.status === 'PENDING' ? "bg-amber-400" : "bg-emerald-500"
@@ -171,7 +171,7 @@ export default function AdminReclamationsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col h-full bg-slate-50/50 rounded-[28px] p-8 border border-white shadow-inner">
+                <div className="flex flex-col h-full bg-slate-50/50 rounded-[28px] p-4 sm:p-8 border border-white shadow-inner">
                   <div className="flex items-center gap-2 mb-6">
                     <Send className="w-4 h-4 text-emerald-500" />
                     <span className="text-xs font-black uppercase tracking-widest text-slate-800">Action Corrective</span>
@@ -208,7 +208,7 @@ export default function AdminReclamationsPage() {
                         />
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Button 
                           onClick={() => replyMutation.mutate({ id: reclamation.id, status: 'RESOLVED', adminReply: replies[reclamation.id] })}
                           disabled={!replies[reclamation.id] || replyMutation.isPending}

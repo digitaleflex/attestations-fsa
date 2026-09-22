@@ -440,14 +440,14 @@ export default function AdminUsersPage() {
         </Link>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Utilisateurs</h1>
           <p className="text-slate-500 mt-1">Gérez les comptes utilisateurs ({meta.total})</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()} className="gap-2">
+            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
               <UserPlus className="w-4 h-4" />
               Nouvel utilisateur
             </Button>

@@ -159,18 +159,18 @@ export default function AdminAttestationsPage() {
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-800">📜 Attestations</h1>
             <p className="text-slate-500 mt-1">Gérez toutes les attestations délivrées</p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleExport} variant="outline" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button onClick={handleExport} variant="outline" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex-1 sm:flex-none">
               <Download className="w-4 h-4" />
               Exporter Excel
             </Button>
-            <Link href="/admin/attestations/new">
-              <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700">
+            <Link href="/admin/attestations/new" className="flex-1 sm:flex-none">
+              <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 w-full sm:w-auto">
                 <Plus className="w-4 h-4" />
                 Nouvelle
               </Button>
@@ -326,14 +326,14 @@ export default function AdminAttestationsPage() {
 
         {/* Contenu */}
         {loading ? (
-          <Card className="p-12 bg-white shadow-sm">
+          <Card className="p-6 sm:p-12 bg-white shadow-sm">
             <div className="flex flex-col items-center justify-center">
               <Loader2 className="animate-spin w-8 h-8 text-slate-400 mb-3" />
               <p className="text-sm text-slate-500">Chargement des attestations...</p>
             </div>
           </Card>
         ) : filteredAttestations.length === 0 ? (
-          <Card className="p-12 bg-white shadow-sm">
+          <Card className="p-6 sm:p-12 bg-white shadow-sm">
             <div className="flex flex-col items-center justify-center text-center">
               <FileText className="w-12 h-12 text-slate-300 mb-3" />
               <p className="text-lg font-medium text-slate-600">Aucune attestation trouvée</p>

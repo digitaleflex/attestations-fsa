@@ -7,7 +7,7 @@ import Link from "next/link";
 export default function CreateExamPage() {
   return (
     <div className="p-6 space-y-8 bg-slate-50/50 min-h-screen">
-      <div className="flex items-center justify-between max-w-4xl mx-auto">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between max-w-4xl mx-auto">
         <div className="flex flex-col gap-1">
           <Link
             href="/admin/exams"

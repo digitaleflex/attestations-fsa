@@ -239,7 +239,7 @@ export default function EditAttestationPage() {
 
         {/* Formulaire - Rendu seulement si form est prêt */}
         {!form ? (
-          <Card className="p-12 flex flex-col items-center justify-center bg-white shadow-lg space-y-4">
+          <Card className="p-6 sm:p-12 flex flex-col items-center justify-center bg-white shadow-lg space-y-4">
              <Loader2 className="animate-spin w-8 h-8 text-blue-500" />
              <p className="text-slate-500 text-sm italic font-medium">Récuperation de la configuration...</p>
           </Card>

@@ -92,13 +92,13 @@ export default function AdminFormationsPage() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-800">🎓 Formations</h1>
             <p className="text-slate-500 mt-1">Gérez le catalogue des formations</p>
           </div>
-          <Link href="/admin/formations/new">
-            <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700">
+          <Link href="/admin/formations/new" className="w-full sm:w-auto">
+            <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               Nouvelle formation
             </Button>
@@ -199,14 +199,14 @@ export default function AdminFormationsPage() {
 
         {/* Grille des formations */}
         {loading ? (
-          <Card className="p-12 bg-white shadow-sm">
+          <Card className="p-6 sm:p-12 bg-white shadow-sm">
             <div className="flex flex-col items-center justify-center">
               <Loader2 className="animate-spin w-8 h-8 text-slate-400 mb-3" />
               <p className="text-sm text-slate-500">Chargement des formations...</p>
             </div>
           </Card>
         ) : filteredFormations.length === 0 ? (
-          <Card className="p-12 bg-white shadow-sm">
+          <Card className="p-6 sm:p-12 bg-white shadow-sm">
             <div className="flex flex-col items-center justify-center text-center">
               <GraduationCap className="w-12 h-12 text-slate-300 mb-3" />
               <p className="text-lg font-medium text-slate-600">Aucune formation trouvée</p>
