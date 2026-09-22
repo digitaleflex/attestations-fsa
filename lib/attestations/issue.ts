@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { customAlphabet } from "nanoid";
 import { resolveMention, isPassed } from "@/lib/exams/scoring";
+import { sealCertificate } from "@/lib/crypto/seal";
 import type { AttestationStatus } from "@prisma/client";
 
 const customNanoid = customAlphabet("1234567890abcdef", 5);
@@ -29,7 +30,7 @@ export async function issueExamAttestation(sessionId: string): Promise<{
     const session = await prisma.examSession.findUnique({
       where: { id: sessionId },
       include: {
-        exam: true,
+        exam: { include: { formation: { select: { name: true } } } },
         candidate: true,
       },
     });
@@ -44,9 +45,11 @@ export async function issueExamAttestation(sessionId: string): Promise<{
 
     // Résolution de la formation (fallback première formation : comportement hérité)
     let formationId: string | null = session.exam.formationId;
+    let formationName: string | null = session.exam.formation?.name ?? null;
     if (!formationId) {
       const defaultFormation = await prisma.formation.findFirst();
       formationId = defaultFormation?.id ?? null;
+      formationName = defaultFormation?.name ?? null;
       console.warn(
         `[ATTESTATION] Exam ${session.exam.id} has no formationId. Using default: ${formationId ?? "none"}`,
       );
@@ -68,17 +71,33 @@ export async function issueExamAttestation(sessionId: string): Promise<{
         type: "CERTIFICATION",
         sessionId,
       },
-      select: { id: true, status: true },
+      select: { id: true, status: true, code: true },
     });
 
     // Re-correction de la même session : mise à jour ou révocation.
     if (existing) {
+      const endDate = session.submittedAt || new Date();
+      const mention = resolveMention(finalScore);
+      // Re-scellement : les données gravées changent, l'empreinte doit suivre
+      // (un ancien sceau deviendrait faux sur une attestation légitimement mise à jour).
+      const seal = passed
+        ? sealCertificate({
+            code: existing.code,
+            fullName: session.candidate.name || "Candidat Anonyme",
+            formationName,
+            certificationScore: finalScore,
+            certificationMention: mention,
+            endDate,
+          })
+        : null;
+
       const data = {
         certificationScore: finalScore,
         stageScore: internshipScore,
-        certificationMention: resolveMention(finalScore),
+        certificationMention: mention,
         status: (passed ? "VALIDATED" : "REJECTED") as AttestationStatus,
-        endDate: session.submittedAt || new Date(),
+        endDate,
+        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
       };
 
       await prisma.attestation.update({
@@ -114,6 +133,18 @@ export async function issueExamAttestation(sessionId: string): Promise<{
     const seq = String(count + 1).padStart(5, "0");
     const hash = customNanoid();
     const code = `FSA-${year}-${month}-${seq}-${hash}`;
+    const endDate = session.submittedAt || new Date();
+    const mention = resolveMention(finalScore);
+
+    // Scellement HMAC-SHA256 (#155) : empreinte des données gravées.
+    const seal = sealCertificate({
+      code,
+      fullName: session.candidate.name || "Candidat Anonyme",
+      formationName,
+      certificationScore: finalScore,
+      certificationMention: mention,
+      endDate,
+    });
 
     await prisma.attestation.create({
       data: {
@@ -125,7 +156,7 @@ export async function issueExamAttestation(sessionId: string): Promise<{
         type: "CERTIFICATION",
         status: "VALIDATED",
         startDate: session.startedAt,
-        endDate: session.submittedAt || new Date(),
+        endDate,
         location: "En ligne (Plateforme FSA)",
         userId: session.userId,
         sessionId,
@@ -133,7 +164,8 @@ export async function issueExamAttestation(sessionId: string): Promise<{
         issuingCompany: "FSA - Ferme Agro-Piscicole Cité St André",
         certificationScore: finalScore,
         stageScore: internshipScore,
-        certificationMention: resolveMention(finalScore),
+        certificationMention: mention,
+        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
       },
     });
 

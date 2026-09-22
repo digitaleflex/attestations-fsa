@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { applyRateLimit } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/error-handler'
 import { sanitizeInput } from '@/lib/sanitization'
+import { verifyCertificateSeal } from '@/lib/crypto/seal'
 
 export async function GET(request: Request) {
   try {
@@ -50,6 +51,9 @@ export async function GET(request: Request) {
         status: true,
         certificationScore: true,
         stageScore: true,
+        certificationMention: true,
+        sealHash: true,
+        sealedAt: true,
         issuedAt: true,
         startDate: true,
         endDate: true,
@@ -71,10 +75,32 @@ export async function GET(request: Request) {
       }, { status: 404 })
     }
 
+    // Preuve de scellement (#155) : recalcul de l'empreinte depuis les données
+    // en base et comparaison à l'empreinte stockée. Toute divergence = altération.
+    const seal = verifyCertificateSeal({
+      code: attestation.code,
+      fullName: attestation.fullName,
+      formationName: attestation.formation?.name ?? null,
+      certificationScore: attestation.certificationScore,
+      certificationMention: attestation.certificationMention,
+      endDate: attestation.endDate,
+      sealHash: attestation.sealHash,
+    });
+
     // Mapper certificationScore vers score pour la compatibilité frontend
     const responseData = {
       ...attestation,
-      score: attestation.certificationScore || 0
+      score: attestation.certificationScore || 0,
+      proof: {
+        algorithm: seal.algorithm,
+        sealed: seal.sealed,
+        valid: seal.valid,
+        reason: seal.reason ?? null,
+        revoked: attestation.status === 'REJECTED',
+        status: attestation.status,
+        sealedAt: attestation.sealedAt,
+        checkedAt: new Date().toISOString(),
+      },
     };
 
     return NextResponse.json({ attestation: responseData })

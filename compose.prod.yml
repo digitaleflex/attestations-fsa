@@ -59,6 +59,8 @@ services:
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
       BOTID_SECRET: ${BOTID_SECRET}
+      # Scellement HMAC-SHA256 des certificats (#155) — valeur probante
+      CERT_SEAL_SECRET: ${CERT_SEAL_SECRET}
       # Plugin admin Better Auth : IDs des utilisateurs promus admin
       ADMIN_USER_IDS: ${ADMIN_USER_IDS}
       # #151 — Observabilité Sentry, OPTIONNELLE. Sans SENTRY_DSN : no-op total,
