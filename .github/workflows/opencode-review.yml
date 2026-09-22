@@ -1,0 +1,52 @@
+# =====================================================================
+# Revue automatique de chaque PR
+# ---------------------------------------------------------------------
+# À chaque PR ouverte/mise à jour, l'agent revoit le diff et poste un
+# commentaire structuré sur la PR (qualité, bugs, sécurité, conventions).
+# Mode lecture seule : ne modifie pas le code.
+#
+# Note : les PR créées par GITHUB_TOKEN (agent) ne déclenchent pas ce
+# workflow (anti-boucle GitHub) — pour les revoir, commenter /oc review.
+#
+# Setup : identique à opencode.yml (secret OPENCODE_AUTH_JSON).
+# =====================================================================
+name: opencode-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run OpenCode (review)
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_JSON }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          model: ${{ vars.OPENCODE_MODEL || 'opencode-go/deepseek-v4.1-flash' }}
+          agent: ${{ vars.OPENCODE_AGENT || 'ci' }}
+          use_github_token: true
+          share: false
+          prompt: |
+            Revue de pull request — mode LECTURE SEULE, ne modifie AUCUN fichier.
+
+            Analyse le diff et poste un commentaire structuré en français :
+            - ✅ Points forts
+            - ⚠️ Problèmes : bugs potentiels, régressions, cas limites
+            - 🔒 Sécurité : secrets, injections, OWASP, exposition de données utilisateurs
+            - 🧪 Tests : couverture du changement, tests manquants
+            - 🔧 Suggestions : conventions du repo, nommage, types, dette technique
+            - Vérifie le respect des conventions : Conventional Commits, TypeScript strict, gate pnpm verify.
