@@ -192,7 +192,7 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                       onChange={(e) => updateQuestion(qIdx, { text: e.target.value })}
                       className="font-medium border-none shadow-none text-lg p-0 h-auto focus-visible:ring-0"
                     />
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-4 text-xs min-w-0 flex-wrap">
                       <div className="flex items-center gap-2">
                         <span className="text-slate-400">Type:</span>
                         <select
@@ -227,7 +227,7 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                 </div>
 
                 {(q.type === 'SINGLE_CHOICE' || q.type === 'MULTIPLE_CHOICE') && (
-                  <div className="pl-12 space-y-2">
+                  <div className="pl-4 sm:pl-12 space-y-2">
                     {q.options?.map((opt, oIdx) => (
                       <div key={oIdx} className="flex items-center gap-3">
                         <Switch

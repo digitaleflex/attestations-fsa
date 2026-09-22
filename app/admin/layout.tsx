@@ -57,7 +57,7 @@ export default async function AdminLayout({
       <AdminSidebar admin={session?.user || null} />
 
       <SidebarInset className="flex flex-col min-h-screen bg-slate-50">
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-6">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4 md:px-6">
           <div className="flex-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />

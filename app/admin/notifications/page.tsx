@@ -79,7 +79,7 @@ export default function AdminNotificationsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Form */}
-          <Card className="lg:col-span-2 p-8 bg-white shadow-xl border-none ring-1 ring-slate-200 overflow-hidden relative">
+          <Card className="lg:col-span-2 p-4 sm:p-8 bg-white shadow-xl border-none ring-1 ring-slate-200 overflow-hidden relative">
             <div className="absolute top-0 right-0 p-4 opacity-5">
               <Send className="w-32 h-32 text-slate-900" />
             </div>
@@ -108,7 +108,7 @@ export default function AdminNotificationsPage() {
                 <p className="text-xs text-slate-400 italic">Ce message apparaîtra sur le tableau de bord de chaque candidat sélectionné.</p>
               </div>
 
-              <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+              <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100">
                 <div className="flex items-center gap-2">
                    <input 
                     type="checkbox" 

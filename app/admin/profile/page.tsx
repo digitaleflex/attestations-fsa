@@ -170,21 +170,22 @@ export default function AdminProfilePage() {
         </Card>
 
         {/* Onglets */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={activeTab === "profile" ? "default" : "outline"}
             onClick={() => setActiveTab("profile")}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
-            <User className="w-4 h-4" />
-            Informations personnelles
+            <User className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Informations personnelles</span>
+            <span className="sm:hidden">Profil</span>
           </Button>
           <Button
             variant={activeTab === "security" ? "default" : "outline"}
             onClick={() => setActiveTab("security")}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
-            <Lock className="w-4 h-4" />
+            <Lock className="w-4 h-4 shrink-0" />
             Sécurité
           </Button>
         </div>

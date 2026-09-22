@@ -145,19 +145,19 @@ export default function NewFormationPage() {
                     <X className="w-4 h-4" />
                   </button>
                 )}
-              </div>
-              {showCategorySuggestions && (
-                <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-slate-200 rounded-lg shadow-lg p-2">
-                  <p className="text-xs text-slate-500 mb-2 px-2">Suggestions :</p>
-                  <div className="flex flex-wrap gap-1">
-                    {CATEGORIES_SUGGESTIONS.map((cat) => (
-                      <button key={cat} type="button" onClick={() => { setForm((prev) => ({ ...prev, category: cat })); setShowCategorySuggestions(false); }} className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 rounded-full transition-colors">
-                        {cat}
-                      </button>
-                    ))}
+                {showCategorySuggestions && (
+                  <div className="absolute z-10 mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg p-2">
+                    <p className="text-xs text-slate-500 mb-2 px-2">Suggestions :</p>
+                    <div className="flex flex-wrap gap-1">
+                      {CATEGORIES_SUGGESTIONS.map((cat) => (
+                        <button key={cat} type="button" onClick={() => { setForm((prev) => ({ ...prev, category: cat })); setShowCategorySuggestions(false); }} className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 rounded-full transition-colors">
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div>

@@ -99,7 +99,7 @@ export default function AdminReclamationsPage() {
           <p className="text-slate-500 font-medium">Gérez les contestations de notes et les demandes de révision.</p>
         </div>
 
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1 overflow-x-auto">
           {["PENDING", "RESOLVED", "all"].map((f) => (
             <Button
               key={f}

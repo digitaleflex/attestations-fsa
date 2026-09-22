@@ -150,7 +150,7 @@ export default function Admin2FASetupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
-      <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl px-10 py-12 border border-indigo-100">
+      <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl px-4 sm:px-10 py-8 sm:py-12 border border-indigo-100">
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <ShieldCheck className="w-12 h-12 text-white" />
@@ -192,7 +192,7 @@ export default function Admin2FASetupPage() {
             </div>
 
             {/* Method Selection */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Button
                 variant={method === "totp" ? "default" : "outline"}
                 onClick={() => setMethod("totp")}
@@ -271,7 +271,7 @@ export default function Admin2FASetupPage() {
                     Copier
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-sm">
                   {backupCodes.map((code, i) => (
                     <div
                       key={i}
