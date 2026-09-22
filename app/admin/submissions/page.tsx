@@ -235,69 +235,115 @@ export default function AdminSubmissionsPage() {
         </Card>
       ) : (
         <Card className="border-slate-100 shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
-                <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
-                  Candidat
-                </TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
-                  Examen
-                </TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
-                  Soumis le
-                </TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
-                  Score
-                </TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
-                  Moyenne
-                </TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
-                  Statut
-                </TableHead>
-                <TableHead className="text-right font-bold text-slate-500 uppercase text-[11px] tracking-wider">
-                  Action
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((sub) => (
-                <TableRow key={sub.id} className="hover:bg-slate-50/60">
-                  <TableCell>
-                    <p className="font-bold text-slate-900">
+          {/* Vue Bureau (Tableau) */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                  <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
+                    Candidat
+                  </TableHead>
+                  <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
+                    Examen
+                  </TableHead>
+                  <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
+                    Soumis le
+                  </TableHead>
+                  <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
+                    Score
+                  </TableHead>
+                  <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
+                    Moyenne
+                  </TableHead>
+                  <TableHead className="font-bold text-slate-500 uppercase text-[11px] tracking-wider">
+                    Statut
+                  </TableHead>
+                  <TableHead className="text-right font-bold text-slate-500 uppercase text-[11px] tracking-wider">
+                    Action
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((sub) => (
+                  <TableRow key={sub.id} className="hover:bg-slate-50/60">
+                    <TableCell>
+                      <p className="font-bold text-slate-900">
+                        {sub.candidate.name || "Candidat"}
+                      </p>
+                      <p className="text-xs text-slate-400">{sub.candidate.email}</p>
+                    </TableCell>
+                    <TableCell className="font-medium text-slate-700">
+                      {sub.exam.name || sub.exam.title || "Examen"}
+                    </TableCell>
+                    <TableCell className="text-slate-500">
+                      {formatDate(sub.submittedAt || sub.startedAt)}
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-700">
+                      {Math.round(sub.totalScore * 100) / 100}
+                      <span className="text-slate-400">/{sub.maxScore}</span>
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-700">
+                      {sub.completed
+                        ? `${(Math.round(sub.finalScore * 100) / 100).toFixed(2)}%`
+                        : "--"}
+                    </TableCell>
+                    <TableCell>{statusBadge(sub)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild size="sm" variant="outline" className="rounded-xl">
+                        <Link href={`/admin/submissions/${sub.id}`}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          Corriger
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Vue Mobile (Cartes) */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {filtered.map((sub) => (
+              <div key={sub.id} className="p-4 space-y-3 bg-white hover:bg-slate-50 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 truncate">
                       {sub.candidate.name || "Candidat"}
                     </p>
-                    <p className="text-xs text-slate-400">{sub.candidate.email}</p>
-                  </TableCell>
-                  <TableCell className="font-medium text-slate-700">
-                    {sub.exam.name || sub.exam.title || "Examen"}
-                  </TableCell>
-                  <TableCell className="text-slate-500">
-                    {formatDate(sub.submittedAt || sub.startedAt)}
-                  </TableCell>
-                  <TableCell className="font-bold text-slate-700">
-                    {Math.round(sub.totalScore * 100) / 100}
+                    <p className="text-xs text-slate-400 truncate">{sub.candidate.email}</p>
+                  </div>
+                  {statusBadge(sub)}
+                </div>
+                <div className="text-sm font-medium text-slate-700 truncate">
+                  {sub.exam.name || sub.exam.title || "Examen"}
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Soumis le {formatDate(sub.submittedAt || sub.startedAt)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <span className="font-bold text-slate-700">
+                      {Math.round(sub.totalScore * 100) / 100}
+                    </span>
                     <span className="text-slate-400">/{sub.maxScore}</span>
-                  </TableCell>
-                  <TableCell className="font-bold text-slate-700">
-                    {sub.completed
-                      ? `${(Math.round(sub.finalScore * 100) / 100).toFixed(2)}%`
-                      : "--"}
-                  </TableCell>
-                  <TableCell>{statusBadge(sub)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button asChild size="sm" variant="outline" className="rounded-xl">
-                      <Link href={`/admin/submissions/${sub.id}`}>
-                        <Eye className="w-4 h-4 mr-1" />
-                        Corriger
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    <span className="mx-2 text-slate-200">|</span>
+                    <span className="font-bold text-slate-700">
+                      {sub.completed
+                        ? `${(Math.round(sub.finalScore * 100) / 100).toFixed(2)}%`
+                        : "--"}
+                    </span>
+                  </div>
+                  <Button asChild size="sm" variant="outline" className="rounded-xl">
+                    <Link href={`/admin/submissions/${sub.id}`}>
+                      <Eye className="w-4 h-4 mr-1" />
+                      Corriger
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
     </div>

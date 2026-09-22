@@ -188,7 +188,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       {/* Stepper */}
-      <div className="flex items-center justify-between px-4">
+      <div className="flex items-center justify-between px-4 overflow-x-auto">
         {steps.map((s, i) => {
           const Icon = s.icon;
           const isActive = step === i;
@@ -215,7 +215,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
                   )}
                 </div>
                 <span
-                  className={`text-[10px] uppercase tracking-wider font-bold ${
+                  className={`text-[10px] uppercase tracking-wider font-bold hidden sm:block ${
                     isActive
                       ? "text-primary"
                       : isDone
@@ -228,7 +228,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
               </div>
               {i < steps.length - 1 && (
                 <div
-                  className={`flex-1 h-[2px] mx-4 transition-colors duration-300 ${step > i ? "bg-emerald-500" : "bg-slate-200"}`}
+                  className={`flex-1 h-[2px] mx-1 sm:mx-4 transition-colors duration-300 ${step > i ? "bg-emerald-500" : "bg-slate-200"}`}
                 />
               )}
             </React.Fragment>

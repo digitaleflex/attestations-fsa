@@ -146,12 +146,12 @@ export default function MonitoringDashboard() {
             <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 animate-pulse font-black text-[9px] uppercase tracking-widest">Système Actif</Badge>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative group">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="relative group flex-1 min-w-0 sm:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
             <Input
               placeholder="IP, Nom, Action, Utilisateur..."
-              className="pl-10 w-[300px] bg-white border-slate-200 shadow-sm focus:ring-primary/20 h-11 rounded-xl font-bold"
+              className="pl-10 w-full sm:w-[300px] bg-white border-slate-200 shadow-sm focus:ring-primary/20 h-11 rounded-xl font-bold"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
