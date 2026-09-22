@@ -6,14 +6,12 @@ import { useState, useEffect, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Clock, BookOpen, Save, AlertTriangle, Lock, Shield } from "lucide-react";
+import { Clock, BookOpen, Save } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
-import { useExamMonitoring } from "@/lib/useExamMonitoring";
-import type { EnforcementAction } from "@/lib/exam-enforcement";
 
 import { ExamInstructions } from "./_components/ExamInstructions";
 import { ExamPart1 } from "./_components/ExamPart1";
@@ -46,34 +44,11 @@ export default function ExamSessionPage() {
   const [showInstructions, setShowInstructions] = useState(true);
   const [agreedToRules, setAgreedToRules] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [answersLocked, setAnswersLocked] = useState(false);
-  const [enforcementMessage, setEnforcementMessage] = useState<string | null>(null);
-  const [forceSubmitTriggered, setForceSubmitTriggered] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: session } = useSession();
   const userId = session?.user?.id;
-
-  const mon = useExamMonitoring({
-    examId: id,
-    userId,
-    maxTabSwitches: 3,
-    onEnforcement: (action: EnforcementAction) => {
-      if (action.warnUser && action.reason) {
-        setEnforcementMessage(action.reason);
-        toast.warning(action.reason);
-      }
-      if (action.lockAnswers) {
-        setAnswersLocked(true);
-      }
-      if (action.forceSubmit && !forceSubmitTriggered) {
-        setForceSubmitTriggered(true);
-        toast.error("Tentatives de triche détectées. Soumission forcée.");
-        handleSubmit();
-      }
-    },
-  });
 
   const { data: exam, isLoading: examLoading } = useQuery({
     queryKey: ["exam", id],
@@ -214,7 +189,6 @@ export default function ExamSessionPage() {
   }, [id]);
 
   const handleAnswerChange = (questionId: string, value: string) => {
-    if (answersLocked) return;
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
@@ -282,25 +256,6 @@ export default function ExamSessionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {enforcementMessage && (
-        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0">
-          <AlertTriangle className="w-4 h-4" />
-          <AlertTitle>Comportement suspect</AlertTitle>
-          <AlertDescription>{enforcementMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {answersLocked && (
-        <div className="rounded-none border-x-0 border-t-0 bg-amber-50 border-b border-amber-200 px-4 py-3 text-sm flex items-start gap-3">
-          <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-medium text-amber-800">Réponses verrouillées</p>
-            <p className="text-amber-700">
-              Les réponses ne peuvent plus être modifiées en raison d'activités suspectes.
-            </p>
-          </div>
-        </div>
-      )}
 
       <header className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
@@ -317,12 +272,6 @@ export default function ExamSessionPage() {
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 pt-3 sm:pt-0">
-            {answersLocked && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium">
-                <Shield className="w-3.5 h-3.5" />
-                Verrouillé
-              </div>
-            )}
             <div className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg ${
               timeRemaining < 300 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
             }`}>
@@ -380,7 +329,7 @@ export default function ExamSessionPage() {
             totalPoints={exam?.part3Points || 40}
             isSubmitting={isSubmitting}
             onAnswerChange={(value) => {
-              if (!answersLocked) setAnswers((prev) => ({ ...prev, part3: value }));
+              setAnswers((prev) => ({ ...prev, part3: value }));
             }}
             onBack={() => setCurrentPart(2)}
             onSubmit={handleSubmit}
