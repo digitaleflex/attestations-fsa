@@ -163,6 +163,9 @@ model Attestation {
   stageScore                Float?
   userId                    String?
   sessionId                 String?
+  // Scellement HMAC-SHA256 (#155) — valeur probante interne.
+  sealHash                  String?
+  sealedAt                  DateTime?
   formation                 Formation             @relation(fields: [formationId], references: [id])
   user                      User?                 @relation(fields: [userId], references: [id])
   correctionRequests        CorrectionRequest[]

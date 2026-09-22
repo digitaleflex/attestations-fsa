@@ -5,7 +5,22 @@ import pluginReact from "eslint-plugin-react";
 
 export default tseslint.config(
   { 
-    ignores: [".next/", ".next-e2e/", "node_modules/", "tmp/", "dist/", "public/"] 
+    ignores: [
+      ".next/",
+      ".next-e2e/",
+      "node_modules/",
+      "tmp/",
+      "dist/",
+      "public/",
+      // Rapport de couverture : fichiers GÉNÉRÉS (sinon le gate linter du
+      // bruit : 2 warnings sur coverage/lcov-report/*.js après un run --coverage).
+      "coverage/",
+      // Copie locale du repo (worktree kilo, 5 Mo) + sauvegardes : code
+      // dupliqué, déjà ignoré par git via .git/info/exclude. Linter une copie
+      // gaspille du temps et peut remonter des faux positifs.
+      ".kilo/",
+      "Backup/",
+    ]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

@@ -281,7 +281,8 @@ export async function PATCH(
           },
           data: {
             ...(hashedPassword ? { password: hashedPassword } : {}),
-            ...(data.email ? { accountId: data.email } : {})
+            // Better Auth 1.7 : accountId d'un compte credential = user.id (jamais l'email).
+            accountId: id
           }
         });
       }

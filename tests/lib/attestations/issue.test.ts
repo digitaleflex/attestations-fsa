@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 const db = vi.hoisted(() => ({
   sessionFindUnique: vi.fn(),
@@ -49,10 +49,17 @@ function makeSession(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.CERT_SEAL_SECRET = "issue-test-secret-0123456789abcdef";
   db.attestationFindFirst.mockResolvedValue(null as never);
   db.attestationCount.mockResolvedValue(3 as never);
   db.attestationCreate.mockResolvedValue({ id: "att-1" } as never);
   db.attestationUpdate.mockResolvedValue({ id: "att-1" } as never);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+  process.env.CERT_SEAL_SECRET = "issue-test-secret-0123456789abcdef";
 });
 
 describe("issueExamAttestation (#133)", () => {
@@ -96,6 +103,30 @@ describe("issueExamAttestation (#133)", () => {
     );
   });
 
+  it("scelle l'attestation créée (sealHash + sealedAt) (#155)", async () => {
+    db.sessionFindUnique.mockResolvedValue(makeSession());
+    const res = await issueExamAttestation("session-1");
+    expect(res.created).toBe(true);
+
+    const createArgs = db.attestationCreate.mock.calls[0][0] as {
+      data: { sealHash?: string; sealedAt?: Date };
+    };
+    expect(createArgs.data.sealHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
+  });
+
+  it("ne scelle pas si la clé est absente (dégradé, non bloquant) (#155)", async () => {
+    delete process.env.CERT_SEAL_SECRET;
+    db.sessionFindUnique.mockResolvedValue(makeSession());
+    const res = await issueExamAttestation("session-1");
+    expect(res.created).toBe(true);
+
+    const createArgs = db.attestationCreate.mock.calls[0][0] as {
+      data: { sealHash?: string };
+    };
+    expect(createArgs.data.sealHash).toBeUndefined();
+  });
+
   it("échec + pas d'existante → rien à émettre", async () => {
     db.sessionFindUnique.mockResolvedValue(makeSession({ finalScore: 50 }));
     const res = await issueExamAttestation("session-1");
@@ -125,6 +156,23 @@ describe("issueExamAttestation (#133)", () => {
     expect(db.attestationCreate).not.toHaveBeenCalled();
   });
 
+  it("re-scelle une attestation mise à jour (#155)", async () => {
+    db.sessionFindUnique.mockResolvedValue(makeSession());
+    db.attestationFindFirst.mockResolvedValue({
+      id: "att-1",
+      status: "VALIDATED",
+      code: "FSA-2026-M09-00001-abcde",
+    } as never);
+
+    await issueExamAttestation("session-1");
+
+    const updateArgs = db.attestationUpdate.mock.calls[0][0] as {
+      data: { sealHash?: string; sealedAt?: Date };
+    };
+    expect(updateArgs.data.sealHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(updateArgs.data.sealedAt).toBeInstanceOf(Date);
+  });
+
   it("existante + re-correction à la baisse → révocation (REJECTED)", async () => {
     db.sessionFindUnique.mockResolvedValue(makeSession({ finalScore: 40 }));
     db.attestationFindFirst.mockResolvedValue({
@@ -146,5 +194,45 @@ describe("issueExamAttestation (#133)", () => {
     const res = await issueExamAttestation("session-1");
     expect(res.created).toBe(false);
     expect(res.error).toContain("DB down");
+  });
+
+  it("prod sans clé : émet quand même mais log error explicite (#155)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    delete process.env.CERT_SEAL_SECRET;
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    db.sessionFindUnique.mockResolvedValue(makeSession());
+
+    const res = await issueExamAttestation("session-1");
+
+    // Le parcours cœur n'échoue pas...
+    expect(res.created).toBe(true);
+    expect(db.attestationCreate).toHaveBeenCalled();
+
+    // ...mais la dégradation n'est plus silencieuse.
+    const createArgs = db.attestationCreate.mock.calls[0][0] as {
+      data: { sealHash?: string };
+    };
+    expect(createArgs.data.sealHash).toBeUndefined();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("scellement désactivé"),
+    );
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("openssl rand -base64 48"),
+    );
+  });
+
+  it("prod avec clé : scelle et reste silencieux (aucune régression) (#155)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    db.sessionFindUnique.mockResolvedValue(makeSession());
+
+    const res = await issueExamAttestation("session-1");
+
+    expect(res.created).toBe(true);
+    const createArgs = db.attestationCreate.mock.calls[0][0] as {
+      data: { sealHash?: string };
+    };
+    expect(createArgs.data.sealHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 });

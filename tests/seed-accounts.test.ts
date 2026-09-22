@@ -10,6 +10,7 @@ const prismaMock = vi.hoisted(() => ({
       id: where.email.startsWith("admin") ? "admin-id" : "candidate-id",
     })),
     create: vi.fn(async () => ({ id: "created-user-id" })),
+    update: vi.fn(async () => ({ id: "admin-id" })),
   },
   account: {
     findFirst: vi.fn(async () => ({
@@ -94,7 +95,7 @@ describe("ensureCredentialAccount — Account credential seedé (#223)", () => {
     expect(account.update).not.toHaveBeenCalled();
   });
 
-  it("est idempotent : un Account sain n'est ni recréé ni modifié", async () => {
+  it("rafraîchit le mot de passe d'un Account sain sans le recréer", async () => {
     const { client, account } = makeClient({
       id: "acc-1",
       accountId: "user-42",
@@ -108,7 +109,15 @@ describe("ensureCredentialAccount — Account credential seedé (#223)", () => {
 
     expect(state).toBe("exists");
     expect(account.create).not.toHaveBeenCalled();
-    expect(account.update).not.toHaveBeenCalled();
+    expect(account.update).toHaveBeenCalledTimes(1);
+    expect(account.update).toHaveBeenCalledWith({
+      where: { id: "acc-1" },
+      data: {
+        accountId: "user-42",
+        password: "hashed:new",
+        updatedAt: expect.any(Date),
+      },
+    });
   });
 
   it("répare un accountId désaligné (email) sans créer de doublon", async () => {
@@ -173,7 +182,7 @@ describe("ensureCredentialAccount — Account credential seedé (#223)", () => {
     expect(first).toBe("created");
     expect(second).toBe("exists");
     expect(account.create).toHaveBeenCalledTimes(1);
-    expect(account.update).not.toHaveBeenCalled();
+    expect(account.update).toHaveBeenCalledTimes(1);
   });
 });
 

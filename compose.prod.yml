@@ -18,6 +18,15 @@ services:
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
     container_name: attestations-fsa-prod
     hostname: fsa-app
+    # Persistance des fichiers uploadés. Sans ces volumes, ils vivent dans la
+    # couche d'écriture du conteneur : détruits à chaque recréation (donc à
+    # chaque déploiement) et absents de toute sauvegarde — vps-pre-deploy-backup.sh
+    # ne fait qu'un pg_dump. Le dump contient les lignes CompositionScan (et leurs
+    # url) mais jamais les octets : restaurer produirait des preuves illisibles.
+    # Le Dockerfile crée ces dossiers et les cède à l'utilisateur applicatif.
+    volumes:
+      - fsa-uploads-public:/app/public/uploads
+      - fsa-uploads-private:/app/private/uploads
     expose:
       - "3000"
     # Pas de ports publiés : Traefik route via le réseau proxy.
@@ -50,6 +59,8 @@ services:
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
       BOTID_SECRET: ${BOTID_SECRET}
+      # Scellement HMAC-SHA256 des certificats (#155) — valeur probante
+      CERT_SEAL_SECRET: ${CERT_SEAL_SECRET}
       # Plugin admin Better Auth : IDs des utilisateurs promus admin
       ADMIN_USER_IDS: ${ADMIN_USER_IDS}
       # #151 — Observabilité Sentry, OPTIONNELLE. Sans SENTRY_DSN : no-op total,
@@ -165,3 +176,18 @@ volumes:
   fsa-postgres-prod-data:
     driver: local
     name: attestations-fsa-postgres-prod-data
+
+  # Fichiers uploadés — CV/images (public) et scans d'examen (private, la preuve
+  # en cas de réclamation, arbitrage #95).
+  # Volumes NOMMÉS plutôt que bind mounts : portables entre machines, et leur
+  # propriété est initialisée depuis l'image au premier montage (le Dockerfile
+  # cède ces dossiers à l'utilisateur applicatif uid 1001).
+  # ⚠️ Ces volumes ne sont PAS couverts par vps-pre-deploy-backup.sh (qui ne
+  # fait qu'un pg_dump) : leur sauvegarde reste à traiter — voir la conception
+  # de cohérence (PR docs-coherence-migration).
+  fsa-uploads-public:
+    driver: local
+    name: attestations-fsa-uploads-public
+  fsa-uploads-private:
+    driver: local
+    name: attestations-fsa-uploads-private

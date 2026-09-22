@@ -1,0 +1,16 @@
+{
+  // Dédoublonnage du seed : `prisma db seed` lancent
+  //   ts-node --compiler-options "{\"module\":\"CommonJS\"}" prisma/seed.ts
+  // et ce JSON est DÉFORMÉ par le shell (Windows/`prisma` passant par spawn) :
+  //   error TS5023: Unknown compiler option '0' / '1' / '2' / '3'
+  // Ici la valeur d'option ne transite plus par la ligne de commande, seulement
+  // le nom d'un fichier de configuration → la seed fonctionne partout.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "isolatedModules": false
+  },
+  "include": ["prisma/seed.ts"]
+}

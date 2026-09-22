@@ -29,6 +29,10 @@ const DEV_DB_NAME = "attestation_fsa";
 export const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL ?? "candidat@example.com";
 export const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD ?? "Candidat123!";
 
+/** Compte administrateur semé par `prisma/seed.ts` (fixture de test, pas un secret de prod). */
+export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@fsa.bj";
+export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "AdminFSA1452.";
+
 function readEnvLocal(): Record<string, string> {
   if (!fs.existsSync(ENV_LOCAL_PATH)) {
     throw new Error(
