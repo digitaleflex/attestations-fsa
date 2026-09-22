@@ -154,29 +154,21 @@ export const auth = betterAuth({
       // (type "email-verification") au lieu du lien de vérification par défaut.
       overrideDefaultEmailVerification: true,
       async sendVerificationOTP({ email, otp, type }) {
-        // Log OTP pour administration
-        const { logOTP } = await import("@/lib/otp-store");
         const { emailService } = await import("@/lib/email");
 
         if (type === "email-verification") {
-          // Vérification d'email lors de l'inscription
-          logOTP(email, otp, type);
           await emailService.sendVerificationOTP(
             email,
             email.split("@")[0],
             otp,
           );
         } else if (type === "sign-in") {
-          // Connexion par code OTP (code FSA / adresse e-mail)
-          logOTP(email, otp, type);
           await emailService.sendFsaLoginOTP(
             email,
             email.split("@")[0],
             otp,
           );
         } else if (type === "forget-password") {
-          // Réinitialisation du mot de passe
-          logOTP(email, otp, type);
           await emailService.sendPasswordResetOTP(
             email,
             email.split("@")[0],
