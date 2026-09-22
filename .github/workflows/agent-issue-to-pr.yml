@@ -1,0 +1,198 @@
+# =====================================================================
+# Agent issue → PR (opencode headless)
+# ---------------------------------------------------------------------
+# Déclencheurs :
+#   - label "agent" ajouté à une issue
+#   - commentaire "/agent" sur une issue
+#
+# Setup (une seule fois, ~2 min) :
+#   1. Secret GitHub "OPENCODE_AUTH_JSON" :
+#      = contenu de ~/.local/share/opencode/auth.json (Windows) ou
+#        ~/.config/opencode/auth.json (Linux)
+#      → Settings → Secrets and variables → Actions → New repository secret
+#   2. (Optionnel) Variables du repo (Settings → Variables) :
+#      - OPENCODE_MODEL : modèle utilisé (défaut opencode-go/deepseek-v4.1-flash ;
+#        alternative 0 quota : opencode/mimo-v2.6-flash-free)
+#      - OPENCODE_AGENT : agent opencode (défaut "ci", défini dans opencode.json)
+#
+# Garde-fous :
+#   - L'agent ne pousse JAMAIS : le workflow committe APRÈS le gate `pnpm verify`.
+#   - Chemins interdits à l'agent : .env*, prisma/migrations/**, secrets,
+#     .github/workflows/** (voir opencode.json → agent "ci").
+#   - Concurrence par issue : pas de double run sur la même issue.
+#   - Pas de PR en double : vérification gh pr list avant création.
+# =====================================================================
+name: Agent issue → PR
+
+on:
+  issues:
+    types: [labeled, opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: agent-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    if: >-
+      github.event.issue.pull_request == null &&
+      (
+        (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent') ||
+        (github.event_name == 'issues' && github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'agent')) ||
+        (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/agent'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode-go/deepseek-v4.1-flash' }}
+      OPENCODE_AGENT: ${{ vars.OPENCODE_AGENT || 'ci' }}
+      # Env minimal pour que `pnpm verify` (tsc + eslint + vitest) tourne en CI.
+      # lib/auth.ts a un fallback dev ; lib/prisma.ts est lazy (pas de DB requise).
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      AUTH_SECRET: ci-only-dummy-secret-not-used-in-prod
+      NODE_ENV: test
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+    steps:
+      - name: Commenter le démarrage
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🤖 **Agent opencode démarré** — résolution de l'issue en cours.\nModèle : \`${process.env.OPENCODE_MODEL}\` · Agent : \`${process.env.OPENCODE_AGENT}\`\nLe gate \`pnpm verify\` doit passer avant toute PR.`
+            });
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+      - name: Installer opencode
+        run: npm install -g opencode-ai@1.18.32
+
+      - name: Vérifier le secret d'auth
+        env:
+          OPENCODE_AUTH_JSON: ${{ secrets.OPENCODE_AUTH_JSON }}
+        run: |
+          if [ -z "$OPENCODE_AUTH_JSON" ]; then
+            echo "::error::Secret OPENCODE_AUTH_JSON manquant. Ajoute le contenu de ~/.local/share/opencode/auth.json dans Settings → Secrets → Actions."
+            exit 1
+          fi
+
+      - name: Exporter l'issue en fichier
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issue = context.payload.issue;
+            const body = `# ${issue.title}\n\n${issue.body || '_Aucune description._'}\n\n---\nIssue #${issue.number} — ${issue.html_url}`;
+            fs.writeFileSync('issue.md', body);
+            fs.writeFileSync('issue-title.txt', issue.title);
+
+      - name: Résoudre l'issue avec opencode
+        id: agent
+        env:
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_JSON }}
+        run: |
+          set -o pipefail
+          opencode run \
+            --pure \
+            --agent "$OPENCODE_AGENT" \
+            --model "$OPENCODE_MODEL" \
+            -f issue.md \
+            "Résous l'issue GitHub #${ISSUE_NUMBER} (contenu dans issue.md) dans ce repo.
+
+          Règles impératives :
+          1. Ne touche JAMAIS à : .env*, prisma/migrations/**, fichiers de secrets/clés, .github/workflows/**.
+          2. Écris ou adapte les tests pour couvrir ton changement.
+          3. Lance \`pnpm verify\` et corrige jusqu'à ce que tout passe (tsc + eslint + vitest).
+          4. Ne fais AUCUN git push, gh pr create, ni commit : le workflow s'en charge après le gate.
+          5. Termine par un résumé en français : changements, fichiers touchés, tests, points d'attention." \
+            2>&1 | tee agent-output.txt
+
+      - name: Vérifier qu'il y a des changements
+        id: changes
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Aucun changement
+        if: steps.changes.outputs.no_changes == 'true'
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "🤖 **Aucun changement produit** — l'agent estime que l'issue est déjà résolue ou hors de portée. Logs : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Gate de vérification (pnpm verify)
+        if: steps.changes.outputs.no_changes == 'false'
+        run: pnpm verify
+
+      - name: Créer la branche, committer et ouvrir la PR
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          BRANCH="agent/issue-${ISSUE_NUMBER}"
+          # Pas de PR en double sur la même issue
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "🤖 Une PR existe déjà pour cette issue : #${EXISTING}"
+            exit 0
+          fi
+          git checkout -b "$BRANCH"
+          git add -A
+          git -c user.name="opencode-agent[bot]" -c user.email="agent[bot]@users.noreply.github.com" \
+            commit -m "fix(agent): résout l'issue #${ISSUE_NUMBER}"
+          git push origin "$BRANCH"
+          {
+            echo "Résout #${ISSUE_NUMBER}."
+            echo ""
+            echo "**Résumé de l'agent :**"
+            echo ""
+            head -c 4000 agent-output.txt
+            echo ""
+            echo "---"
+            echo "> PR générée automatiquement par opencode (workflow \`agent-issue-to-pr\`)."
+            echo "> Le gate \`pnpm verify\` (tsc + eslint + vitest) est passé."
+          } > pr-body.md
+          gh pr create \
+            --base "$DEFAULT_BRANCH" \
+            --head "$BRANCH" \
+            --title "🤖 fix #${ISSUE_NUMBER}: $(head -c 80 issue-title.txt)" \
+            --body-file pr-body.md
+
+      - name: Commenter le résultat
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          PR_URL=$(gh pr list --head "agent/issue-${ISSUE_NUMBER}" --state open --json url --jq '.[0].url')
+          gh issue comment "$ISSUE_NUMBER" --body "✅ **PR créée par l'agent** : ${PR_URL}"
+
+      - name: Commenter l'échec
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "❌ **Échec du run agent** — voir les logs : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

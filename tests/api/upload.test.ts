@@ -10,15 +10,20 @@ vi.mock("@/lib/auth", () => ({
   getAdminUser: authDeps.getAdminUser,
 }));
 
-const fsDeps = vi.hoisted(() => ({
-  writeFile: vi.fn(),
-  mkdir: vi.fn(),
+// La route délègue l'écriture à l'abstraction `lib/storage` : on mocke
+// uniquement `getStorage` (driver), le reste (buildObjectKey,
+// validateUpload) reste réel.
+const store = vi.hoisted(() => ({
+  put: vi.fn(async () => {}),
+  delete: vi.fn(async () => {}),
+  exists: vi.fn(async () => true),
+  getSignedUrl: vi.fn(async (key: string) => `/uploads/${key}`),
 }));
 
-vi.mock("fs/promises", () => ({
-  writeFile: fsDeps.writeFile,
-  mkdir: fsDeps.mkdir,
-}));
+vi.mock("@/lib/storage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/storage")>();
+  return { ...actual, getStorage: () => store };
+});
 
 vi.mock("nanoid", () => ({ nanoid: () => "abcdefghijkl" }));
 
@@ -32,11 +37,19 @@ interface FakeFile {
 }
 
 function makeFile(overrides: Partial<FakeFile> = {}): FakeFile {
+  // Magic bytes réels : validateUpload (lib/storage) vérifie le contenu,
+  // pas seulement le type déclaré.
+  const magicByType: Record<string, Uint8Array> = {
+    "application/pdf": new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]),
+    "image/png": new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  };
+  const type = overrides.type ?? "application/pdf";
+  const bytes = magicByType[type] ?? new Uint8Array([0x25, 0x50, 0x44, 0x46]);
   return {
     name: "cv.pdf",
     type: "application/pdf",
     size: 1234,
-    arrayBuffer: async () => new ArrayBuffer(4),
+    arrayBuffer: async () => bytes.buffer as ArrayBuffer,
     ...overrides,
   };
 }
@@ -57,8 +70,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   authDeps.getCurrentUser.mockResolvedValue({ id: "user-1" } as never);
   authDeps.getAdminUser.mockResolvedValue(null as never);
-  fsDeps.writeFile.mockResolvedValue(undefined as never);
-  fsDeps.mkdir.mockResolvedValue(undefined as never);
+  store.put.mockResolvedValue(undefined as never);
+  store.getSignedUrl.mockImplementation(async (key: string) => `/uploads/${key}`);
 });
 
 describe("POST /api/upload", () => {
@@ -79,7 +92,7 @@ describe("POST /api/upload", () => {
       makeUploadRequest(makeFile({ size: 6 * 1024 * 1024 })) as never,
     );
     expect(res.status).toBe(400);
-    expect(fsDeps.writeFile).not.toHaveBeenCalled();
+    expect(store.put).not.toHaveBeenCalled();
   });
 
   it("400 si le type MIME n'est pas autorisé", async () => {
@@ -87,7 +100,7 @@ describe("POST /api/upload", () => {
       makeUploadRequest(makeFile({ type: "text/plain", name: "note.txt" })) as never,
     );
     expect(res.status).toBe(400);
-    expect(fsDeps.writeFile).not.toHaveBeenCalled();
+    expect(store.put).not.toHaveBeenCalled();
   });
 
   it("201 écrit le PDF dans /uploads/cv et renvoie l'URL publique", async () => {
@@ -96,8 +109,7 @@ describe("POST /api/upload", () => {
     const body = await res.json();
     expect(body.url).toBe("/uploads/cv/abcdefghijkl.pdf");
     expect(body.filename).toBe("cv.pdf");
-    expect(fsDeps.mkdir).toHaveBeenCalled();
-    expect(fsDeps.writeFile).toHaveBeenCalled();
+    expect(store.put).toHaveBeenCalled();
   });
 
   it("201 range les images dans /uploads/images", async () => {
@@ -112,7 +124,7 @@ describe("POST /api/upload", () => {
   });
 
   it("500 si l'écriture disque échoue", async () => {
-    fsDeps.writeFile.mockRejectedValue(new Error("disk full") as never);
+    store.put.mockRejectedValue(new Error("disk full") as never);
     const res = await POST(makeUploadRequest(makeFile()) as never);
     expect(res.status).toBe(500);
   });
