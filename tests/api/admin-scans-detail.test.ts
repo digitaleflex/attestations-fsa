@@ -58,6 +58,17 @@ vi.mock("fs/promises", async (importOriginal) => {
   };
 });
 
+// La route de lecture passe par l'abstraction de stockage objet
+// (`lib/storage`) : on mocke le driver (exists / getSignedUrl) et le
+// fetch serveur-à-serveur qui récupère l'objet.
+const store = vi.hoisted(() => ({
+  put: vi.fn(async () => {}),
+  delete: vi.fn(async () => {}),
+  exists: vi.fn(async () => true),
+  getSignedUrl: vi.fn(async () => "/uploads/scans/sub-1/s1.pdf"),
+}));
+vi.mock("@/lib/storage", () => ({ getStorage: () => store }));
+
 import {
   GET as getScans,
   POST as uploadScans,
@@ -142,6 +153,12 @@ beforeEach(() => {
   fsMocks.createReadStream.mockReturnValue(
     Readable.from(Buffer.from("%PDF-1.4")) as never,
   );
+  store.exists.mockResolvedValue(true);
+  store.getSignedUrl.mockResolvedValue("/uploads/scans/sub-1/s1.pdf");
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response("%PDF-1.4") as never),
+  );
 });
 
 describe("GET /api/admin/submissions/[id]/scans", () => {
@@ -207,7 +224,7 @@ describe("POST /api/admin/submissions/[id]/scans", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.count).toBe(1);
-    expect(fsMocks.writeFile).toHaveBeenCalled();
+    expect(store.put).toHaveBeenCalled();
     expect(db.scanCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ submissionId: SUB, uploadedBy: "admin-1" }),
@@ -239,7 +256,7 @@ describe("DELETE /api/admin/submissions/[id]/scans", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.deletedScanId).toBe(SCAN);
-    expect(fsMocks.unlink).toHaveBeenCalled();
+    expect(store.delete).toHaveBeenCalled();
     expect(db.scanDelete).toHaveBeenCalledWith({ where: { id: SCAN } });
   });
 });
@@ -265,18 +282,12 @@ describe("GET /api/admin/submissions/[id]/scans/[scanId]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("404 si le fichier est absent du disque", async () => {
-    fsMocks.stat.mockRejectedValue(new Error("ENOENT") as never);
+  it("404 si le fichier est absent du stockage", async () => {
+    store.exists.mockResolvedValue(false);
     const res = await callGetScanFile();
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.error).toBe("Fichier scan introuvable sur le disque");
-  });
-
-  it("404 si le chemin n'est pas un fichier régulier", async () => {
-    fsMocks.stat.mockResolvedValue({ isFile: () => false, size: 0 } as never);
-    const res = await callGetScanFile();
-    expect(res.status).toBe(404);
+    expect(body.error).toBe("Fichier scan introuvable");
   });
 
   it("200 → streame le fichier avec les en-têtes de sécurité", async () => {
@@ -285,6 +296,7 @@ describe("GET /api/admin/submissions/[id]/scans/[scanId]", () => {
     expect(res.headers.get("content-type")).toBe("application/pdf");
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(fsMocks.createReadStream).toHaveBeenCalled();
+    expect(store.exists).toHaveBeenCalled();
+    expect(store.getSignedUrl).toHaveBeenCalled();
   });
 });

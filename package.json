@@ -26,6 +26,8 @@
     "e2e:setup": "pnpm e2e:db:up && pnpm e2e:db:migrate && pnpm e2e:seed"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1132.0",
+    "@aws-sdk/s3-request-presigner": "^3.1132.0",
     "@hookform/resolvers": "^5.1.1",
     "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.11.1",
