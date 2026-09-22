@@ -6,7 +6,77 @@
 
 ---
 
-## 📋 Qu'est-ce qu'un Test E2E ?
+## 🚀 Prérequis & exécution (la suite réelle)
+
+> ⚠️ La suite réelle du projet est **Playwright**, dans `e2e/*.e2e.ts` avec la
+> configuration `playwright.config.ts`. Tout le reste de ce document est un
+> guide d'écriture générique, pas la procédure d'exécution.
+
+### 1. Prérequis
+
+- Docker Desktop en marche (daemon actif)
+- Node 22 + pnpm 9.15.4
+- Navigateur Playwright : `npx playwright install chromium`
+
+### 2. Base de données E2E (séparée de la dev)
+
+| | Dev | **E2E** |
+| --- | --- | --- |
+| Port hôte | `5432` | **`5434`** |
+| Base | `attestation_fsa` | **`attestation_fsa_e2e`** |
+| Service compose | `postgres` | **`postgres-e2e`** |
+
+`e2e/setup/env.ts` **refuse** le port 5432 / la base `attestation_fsa` :
+la suite ne peut jamais écraser la base de développement. L'URL est dérivée
+automatiquement depuis `.env.local` (seuls port et base sont remplacés) ; en CI,
+on la force avec `E2E_DATABASE_URL` (prioritaire).
+
+### 3. Lancer la suite (2 commandes)
+
+```bash
+pnpm e2e:setup      # démarre postgres-e2e (5434) + migrate + seed
+pnpm test:e2e       # exécute les 2 projets Playwright
+```
+
+Optionnel : `pnpm e2e:db:down` (arrête la base E2E sans la détruire).
+
+Si vos crédits `.env.local` diffèrent des valeurs par défaut de compose,
+définissez explicitement :
+
+```bash
+export E2E_DATABASE_URL="postgresql://USER:PASS@localhost:5434/attestation_fsa_e2e"
+pnpm test:e2e
+```
+
+### 4. Les deux projets Playwright
+
+| Projet | Contenu | Exécution |
+| --- | --- | --- |
+| `chromium` | `parcours-candidat.e2e.ts` (auth → examen → score → attestation → PDF → vérification publique) + `verification-publique.e2e.ts` | normal |
+| `chromium-ui-examen` | `ui-examen.e2e.ts` : même parcours **100 % via l'interface** | projet dédié, lancé en dernier |
+
+`workers: 1` : les tests partagent l'état applicatif (session, attestation émise).
+Le serveur est un `next dev` sur le **port 3100** (`distDir` `.next-e2e`, rate-limit
+mémoire), démarré par Playwright — ne jamais le lancer soi-même sur ce port.
+
+### 5. Deux façons de semer (ne pas confondre)
+
+| Commande | Base visée | Prérequis |
+| --- | --- | --- |
+| `pnpm db:seed` | base **dev** (`5432`, via `.env.local`) | `docker compose -f compose.local.yml up -d postgres` |
+| `pnpm e2e:seed` | base **E2E** (`5434`) | `pnpm e2e:db:up` |
+
+> Historique : `pnpm db:seed` échouait sur Windows avec
+> `TS5023: Unknown compiler option '0'…'3'` — `prisma db seed` passait le JSON
+> `--compiler-options` par le shell, qui le déformait. Le seed s'appelle
+> désormais sur `tsconfig.seed.json` (valeur d'option non transmise en CLI).
+
+### 6. CI
+
+`test.yml` fournit le service `postgres:17-alpine` (5434) et injecte
+`E2E_DATABASE_URL` ; voir le job `e2e`.
+
+---
 
 Un test E2E (End-to-End) vérifie un **flux utilisateur complet** du début à la fin, en simulant un vrai utilisateur qui utilise l'application.
 
