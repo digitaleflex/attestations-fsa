@@ -42,6 +42,7 @@ export default function NotificationBell() {
 
         if (profil?.id) {
             const pusher = getPusherClient();
+            if (!pusher) return;
             const channel = pusher.subscribe(`user-${profil.id}`);
 
             channel.bind("notification", (newNotif: Notification) => {

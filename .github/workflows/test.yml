@@ -4,7 +4,43 @@ on:
   push:
   pull_request:
 
+# Lecture seule sur le dépôt (`contents: read`) : ce workflow ne modifie rien.
+# Il uploade néanmoins le rapport Playwright en artefact QUAND le job `e2e`
+# échoue — un artefact de diagnostic, pas une publication.
+permissions:
+  contents: read
+
 jobs:
+  # ── GATE TYPE + LINT ──────────────────────────────────────────────────
+  # Avant cette issue, la CI ne faisait ni type-check ni lint : un diff qui ne
+  # compilait pas pouvait être mergé en ayant un run vert. C'est le même
+  # problème que l'E2E ci-dessous : la preuve doit être automatisée.
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+  # ── GATE SÉCURITÉ DES DÉPENDANCES + COUVERTURE (inchangé) ─────────────
   test:
     runs-on: ubuntu-latest
     steps:
@@ -30,3 +66,90 @@ jobs:
 
       - name: Run tests with coverage
         run: pnpm run test:coverage
+
+  # ── GATE CŒUR MÉTIER : PARCOURS CANDIDAT DE BOUT EN BOUT ──────────────
+  # Preuve que la chaîne fonctionne réellement :
+  #   auth → démarrage examen → QCM → scoring serveur → attestation émise
+  #   avec code réel → PDF → code accepté par la vérification publique.
+  # Base DÉDIÉE (5434 / attestation_fsa_e2e) : la base de dev n'est jamais
+  # touchée (garde-fou assertSafeE2eUrl dans e2e/setup/env.ts).
+  #
+  # ⚠️ `.env.local` n'existe pas en CI : sans `E2E_DATABASE_URL`,
+  # `e2e/setup/env.ts` lève (readEnvLocal → "Fichier introuvable"). C'est la
+  # seule variable OBLIGATOIRE ; aucune autre ne fait planter le boot en mode
+  # dev (BETTER_AUTH_SECRET/RESEND_API_KEY ne jettent qu'en production —
+  # voir lib/auth.ts:29-39, lib/email-health.ts:41-49), le rate-limit retombe
+  # sur le fallback mémoire (lib/rate-limit.ts:323-337) parce que
+  # playwright.config.ts force UPSTASH à "".
+  e2e:
+    # `quality` (types/lint) ET `test` (SCA + ratchet de couverture) : sans le
+    # 2e, l'E2E pouvait afficher un vert alors que l'audit de sécurité ou la
+    # couverture échoue (revue T13a/A3 — « faux vert » au niveau du job).
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        ports:
+          - "5434:5432"
+        env:
+          POSTGRES_USER: attestation_fsa_user
+          POSTGRES_PASSWORD: attestation_fsa_password
+          POSTGRES_DB: attestation_fsa_e2e
+        options: >-
+          --health-cmd "pg_isready -U attestation_fsa_user -d attestation_fsa_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e
+      # Dummy local uniquement : rien de secret, et l'E2E tourne en `next dev`.
+      BETTER_AUTH_SECRET: e2e-local-only-not-a-real-secret
+      BETTER_AUTH_URL: http://localhost:3100
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+      # Force le fallback mémoire du rate-limit (lib/rate-limit.ts) : la suite
+      # ne dépend alors d'aucun Redis partagé et les quotas se réinitialisent
+      # à chaque démarrage du serveur de test.
+      UPSTASH_REDIS_REST_URL: ""
+      UPSTASH_REDIS_REST_TOKEN: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Base neuve : ces deux scripts pointent sur 5434 et ne lisent PAS
+      # `.env.local` (cross-env) — identique au flux local `pnpm e2e:setup`,
+      # moins le démarrage du conteneur (fourni par le service CI).
+      - name: Apply migrations (E2E DB)
+        run: pnpm e2e:db:migrate
+
+      - name: Seed (E2E DB)
+        run: pnpm e2e:seed
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E (parcours candidat + vérification publique)
+        run: pnpm test:e2e
+
+      - name: Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

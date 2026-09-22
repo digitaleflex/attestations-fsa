@@ -27,10 +27,9 @@ export async function ensureCredentialAccount(
     const isUsable =
       existing.accountId === params.userId && Boolean(existing.password);
 
-    if (isUsable) {
-      return 'exists';
-    }
-
+    // Toujours rafraîchir le hash du mot de passe (et updatedAt) : un
+    // changement de mot de passe dans le seed doit se propager aux deux
+    // enregistrements (User + Account credential).
     await client.account.update({
       where: { id: existing.id },
       data: {
@@ -40,7 +39,7 @@ export async function ensureCredentialAccount(
       },
     });
 
-    return 'repaired';
+    return isUsable ? 'exists' : 'repaired';
   }
 
   await client.account.create({
@@ -59,20 +58,23 @@ export async function ensureCredentialAccount(
 
 
 async function main() {
+  // Identifiants admin : E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD (flux e2e)
+  // prioritaire, sinon défauts locaux (dev).
+  const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'admin@fsa.bj';
+  const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminFSA1452.';
+
   // Vérifier si un admin existe déjà
   const adminExists = await prisma.user.findUnique({
     where: { 
-      email: 'admin@fsa.bj'
+      email: adminEmail
     },
   });
-
-  const adminPassword = 'AdminFSA1452.';
   const hashedAdminPassword = await hashPassword(adminPassword);
 
   if (!adminExists) {
     const newUser = await prisma.user.create({
       data: {
-        email: 'admin@fsa.bj',
+        email: adminEmail,
         password: hashedAdminPassword,
         role: 'ADMIN',
         name: 'Administrateur FSA',
@@ -87,11 +89,22 @@ async function main() {
     });
 
     console.log('✅ Compte administrateur unifié créé avec succès (Better Auth Ready)');
-    console.log('📧 Email: admin@fsa.bj');
+    console.log('📧 Email:', adminEmail);
     console.log('🔑 Mot de passe:', adminPassword);
     console.log('\n⚠️  Veuillez changer ce mot de passe après votre première connexion !');
   } else {
-    console.log('ℹ️ Un compte administrateur unifié existe déjà');
+    // Admin existant : rafraîchir le hash du mot de passe (User) et
+    // l'enregistrement credential (Account) pour que les deux utilisent
+    // le mot de passe courant du seed.
+    await prisma.user.update({
+      where: { id: adminExists.id },
+      data: { password: hashedAdminPassword },
+    });
+    await ensureCredentialAccount(prisma, {
+      userId: adminExists.id,
+      passwordHash: hashedAdminPassword,
+    });
+    console.log('ℹ️ Compte administrateur existant — mot de passe rafraîchi');
   }
   
   // Créer un utilisateur de test (candidat)

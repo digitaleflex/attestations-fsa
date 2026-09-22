@@ -63,6 +63,7 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     const pusher = getPusherClient();
+    if (!pusher) return;
     const channel = pusher.subscribe("admin-events");
 
     const refresh = (type: string, data: { content?: string; motif?: string; userName?: string }) => {

@@ -22,6 +22,36 @@ services:
     networks:
       - attestations-fsa-network
 
+  # Base DÉDIÉE aux tests E2E (Playwright) — port et base distincts de la dev.
+  # `e2e/setup/env.ts` exige : port hôte 5434 + base `attestation_fsa_e2e`.
+  # Elle dérive l'URL depuis `.env.local` en ne changeant QUE port et base, donc
+  # les crédits doivent matcher la base dev ci-dessus (mêmes valeurs par défaut).
+  # En CI on passe `E2E_DATABASE_URL` en override (prioritaire) → voir test.yml.
+  postgres-e2e:
+    image: postgres:17-alpine
+    container_name: attestations-fsa-postgres-e2e
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-attestation_fsa_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-attestation_fsa_password}
+      POSTGRES_DB: ${E2E_POSTGRES_DB:-attestation_fsa_e2e}
+    ports:
+      # 127.0.0.1 uniquement (revue T13a/A1) : base de TEST avec identifiants
+      # par défaut connus — inutile de l'exposer à tout le réseau local.
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - postgres_e2e_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-attestation_fsa_user} -d ${E2E_POSTGRES_DB:-attestation_fsa_e2e}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - attestations-fsa-network
+
   # Optional: run the Next.js app in Docker for full local testing
   # app:
   #   build:
@@ -45,6 +75,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres_e2e_data:
 
 networks:
   attestations-fsa-network:
