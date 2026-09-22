@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { applyRateLimitByUser } from '@/lib/rate-limit';
-import { analyzeAnswerPattern, logCheatingDetection } from '@/lib/anti-cheat';
 import { createAuditLog } from '@/lib/audit';
 import { pusherServer } from '@/lib/pusher';
 import {
@@ -48,22 +47,6 @@ export async function POST(
     // Early exit if already submitted (fast path before any heavy queries)
     if (existingSession?.status && !['IN_PROGRESS', 'PENDING'].includes(existingSession.status)) {
       return NextResponse.json({ error: 'Session déjà soumise' }, { status: 409 });
-    }
-
-    // ANTI-CHEAT: Time check using DB startedAt (not client-supplied value)
-    if (existingSession?.startedAt) {
-      const timeTakenMinutes = (Date.now() - existingSession.startedAt.getTime()) / 60000;
-      if (timeTakenMinutes < 1) {
-        await logCheatingDetection(user.id, examId, request.headers.get('x-forwarded-for') || 'unknown', request.headers.get('user-agent') || 'unknown', {
-          isSuspicious: true,
-          confidence: 'HIGH',
-          flags: [{
-            type: 'RAPID_SUBMISSION',
-            severity: 'HIGH',
-            details: `Soumission extrêmement rapide : ${timeTakenMinutes.toFixed(2)} minutes`
-          }]
-        });
-      }
     }
 
     // ✅ Only fetch QCM part questions needed for scoring (not full exam)
@@ -228,23 +211,6 @@ export async function POST(
       newValue: { status: finalStatus, scorePart1: roundedPart1, finalScore },
       ipAddress: request.headers.get("x-forwarded-for") || "unknown"
     });
-
-    // ✅ ANTI-CHEAT: Analyze answer patterns (Re-enabled)
-    try {
-      const detection = await analyzeAnswerPattern(answers, examId, user.id);
-      
-      if (detection.isSuspicious) {
-        await logCheatingDetection(
-          user.id,
-          examId,
-          request.headers.get('x-forwarded-for') || 'unknown',
-          request.headers.get('user-agent') || 'unknown',
-          detection
-        );
-      }
-    } catch (error) {
-      console.error('[ANTI-CHEAT ERROR]', error);
-    }
 
     // Fetch the updated session for the response
     const updatedSession = await prisma.examSession.findFirst({
