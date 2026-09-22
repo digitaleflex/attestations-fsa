@@ -35,7 +35,7 @@ on la force avec `E2E_DATABASE_URL` (prioritaire).
 
 ```bash
 pnpm e2e:setup      # démarre postgres-e2e (5434) + migrate + seed
-pnpm test:e2e       # exécute les 2 projets Playwright
+pnpm test:e2e       # exécute les 3 projets Playwright
 ```
 
 Optionnel : `pnpm e2e:db:down` (arrête la base E2E sans la détruire).
@@ -48,11 +48,12 @@ export E2E_DATABASE_URL="postgresql://USER:PASS@localhost:5434/attestation_fsa_e
 pnpm test:e2e
 ```
 
-### 4. Les deux projets Playwright
+### 4. Les trois projets Playwright
 
 | Projet | Contenu | Exécution |
 | --- | --- | --- |
 | `chromium` | `parcours-candidat.e2e.ts` (auth → examen → score → attestation → PDF → vérification publique) + `verification-publique.e2e.ts` | normal |
+| `chromium-admin` | `parcours-admin.e2e.ts` : connexion admin, consultation et révocation d'attestation | **dépend de `chromium`** (l'attestation doit avoir été émise par le parcours candidat) — déclaré après `chromium` |
 | `chromium-ui-examen` | `ui-examen.e2e.ts` : même parcours **100 % via l'interface** | projet dédié, lancé en dernier |
 
 `workers: 1` : les tests partagent l'état applicatif (session, attestation émise).

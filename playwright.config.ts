@@ -47,7 +47,7 @@ export default defineConfig({
     {
       // Parcours prouvés (auth, endpoints applicatifs, certificat, vérification).
       name: "chromium",
-      testIgnore: /ui-examen\.e2e\.ts/,
+      testIgnore: /(ui-examen|parcours-admin)\.e2e\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -56,6 +56,7 @@ export default defineConfig({
       // émise par le parcours candidat → déclaré APRÈS `chromium`.
       name: "chromium-admin",
       testMatch: /parcours-admin\.e2e\.ts/,
+      dependencies: ["chromium"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
