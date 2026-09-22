@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:watch": "vitest",
-    "seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts",
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
@@ -18,7 +18,12 @@
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate",
     "test:coverage": "vitest run --coverage",
-    "verify": "tsc --noEmit && eslint . && vitest run"
+    "verify": "tsc --noEmit && eslint . && vitest run",
+    "e2e:db:up": "docker compose -f compose.local.yml up -d postgres-e2e",
+    "e2e:db:down": "docker compose -f compose.local.yml stop postgres-e2e",
+    "e2e:db:migrate": "cross-env DATABASE_URL=postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e DIRECT_DATABASE_URL=postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e prisma migrate deploy",
+    "e2e:seed": "cross-env DATABASE_URL=postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e DIRECT_DATABASE_URL=postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e prisma db seed",
+    "e2e:setup": "pnpm e2e:db:up && pnpm e2e:db:migrate && pnpm e2e:seed"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -146,7 +151,7 @@
     "webpack": "^5.99.9"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts"
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
   },
   "packageManager": "pnpm@9.15.4"
 }
