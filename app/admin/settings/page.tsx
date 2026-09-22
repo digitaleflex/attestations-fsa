@@ -138,12 +138,12 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4 w-full lg:w-auto">
              <Button
                 onClick={() => setShowPreview(!showPreview)}
                 variant="outline"
                 className={cn(
-                    "h-14 px-8 rounded-2xl font-bold gap-3 transition-all border-slate-200 shadow-sm",
+                    "h-14 px-8 rounded-2xl font-bold gap-3 transition-all border-slate-200 shadow-sm flex-1 sm:flex-none",
                     showPreview && "bg-blue-50 text-blue-600 border-blue-200"
                 )}
              >
@@ -153,7 +153,7 @@ export default function SettingsPage() {
              <Button
                 onClick={() => setShowConfirm(true)}
                 disabled={isSaving}
-                className="bg-slate-900 hover:bg-slate-800 text-white gap-3 h-14 px-10 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all"
+                className="bg-slate-900 hover:bg-slate-800 text-white gap-3 h-14 px-10 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex-1 sm:flex-none"
             >
                 {isSaving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5 text-emerald-400" />}
                 Mettre à jour FSA

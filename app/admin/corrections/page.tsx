@@ -84,14 +84,14 @@ export default function AdminCorrectionsPage() {
       </div>
 
       {/* Filtres */}
-      <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 max-w-fit">
+      <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
         {["PENDING", "APPROVED", "REJECTED", "ALL"].map(s => (
           <Button
             key={s}
             size="sm"
             variant={filter === s ? "default" : "ghost"}
             onClick={() => setFilter(s)}
-            className={`rounded-xl px-4 py-2 font-bold text-xs ${filter === s ? "bg-slate-900 shadow-lg shadow-slate-200" : "text-slate-500"}`}
+            className={`rounded-xl px-4 py-2 font-bold text-xs whitespace-nowrap ${filter === s ? "bg-slate-900 shadow-lg shadow-slate-200" : "text-slate-500"}`}
           >
             {s === "PENDING" ? "En attente" : s === "APPROVED" ? "Approuvées" : s === "REJECTED" ? "Rejetées" : "Toutes"}
           </Button>

@@ -353,7 +353,7 @@ export default function AttestationDetailsPage() {
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <Link href="/admin/attestations">
               <Button variant="outline" size="sm" className="gap-2">
@@ -366,27 +366,27 @@ export default function AttestationDetailsPage() {
               <p className="text-sm text-slate-500">{data.code}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <div className="flex gap-2">
-              <Link href={`/transcript?userId=${data.userId}`} target="_blank">
-                <Button variant="outline" className="gap-2 bg-indigo-50 text-indigo-600 border-indigo-200">
+          <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+              <Link href={`/transcript?userId=${data.userId}`} target="_blank" className="flex-1 sm:flex-none">
+                <Button variant="outline" className="gap-2 bg-indigo-50 text-indigo-600 border-indigo-200 w-full sm:w-auto">
                     <ClipboardList className="w-4 h-4" />
                     Voir Relevé
                 </Button>
               </Link>
-              <Link href={`/transcript?userId=${data.userId}&download=true`} target="_blank">
-                <Button variant="outline" className="gap-2 bg-emerald-50 text-emerald-600 border-emerald-200">
+              <Link href={`/transcript?userId=${data.userId}&download=true`} target="_blank" className="flex-1 sm:flex-none">
+                <Button variant="outline" className="gap-2 bg-emerald-50 text-emerald-600 border-emerald-200 w-full sm:w-auto">
                     <HistoryIcon className="w-4 h-4" />
                     Télécharger Global
                 </Button>
               </Link>
-              <Link href={`/admin/attestations/${id}/edit`}>
-                <Button variant="outline" className="gap-2">
+              <Link href={`/admin/attestations/${id}/edit`} className="flex-1 sm:flex-none">
+                <Button variant="outline" className="gap-2 w-full sm:w-auto">
                   <Edit className="w-4 h-4" />
                   Modifier
                 </Button>
               </Link>
-              <Button onClick={() => handleDownloadAttestation()} variant="outline" className="gap-2 bg-blue-50 text-blue-600 border-blue-200">
+              <Button onClick={() => handleDownloadAttestation()} variant="outline" className="gap-2 bg-blue-50 text-blue-600 border-blue-200 w-full sm:w-auto">
                 <Download className="w-4 h-4" />
                 Télécharger PDF
               </Button>
