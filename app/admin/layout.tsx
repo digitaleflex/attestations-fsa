@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 import NotificationCenter from "@/components/admin/NotificationCenter";
 
 /**
@@ -56,12 +57,10 @@ export default async function AdminLayout({
       <SidebarInset className="flex flex-col min-h-screen bg-slate-50">
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4 md:px-6">
           <div className="flex-1 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="-ml-1" />
-              <div className="h-4 w-px bg-slate-200 mx-2" />
-              <h1 className="hidden sm:block text-sm font-medium text-slate-600">
-                Admin | Ferme Agro-Piscicole Cité St André
-              </h1>
+            <div className="flex min-w-0 items-center gap-2">
+              <SidebarTrigger className="-ml-1 h-11 w-11" aria-label="Basculer la barre latérale" />
+              <div className="h-4 w-px bg-slate-200 mx-2" aria-hidden="true" />
+              <AdminBreadcrumbs className="hidden sm:block" />
             </div>
 
             <div className="flex items-center gap-4">

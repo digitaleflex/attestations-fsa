@@ -11,6 +11,9 @@ import {
   SidebarFooter,
   SidebarMenuButton,
   SidebarRail,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -27,22 +30,86 @@ import {
   FileCheck,
   Bell,
   Mail,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
-const mainLinks = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Apprenants", icon: Users },
-  { href: "/admin/formations", label: "Catalogue Pédagogique", icon: BookOpen },
-  { href: "/admin/exams", label: "Examens", icon: ClipboardCheck },
-  { href: "/admin/corrections", label: "Corrections", icon: FileCheck },
-  { href: "/admin/notifications", label: "Notifications", icon: Bell },
-  { href: "/admin/attestations", label: "Attestations", icon: FileText },
-  { href: "/admin/reclamations", label: "Réclamations", icon: AlertCircle },
-  { href: "/admin/contacts", label: "Messages", icon: Mail },
+interface NavLink {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavSection {
+  title: string;
+  links: NavLink[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Principal",
+    links: [
+      { href: "/admin/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: "Formation",
+    links: [
+      { href: "/admin/users", label: "Apprenants", icon: Users },
+      { href: "/admin/formations", label: "Catalogue Pédagogique", icon: BookOpen },
+      { href: "/admin/exams", label: "Examens", icon: ClipboardCheck },
+      { href: "/admin/corrections", label: "Corrections", icon: FileCheck },
+    ],
+  },
+  {
+    title: "Administration",
+    links: [
+      { href: "/admin/attestations", label: "Attestations", icon: FileText },
+      { href: "/admin/reclamations", label: "Réclamations", icon: AlertCircle },
+      { href: "/admin/contacts", label: "Messages", icon: Mail },
+      { href: "/admin/notifications", label: "Notifications", icon: Bell },
+    ],
+  },
 ];
+
+const SYSTEM_LINKS: NavLink[] = [
+  { href: "/admin/settings", label: "Paramètres", icon: Settings },
+  { href: "/admin/profile", label: "Mon profil", icon: User },
+  { href: "/", label: "Site public", icon: Home },
+];
+
+function isLinkActive(pathname: string | null, href: string): boolean {
+  if (!pathname) return false;
+  if (href === "/admin/dashboard") return pathname === href;
+  if (href === "/") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavItem({ item, pathname }: { item: NavLink; pathname: string | null }) {
+  const Icon = item.icon;
+  const isActive = isLinkActive(pathname, item.href);
+  return (
+    <SidebarMenuItem key={item.href}>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip={item.label}
+        className={`transition-all duration-200 ${
+          isActive
+            ? "bg-brand text-white shadow-md shadow-brand/30 hover:bg-brand-dark hover:text-white"
+            : "text-slate-600 hover:bg-slate-100"
+        }`}
+      >
+        <Link href={item.href} aria-current={isActive ? "page" : undefined}>
+          <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
+          <span className="font-medium text-sm">{item.label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
 
 export function AdminSidebar({ admin }: { admin: any }) {
   const pathname = usePathname();
@@ -67,72 +134,32 @@ export function AdminSidebar({ admin }: { admin: any }) {
       </SidebarHeader>
 
       <SidebarContent className="flex-1 px-2 py-6 overflow-x-hidden">
-        <SidebarMenu className="space-y-1">
-          {mainLinks.map((item) => {
-            const Icon = item.icon;
-            const isActive = !!(
-              pathname === item.href ||
-              (pathname && item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
-            );
-
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive}
-                  tooltip={item.label}
-                  className={`transition-all duration-200 ${
-                    isActive
-                       ? "bg-brand text-white shadow-md shadow-brand/30 hover:bg-brand-dark hover:text-white"
-                       : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  <Link href={item.href}>
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
-                    <span className="font-medium text-sm">{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
+        {NAV_SECTIONS.map((section) => (
+          <SidebarGroup key={section.title} className="p-0 pb-4">
+            <SidebarGroupLabel className="px-3 pb-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+              {section.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {section.links.map((item) => (
+                  <NavItem key={item.href} item={item} pathname={pathname} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarSeparator className="mx-4 bg-slate-100" />
 
       <SidebarFooter className="p-4 space-y-4">
         <SidebarMenu className="space-y-1">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={pathname === "/admin/settings" || pathname?.startsWith("/admin/settings")}
-              tooltip="Paramètres"
-              className={`transition-all duration-200 ${
-                pathname === "/admin/settings" || pathname?.startsWith("/admin/settings")
-                  ? "bg-brand text-white shadow-md shadow-brand/30 hover:bg-brand-dark hover:text-white"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              <Link href="/admin/settings">
-                <Settings className={`w-4 h-4 shrink-0 ${
-                  pathname === "/admin/settings" || pathname?.startsWith("/admin/settings")
-                    ? "text-white" 
-                    : "text-slate-400"
-                }`} />
-                <span className="font-medium text-sm">Paramètres</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Site public" className="text-slate-600 hover:bg-slate-100 transition-all duration-200">
-              <Link href="/">
-                <Home className="w-4 h-4 shrink-0 text-slate-400" />
-                <span className="font-medium text-sm">Site public</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
+          <SidebarGroupLabel className="px-3 pb-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+            Système
+          </SidebarGroupLabel>
+          {SYSTEM_LINKS.map((item) => (
+            <NavItem key={item.href} item={item} pathname={pathname} />
+          ))}
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
