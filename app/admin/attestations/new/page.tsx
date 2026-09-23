@@ -272,7 +272,7 @@ export default function NewAttestationPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center shadow-lg">
               <span className="text-2xl">📝</span>
             </div>
             <div>
@@ -690,7 +690,7 @@ export default function NewAttestationPage() {
             {form.type === "STAGE" && (
               <>
                 <div className="md:col-span-2 mt-4 border-t pt-4">
-                  <h3 className="text-lg font-bold text-blue-600 mb-4">
+                  <h3 className="text-lg font-bold text-slate-800 mb-4">
                     📋 Informations de Stage
                   </h3>
                 </div>
@@ -765,10 +765,10 @@ export default function NewAttestationPage() {
                       }))
                     }
                     placeholder="Décrivez le déroulement du stage..."
-                    className="w-full min-h-[100px] px-4 py-3 rounded-md border border-blue-200 bg-blue-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mt-1.5"
+                    className="w-full min-h-[100px] px-4 py-3 rounded-2xl border-2 border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand resize-none mt-1.5"
                     maxLength={1000}
                   />
-                  <div className="text-right text-xs text-blue-400 mt-1">
+                  <div className="text-right text-xs text-slate-500 mt-1">
                     {form.stageObservations?.length || 0}/1000
                   </div>
                 </div>
@@ -885,7 +885,7 @@ export default function NewAttestationPage() {
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+              className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark"
             >
               {loading ? (
                 <>

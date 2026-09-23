@@ -240,7 +240,7 @@ export default function EditAttestationPage() {
         {/* Formulaire - Rendu seulement si form est prêt */}
         {!form ? (
           <Card className="p-6 sm:p-12 flex flex-col items-center justify-center bg-white shadow-lg space-y-4">
-             <Loader2 className="animate-spin w-8 h-8 text-blue-500" />
+             <Loader2 className="animate-spin w-8 h-8 text-brand" />
              <p className="text-slate-500 text-sm italic font-medium">Récuperation de la configuration...</p>
           </Card>
         ) : (
@@ -249,7 +249,7 @@ export default function EditAttestationPage() {
             {/* Informations personnelles */}
             <div>
               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm">1</span>
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white text-sm">1</span>
                 Informations personnelles
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -323,7 +323,7 @@ export default function EditAttestationPage() {
             {/* Détails de la formation */}
             <div>
               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-sm">2</span>
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white text-sm">2</span>
                 Détails de la formation
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -468,7 +468,7 @@ export default function EditAttestationPage() {
             {form?.type === "CERTIFICATION" && (
               <div>
                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-sm">3</span>
+                  <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white text-sm">3</span>
                   Informations de Certification
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -521,7 +521,7 @@ export default function EditAttestationPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+                className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark"
               >
                 {saving ? (
                   <>

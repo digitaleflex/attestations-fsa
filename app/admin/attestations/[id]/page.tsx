@@ -374,7 +374,7 @@ export default function AttestationDetailsPage() {
                   Modifier
                 </Button>
               </Link>
-              <Button onClick={() => handleDownloadAttestation()} variant="outline" className="gap-2 bg-blue-50 text-blue-600 border-blue-200 w-full sm:w-auto">
+              <Button onClick={() => handleDownloadAttestation()} variant="outline" className="gap-2 bg-brand/10 text-brand-dark border-brand/30 w-full sm:w-auto">
                 <Download className="w-4 h-4" />
                 Télécharger PDF
               </Button>
@@ -386,7 +386,7 @@ export default function AttestationDetailsPage() {
         <Card className="p-4 bg-white shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center">
                 <TypeIcon className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -411,7 +411,7 @@ export default function AttestationDetailsPage() {
             {/* Header de l'aperçu */}
             <div className="bg-slate-50 border-b p-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-brand">
                         <Award className="w-5 h-5" />
                     </div>
                     <div>
@@ -454,7 +454,7 @@ export default function AttestationDetailsPage() {
             {/* QR Code */}
             <Card className="p-6 bg-white shadow-sm">
               <div className="flex items-center gap-2 mb-4">
-                <QrCode className="w-5 h-5 text-blue-500" />
+                <QrCode className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-slate-800">QR Code de vérification</h3>
               </div>
               <div className="flex justify-center">
@@ -561,16 +561,16 @@ export default function AttestationDetailsPage() {
                       <AlertDialogTrigger asChild>
                         <Button 
                           variant="outline" 
-                          className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                          className="w-full gap-2 border-rose-300 text-rose-700 hover:bg-rose-50"
                           disabled={actionLoading}
                         >
                           <ArrowLeft className="w-4 h-4 rotate-90" />
                           Rétrograder le Candidat
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-white border-2 border-indigo-100 shadow-2xl">
+                      <AlertDialogContent className="bg-white border-2 border-rose-100 shadow-2xl rounded-3xl">
                          <AlertDialogHeader>
-                           <AlertDialogTitle className="flex items-center gap-3 text-indigo-600 font-bold text-xl">
+                           <AlertDialogTitle className="flex items-center gap-3 text-rose-600 font-bold text-xl">
                              <ArrowLeft className="w-6 h-6 rotate-90" />
                              Rétrograder et Repasser l'examen ?
                            </AlertDialogTitle>
@@ -578,7 +578,7 @@ export default function AttestationDetailsPage() {
                              ⚠️ <span className="font-bold text-slate-900">Action Irréversible !!</span><br/><br/>
                              1. L'attestation sera <span className="text-rose-600 font-bold">supprimée définitivement</span>.<br/>
                              2. Les scores actuels seront <span className="text-rose-600 font-bold">effacés</span>.<br/>
-                             3. Le candidat devra <span className="text-indigo-600 font-bold">repasser intégralement son examen</span>.<br/><br/>
+                             3. Le candidat devra <span className="text-rose-600 font-bold">repasser intégralement son examen</span>.<br/><br/>
                              <strong className="text-slate-900">Motif de la rétrogradation :</strong>
                            </AlertDialogDescription>
                          </AlertDialogHeader>
@@ -587,7 +587,7 @@ export default function AttestationDetailsPage() {
                                 placeholder="Ex: Tricherie prouvée, Incohérence des notes..." 
                                 value={actionReason}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActionReason(e.target.value)}
-                                className="border-indigo-100 focus-visible:ring-indigo-500"
+                                className="border-rose-200 focus-visible:ring-rose-500"
                             />
                          </div>
                          <AlertDialogFooter className="mt-4 gap-3">
@@ -595,7 +595,7 @@ export default function AttestationDetailsPage() {
                            <AlertDialogAction 
                              onClick={() => handleAdminAction('RETROGRADE')} 
                              disabled={actionReason.length < 5}
-                             className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200"
+                             className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
                            >
                              Rétrograder Maintenant
                            </AlertDialogAction>
@@ -622,7 +622,7 @@ export default function AttestationDetailsPage() {
                             par {log.user?.name || log.user?.email} • <DateLocale date={log.timestamp} options={{ hour: '2-digit', minute: '2-digit' }} />
                           </p>
                           {log.newValue?.reason && (
-                            <p className="text-[11px] mt-1 italic text-indigo-600 font-medium">" {log.newValue.reason} "</p>
+                            <p className="text-[11px] mt-1 italic text-slate-600 font-medium">" {log.newValue.reason} "</p>
                           )}
                         </div>
                       ))}
@@ -633,7 +633,7 @@ export default function AttestationDetailsPage() {
                   <>
                     <Button
                       onClick={() => handleStatus("VALIDATED")}
-                      className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+                      className="w-full gap-2 bg-brand hover:bg-brand-dark"
                       disabled={actionLoading}
                     >
                       <CheckCircle className="w-4 h-4" />

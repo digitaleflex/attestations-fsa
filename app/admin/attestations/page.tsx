@@ -212,12 +212,12 @@ export default function AdminAttestationsPage() {
             <p className="text-slate-500 mt-1">Gérez toutes les attestations délivrées</p>
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <Button onClick={handleExport} variant="outline" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex-1 sm:flex-none">
+            <Button onClick={handleExport} variant="outline" className="gap-2 border-brand/30 text-brand-dark hover:bg-brand/10 flex-1 sm:flex-none">
               <Download className="w-4 h-4" />
               Exporter Excel
             </Button>
             <Link href="/admin/attestations/new" className="flex-1 sm:flex-none">
-              <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 w-full sm:w-auto">
+              <Button className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark w-full sm:w-auto">
                 <Plus className="w-4 h-4" />
                 Nouvelle
               </Button>
@@ -229,8 +229,8 @@ export default function AdminAttestationsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card className="p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="p-2 bg-brand/10 rounded-lg">
+                <FileText className="w-5 h-5 text-brand" />
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Total</p>
@@ -400,7 +400,7 @@ export default function AdminAttestationsPage() {
                 <Card key={a.id} className="p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center shadow-lg shadow-brand/20">
                         <TypeIcon className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -473,7 +473,7 @@ export default function AdminAttestationsPage() {
                 return (
                   <div key={a.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 transition-colors group">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-brand group-hover:text-white transition-colors">
                         <TypeIcon className="w-5 h-5 text-slate-500 group-hover:text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
