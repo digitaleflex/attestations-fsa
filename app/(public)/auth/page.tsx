@@ -498,18 +498,18 @@ function AuthContent() {
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 relative overflow-hidden px-4 py-8">
       {/* Premium Backdrops */}
       <div className="absolute inset-0 z-0 bg-grid-slate-200/50 bg-[size:30px_30px] opacity-40 pointer-events-none" />
-      <div className="absolute -top-[10%] -left-[10%] w-[50vw] h-[50vw] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      <div className="absolute -bottom-[10%] -right-[10%] w-[50vw] h-[50vw] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -top-[10%] -left-[10%] w-[50vw] h-[50vw] bg-brand/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+      <div className="absolute -bottom-[10%] -right-[10%] w-[50vw] h-[50vw] bg-brand-dark/10 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Main card box with glassmorphism and subtle ring */}
       <Card className="bg-white/80 backdrop-blur-3xl rounded-[3rem] shadow-[0_32px_64px_rgba(0,0,0,0.06)] w-full max-w-lg px-6 py-10 sm:px-12 sm:py-14 border border-white/90 relative overflow-hidden z-10 hover:shadow-[0_48px_80px_rgba(0,0,0,0.08)] transition-all duration-500">
         {/* Glow corner elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-dark/5 rounded-full blur-2xl pointer-events-none" />
 
         {/* Dynamic Animate Header & Icons */}
         <div className="flex flex-col items-center mb-8 relative z-10 text-center">
-          <div className="relative w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-200/50 group overflow-hidden">
+          <div className="relative w-20 h-20 bg-gradient-to-br from-brand to-brand-dark rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-brand/30 group overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000" />
             {step === 1 ? (
               tab === "password" ? (
@@ -533,7 +533,7 @@ function AuthContent() {
           </p>
 
           {step === 2 && (
-            <span className="mt-3 font-bold text-emerald-700 text-xs tracking-wider bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100/50 shadow-sm">
+            <span className="mt-3 font-bold text-brand-dark text-xs tracking-wider bg-brand/10 px-4 py-1.5 rounded-full border border-brand/20 shadow-sm">
               {maskedEmail}
             </span>
           )}
@@ -590,7 +590,7 @@ function AuthContent() {
                       {tab === id && (
                         <motion.span
                           layoutId="auth-tab-pill"
-                          className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg shadow-emerald-600/20"
+                          className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-brand to-brand-dark shadow-lg shadow-brand/20"
                           transition={{
                             type: "spring",
                             stiffness: 400,
@@ -615,7 +615,7 @@ function AuthContent() {
                         Adresse e-mail
                       </Label>
                       <div className="relative group">
-                        <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                        <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
                         <Input
                           id="email"
                           name="email"
@@ -627,7 +627,7 @@ function AuthContent() {
                           }}
                           required
                           placeholder="votre@email.com"
-                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
                             fieldErrors.email
                               ? "border-red-500 focus:ring-red-500/5"
                               : ""
@@ -653,13 +653,13 @@ function AuthContent() {
                         </Label>
                         <Link
                           href="/forgot-password"
-                          className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-colors"
+                          className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-brand transition-colors"
                         >
                           Mot de passe oublié ?
                         </Link>
                       </div>
                       <div className="relative group">
-                        <Lock className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                        <Lock className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
                         <Input
                           id="password"
                           name="password"
@@ -671,7 +671,7 @@ function AuthContent() {
                           }}
                           required
                           placeholder="••••••••"
-                          className={`pl-12 pr-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                          className={`pl-12 pr-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
                             fieldErrors.password
                               ? "border-red-500 focus:ring-red-500/5"
                               : ""
@@ -682,7 +682,7 @@ function AuthContent() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-4 top-4 text-slate-300 hover:text-emerald-600 transition-colors"
+                          className="absolute right-4 top-4 text-slate-300 hover:text-brand transition-colors"
                           aria-label={
                             showPassword
                               ? "Masquer le mot de passe"
@@ -706,7 +706,7 @@ function AuthContent() {
 
                     <Button
                       type="submit"
-                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
+                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
                       disabled={loading}
                     >
                       {loading ? (
@@ -733,7 +733,7 @@ function AuthContent() {
                         E-mail ou Code FSA
                       </Label>
                       <div className="relative group">
-                        <KeyRound className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                        <KeyRound className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
                         <Input
                           id="fsaCode"
                           name="fsaCode"
@@ -742,7 +742,7 @@ function AuthContent() {
                           onChange={handleFsaCodeChange}
                           required
                           placeholder="Ex: candidat@email.com ou code FSA"
-                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
                             fieldErrors.fsaCode
                               ? "border-red-500 focus:ring-red-500/5"
                               : ""
@@ -758,14 +758,14 @@ function AuthContent() {
                       )}
 
                       <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex items-start gap-3 mt-3">
-                        <GraduationCap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <GraduationCap className="w-5 h-5 text-brand shrink-0 mt-0.5" />
                         <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
                           Saisissez votre e-mail (si pré-enregistré par
                           l&apos;administration) ou le code FSA figurant sur
                           votre relevé ou attestation. Pour aller plus vite,
                           vous pouvez aussi saisir uniquement les 5 derniers
                           caractères du code FSA (ex:{" "}
-                          <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-emerald-700">
+                          <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-brand-dark">
                             f0f9a
                           </code>
                           ).
@@ -775,7 +775,7 @@ function AuthContent() {
 
                     <Button
                       type="submit"
-                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
+                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
                       disabled={loading}
                     >
                       {loading ? (
@@ -813,7 +813,7 @@ function AuthContent() {
                       Code de vérification (6 chiffres)
                     </Label>
                     <div className="relative group">
-                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
                       <Input
                         id="email-otp"
                         name="email-otp"
@@ -823,7 +823,7 @@ function AuthContent() {
                         onChange={handleOtpChange}
                         required
                         placeholder="0 0 0 0 0 0"
-                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
                           fieldErrors.otp
                             ? "border-red-500 focus:ring-red-500/5"
                             : ""
@@ -852,7 +852,7 @@ function AuthContent() {
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
+                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
                       disabled={loading || resending}
                     >
                       {loading ? (
@@ -873,12 +873,12 @@ function AuthContent() {
                       className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors focus:outline-none ${
                         resendCooldown > 0
                           ? "text-slate-300 cursor-not-allowed"
-                          : "text-slate-400 hover:text-emerald-600"
+                          : "text-slate-400 hover:text-brand"
                       }`}
                       disabled={loading || resending || resendCooldown > 0}
                     >
                       <RefreshCw
-                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-emerald-600" : ""}`}
+                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-brand" : ""}`}
                       />
                       {resending
                         ? "Renvoi en cours..."
@@ -909,7 +909,7 @@ function AuthContent() {
                       Code OTP (6 chiffres)
                     </Label>
                     <div className="relative group">
-                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
                       <Input
                         id="otp"
                         name="otp"
@@ -919,7 +919,7 @@ function AuthContent() {
                         onChange={handleOtpChange}
                         required
                         placeholder="0 0 0 0 0 0"
-                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-emerald-500/80 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all duration-300 shadow-inner ${
+                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
                           fieldErrors.otp
                             ? "border-red-500 focus:ring-red-500/5"
                             : ""
@@ -948,7 +948,7 @@ function AuthContent() {
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-xl shadow-emerald-600/10 hover:shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
+                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
                       disabled={loading || resending}
                     >
                       {loading ? (
@@ -969,12 +969,12 @@ function AuthContent() {
                       className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors focus:outline-none ${
                         resendCooldown > 0
                           ? "text-slate-300 cursor-not-allowed"
-                          : "text-slate-400 hover:text-emerald-600"
+                          : "text-slate-400 hover:text-brand"
                       }`}
                       disabled={loading || resending || resendCooldown > 0}
                     >
                       <RefreshCw
-                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-emerald-600" : ""}`}
+                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-brand" : ""}`}
                       />
                       {resending
                         ? "Renvoi en cours..."
@@ -993,14 +993,14 @@ function AuthContent() {
         <div className="mt-8 pt-6 border-t border-slate-100/80 flex flex-col items-center gap-3">
           <Link
             href="/inscription"
-            className="text-xs font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1.5"
+            className="text-xs font-bold uppercase tracking-widest text-brand hover:text-brand-dark transition-colors flex items-center gap-1.5"
           >
             <UserPlus className="w-3.5 h-3.5" />
             Pas de compte ? Créer un compte
           </Link>
           <Link
             href="/"
-            className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-colors flex items-center gap-1.5"
+            className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-brand transition-colors flex items-center gap-1.5"
           >
             <span>←</span> Retour au portail
           </Link>
@@ -1025,7 +1025,7 @@ function AuthContent() {
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
           </div>
-          <p className="text-emerald-900 font-black uppercase tracking-widest text-sm animate-pulse mt-8">
+          <p className="text-brand-dark font-black uppercase tracking-widest text-sm animate-pulse mt-8">
             Ouverture de votre Espace...
           </p>
         </div>
@@ -1118,7 +1118,7 @@ export default function AuthPage() {
       fallback={
         <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 relative">
           <div className="absolute inset-0 bg-grid-slate-200/50 bg-[size:30px_30px] opacity-40 pointer-events-none" />
-          <Loader2 className="animate-spin w-8 h-8 text-emerald-600 relative z-10" />
+          <Loader2 className="animate-spin w-8 h-8 text-brand relative z-10" />
         </div>
       }
     >

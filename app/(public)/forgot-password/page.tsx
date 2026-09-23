@@ -48,10 +48,10 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand/10 via-brand-accent/5 to-white p-4">
       <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md px-10 py-12 border border-gray-100 animate-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg transform hover:scale-105 transition-transform">
+          <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-dark rounded-2xl flex items-center justify-center mb-4 shadow-lg transform hover:scale-105 transition-transform">
             {sent ? (
               <CheckCircle className="w-10 h-10 text-white" />
             ) : (
@@ -77,13 +77,13 @@ export default function ForgotPasswordPage() {
 
         {sent ? (
           <div className="space-y-4 text-center">
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
-              <p className="text-sm text-emerald-700">
+            <div className="p-4 bg-brand/10 border border-brand/20 rounded-2xl">
+              <p className="text-sm text-brand-dark">
                 Un code de vérification à 6 chiffres a été envoyé à{" "}
-                <strong className="block mt-1 font-bold text-emerald-800">{email}</strong>
+                <strong className="block mt-1 font-bold text-brand-dark">{email}</strong>
               </p>
-              <p className="text-xs text-emerald-600/80 mt-3 flex items-center justify-center gap-1">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+              <p className="text-xs text-brand/80 mt-3 flex items-center justify-center gap-1">
+                <span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
                 Le code expire dans 10 minutes.
               </p>
             </div>
@@ -98,7 +98,7 @@ export default function ForgotPasswordPage() {
               Renvoyer à une autre adresse
             </Button>
             <Link href="/auth" className="block">
-              <Button variant="ghost" className="w-full text-slate-500 hover:text-emerald-600 transition-colors">
+              <Button variant="ghost" className="w-full text-slate-500 hover:text-brand transition-colors">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Retour à la connexion
               </Button>
@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="votre@email.com"
-                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-brand focus:ring-brand/20"
                   autoComplete="email"
                 />
               </div>
@@ -127,7 +127,7 @@ export default function ForgotPasswordPage() {
 
             <Button
               type="submit"
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md hover:shadow-lg transition-all rounded-xl"
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-md hover:shadow-lg transition-all rounded-xl"
               disabled={loading}
             >
               {loading ? (
@@ -143,7 +143,7 @@ export default function ForgotPasswordPage() {
         )}
 
         <div className="mt-8 pt-6 border-t border-gray-100">
-          <Link href="/auth" className="flex items-center justify-center text-sm text-gray-500 hover:text-emerald-600 font-medium transition-colors">
+          <Link href="/auth" className="flex items-center justify-center text-sm text-gray-500 hover:text-brand font-medium transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Retour à l&apos;espace candidat
           </Link>

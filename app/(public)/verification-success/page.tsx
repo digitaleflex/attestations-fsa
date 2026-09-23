@@ -10,7 +10,7 @@ export default function VerificationSuccessPage() {
     <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center p-6 pt-24 md:pt-36">
       {/* Decorative Blur Background */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-emerald-100/30 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-brand/10/30 rounded-full blur-[120px]" />
         <div className="absolute bottom-10 left-[-10%] w-[50vw] h-[50vw] bg-blue-100/20 rounded-full blur-[100px]" />
       </div>
 
@@ -22,7 +22,7 @@ export default function VerificationSuccessPage() {
       >
         <div className="bg-white/70 backdrop-blur-3xl border border-white p-8 md:p-16 rounded-[2.5rem] md:rounded-[3.5rem] shadow-[0_40px_80px_rgba(0,0,0,0.05)] text-center space-y-8">
           <div className="relative">
-            <div className="w-24 h-24 md:w-32 md:h-32 bg-emerald-100 rounded-[2.5rem] md:rounded-[3rem] flex items-center justify-center mx-auto text-emerald-600 mb-6">
+            <div className="w-24 h-24 md:w-32 md:h-32 bg-brand/10 rounded-[2.5rem] md:rounded-[3rem] flex items-center justify-center mx-auto text-brand mb-6">
               <CheckCircle2 className="w-12 h-12 md:w-16 md:h-16" />
             </div>
             <motion.div
@@ -30,14 +30,14 @@ export default function VerificationSuccessPage() {
               transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
               className="absolute top-0 right-1/4"
             >
-              <Sparkles className="w-6 h-6 text-emerald-400 opacity-50" />
+              <Sparkles className="w-6 h-6 text-brand/60 opacity-50" />
             </motion.div>
           </div>
 
           <div className="space-y-4">
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-[0.9] tracking-tight">
               Email <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-blue-600">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand to-brand-dark">
                 Confirmé.
               </span>
             </h1>
@@ -55,7 +55,7 @@ export default function VerificationSuccessPage() {
           </div>
 
           <Link href="/auth?mode=login">
-            <Button className="w-full h-16 md:h-20 rounded-2xl md:rounded-[2rem] bg-slate-900 hover:bg-emerald-600 text-white font-black uppercase tracking-[0.2em] text-[10px] md:text-sm shadow-2xl shadow-emerald-500/10 transition-all duration-500 group/btn mt-8">
+            <Button className="w-full h-16 md:h-20 rounded-2xl md:rounded-[2rem] bg-slate-900 hover:bg-brand text-white font-black uppercase tracking-[0.2em] text-[10px] md:text-sm shadow-2xl shadow-brand/20 transition-all duration-500 group/btn mt-8">
               Me connecter
               <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-4 transition-transform group-hover/btn:translate-x-2 shrink-0" />
             </Button>

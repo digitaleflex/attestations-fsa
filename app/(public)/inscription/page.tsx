@@ -120,7 +120,7 @@ function fieldInputClass(hasError: boolean, extra = ""): string {
   return `h-14 rounded-2xl border bg-slate-50/50 text-base font-bold tracking-wide shadow-inner transition-all duration-300 focus:bg-white focus:ring-4 focus-visible:outline-none ${
     hasError
       ? "border-red-400 focus:border-red-500 focus:ring-red-500/5"
-      : "border-slate-100 focus:border-emerald-500/80 focus:ring-emerald-500/5"
+      : "border-slate-100 focus:border-brand/80 focus:ring-brand/5"
   } ${extra}`;
 }
 
@@ -147,7 +147,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
         <span
           className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black transition-colors duration-300 ${
             step >= 1
-              ? "bg-gradient-to-br from-emerald-600 to-blue-600 text-white shadow-md shadow-emerald-600/20"
+              ? "bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/20"
               : "bg-slate-100 text-slate-400"
           }`}
         >
@@ -164,7 +164,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
 
       <div className="relative h-px flex-1 overflow-hidden bg-slate-100">
         <motion.span
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-600 to-blue-600"
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-brand to-brand-dark"
           initial={false}
           animate={{ width: step >= 2 ? "100%" : "0%" }}
           transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -175,7 +175,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
         <span
           className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black transition-colors duration-300 ${
             step >= 2
-              ? "bg-gradient-to-br from-emerald-600 to-blue-600 text-white shadow-md shadow-emerald-600/20"
+              ? "bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/20"
               : "bg-slate-100 text-slate-400"
           }`}
         >
@@ -489,9 +489,9 @@ export default function InscriptionPage() {
         aria-hidden="true"
         className="fixed inset-0 pointer-events-none overflow-hidden"
       >
-        <div className="absolute -left-[8%] -top-[12%] h-[46vw] w-[46vw] min-h-[320px] min-w-[320px] rounded-full bg-emerald-400/20 blur-[120px]" />
+        <div className="absolute -left-[8%] -top-[12%] h-[46vw] w-[46vw] min-h-[320px] min-w-[320px] rounded-full bg-brand/20 blur-[120px]" />
         <div className="absolute -bottom-[14%] -right-[8%] h-[48vw] w-[48vw] min-h-[320px] min-w-[320px] rounded-full bg-blue-500/20 blur-[120px]" />
-        <div className="absolute left-1/2 top-1/2 h-[34vw] w-[34vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-300/10 blur-[100px]" />
+        <div className="absolute left-1/2 top-1/2 h-[34vw] w-[34vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-accent/10 blur-[100px]" />
       </div>
 
       {/* Trame discrète */}
@@ -503,7 +503,7 @@ export default function InscriptionPage() {
       <Card className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[2.5rem] border border-white bg-white/70 shadow-[0_32px_64px_rgba(0,0,0,0.06)] backdrop-blur-3xl transition-shadow duration-500 hover:shadow-[0_48px_80px_rgba(0,0,0,0.08)] sm:rounded-[3rem]">
         <div className="grid lg:grid-cols-[1.05fr_1fr]">
           {/* ----------------------- Panneau de marque ----------------------- */}
-          <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-500 to-blue-600 p-10 text-white lg:flex xl:p-12">
+          <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-brand via-brand-dark to-brand-dark p-10 text-white lg:flex xl:p-12">
             <div aria-hidden="true" className="pointer-events-none absolute inset-0">
               <div className="absolute -right-10 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
               <div className="absolute -left-16 bottom-0 h-64 w-64 rounded-full bg-blue-900/20 blur-3xl" />
@@ -562,7 +562,7 @@ export default function InscriptionPage() {
             <StepIndicator step={step} />
 
             <div className="mb-7 flex flex-col items-center text-center">
-              <div className="group relative mb-5 flex h-16 w-16 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-blue-600 shadow-xl shadow-emerald-200/50">
+              <div className="group relative mb-5 flex h-16 w-16 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-brand to-brand-dark shadow-xl shadow-brand/30">
                 <div className="absolute inset-0 translate-y-[-100%] bg-gradient-to-tr from-transparent via-white/15 to-transparent transition-transform duration-1000 group-hover:translate-y-[100%]" />
                 {step === 1 ? (
                   <UserPlus className="h-8 w-8 text-white" />
@@ -571,7 +571,7 @@ export default function InscriptionPage() {
                 )}
               </div>
 
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand">
                 Inscription
               </span>
               <h1 className="mt-2 text-2xl font-black leading-none tracking-tight text-slate-800 sm:text-3xl">
@@ -587,7 +587,7 @@ export default function InscriptionPage() {
                   <p className="max-w-sm text-sm font-medium leading-relaxed text-slate-400">
                     Un code à 6 chiffres a été envoyé à
                   </p>
-                  <span className="rounded-full border border-emerald-100/60 bg-emerald-50 px-4 py-1.5 text-xs font-bold tracking-wider text-emerald-700 shadow-sm">
+                  <span className="rounded-full border border-brand/20/60 bg-brand/10 px-4 py-1.5 text-xs font-bold tracking-wider text-brand-dark shadow-sm">
                     {email}
                   </span>
                   <p className="mt-1 flex max-w-xs items-start justify-center gap-2 text-[11px] font-medium leading-relaxed text-slate-500">
@@ -640,7 +640,7 @@ export default function InscriptionPage() {
                         Nom complet
                       </Label>
                       <div className="group relative">
-                        <User className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-emerald-500" />
+                        <User className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-brand" />
                         <Input
                           id="name"
                           name="name"
@@ -676,7 +676,7 @@ export default function InscriptionPage() {
                         Adresse e-mail
                       </Label>
                       <div className="group relative">
-                        <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-emerald-500" />
+                        <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-brand" />
                         <Input
                           id="email"
                           name="email"
@@ -712,7 +712,7 @@ export default function InscriptionPage() {
                         Mot de passe
                       </Label>
                       <div className="group relative">
-                        <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-emerald-500" />
+                        <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-brand" />
                         <Input
                           id="password"
                           name="password"
@@ -738,7 +738,7 @@ export default function InscriptionPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-4 top-4 text-slate-300 transition-colors hover:text-emerald-600"
+                          className="absolute right-4 top-4 text-slate-300 transition-colors hover:text-brand"
                           aria-label={
                             showPassword
                               ? "Masquer le mot de passe"
@@ -771,7 +771,7 @@ export default function InscriptionPage() {
                         Confirmer le mot de passe
                       </Label>
                       <div className="group relative">
-                        <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-emerald-500" />
+                        <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-brand" />
                         <Input
                           id="confirmPassword"
                           name="confirmPassword"
@@ -799,7 +799,7 @@ export default function InscriptionPage() {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword((v) => !v)}
-                          className="absolute right-4 top-4 text-slate-300 transition-colors hover:text-emerald-600"
+                          className="absolute right-4 top-4 text-slate-300 transition-colors hover:text-brand"
                           aria-label={
                             showConfirmPassword
                               ? "Masquer la confirmation du mot de passe"
@@ -824,7 +824,7 @@ export default function InscriptionPage() {
                       type="submit"
                       disabled={loading}
                       aria-busy={loading}
-                      className="group flex h-14 w-full items-center justify-center gap-2 rounded-2xl border-none bg-gradient-to-r from-emerald-600 to-blue-600 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-emerald-600/10 transition-all duration-300 hover:-translate-y-0.5 hover:from-emerald-700 hover:to-blue-700 hover:shadow-emerald-600/20 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60"
+                      className="group flex h-14 w-full items-center justify-center gap-2 rounded-2xl border-none bg-gradient-to-r from-brand to-brand-dark text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-brand/10 transition-all duration-300 hover:-translate-y-0.5 hover:from-brand-dark hover:to-brand-dark hover:shadow-brand/20 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60"
                     >
                       {loading ? (
                         <>
@@ -843,14 +843,14 @@ export default function InscriptionPage() {
                       En créant un compte, vous acceptez nos{" "}
                       <Link
                         href="/legal/cgu"
-                        className="font-bold text-slate-500 underline decoration-slate-200 underline-offset-2 transition-colors hover:text-emerald-600"
+                        className="font-bold text-slate-500 underline decoration-slate-200 underline-offset-2 transition-colors hover:text-brand"
                       >
                         conditions générales
                       </Link>{" "}
                       et notre{" "}
                       <Link
                         href="/legal/confidentialite"
-                        className="font-bold text-slate-500 underline decoration-slate-200 underline-offset-2 transition-colors hover:text-emerald-600"
+                        className="font-bold text-slate-500 underline decoration-slate-200 underline-offset-2 transition-colors hover:text-brand"
                       >
                         politique de confidentialité
                       </Link>
@@ -878,7 +878,7 @@ export default function InscriptionPage() {
                         Code de vérification (6 chiffres)
                       </Label>
                       <div className="group relative">
-                        <ShieldCheck className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-emerald-500" />
+                        <ShieldCheck className="absolute left-4 top-4 h-5 w-5 text-slate-300 transition-colors duration-300 group-focus-within:text-brand" />
                         <Input
                           id="otp"
                           name="otp"
@@ -923,7 +923,7 @@ export default function InscriptionPage() {
                         type="submit"
                         disabled={loading || resending}
                         aria-busy={loading}
-                        className="flex h-14 flex-[2] items-center justify-center gap-2 rounded-2xl border-none bg-gradient-to-r from-emerald-600 to-blue-600 text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-emerald-600/10 transition-all duration-300 hover:-translate-y-0.5 hover:from-emerald-700 hover:to-blue-700 hover:shadow-emerald-600/20 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60"
+                        className="flex h-14 flex-[2] items-center justify-center gap-2 rounded-2xl border-none bg-gradient-to-r from-brand to-brand-dark text-sm font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-brand/10 transition-all duration-300 hover:-translate-y-0.5 hover:from-brand-dark hover:to-brand-dark hover:shadow-brand/20 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60"
                       >
                         {loading ? (
                           <>
@@ -947,12 +947,12 @@ export default function InscriptionPage() {
                         className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors focus:outline-none ${
                           resendCooldown > 0
                             ? "cursor-not-allowed text-slate-300"
-                            : "text-slate-400 hover:text-emerald-600"
+                            : "text-slate-400 hover:text-brand"
                         }`}
                       >
                         <RefreshCw
                           className={`h-3.5 w-3.5 ${
-                            resending ? "animate-spin text-emerald-600" : ""
+                            resending ? "animate-spin text-brand" : ""
                           }`}
                         />
                         {resending
@@ -971,14 +971,14 @@ export default function InscriptionPage() {
             <div className="mt-8 flex flex-col items-center gap-3 border-t border-slate-100/80 pt-6">
               <Link
                 href="/auth"
-                className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-600 transition-colors hover:text-emerald-700"
+                className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-brand transition-colors hover:text-brand-dark"
               >
                 <LogIn className="h-3.5 w-3.5" />
                 Déjà un compte ? Se connecter
               </Link>
               <Link
                 href="/"
-                className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 transition-colors hover:text-emerald-600"
+                className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 transition-colors hover:text-brand"
               >
                 ← Retour au portail
               </Link>
@@ -1000,7 +1000,7 @@ export default function InscriptionPage() {
           >
             <div className="relative flex h-28 w-28 items-center justify-center">
               <motion.span
-                className="absolute inset-0 rounded-full border-2 border-transparent border-b-emerald-500 border-t-emerald-500"
+                className="absolute inset-0 rounded-full border-2 border-transparent border-b-brand border-t-brand"
                 animate={{ rotate: 360 }}
                 transition={{
                   repeat: Infinity,
@@ -1009,7 +1009,7 @@ export default function InscriptionPage() {
                 }}
               />
               <motion.span
-                className="absolute inset-3 rounded-full border-2 border-transparent border-l-blue-600 border-r-blue-600"
+                className="absolute inset-3 rounded-full border-2 border-transparent border-l-brand-dark border-r-brand-dark"
                 animate={{ rotate: -360 }}
                 transition={{
                   repeat: Infinity,
@@ -1017,11 +1017,11 @@ export default function InscriptionPage() {
                   ease: "linear",
                 }}
               />
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-blue-600 shadow-lg shadow-emerald-600/30">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-brand-dark shadow-lg shadow-brand/30">
                 <GraduationCap className="h-7 w-7 text-white" />
               </div>
             </div>
-            <p className="mt-8 animate-pulse text-sm font-black uppercase tracking-[0.2em] text-emerald-900">
+            <p className="mt-8 animate-pulse text-sm font-black uppercase tracking-[0.2em] text-brand-dark">
               Ouverture de votre espace...
             </p>
           </motion.div>

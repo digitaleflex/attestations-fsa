@@ -114,17 +114,17 @@ function ResetPasswordForm() {
     if (password.length === 0) return { label: "À saisir", color: "bg-gray-200" };
     if (password.length < 8) return { label: "Trop court", color: "bg-red-500" };
     if (password.length < 12) return { label: "Moyen", color: "bg-amber-500" };
-    return { label: "Fort", color: "bg-emerald-500" };
+    return { label: "Fort", color: "bg-brand/100" };
   };
 
   const strength = getPasswordStrength();
   const passwordsMatch = password === confirmPassword && password.length >= 8;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand/10 via-brand-accent/5 to-white p-4">
       <Card className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md px-10 py-12 border border-gray-100 animate-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg transform hover:scale-105 transition-transform">
+          <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-dark rounded-2xl flex items-center justify-center mb-4 shadow-lg transform hover:scale-105 transition-transform">
             {success ? (
               <CheckCircle className="w-10 h-10 text-white" />
             ) : step === "otp" ? (
@@ -158,13 +158,13 @@ function ResetPasswordForm() {
 
         {success ? (
           <div className="space-y-4 text-center">
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
-              <p className="text-sm text-emerald-700">
+            <div className="p-4 bg-brand/10 border border-brand/20 rounded-2xl">
+              <p className="text-sm text-brand-dark">
                 Votre mot de passe a été modifié avec succès.
               </p>
             </div>
             <Link href="/auth" className="block">
-              <Button className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700">Se connecter</Button>
+              <Button className="w-full h-11 rounded-xl bg-brand hover:bg-brand-dark">Se connecter</Button>
             </Link>
           </div>
         ) : step === "email" ? (
@@ -182,7 +182,7 @@ function ResetPasswordForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="votre@email.com"
-                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-brand focus:ring-brand/20"
                   autoComplete="email"
                 />
               </div>
@@ -190,7 +190,7 @@ function ResetPasswordForm() {
 
             <Button
               type="submit"
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md hover:shadow-lg transition-all rounded-xl"
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-md hover:shadow-lg transition-all rounded-xl"
               disabled={loading}
             >
               {loading ? (
@@ -220,7 +220,7 @@ function ResetPasswordForm() {
                   required
                   placeholder="123456"
                   maxLength={6}
-                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 text-center text-2xl font-mono tracking-widest"
+                  className="pl-12 h-12 rounded-xl border-gray-200 focus:border-brand focus:ring-brand/20 text-center text-2xl font-mono tracking-widest"
                   autoComplete="one-time-code"
                 />
               </div>
@@ -243,7 +243,7 @@ function ResetPasswordForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="Minimum 8 caractères"
-                  className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-brand focus:ring-brand/20"
                   autoComplete="new-password"
                 />
                 <button
@@ -293,7 +293,7 @@ function ResetPasswordForm() {
                   placeholder="Retapez votre mot de passe"
                   className={`pl-12 pr-12 h-12 rounded-xl border-gray-200 transition-all ${
                     confirmPassword && passwordsMatch
-                      ? "border-emerald-500 ring-2 ring-emerald-500/10"
+                      ? "border-brand ring-2 ring-brand/10"
                       : confirmPassword
                       ? "border-red-300"
                       : ""
@@ -309,7 +309,7 @@ function ResetPasswordForm() {
                 </button>
               </div>
               {confirmPassword && (
-                <p className={`text-[11px] mt-1.5 ml-1 font-medium ${passwordsMatch ? "text-emerald-600" : "text-red-500"}`}>
+                <p className={`text-[11px] mt-1.5 ml-1 font-medium ${passwordsMatch ? "text-brand" : "text-red-500"}`}>
                   {passwordsMatch ? "✓ Les mots de passe correspondent" : "✗ Les mots de passe ne correspondent pas"}
                 </p>
               )}
@@ -317,7 +317,7 @@ function ResetPasswordForm() {
 
             <Button
               type="submit"
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-md hover:shadow-lg transition-all rounded-xl disabled:opacity-50"
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-md hover:shadow-lg transition-all rounded-xl disabled:opacity-50"
               disabled={loading || !passwordsMatch}
             >
               {loading ? (
@@ -346,13 +346,13 @@ function ResetPasswordForm() {
           <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-3">
             <Link
               href="/forgot-password"
-              className="text-xs text-gray-400 hover:text-emerald-600 transition-colors"
+              className="text-xs text-gray-400 hover:text-brand transition-colors"
             >
               Code expiré ? Recommencer
             </Link>
             <Link
               href="/auth"
-              className="flex items-center justify-center text-sm text-gray-600 hover:text-emerald-600 font-medium transition-all"
+              className="flex items-center justify-center text-sm text-gray-600 hover:text-brand font-medium transition-all"
             >
               ← Retour à l&apos;espace candidat
             </Link>
@@ -366,8 +366,8 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
-        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand/10 via-brand-accent/5 to-white p-4">
+        <Loader2 className="w-10 h-10 text-brand animate-spin" />
       </div>
     }>
       <ResetPasswordForm />
