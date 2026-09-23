@@ -1325,18 +1325,18 @@ export default function AdminUsersPage() {
                    onClick={() => handleResetPassword(viewingUser.id)}
                    className="bg-white/5 border-white/10 text-white hover:bg-white/10 h-12 rounded-2xl font-bold text-xs gap-2"
                  >
-                   <KeyRound className="w-4 h-4 text-blue-400" /> Forcer Reset Password
+                   <KeyRound className="w-4 h-4 text-brand-light" /> Forcer Reset Password
                  </Button>
                  <Button
                    variant="outline"
                    onClick={() => setViewTab(viewTab === 'INFO' ? 'AUDIT' : 'INFO')}
                    className={`h-12 rounded-2xl font-bold text-xs gap-2 transition-all ${
                      viewTab === 'AUDIT'
-                       ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/20'
+                       ? 'bg-brand border-brand-light text-white shadow-lg shadow-brand/20'
                        : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                    }`}
                  >
-                   <Activity className={`w-4 h-4 ${viewTab === 'AUDIT' ? 'text-white' : 'text-amber-400'}`} />
+                   <Activity className={`w-4 h-4 ${viewTab === 'AUDIT' ? 'text-white' : 'text-slate-400'}`} />
                    {viewTab === 'AUDIT' ? "Voir Profil Complet" : "Historique d'Audit"}
                  </Button>
               </div>
@@ -1396,9 +1396,9 @@ export default function AdminUsersPage() {
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email vérifié</p>
                       <p className="text-base font-bold">
                         {viewingUser.emailVerified ? (
-                          <span className="text-emerald-400">✓ Oui</span>
+                          <span className="text-emerald-400 font-bold">Vérifié</span>
                         ) : (
-                          <span className="text-amber-400 italic">⏳ Non</span>
+                          <span className="text-amber-400 font-bold italic">Non vérifié</span>
                         )}
                       </p>
                     </div>

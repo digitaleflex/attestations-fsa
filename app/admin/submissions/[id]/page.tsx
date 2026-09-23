@@ -285,8 +285,8 @@ export default function AdminSubmissionDetailPage() {
         {/* Candidat */}
         <Card className="p-6 border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center">
-              <User className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-2xl bg-brand/10 flex items-center justify-center">
+              <User className="w-5 h-5 text-brand" />
             </div>
             <h2 className="font-black text-slate-900">Candidat</h2>
           </div>
@@ -414,7 +414,7 @@ export default function AdminSubmissionDetailPage() {
             <Button
               type="submit"
               disabled={saving}
-              className="h-11 rounded-xl font-bold bg-blue-600 hover:bg-blue-700"
+              className="h-11 rounded-xl font-bold bg-brand hover:bg-brand-dark"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -519,7 +519,7 @@ export default function AdminSubmissionDetailPage() {
           onChange={(e) => setObservations(e.target.value)}
           placeholder="Ajoutez vos observations, commentaires ou retour sur la copie..."
           rows={6}
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-y"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-y"
         />
       </Card>
 
