@@ -59,6 +59,7 @@ import {
   type UsersVerifiedFilter,
 } from "@/components/admin/users/UsersFilterBar";
 import { UsersTableSkeleton } from "@/components/admin/users/UsersTableSkeleton";
+import { UsersBulkBar, type BulkKind } from "@/components/admin/users/UsersBulkBar";
 import { TableCaption } from "@/components/ui/table";
 // ... (icons)
 import {
@@ -146,6 +147,35 @@ const formatDateTime = (value: Date | string | null | undefined): string => {
   if (Number.isNaN(d.getTime())) return "-";
   return d.toLocaleString("fr-FR");
 };
+
+function RowCheckbox({
+  checked,
+  indeterminate,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = Boolean(indeterminate);
+  }, [indeterminate]);
+  return (
+    <span className="flex h-11 w-11 items-center justify-center">
+      <input
+        ref={ref}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        aria-label={label}
+        className="h-5 w-5 shrink-0 cursor-pointer rounded accent-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      />
+    </span>
+  );
+}
 
 function SortButton({
   field,
@@ -329,6 +359,8 @@ export default function AdminUsersPage() {
   const fetchUsers = useCallback(async () => {
     const f = filtersRef.current;
     setLoading(true);
+    // La sélection appartient au jeu de résultats courant
+    setSelectedIds([]);
     try {
       const params = new URLSearchParams();
       params.set("page", String(f.page));
@@ -499,6 +531,7 @@ export default function AdminUsersPage() {
     } finally {
       setIsDeleting(false);
       setDeleteId(null);
+      setDeleteConfirm("");
     }
   };
 
@@ -646,6 +679,109 @@ export default function AdminUsersPage() {
   const handleDeleteRequest = (userId: string) => {
     setDeleteConfirm("");
     setDeleteId(userId);
+  };
+
+  // --- Sélection + actions groupées ---
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState<BulkKind | null>(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
+  const [bulkConfirm, setBulkConfirm] = useState("");
+
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelectedIds((prev) =>
+      checked ? [...prev.filter((x) => x !== id), id] : prev.filter((x) => x !== id),
+    );
+  };
+
+  const toggleAllVisible = (checked: boolean) => {
+    setSelectedIds(checked ? displayUsers.map((u) => u.id) : []);
+  };
+
+  const visibleIds = displayUsers.map((u) => u.id);
+  const selectedVisible = visibleIds.filter((id) => selectedIds.includes(id));
+  const allVisibleSelected =
+    visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
+  const someVisibleSelected =
+    selectedVisible.length > 0 && !allVisibleSelected;
+
+  const bulkUsers = users.filter((u) => (bulkDeleteIds ?? []).includes(u.id));
+  const bulkHasAdmin = bulkUsers.some((u) => u.role === "admin");
+
+  async function patchStatusBulk(ids: string[], status: "ACTIVE" | "BLOCKED") {
+    const verb = status === "ACTIVE" ? "réactivé" : "suspendu";
+    setBulkBusy(status === "ACTIVE" ? "reactivate" : "suspend");
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          fetch(`/api/users/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status }),
+          }).then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          }),
+        ),
+      );
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      const fail = ids.length - ok;
+      if (fail === 0) {
+        toast.success(`${ok} utilisateur${ok > 1 ? "s" : ""} ${verb}`);
+      } else {
+        console.error("[admin/users] bulk statut partiel:", results);
+        toast.error(`${ok} traité(s), ${fail} échec(s).`);
+      }
+      setSelectedIds([]);
+      fetchUsers();
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  const handleBulkAction = (kind: BulkKind) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (kind === "delete") {
+      setBulkConfirm("");
+      setBulkDeleteIds(ids);
+      return;
+    }
+    patchStatusBulk(ids, kind === "reactivate" ? "ACTIVE" : "BLOCKED");
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = bulkDeleteIds ?? [];
+    if (ids.length === 0) return;
+    setBulkBusy("delete");
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          fetch(`/api/users/${id}`, { method: "DELETE" }).then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          }),
+        ),
+      );
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      const fail = ids.length - ok;
+      if (fail === 0) {
+        toast.success(`${ok} utilisateur${ok > 1 ? "s" : ""} supprimé${ok > 1 ? "s" : ""}`);
+      } else {
+        console.error("[admin/users] bulk suppression partielle:", results);
+        toast.error(`${ok} supprimé(s), ${fail} échec(s).`);
+      }
+      setSelectedIds([]);
+      setBulkDeleteIds(null);
+      setBulkConfirm("");
+      fetchUsers();
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteId(null);
+    setBulkDeleteIds(null);
+    setDeleteConfirm("");
+    setBulkConfirm("");
   };
   const visibleExams = exams.filter(
     (e) => e.status === "SCHEDULED" || e.status === "PUBLISHED",
@@ -831,6 +967,14 @@ export default function AdminUsersPage() {
             </TableCaption>
             <TableHeader>
               <TableRow>
+                <TableHead scope="col" className="w-14">
+                  <RowCheckbox
+                    checked={allVisibleSelected}
+                    indeterminate={someVisibleSelected}
+                    onChange={toggleAllVisible}
+                    label="Tout sélectionner"
+                  />
+                </TableHead>
                 <TableHead scope="col" aria-sort={filters.sort === "name" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
                   <SortButton
                     field="name"
@@ -876,13 +1020,13 @@ export default function AdminUsersPage() {
             <TableBody>
               {loading && users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="p-0">
+                  <TableCell colSpan={9} className="p-0">
                     <UsersTableSkeleton />
                   </TableCell>
                 </TableRow>
               ) : loadError && users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="p-0">
+                  <TableCell colSpan={9} className="p-0">
                     <ErrorState
                       title="Impossible de charger les apprenants"
                       description="Une erreur est survenue lors du chargement des données."
@@ -892,7 +1036,7 @@ export default function AdminUsersPage() {
                 </TableRow>
               ) : displayUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="p-0">
+                  <TableCell colSpan={9} className="p-0">
                     <EmptyState
                       title={hasActiveFilters ? "Aucun apprenant trouvé" : "Aucun apprenant"}
                       description={
@@ -915,7 +1059,14 @@ export default function AdminUsersPage() {
                 </TableRow>
               ) : (
                 displayUsers.map((u) => (
-                  <TableRow key={u.id} className="hover:bg-slate-50/60">
+                  <TableRow key={u.id} className="hover:bg-slate-50/60" data-selected={selectedIds.includes(u.id) || undefined}>
+                    <TableCell>
+                      <RowCheckbox
+                        checked={selectedIds.includes(u.id)}
+                        onChange={(checked) => toggleOne(u.id, checked)}
+                        label={`Sélectionner ${u.name || u.email || "cet utilisateur"}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <span className="flex items-center gap-2.5">
                         <span
@@ -1041,7 +1192,12 @@ export default function AdminUsersPage() {
             {displayUsers.map((u) => (
               <Card key={u.id} className="p-4 bg-white shadow-sm border-slate-100 space-y-4">
                 <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <RowCheckbox
+                      checked={selectedIds.includes(u.id)}
+                      onChange={(checked) => toggleOne(u.id, checked)}
+                      label={`Sélectionner ${u.name || u.email || "cet utilisateur"}`}
+                    />
                     <span
                       aria-hidden="true"
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-black text-brand-dark"
@@ -1406,43 +1562,56 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) { setDeleteId(null); setDeleteConfirm(""); } }}>
+      <AlertDialog open={!!deleteId || !!bulkDeleteIds} onOpenChange={(open) => { if (!open) closeDeleteDialog(); }}>
         <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
               <Trash2 className="w-6 h-6" aria-hidden="true" />
-              Supprimer cet utilisateur ?
+              {bulkDeleteIds ? `Supprimer ${bulkDeleteIds.length} utilisateur${bulkDeleteIds.length > 1 ? "s" : ""} ?` : "Supprimer cet utilisateur ?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-              Cette action supprimera définitivement le compte
-              {deletingUser ? <> de <strong>{deletingUser.name || deletingUser.email}</strong></> : " de l'utilisateur"}{" "}
-              ainsi que les données associées.
-              <span className="block mt-2 font-bold text-rose-600 underline">Ses données d&apos;examen et son historique seront perdus.</span>
-              {deletingUser?.role === "admin" && (
+              Cette action supprimera définitivement {bulkDeleteIds ? <>les {bulkDeleteIds.length} comptes sélectionnés</> : <>le compte{deletingUser ? <> de <strong>{deletingUser.name || deletingUser.email}</strong></> : " de l'utilisateur"}</>} ainsi que les données associées.
+              <span className="block mt-2 font-bold text-rose-600 underline">Les données d&apos;examen et l&apos;historique seront perdus.</span>
+              {(deletingUser?.role === "admin" || bulkHasAdmin) && (
                 <span className="mt-3 block rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm font-bold text-amber-800">
-                  Attention : ce compte possède le rôle administrateur. Pour confirmer,
-                  saisissez son adresse email ci-dessous.
+                  Attention : la sélection contient un compte administrateur. Pour confirmer,
+                  saisissez {bulkDeleteIds ? "« SUPPRIMER »" : "son adresse email"} ci-dessous.
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {deletingUser?.role === "admin" && (
+          {(deletingUser?.role === "admin" || bulkHasAdmin) && (
             <div className="mt-2">
-              <Label htmlFor="delete-confirm-email">Confirmation — adresse email du compte</Label>
-              <Input
-                id="delete-confirm-email"
-                type="text"
-                autoComplete="off"
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder={deletingUser.email || ""}
-                className="mt-1"
-              />
+              <Label htmlFor={bulkDeleteIds ? "bulk-delete-confirm" : "delete-confirm-email"}>
+                Confirmation{bulkDeleteIds ? " — saisissez SUPPRIMER" : " — adresse email du compte"}
+              </Label>
+              {bulkDeleteIds ? (
+                <Input
+                  id="bulk-delete-confirm"
+                  type="text"
+                  autoComplete="off"
+                  value={bulkConfirm}
+                  onChange={(e) => setBulkConfirm(e.target.value)}
+                  placeholder="SUPPRIMER"
+                  className="mt-1"
+                />
+              ) : (
+                <Input
+                  id="delete-confirm-email"
+                  type="text"
+                  autoComplete="off"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder={deletingUser?.email || ""}
+                  className="mt-1"
+                />
+              )}
             </div>
           )}
           <AlertDialogFooter className="mt-8 gap-3">
             <AlertDialogCancel
-              disabled={isDeleting}
+              disabled={isDeleting || bulkBusy === "delete"}
+              onClick={closeDeleteDialog}
               className="border-slate-200 text-slate-600 hover:bg-slate-50 min-h-[44px]"
             >
               Annuler
@@ -1450,12 +1619,19 @@ export default function AdminUsersPage() {
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                handleDelete();
+                if (bulkDeleteIds) handleBulkDelete();
+                else handleDelete();
               }}
               className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 min-h-[44px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
-              disabled={isDeleting || (deletingUser?.role === "admin" && deleteConfirm.trim().toLowerCase() !== (deletingUser.email || "").toLowerCase())}
+              disabled={
+                isDeleting ||
+                bulkBusy === "delete" ||
+                (bulkDeleteIds
+                  ? bulkHasAdmin && bulkConfirm.trim() !== "SUPPRIMER"
+                  : deletingUser?.role === "admin" && deleteConfirm.trim().toLowerCase() !== (deletingUser.email || "").toLowerCase())
+              }
             >
-              {isDeleting ? (
+              {(isDeleting || bulkBusy === "delete") ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Suppression en cours...
@@ -1467,6 +1643,13 @@ export default function AdminUsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UsersBulkBar
+        count={selectedIds.length}
+        busy={bulkBusy}
+        onAction={handleBulkAction}
+        onClear={() => setSelectedIds([])}
+      />
     </div>
   );
 }

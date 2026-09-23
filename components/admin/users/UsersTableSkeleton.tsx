@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 
-const COLUMNS = 8;
+const COLUMNS = 9;
 
 /**
  * Skeleton du tableau Apprenants — préserve la structure
@@ -21,6 +21,7 @@ export function UsersTableSkeleton({ rows = 8 }: { rows?: number }) {
             key={r}
             className="flex items-center gap-4 border-b border-slate-50 px-4 py-4"
           >
+            <Skeleton className="h-5 w-5 shrink-0 rounded" />
             <Skeleton className="h-4 w-32" />
             <Skeleton className="h-4 w-48" />
             <Skeleton className="h-6 w-20 rounded-full" />
