@@ -166,7 +166,7 @@ export default function InternshipApplicationPage() {
       <div className="w-full max-w-2xl mx-auto py-20 px-6 animate-in fade-in zoom-in duration-700">
         <Card className="p-12 text-center space-y-8 border-none shadow-2xl bg-white rounded-3xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
-          <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-sm">
+          <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
              <CheckCircle2 className="w-12 h-12" />
           </div>
           <div className="space-y-4">
@@ -193,14 +193,14 @@ export default function InternshipApplicationPage() {
       {/* Colonne d'informations */}
       <div className="md:w-1/3 space-y-12">
         <div className="space-y-4">
-          <div className="w-16 h-1 bg-emerald-600 rounded-full" />
+          <div className="w-16 h-1 bg-brand rounded-full" />
           <h1 className="text-5xl font-black text-slate-900 leading-none">Postulez pour un Stage</h1>
           <p className="text-xl text-slate-500 leading-relaxed italic">Rejoignez une équipe dynamique et passionnée à la Ferme Agro-Piscicole Cité St André.</p>
         </div>
 
         <div className="space-y-8">
           <div className="flex gap-4 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-             <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-500">
+             <div className="w-12 h-12 bg-brand/10 text-brand rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-brand-dark group-hover:text-white transition-colors duration-500">
                 <MapPin className="w-6 h-6" />
              </div>
              <div>
@@ -209,7 +209,7 @@ export default function InternshipApplicationPage() {
              </div>
           </div>
           <div className="flex gap-4 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-             <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-500">
+             <div className="w-12 h-12 group-hover:bg-brand-dark text-brand-dark rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-brand-dark group-hover:text-white transition-colors duration-500">
                 <GraduationCap className="w-6 h-6" />
              </div>
              <div>
@@ -226,9 +226,9 @@ export default function InternshipApplicationPage() {
           
           {/* VRAI Indicateur de progression par étapes */}
           <div className="absolute top-10 right-10 flex gap-2">
-             <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= 1 ? 'w-8 bg-emerald-500' : 'w-4 bg-slate-100'}`} />
-             <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= 2 ? 'w-8 bg-emerald-500' : 'w-4 bg-slate-100'}`} />
-             <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= 3 ? 'w-8 bg-emerald-500' : 'w-4 bg-slate-100'}`} />
+             <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= 1 ? 'w-8 bg-brand' : 'w-4 bg-slate-100'}`} />
+             <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= 2 ? 'w-8 bg-brand' : 'w-4 bg-slate-100'}`} />
+             <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= 3 ? 'w-8 bg-brand' : 'w-4 bg-slate-100'}`} />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8 mt-6">
@@ -245,7 +245,7 @@ export default function InternshipApplicationPage() {
                   className="space-y-6"
                 >
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase font-black tracking-widest text-emerald-600">Étape 1 sur 3</span>
+                    <span className="text-[10px] uppercase font-black tracking-widest text-brand">Étape 1 sur 3</span>
                     <h2 className="text-2xl font-black text-slate-800">Vos informations personnelles</h2>
                   </div>
 
@@ -259,7 +259,7 @@ export default function InternshipApplicationPage() {
                           value={formData.fullName}
                           onChange={(e) => setFormData({...formData, fullName: e.target.value})}
                           required
-                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
+                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
                         />
                         <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><FileText className="w-5 h-5" /></div>
                       </div>
@@ -276,7 +276,7 @@ export default function InternshipApplicationPage() {
                             value={formData.email}
                             onChange={(e) => setFormData({...formData, email: e.target.value})}
                             required
-                            className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
+                            className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
                           />
                           <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><Mail className="w-5 h-5" /></div>
                         </div>
@@ -291,7 +291,7 @@ export default function InternshipApplicationPage() {
                             value={formData.phone}
                             onChange={(e) => setFormData({...formData, phone: e.target.value})}
                             required
-                            className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
+                            className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
                           />
                           <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><Phone className="w-5 h-5" /></div>
                         </div>
@@ -323,7 +323,7 @@ export default function InternshipApplicationPage() {
                   className="space-y-6"
                 >
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase font-black tracking-widest text-emerald-600">Étape 2 sur 3</span>
+                    <span className="text-[10px] uppercase font-black tracking-widest text-brand">Étape 2 sur 3</span>
                     <h2 className="text-2xl font-black text-slate-800">Votre profil académique</h2>
                   </div>
 
@@ -336,7 +336,7 @@ export default function InternshipApplicationPage() {
                           value={formData.position}
                           onChange={(e) => setFormData({...formData, position: e.target.value})}
                           required
-                          className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner outline-none appearance-none"
+                          className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner outline-none appearance-none"
                         >
                           <option value="">Sélectionnez le domaine...</option>
                           <option value="Pisciculture">Pisciculture / Aquaculture</option>
@@ -356,7 +356,7 @@ export default function InternshipApplicationPage() {
                           placeholder="Ex: UAC"
                           value={formData.university}
                           onChange={(e) => setFormData({...formData, university: e.target.value})}
-                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
+                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
                         />
                       </div>
                       <div className="space-y-3">
@@ -366,7 +366,7 @@ export default function InternshipApplicationPage() {
                           placeholder="Ex: Licence 3"
                           value={formData.level}
                           onChange={(e) => setFormData({...formData, level: e.target.value})}
-                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner"
+                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
                         />
                       </div>
                     </div>
@@ -404,7 +404,7 @@ export default function InternshipApplicationPage() {
                   className="space-y-6"
                 >
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase font-black tracking-widest text-emerald-600">Étape 3 sur 3</span>
+                    <span className="text-[10px] uppercase font-black tracking-widest text-brand">Étape 3 sur 3</span>
                     <h2 className="text-2xl font-black text-slate-800">Votre candidature (CV & Motivations)</h2>
                   </div>
 
@@ -419,12 +419,12 @@ export default function InternshipApplicationPage() {
                         onDragLeave={handleDrag}
                         onDrop={handleDrop}
                         className={`w-full border-2 border-dashed rounded-[2rem] p-8 text-center flex flex-col items-center justify-center gap-4 transition-all relative ${
-                          dragActive ? "border-emerald-500 bg-emerald-50/25" : "border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300"
+                          dragActive ? "border-brand bg-brand/10" : "border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300"
                         }`}
                       >
                         {formData.cvFile ? (
                           <div className="space-y-3">
-                            <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto shadow-sm">
+                            <div className="w-14 h-14 rounded-2xl bg-brand/10 text-brand flex items-center justify-center mx-auto shadow-sm">
                               <FileText className="w-7 h-7" />
                             </div>
                             <div>
@@ -482,7 +482,7 @@ export default function InternshipApplicationPage() {
                         value={formData.message}
                         onChange={(e) => setFormData({...formData, message: e.target.value})}
                         required
-                        className="min-h-[120px] p-6 bg-slate-50 border-none rounded-3xl focus:ring-2 focus:ring-emerald-500/20 text-base font-medium shadow-inner outline-none resize-none"
+                        className="min-h-[120px] p-6 bg-slate-50 border-none rounded-3xl focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner outline-none resize-none"
                       />
                     </div>
                   </div>
@@ -499,7 +499,7 @@ export default function InternshipApplicationPage() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="h-14 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 group flex items-center"
+                      className="h-14 px-8 bg-brand hover:bg-brand-dark text-white rounded-2xl font-black text-sm gap-2 shadow-lg shadow-brand/20 transition-all hover:scale-105 active:scale-95 group flex items-center"
                     >
                       {loading ? <Loader2 className="animate-spin w-5 h-5" /> : (
                         <>

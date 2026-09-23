@@ -76,10 +76,10 @@ function ContactContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] selection:bg-emerald-100 selection:text-emerald-900 pb-24 overflow-x-hidden pt-24 md:pt-36">
+    <div className="min-h-screen bg-[#fafbfc] selection:bg-brand selection:text-white pb-24 overflow-x-hidden pt-24 md:pt-36">
       {/* Decorative Blur Background */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-emerald-100/30 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-brand/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-10 left-[-10%] w-[50vw] h-[50vw] bg-blue-100/20 rounded-full blur-[100px]" />
       </div>
 
@@ -94,13 +94,13 @@ function ContactContent() {
             className="space-y-10 md:space-y-12"
           >
             <div className="space-y-6">
-                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-100 shadow-xl shadow-slate-200/50 text-emerald-600 self-start">
-                    <Sparkles className="w-4 h-4 fill-emerald-500" />
+                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-100 shadow-xl shadow-slate-200/50 text-brand self-start">
+                    <Sparkles className="w-4 h-4 fill-brand" />
                     <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.25em]">Parlons de votre futur</span>
                 </div>
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 leading-[0.9] tracking-tight">
                     Prendre <br />
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-blue-600">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand to-brand-dark">
                         RDV.
                     </span>
                 </h1>
@@ -113,7 +113,7 @@ function ContactContent() {
                 <h3 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Nos coordonnées</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 md:gap-6">
                     <div className="flex items-center lg:items-start gap-4 md:gap-6 group">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white border border-slate-100 shadow-lg flex items-center justify-center text-emerald-500 shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white border border-slate-100 shadow-lg flex items-center justify-center text-brand shrink-0 group-hover:bg-brand group-hover:text-white transition-all duration-300">
                              <Phone className="w-4 h-4 md:w-5 md:h-5" />
                         </div>
                         <div>
@@ -165,7 +165,7 @@ function ContactContent() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="relative lg:mt-0"
           >
-             <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 blur-3xl opacity-50 rounded-[4rem]" />
+             <div className="absolute -inset-4 bg-gradient-to-r from-brand/10 to-brand-accent/10 blur-3xl opacity-50 rounded-[4rem]" />
              
              <div className="relative bg-white/70 backdrop-blur-3xl border border-white p-6 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-[0_40px_80px_rgba(0,0,0,0.05)]">
                 {submitted ? (
@@ -174,7 +174,7 @@ function ContactContent() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="py-16 md:py-20 text-center space-y-6"
                    >
-                     <div className="w-20 h-20 md:w-24 md:h-24 bg-emerald-100 rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center mx-auto text-emerald-600 mb-6 md:mb-8">
+                     <div className="w-20 h-20 md:w-24 md:h-24 bg-brand/10 rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center mx-auto text-brand mb-6 md:mb-8">
                         <CheckCircle2 className="w-10 h-10 md:w-12 md:h-12" />
                      </div>
                      <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">C'est envoyé !</h3>
@@ -184,7 +184,7 @@ function ContactContent() {
                      <Button 
                         onClick={() => setSubmitted(false)}
                         variant="link"
-                        className="text-emerald-600 font-black uppercase text-[10px] tracking-widest"
+                        className="text-brand font-black uppercase text-[10px] tracking-widest"
                      >
                         Envoyer un autre message
                      </Button>
@@ -202,7 +202,7 @@ function ContactContent() {
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     required
                                     placeholder="Koffi Sènou" 
-                                    className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
+                                    className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-brand/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
                                 />
                             </div>
                         </div>
@@ -217,7 +217,7 @@ function ContactContent() {
                                     required
                                     type="email"
                                     placeholder="koffi@email.com" 
-                                    className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
+                                    className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-brand/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
                                 />
                             </div>
                         </div>
@@ -234,7 +234,7 @@ function ContactContent() {
                                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                                     required
                                     placeholder="+229 01..." 
-                                    className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
+                                    className="h-12 md:h-14 pl-11 pr-4 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-brand/20 focus:bg-white transition-all font-bold text-slate-800 text-sm"
                                 />
                             </div>
                         </div>
@@ -247,7 +247,7 @@ function ContactContent() {
                                     value={formData.subject}
                                     onChange={(e) => setFormData({...formData, subject: e.target.value})}
                                     required
-                                    className="w-full h-12 md:h-14 pl-11 pr-10 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 appearance-none text-xs md:text-sm"
+                                    className="w-full h-12 md:h-14 pl-11 pr-10 bg-white/60 border-slate-100/50 rounded-xl md:rounded-2xl focus:ring-brand/20 focus:bg-white transition-all font-bold text-slate-800 appearance-none text-xs md:text-sm"
                                 >
                                     <option value="mesure">Programme sur-mesure</option>
                                     <option value="inscription">Demande d'inscription</option>
@@ -271,14 +271,14 @@ function ContactContent() {
                             onChange={(e) => setFormData({...formData, message: e.target.value})}
                             required
                             placeholder="Décrivez votre projet..."
-                            className="min-h-[120px] md:min-h-[150px] p-5 md:p-6 bg-white/60 border-slate-100/50 rounded-2xl md:rounded-[2rem] focus:ring-emerald-500/20 focus:bg-white transition-all font-bold text-slate-800 resize-none text-sm"
+                            className="min-h-[120px] md:min-h-[150px] p-5 md:p-6 bg-white/60 border-slate-100/50 rounded-2xl md:rounded-[2rem] focus:ring-brand/20 focus:bg-white transition-all font-bold text-slate-800 resize-none text-sm"
                         />
                     </div>
 
                     <Button 
                         type="submit"
                         disabled={loading}
-                        className="w-full h-14 md:h-20 rounded-2xl md:rounded-[2rem] bg-slate-900 hover:bg-emerald-600 text-white font-black uppercase tracking-[0.2em] text-[10px] md:text-sm shadow-2xl shadow-emerald-500/10 transition-all duration-500 group/btn active:scale-[0.98]"
+                        className="w-full h-14 md:h-20 rounded-2xl md:rounded-[2rem] bg-slate-900 hover:bg-brand-dark text-white font-black uppercase tracking-[0.2em] text-[10px] md:text-sm shadow-2xl shadow-brand/20 transition-all duration-500 group/btn active:scale-[0.98]"
                     >
                         {loading ? "Envoi..." : "Envoyer ma demande"}
                         <Send className="w-4 h-4 md:w-5 md:h-5 ml-4 transition-transform group-hover/btn:translate-x-2 group-hover/btn:-translate-y-2 shrink-0" />
