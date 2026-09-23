@@ -321,3 +321,16 @@ html, body {
   margin: 0 !important;
   padding: 0 !important;
 }
+
+/* Accessibilité (WCAG 2.3.3) : respecte la réduction des animations système.
+   Désactive animations/transitions/smooth-scroll quand l'utilisateur l'exige. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

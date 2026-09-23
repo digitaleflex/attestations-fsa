@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExamsGridSkeleton } from "@/components/admin/exams/ExamsGridSkeleton";
 import {
   Loader2,
   Plus,
@@ -112,9 +114,16 @@ export default function AdminExamsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex flex-col items-center justify-center min-h-screen bg-slate-50/50">
-        <Loader2 className="animate-spin w-10 h-10 text-blue-500 mb-4" />
-        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Chargement des examens...</p>
+      <div className="p-8 space-y-8 min-h-screen bg-slate-50/50" role="status" aria-label="Chargement des examens">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-11 w-40 rounded-2xl" />
+        </div>
+        <ExamsGridSkeleton />
+        <span className="sr-only">Chargement des examens...</span>
       </div>
     );
   }
