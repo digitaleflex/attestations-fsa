@@ -18,6 +18,22 @@ const CreateUserSchema = z.object({
   role: z.enum(["admin", "user", "ADMIN", "USER"]).optional(),
 });
 
+const ListUsersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  q: z.string().max(200).default(""),
+  status: z.enum(["ACTIVE", "BLOCKED", "SUSPENDED"]).optional(),
+  role: z
+    .enum(["admin", "user", "ADMIN", "USER"])
+    .transform((v) => v.toLowerCase() as "admin" | "user")
+    .optional(),
+  verified: z.enum(["true", "false"]).optional(),
+  from: z.string().datetime({ offset: true }).optional().or(z.literal("")),
+  to: z.string().datetime({ offset: true }).optional().or(z.literal("")),
+  sort: z.enum(["name", "email", "createdAt", "updatedAt"]).default("createdAt"),
+  direction: z.enum(["asc", "desc"]).default("desc"),
+});
+
 // GET - Liste des utilisateurs (Admin uniquement avec pagination)
 export async function GET(request: Request) {
   try {
@@ -31,18 +47,53 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20")));
-    const search = searchParams.get("q") || "";
+    const parsed = ListUsersQuerySchema.safeParse({
+      page: searchParams.get("page") ?? undefined,
+      limit: searchParams.get("limit") ?? undefined,
+      q: searchParams.get("q") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      role: searchParams.get("role") ?? undefined,
+      verified: searchParams.get("verified") ?? undefined,
+      from: searchParams.get("from") ?? undefined,
+      to: searchParams.get("to") ?? undefined,
+      sort: searchParams.get("sort") ?? undefined,
+      direction: searchParams.get("direction") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Paramètres de recherche invalides" },
+        { status: 400 }
+      );
+    }
+    const { page, limit, q: search, status, role, verified, from, to, sort, direction } = parsed.data;
     const skip = (page - 1) * limit;
 
-    // Filtre de recherche
-    const where = search ? {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' as const } },
-        { email: { contains: search, mode: 'insensitive' as const } },
-      ],
-    } : {};
+    // Filtres cumulables (tous optionnels, recherche conservée)
+    const where: Prisma.UserWhereInput = {
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" as const } },
+              { email: { contains: search, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+      ...(status ? { status } : {}),
+      ...(role ? { role } : {}),
+      ...(verified === "true"
+        ? { emailVerified: { not: null } }
+        : verified === "false"
+          ? { emailVerified: null }
+          : {}),
+      ...(from || to
+        ? {
+            createdAt: {
+              ...(from ? { gte: new Date(from) } : {}),
+              ...(to ? { lte: new Date(to) } : {}),
+            },
+          }
+        : {}),
+    };
 
     // Exécuter le comptage et la récupération en parallèle pour la performance
     const [users, total] = await Promise.all([
@@ -73,7 +124,7 @@ export async function GET(request: Request) {
           createdAt: true,
           updatedAt: true,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { [sort]: direction },
         skip,
         take: limit,
       }),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Card } from "@/components/ui/card";
@@ -45,13 +45,28 @@ import Link from "next/link";
 import { UserExamResults } from "@/components/exams/user-exam-results";
 import { UserAuditLogs } from "@/components/admin/user-audit-logs";
 import { User, UserStatus } from "@/types";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { StatusBadge, RoleBadge, VerifiedBadge } from "@/components/admin/users/UserBadges";
+import { UserActionsMenu } from "@/components/admin/users/UserActionsMenu";
+import {
+  UsersFilterBar,
+  hasActiveUsersFilters,
+  type UsersFilters,
+  type UsersPeriodFilter,
+  type UsersRoleFilter,
+  type UsersStatusFilter,
+  type UsersVerifiedFilter,
+} from "@/components/admin/users/UsersFilterBar";
+import { UsersTableSkeleton } from "@/components/admin/users/UsersTableSkeleton";
+import { TableCaption } from "@/components/ui/table";
 // ... (icons)
-import { 
-  Loader2, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  UserPlus, 
+import {
+  Loader2,
+  Plus,
+  Edit,
+  Trash2,
+  UserPlus,
   Eye,
   ShieldAlert,
   Unlock,
@@ -64,8 +79,116 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  CalendarClock
+  CalendarClock,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
+
+type SortField = "name" | "email" | "createdAt" | "updatedAt";
+type SortDirection = "asc" | "desc";
+
+const VALID_SORTS: SortField[] = ["name", "email", "createdAt", "updatedAt"];
+const VALID_STATUS: UsersStatusFilter[] = ["", "ACTIVE", "BLOCKED", "SUSPENDED"];
+const VALID_ROLES: UsersRoleFilter[] = ["", "admin", "user"];
+const VALID_VERIFIED: UsersVerifiedFilter[] = ["", "true", "false"];
+const VALID_PERIODS: UsersPeriodFilter[] = ["", "today", "7d", "30d"];
+
+interface FiltersState extends UsersFilters {
+  sort: SortField;
+  direction: SortDirection;
+  page: number;
+}
+
+const DEFAULT_FILTERS: FiltersState = {
+  q: "",
+  status: "",
+  role: "",
+  verified: "",
+  period: "",
+  sort: "createdAt",
+  direction: "desc",
+  page: 1,
+};
+
+/** Convertit le preset de période en intervalle ISO (filtre createdAt). */
+function periodToRange(period: UsersPeriodFilter): { from?: string } {
+  if (!period) return {};
+  const now = new Date();
+  if (period === "today") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    return { from: start.toISOString() };
+  }
+  const days = period === "7d" ? 7 : 30;
+  return { from: new Date(now.getTime() - days * 86_400_000).toISOString() };
+}
+
+const initialsOf = (u: User): string => {
+  const base = (u.name || u.email || "?").trim();
+  const parts = base.split(/\s+/).filter(Boolean);
+  if (parts.length > 1) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return base.slice(0, 2).toUpperCase();
+};
+
+const formatDate = (value: Date | string | null | undefined): string => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("fr-FR");
+};
+
+const formatDateTime = (value: Date | string | null | undefined): string => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("fr-FR");
+};
+
+function SortButton({
+  field,
+  label,
+  sort,
+  direction,
+  onToggle,
+}: {
+  field: SortField;
+  label: string;
+  sort: SortField;
+  direction: SortDirection;
+  onToggle: (field: SortField) => void;
+}) {
+  const active = sort === field;
+  const next =
+    !active || direction === "desc"
+      ? "croissant"
+      : direction === "asc"
+        ? "décroissant"
+        : "croissant";
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      aria-label={`Trier par ${label}, ordre ${next}`}
+      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-1 text-left font-bold uppercase tracking-wider focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+    >
+      {label}
+      <span aria-hidden="true" className={active ? "text-brand" : "text-slate-400"}>
+        {active ? (
+          direction === "asc" ? (
+            <ArrowUp className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5" />
+        )}
+      </span>
+    </button>
+  );
+}
 
 type UserForm = {
   name: string;
@@ -105,14 +228,47 @@ export default function AdminUsersPage() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 });
-  
-  // Lecture des filtres depuis l'URL
-  const queryPage = parseInt(searchParams.get("page") || "1");
-  const querySearch = searchParams.get("q") || "";
 
-  const [search, setSearch] = useState(querySearch);
+  // Filtres lus depuis l'URL (source de vérité partageable)
+  const rawStatus = searchParams.get("status") || "";
+  const rawRole = searchParams.get("role") || "";
+  const rawVerified = searchParams.get("verified") || "";
+  const rawPeriod = searchParams.get("period") || "";
+  const rawSort = searchParams.get("sort") || "";
+  const rawDirection = searchParams.get("direction") || "";
+  const filters: FiltersState = {
+    q: searchParams.get("q") || "",
+    status: (VALID_STATUS.includes(rawStatus as UsersStatusFilter)
+      ? rawStatus
+      : "") as UsersStatusFilter,
+    role: (VALID_ROLES.includes(rawRole as UsersRoleFilter)
+      ? rawRole
+      : "") as UsersRoleFilter,
+    verified: (VALID_VERIFIED.includes(rawVerified as UsersVerifiedFilter)
+      ? rawVerified
+      : "") as UsersVerifiedFilter,
+    period: (VALID_PERIODS.includes(rawPeriod as UsersPeriodFilter)
+      ? rawPeriod
+      : "") as UsersPeriodFilter,
+    sort: (VALID_SORTS.includes(rawSort as SortField)
+      ? rawSort
+      : "createdAt") as SortField,
+    direction: rawDirection === "asc" ? "asc" : "desc",
+    page: Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1),
+  };
+  const filtersKey = JSON.stringify(filters);
+
+  const [search, setSearch] = useState(filters.q);
   const debouncedSearch = useDebounce(search, 500);
+
+  // L'input suit l'URL (Back/Forward, reset) sans écraser la frappe en cours
+  useEffect(() => {
+    if (filters.q !== search && document.activeElement?.id !== "users-search") {
+      setSearch(filters.q);
+    }
+  }, [filters.q]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -141,42 +297,98 @@ export default function AdminUsersPage() {
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignRemoving, setAssignRemoving] = useState(false);
 
-  // Mettre à jour l'URL quand les filtres changent
-  const updateFilters = useCallback((newPage: number, newSearch: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (newPage > 1) params.set("page", newPage.toString());
-    else params.delete("page");
-    
-    if (newSearch) params.set("q", newSearch);
-    else params.delete("q");
+  // Miroir synchrone des filtres pour updateFilters (évite les closures périmées)
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
-    router.push(`${pathname}?${params.toString()}`);
-  }, [pathname, router, searchParams]);
+  // Écrit les filtres dans l'URL (page réinitialisée sauf mention contraire)
+  const updateFilters = useCallback(
+    (next: Partial<FiltersState>) => {
+      const merged: FiltersState = {
+        ...filtersRef.current,
+        ...next,
+        page: next.page ?? 1,
+      };
+      const params = new URLSearchParams();
+      if (merged.q) params.set("q", merged.q);
+      if (merged.status) params.set("status", merged.status);
+      if (merged.role) params.set("role", merged.role);
+      if (merged.verified) params.set("verified", merged.verified);
+      if (merged.period) params.set("period", merged.period);
+      if (merged.sort !== "createdAt" || merged.direction !== "desc") {
+        params.set("sort", merged.sort);
+        params.set("direction", merged.direction);
+      }
+      if (merged.page > 1) params.set("page", String(merged.page));
+      const query = params.toString();
+      router.push(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router],
+  );
 
-  useEffect(() => {
-    fetchUsers(queryPage, querySearch);
-  }, [queryPage, querySearch]);
-
-  // Déclencher la mise à jour de l'URL quand la recherche debouncée change
-  useEffect(() => {
-    if (debouncedSearch !== querySearch) {
-      updateFilters(1, debouncedSearch);
-    }
-  }, [debouncedSearch, querySearch, updateFilters]);
-
-  const fetchUsers = async (page: number, q: string) => {
+  const fetchUsers = useCallback(async () => {
+    const f = filtersRef.current;
     setLoading(true);
     try {
-      const res = await fetch(`/api/users?page=${page}&q=${encodeURIComponent(q)}`);
-      if (!res.ok) throw new Error("Erreur lors du chargement");
+      const params = new URLSearchParams();
+      params.set("page", String(f.page));
+      if (f.q) params.set("q", f.q);
+      if (f.status) params.set("status", f.status);
+      if (f.role) params.set("role", f.role);
+      if (f.verified) params.set("verified", f.verified);
+      const { from } = periodToRange(f.period);
+      if (from) params.set("from", from);
+      params.set("sort", f.sort);
+      params.set("direction", f.direction);
+      const res = await fetch(`/api/users?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setUsers(Array.isArray(data.items) ? data.items : []);
       setMeta(data.meta || { total: 0, page: 1, totalPages: 1, limit: 20 });
+      setLoadError(false);
     } catch (err) {
-      toast.error("Échec du chargement des utilisateurs");
+      console.error("[admin/users] chargement impossible:", err);
+      setLoadError(true);
+      toast.error("Impossible de charger les utilisateurs.");
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [filtersKey, fetchUsers]);
+
+  // La recherche debouncée met à jour l'URL (qui déclenche le rechargement)
+  useEffect(() => {
+    if (debouncedSearch !== filtersRef.current.q) {
+      updateFilters({ q: debouncedSearch });
+    }
+  }, [debouncedSearch, updateFilters]);
+
+  const handleToggleSort = (field: SortField) => {
+    const f = filtersRef.current;
+    if (f.sort !== field) {
+      updateFilters({ sort: field, direction: "asc" });
+    } else if (f.direction === "asc") {
+      updateFilters({ direction: "desc" });
+    } else {
+      updateFilters({ sort: "createdAt", direction: "desc" });
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSearch("");
+    updateFilters({
+      q: "",
+      status: "",
+      role: "",
+      verified: "",
+      period: "",
+      sort: "createdAt",
+      direction: "desc",
+      page: 1,
+    });
   };
 
   const handleOpenDialog = (user?: User) => {
@@ -262,12 +474,12 @@ export default function AdminUsersPage() {
         throw new Error(data.message || "Erreur");
       }
 
-      toast.success(editingUser ? "Utilisateur modifié !" : "Utilisateur créé !");
+      toast.success(editingUser ? "Utilisateur modifié" : "Utilisateur créé");
       setDialogOpen(false);
-      fetchUsers(queryPage, querySearch);
+      fetchUsers();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
-      toast.error(message);
+      console.error("[admin/users] enregistrement impossible:", err);
+      toast.error("Impossible d'enregistrer cet utilisateur.");
     } finally {
       setSaving(false);
     }
@@ -280,10 +492,10 @@ export default function AdminUsersPage() {
       const res = await fetch(`/api/users/${deleteId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erreur lors de la suppression");
       setUsers((prev) => prev.filter((u) => u.id !== deleteId));
-      toast.success("Utilisateur supprimé !");
+      toast.success("Utilisateur supprimé");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
-      toast.error(message);
+      console.error("[admin/users] suppression impossible:", err);
+      toast.error("Impossible de supprimer cet utilisateur.");
     } finally {
       setIsDeleting(false);
       setDeleteId(null);
@@ -298,11 +510,12 @@ export default function AdminUsersPage() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Erreur");
-      toast.success(status === 'ACTIVE' ? "Utilisateur débloqué !" : "Utilisateur bloqué !");
-      fetchUsers(queryPage, querySearch);
+      toast.success(status === 'ACTIVE' ? "Utilisateur réactivé" : "Utilisateur suspendu");
+      fetchUsers();
       if (viewingUser) setViewingUser(prev => prev ? { ...prev, status } : null);
     } catch (err) {
-      toast.error("Échec de la mise à jour du statut");
+      console.error("[admin/users] changement de statut impossible:", err);
+      toast.error("Impossible de modifier le statut.");
     }
   };
 
@@ -314,9 +527,10 @@ export default function AdminUsersPage() {
         body: JSON.stringify({ resetPasswordRequired: true }),
       });
       if (!res.ok) throw new Error("Erreur");
-      toast.success("Réinitialisation forcée activée !");
+      toast.success("Accès réinitialisé");
     } catch (err) {
-      toast.error("Échec de la réinitialisation");
+      console.error("[admin/users] réinitialisation impossible:", err);
+      toast.error("Impossible de réinitialiser l'accès.");
     }
   };
 
@@ -327,8 +541,9 @@ export default function AdminUsersPage() {
       if (!res.ok) throw new Error("Erreur lors du chargement des examens");
       const data = await res.json();
       setExams(Array.isArray(data) ? (data as AdminExamOption[]) : []);
-    } catch {
-      toast.error("Échec du chargement des examens");
+    } catch (err) {
+      console.error("[admin/users] chargement des examens impossible:", err);
+      toast.error("Impossible de charger les examens.");
     } finally {
       setExamsLoading(false);
     }
@@ -380,12 +595,12 @@ export default function AdminUsersPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || data.message || "Erreur");
       }
-      toast.success("Affectation enregistrée !");
+      toast.success("Affectation enregistrée");
       setAssignDialogOpen(false);
-      fetchUsers(queryPage, querySearch);
+      fetchUsers();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
-      toast.error(message);
+      console.error("[admin/users] affectation impossible:", err);
+      toast.error("Impossible d'enregistrer l'affectation.");
     } finally {
       setAssignSaving(false);
     }
@@ -404,19 +619,34 @@ export default function AdminUsersPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || data.message || "Erreur");
       }
-      toast.success("Affectation retirée !");
+      toast.success("Affectation retirée");
       setAssignDialogOpen(false);
-      fetchUsers(queryPage, querySearch);
+      fetchUsers();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
-      toast.error(message);
+      console.error("[admin/users] retrait d'affectation impossible:", err);
+      toast.error("Impossible de retirer l'affectation.");
     } finally {
       setAssignRemoving(false);
     }
   };
 
-  // Le filtrage se fait maintenant côté serveur via fetchUsers(queryPage, querySearch)
+  // Le filtrage se fait côté serveur via fetchUsers() + URL
   const displayUsers = users;
+  const hasActiveFilters = hasActiveUsersFilters({
+    q: filters.q,
+    status: filters.status,
+    role: filters.role,
+    verified: filters.verified,
+    period: filters.period,
+  });
+
+  const deletingUser = users.find((u) => u.id === deleteId) ?? null;
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+
+  const handleDeleteRequest = (userId: string) => {
+    setDeleteConfirm("");
+    setDeleteId(userId);
+  };
   const visibleExams = exams.filter(
     (e) => e.status === "SCHEDULED" || e.status === "PUBLISHED",
   );
@@ -431,25 +661,25 @@ export default function AdminUsersPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Navigation Apprenants / CRM */}
-      <div className="flex gap-6 border-b border-slate-200">
-        <Link href="/admin/users" className="pb-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 flex items-center gap-2">
-          <Users className="w-4 h-4" /> Tous les utilisateurs
+      <nav aria-label="Sections apprenants" className="flex gap-6 border-b border-slate-200">
+        <Link href="/admin/users" aria-current="page" className="pb-3 text-sm font-bold text-brand border-b-2 border-brand flex items-center gap-2">
+          <Users className="w-4 h-4" aria-hidden="true" /> Tous les utilisateurs
         </Link>
         <Link href="/admin/internships" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
           Demandes de stage
         </Link>
-      </div>
+      </nav>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Utilisateurs</h1>
-          <p className="text-slate-500 mt-1">Gérez les comptes utilisateurs ({meta.total})</p>
+          <h1 className="text-3xl font-bold text-slate-800">Apprenants</h1>
+          <p className="text-slate-500 mt-1">Gérez les comptes et profils des apprenants ({meta.total})</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
-              <UserPlus className="w-4 h-4" />
-              Nouvel utilisateur
+            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto min-h-[44px]">
+              <UserPlus className="w-4 h-4" aria-hidden="true" />
+              Ajouter un apprenant
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -574,122 +804,165 @@ export default function AdminUsersPage() {
       </div>
 
       <Card className="p-6 bg-white">
-        <div className="w-full md:w-96">
-          <Label htmlFor="search">Rechercher</Label>
-          <div className="relative">
-            <Input
-              id="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom ou email..."
-              className="mt-1 pr-10"
-            />
-            {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400" />}
-          </div>
-        </div>
+        <UsersFilterBar
+          filters={{
+            q: search,
+            status: filters.status,
+            role: filters.role,
+            verified: filters.verified,
+            period: filters.period,
+          }}
+          loading={loading}
+          onSearchChange={setSearch}
+          onStatusChange={(status) => updateFilters({ status })}
+          onRoleChange={(role) => updateFilters({ role })}
+          onVerifiedChange={(verified) => updateFilters({ verified })}
+          onPeriodChange={(period) => updateFilters({ period })}
+          onReset={handleResetFilters}
+        />
       </Card>
 
       {/* Vue Bureau (Tableau) */}
       <Card className="bg-white hidden md:block overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
+            <TableCaption className="sr-only">
+              Liste des apprenants — triable par nom, email et dates, actions par utilisateur
+            </TableCaption>
             <TableHeader>
               <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Rôle</TableHead>
-                <TableHead>Vérifié</TableHead>
-                <TableHead>Créé le</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead scope="col" aria-sort={filters.sort === "name" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                  <SortButton
+                    field="name"
+                    label="Nom"
+                    sort={filters.sort}
+                    direction={filters.direction}
+                    onToggle={handleToggleSort}
+                  />
+                </TableHead>
+                <TableHead scope="col" aria-sort={filters.sort === "email" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                  <SortButton
+                    field="email"
+                    label="Email"
+                    sort={filters.sort}
+                    direction={filters.direction}
+                    onToggle={handleToggleSort}
+                  />
+                </TableHead>
+                <TableHead scope="col">Statut</TableHead>
+                <TableHead scope="col">Rôle</TableHead>
+                <TableHead scope="col">Vérifié</TableHead>
+                <TableHead scope="col" aria-sort={filters.sort === "createdAt" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                  <SortButton
+                    field="createdAt"
+                    label="Inscrit le"
+                    sort={filters.sort}
+                    direction={filters.direction}
+                    onToggle={handleToggleSort}
+                  />
+                </TableHead>
+                <TableHead scope="col" aria-sort={filters.sort === "updatedAt" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                  <SortButton
+                    field="updatedAt"
+                    label="Activité"
+                    sort={filters.sort}
+                    direction={filters.direction}
+                    onToggle={handleToggleSort}
+                  />
+                </TableHead>
+                <TableHead scope="col" className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    <Loader2 className="animate-spin w-6 h-6 mx-auto text-slate-400" />
-                    <p className="text-sm text-slate-500 mt-2">Chargement...</p>
+                  <TableCell colSpan={8} className="p-0">
+                    <UsersTableSkeleton />
+                  </TableCell>
+                </TableRow>
+              ) : loadError && users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="p-0">
+                    <ErrorState
+                      title="Impossible de charger les apprenants"
+                      description="Une erreur est survenue lors du chargement des données."
+                      onRetry={fetchUsers}
+                    />
                   </TableCell>
                 </TableRow>
               ) : displayUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-                    {search ? "Aucun utilisateur trouvé" : "Aucun utilisateur"}
+                  <TableCell colSpan={8} className="p-0">
+                    <EmptyState
+                      title={hasActiveFilters ? "Aucun apprenant trouvé" : "Aucun apprenant"}
+                      description={
+                        hasActiveFilters
+                          ? "Nous n'avons trouvé aucun utilisateur correspondant à vos critères."
+                          : "Aucun compte apprenant pour le moment."
+                      }
+                      primaryAction={
+                        hasActiveFilters
+                          ? { label: "Réinitialiser les filtres", onClick: handleResetFilters }
+                          : { label: "Ajouter un apprenant", onClick: () => handleOpenDialog() }
+                      }
+                      secondaryAction={
+                        hasActiveFilters
+                          ? { label: "Ajouter un apprenant", onClick: () => handleOpenDialog() }
+                          : undefined
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
                 displayUsers.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.name || "-"}</TableCell>
-                    <TableCell>{u.email || "-"}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest ${
-                          u.status === "ACTIVE"
-                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                            : "bg-rose-50 text-rose-600 border border-rose-100"
-                        }`}
-                      >
-                        {u.status === "ACTIVE" ? "Actif" : "Bloqué"}
+                  <TableRow key={u.id} className="hover:bg-slate-50/60">
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-2.5">
+                        <span
+                          aria-hidden="true"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-black text-brand-dark"
+                        >
+                          {initialsOf(u)}
+                        </span>
+                        {u.name || "-"}
                       </span>
                     </TableCell>
+                    <TableCell className="max-w-56 truncate" title={u.email || undefined}>{u.email || "-"}</TableCell>
                     <TableCell>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          u.role === "admin"
-                            ? "bg-purple-100 text-purple-700"
-                            : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {u.role === "admin" ? "Administrateur" : "Utilisateur"}
-                      </span>
+                      <StatusBadge status={u.status} />
                     </TableCell>
                     <TableCell>
-                      {u.emailVerified ? (
-                        <span className="text-emerald-600" title="Email vérifié">✓</span>
-                      ) : (
-                        <span className="text-amber-600" title="En attente">⏳</span>
-                      )}
+                      <RoleBadge role={u.role} />
+                    </TableCell>
+                    <TableCell>
+                      <VerifiedBadge verified={Boolean(u.emailVerified)} />
                     </TableCell>
                     <TableCell className="text-sm text-slate-500">
-                      {new Date(u.createdAt).toLocaleDateString("fr-FR")}
+                      {formatDate(u.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-500" title={formatDateTime(u.updatedAt)}>
+                      {formatDate(u.updatedAt)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
-                          size="sm"
                           onClick={() => handleViewDetails(u)}
-                          title="Voir les détails"
+                          aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
+                          className="h-11 gap-2 px-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="h-4 w-4" aria-hidden="true" />
+                          Voir
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenAssignDialog(u)}
-                          title="Affecter un examen"
-                        >
-                          <CalendarClock className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenDialog(u)}
-                          title="Modifier"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteId(u.id)}
-                          className="text-rose-600 hover:text-rose-700"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <UserActionsMenu
+                          user={u}
+                          onView={handleViewDetails}
+                          onEdit={handleOpenDialog}
+                          onAssign={handleOpenAssignDialog}
+                          onResetAccess={handleResetPassword}
+                          onToggleStatus={handleUpdateStatus}
+                          onDelete={handleDeleteRequest}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -700,134 +973,151 @@ export default function AdminUsersPage() {
         </div>
         
         {/* Pagination Desktop */}
-        <div className="p-4 border-t flex items-center justify-between bg-slate-50/50">
+        <div className="p-4 border-t flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-slate-50/50">
           <p className="text-xs text-slate-500">
             Affichage de <span className="font-bold text-slate-700">{users.length}</span> sur <span className="font-bold text-slate-700">{meta.total}</span> utilisateurs
           </p>
-          <div className="flex items-center gap-2">
+          <nav aria-label="Pagination des apprenants" className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
               disabled={meta.page <= 1 || loading}
-              onClick={() => updateFilters(meta.page - 1, querySearch)}
-              className="h-8 gap-1"
+              onClick={() => updateFilters({ page: meta.page - 1 })}
+              aria-label="Page précédente"
+              className="min-h-[44px] gap-1"
             >
-              <ChevronLeft className="w-4 h-4" /> Précédent
+              <ChevronLeft className="w-4 h-4" aria-hidden="true" /> Précédent
             </Button>
             <div className="flex items-center gap-1 mx-2">
-              <span className="text-xs font-medium text-slate-600">Page {meta.page} sur {meta.totalPages}</span>
+              <span className="text-xs font-medium text-slate-600" aria-live="polite">Page {meta.page} sur {meta.totalPages}</span>
             </div>
             <Button
               variant="outline"
-              size="sm"
               disabled={meta.page >= meta.totalPages || loading}
-              onClick={() => updateFilters(meta.page + 1, querySearch)}
-              className="h-8 gap-1"
+              onClick={() => updateFilters({ page: meta.page + 1 })}
+              aria-label="Page suivante"
+              className="min-h-[44px] gap-1"
             >
-              Suivant <ChevronRight className="w-4 h-4" />
+              Suivant <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </Button>
-          </div>
+          </nav>
         </div>
       </Card>
 
       {/* Vue Mobile (Cartes) */}
       <div className="md:hidden space-y-4">
         {loading && users.length === 0 ? (
-          <div className="text-center py-8">
-            <Loader2 className="animate-spin w-6 h-6 mx-auto text-slate-400" />
-            <p className="text-sm text-slate-500 mt-2">Chargement...</p>
-          </div>
+          <UsersTableSkeleton rows={3} />
+        ) : loadError && users.length === 0 ? (
+          <Card className="bg-white">
+            <ErrorState
+              title="Impossible de charger les apprenants"
+              description="Une erreur est survenue lors du chargement des données."
+              onRetry={fetchUsers}
+            />
+          </Card>
         ) : displayUsers.length === 0 ? (
-          <div className="text-center py-8 bg-white rounded-xl border border-slate-100 text-slate-500">
-            {search ? "Aucun utilisateur trouvé" : "Aucun utilisateur"}
-          </div>
+          <Card className="bg-white">
+            <EmptyState
+              title={hasActiveFilters ? "Aucun apprenant trouvé" : "Aucun apprenant"}
+              description={
+                hasActiveFilters
+                  ? "Nous n'avons trouvé aucun utilisateur correspondant à vos critères."
+                  : "Aucun compte apprenant pour le moment."
+              }
+              primaryAction={
+                hasActiveFilters
+                  ? { label: "Réinitialiser les filtres", onClick: handleResetFilters }
+                  : { label: "Ajouter un apprenant", onClick: () => handleOpenDialog() }
+              }
+              secondaryAction={
+                hasActiveFilters
+                  ? { label: "Ajouter un apprenant", onClick: () => handleOpenDialog() }
+                  : undefined
+              }
+            />
+          </Card>
         ) : (
           <>
             {displayUsers.map((u) => (
               <Card key={u.id} className="p-4 bg-white shadow-sm border-slate-100 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-slate-800">{u.name || "-"}</h3>
-                    <p className="text-sm text-slate-500">{u.email || "-"}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleViewDetails(u)}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenAssignDialog(u)}
-                      title="Affecter un examen"
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-black text-brand-dark"
                     >
-                      <CalendarClock className="w-4 h-4 text-blue-600" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
-                      <Edit className="w-4 h-4 text-slate-600" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(u.id)} className="text-rose-600">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                      {initialsOf(u)}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-800 truncate">{u.name || "-"}</h3>
+                      <p className="text-sm text-slate-500 truncate">{u.email || "-"}</p>
+                    </div>
                   </div>
+                  <UserActionsMenu
+                    user={u}
+                    onView={handleViewDetails}
+                    onEdit={handleOpenDialog}
+                    onAssign={handleOpenAssignDialog}
+                    onResetAccess={handleResetPassword}
+                    onToggleStatus={handleUpdateStatus}
+                    onDelete={handleDeleteRequest}
+                  />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-50">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Rôle</p>
-                    <Badge variant="secondary" className="text-[10px] px-2 py-0">
-                      {u.role === "admin" ? "Admin" : "Élève"}
-                    </Badge>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Rôle</p>
+                    <RoleBadge role={u.role} />
                   </div>
-                  <div className="space-y-1 text-right">
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Statut</p>
+                  <div className="space-y-1.5 text-right">
+                    <p className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Statut</p>
                     <div className="flex justify-end">
-                      <span
-                        className={`text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest ${
-                          u.status === "ACTIVE"
-                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                            : "bg-rose-50 text-rose-600 border border-rose-100"
-                        }`}
-                      >
-                        {u.status === "ACTIVE" ? "Actif" : "Bloqué"}
-                      </span>
+                      <StatusBadge status={u.status} />
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-50">
-                   <div className="flex items-center gap-1">
-                     <Users className="w-3 h-3" />
-                     {u.phone || "Pas de tel"}
-                   </div>
-                   <div>
-                     {new Date(u.createdAt).toLocaleDateString("fr-FR")}
-                   </div>
+
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
+                  <VerifiedBadge verified={Boolean(u.emailVerified)} />
+                  <span className="text-[11px] text-slate-500">
+                    Inscrit le {formatDate(u.createdAt)}
+                  </span>
                 </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => handleViewDetails(u)}
+                  aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
+                  className="w-full min-h-[44px] gap-2 font-bold"
+                >
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                  Voir
+                </Button>
               </Card>
             ))}
 
             {/* Pagination Mobile */}
-            <div className="flex items-center justify-between pt-4 pb-8">
+            <nav aria-label="Pagination des apprenants" className="flex items-center justify-between pt-4 pb-8">
                <Button
                  variant="outline"
-                 size="sm"
                  disabled={meta.page <= 1 || loading}
-                 onClick={() => updateFilters(meta.page - 1, querySearch)}
-                 className="bg-white"
+                 onClick={() => updateFilters({ page: meta.page - 1 })}
+                 aria-label="Page précédente"
+                 className="bg-white min-h-[44px]"
                >
-                 <ChevronLeft className="w-4 h-4 mr-1" /> Précédent
+                 <ChevronLeft className="w-4 h-4 mr-1" aria-hidden="true" /> Précédent
                </Button>
-               <span className="text-xs font-bold text-slate-600">Page {meta.page} / {meta.totalPages}</span>
+               <span className="text-xs font-bold text-slate-600" aria-live="polite">Page {meta.page} / {meta.totalPages}</span>
                <Button
                  variant="outline"
-                 size="sm"
                  disabled={meta.page >= meta.totalPages || loading}
-                 onClick={() => updateFilters(meta.page + 1, querySearch)}
-                 className="bg-white"
+                 onClick={() => updateFilters({ page: meta.page + 1 })}
+                 aria-label="Page suivante"
+                 className="bg-white min-h-[44px]"
                >
-                 Suivant <ChevronRight className="w-4 h-4 ml-1" />
+                 Suivant <ChevronRight className="w-4 h-4 ml-1" aria-hidden="true" />
                </Button>
-            </div>
+            </nav>
           </>
         )}
       </div>
@@ -1116,22 +1406,44 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) { setDeleteId(null); setDeleteConfirm(""); } }}>
+        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
-              <Trash2 className="w-6 h-6" />
-              Supprimer l'utilisateur ?
+              <Trash2 className="w-6 h-6" aria-hidden="true" />
+              Supprimer cet utilisateur ?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
-              Cette action supprimera définitivement le compte de l'utilisateur.
-              <span className="block mt-2 font-bold text-rose-600 underline">Ses données d'examen et son historique seront perdus.</span>
+              Cette action supprimera définitivement le compte
+              {deletingUser ? <> de <strong>{deletingUser.name || deletingUser.email}</strong></> : " de l'utilisateur"}{" "}
+              ainsi que les données associées.
+              <span className="block mt-2 font-bold text-rose-600 underline">Ses données d&apos;examen et son historique seront perdus.</span>
+              {deletingUser?.role === "admin" && (
+                <span className="mt-3 block rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm font-bold text-amber-800">
+                  Attention : ce compte possède le rôle administrateur. Pour confirmer,
+                  saisissez son adresse email ci-dessous.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deletingUser?.role === "admin" && (
+            <div className="mt-2">
+              <Label htmlFor="delete-confirm-email">Confirmation — adresse email du compte</Label>
+              <Input
+                id="delete-confirm-email"
+                type="text"
+                autoComplete="off"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder={deletingUser.email || ""}
+                className="mt-1"
+              />
+            </div>
+          )}
           <AlertDialogFooter className="mt-8 gap-3">
             <AlertDialogCancel
               disabled={isDeleting}
-              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+              className="border-slate-200 text-slate-600 hover:bg-slate-50 min-h-[44px]"
             >
               Annuler
             </AlertDialogCancel>
@@ -1140,16 +1452,16 @@ export default function AdminUsersPage() {
                 e.preventDefault();
                 handleDelete();
               }}
-              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
-              disabled={isDeleting}
+              className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 min-h-[44px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
+              disabled={isDeleting || (deletingUser?.role === "admin" && deleteConfirm.trim().toLowerCase() !== (deletingUser.email || "").toLowerCase())}
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Suppression en cours...
                 </>
               ) : (
-                "Confirmer la suppression"
+                "Supprimer définitivement"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
