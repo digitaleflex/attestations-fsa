@@ -149,7 +149,7 @@ export default function AdminProfilePage() {
         {/* Carte de profil */}
         <Card className="overflow-hidden">
           {/* En-tête coloré */}
-          <div className="h-32 bg-gradient-to-r from-emerald-500 to-blue-600" />
+          <div className="h-32 bg-gradient-to-r from-brand to-brand-dark" />
 
           {/* Avatar et infos */}
           <div className="px-6 pb-6">
@@ -160,7 +160,7 @@ export default function AdminProfilePage() {
               <div className="flex-1 mt-8 sm:mt-0">
                 <h2 className="text-2xl font-bold text-slate-800">{admin?.name || "Administrateur"}</h2>
                 <p className="text-slate-500">{admin?.email}</p>
-                <Badge className="mt-2 bg-emerald-100 text-emerald-700 border-emerald-200">
+                <Badge className="mt-2 bg-brand/10 text-brand-dark border-brand/20">
                   <Shield className="w-3 h-3 mr-1" />
                   Administrateur
                 </Badge>
@@ -320,8 +320,8 @@ export default function AdminProfilePage() {
 
             {activeTab === "security" && (
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                  <p className="text-sm text-slate-700">
                     💡 <strong>Conseil :</strong> Utilisez un mot de passe fort avec au moins 8 caractères, une majuscule, une minuscule et un chiffre.
                   </p>
                 </div>
@@ -390,7 +390,7 @@ export default function AdminProfilePage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+                  className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark"
                 >
                   {loading ? (
                     <>

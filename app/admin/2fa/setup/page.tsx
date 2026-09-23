@@ -107,10 +107,10 @@ export default function Admin2FASetupPage() {
 
   if (step === "success") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 p-4">
-        <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl px-10 py-12 border border-emerald-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand/5 via-brand/10 to-brand/15 p-4">
+        <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl px-10 py-12 border border-brand/20">
           <div className="text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-dark rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
               <CheckCircle className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-slate-800 mb-2">
@@ -134,7 +134,7 @@ export default function Admin2FASetupPage() {
 
             <div className="flex gap-3 justify-center">
               <Link href="/admin/dashboard">
-                <Button className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700">
+                <Button className="bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark">
                   Aller au Dashboard
                 </Button>
               </Link>
@@ -149,10 +149,10 @@ export default function Admin2FASetupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
-      <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl px-4 sm:px-10 py-8 sm:py-12 border border-indigo-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand/5 via-brand/10 to-brand/15 p-4">
+      <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl px-4 sm:px-10 py-8 sm:py-12 border border-brand/20">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-dark rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <ShieldCheck className="w-12 h-12 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-800">
@@ -224,7 +224,7 @@ export default function Admin2FASetupPage() {
             <Button
               onClick={handleEnable2FA}
               disabled={loading || !password}
-              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark"
             >
               {loading ? (
                 <>
@@ -249,7 +249,7 @@ export default function Admin2FASetupPage() {
                 <h3 className="text-lg font-semibold mb-4">
                   Scannez ce QR Code
                 </h3>
-                <div className="bg-white p-6 inline-block rounded-xl border-2 border-indigo-200 mb-4">
+                <div className="bg-white p-6 inline-block rounded-xl border-2 border-brand/20 mb-4">
                   <QRCode value={totpURI} size={200} />
                 </div>
                 <p className="text-sm text-slate-600">

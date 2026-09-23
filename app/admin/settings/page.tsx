@@ -132,7 +132,7 @@ export default function SettingsPage() {
           <div className="space-y-1">
             <h1 className="text-4xl font-black text-slate-900 tracking-tight">Configuration Générale</h1>
             <p className="text-slate-500 font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <CheckCircle2 className="w-4 h-4 text-brand" />
                 Gérez l'identité visuelle et les objectifs de performance.
             </p>
           </div>
@@ -144,7 +144,7 @@ export default function SettingsPage() {
                 variant="outline"
                 className={cn(
                     "h-14 px-8 rounded-2xl font-bold gap-3 transition-all border-slate-200 shadow-sm flex-1 sm:flex-none",
-                    showPreview && "bg-blue-50 text-blue-600 border-blue-200"
+                    showPreview && "bg-brand/10 text-brand-dark border-brand/20"
                 )}
              >
                 <Eye className="w-5 h-5" />
@@ -155,7 +155,7 @@ export default function SettingsPage() {
                 disabled={isSaving}
                 className="bg-slate-900 hover:bg-slate-800 text-white gap-3 h-14 px-10 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex-1 sm:flex-none"
             >
-                {isSaving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5 text-emerald-400" />}
+                {isSaving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5 text-brand-light" />}
                 Mettre à jour FSA
             </Button>
         </div>
@@ -164,13 +164,13 @@ export default function SettingsPage() {
       {/* Mode Aperçu Dynamique */}
       {showPreview && (
         <div className="relative group animate-in slide-in-from-top-4 duration-500">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2.5rem] blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-brand to-brand-dark rounded-[2.5rem] blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
             <Card className="relative p-6 sm:p-12 border-none shadow-2xl bg-slate-950 overflow-hidden rounded-[2.5rem]">
                 <div className="flex flex-col items-center">
                     <div className="w-full flex items-center justify-between mb-8 text-white/40 px-4">
                         <span className="text-[10px] font-black uppercase tracking-[0.3em]">Simulation Certificat Officiel v4.2.0</span>
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <div className="w-2 h-2 rounded-full bg-brand animate-pulse" />
                             <span className="text-[10px] font-bold">TEMPS RÉEL</span>
                         </div>
                     </div>
@@ -207,10 +207,10 @@ export default function SettingsPage() {
 
         {/* Section 1 : Identité & Contact */}
         <Card className="p-6 sm:p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50 group-hover:scale-110 transition-transform duration-700" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full -mr-16 -mt-16 opacity-50 group-hover:scale-110 transition-transform duration-700" />
 
             <div className="flex items-center gap-4 relative z-10 pb-6 border-b border-slate-50">
-               <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-100">
+               <div className="p-3 bg-brand rounded-2xl shadow-lg shadow-brand/20">
                   <Building2 className="w-6 h-6 text-white" />
                </div>
                <div>
@@ -229,7 +229,7 @@ export default function SettingsPage() {
                       name="institutionName"
                       value={formData.institutionName || ""}
                       onChange={handleChange}
-                      className="bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 h-14 rounded-2xl text-slate-800 font-bold px-6 transition-all shadow-inner"
+                      className="bg-slate-50 border-none focus:ring-2 focus:ring-brand/20 h-14 rounded-2xl text-slate-800 font-bold px-6 transition-all shadow-inner"
                     />
                 </div>
 
@@ -275,10 +275,10 @@ export default function SettingsPage() {
 
         {/* Section 2 : Autorité de Signature */}
         <Card className="p-6 sm:p-10 border-none shadow-premium bg-white rounded-[2.5rem] space-y-8 relative overflow-hidden group">
-            <div className="absolute bottom-0 right-0 w-40 h-40 bg-emerald-50 rounded-full -mr-20 -mb-20 opacity-40 group-hover:scale-110 transition-transform duration-1000" />
+            <div className="absolute bottom-0 right-0 w-40 h-40 bg-brand/10 rounded-full -mr-20 -mb-20 opacity-40 group-hover:scale-110 transition-transform duration-1000" />
 
             <div className="flex items-center gap-4 relative z-10 pb-6 border-b border-slate-50">
-               <div className="p-3 bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-100">
+               <div className="p-3 bg-brand rounded-2xl shadow-lg shadow-brand/20">
                   <UserCircle className="w-6 h-6 text-white" />
                </div>
                <div>
@@ -311,7 +311,7 @@ export default function SettingsPage() {
                 <div className="space-y-4 pt-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
                         Signature (PNG Transparent)
-                        <PenLine className="w-3.5 h-3.5 text-emerald-600" />
+                        <PenLine className="w-3.5 h-3.5 text-brand" />
                     </label>
                     <Input
                         name="signatureUrl"
@@ -376,9 +376,9 @@ export default function SettingsPage() {
                             type="number"
                             value={formData.targetAttestations || 0}
                             onChange={handleChange}
-                            className="bg-white/5 border-white/5 h-24 text-5xl font-black text-blue-400 rounded-[2rem] text-center focus:ring-0 focus:border-blue-500/40 transition-all selection:bg-blue-500/30"
+                            className="bg-white/5 border-white/5 h-24 text-5xl font-black text-brand-light rounded-[2rem] text-center focus:ring-0 focus:border-brand/40 transition-all selection:bg-brand/30"
                         />
-                        <div className="absolute -bottom-1 left-8 right-8 h-1 bg-blue-500/20 rounded-full blur-sm opacity-0 group-hover/kpi:opacity-100 transition-opacity" />
+                        <div className="absolute -bottom-1 left-8 right-8 h-1 bg-brand/30 rounded-full blur-sm opacity-0 group-hover/kpi:opacity-100 transition-opacity" />
                     </div>
                 </div>
 
@@ -409,7 +409,7 @@ export default function SettingsPage() {
         <AlertDialogContent className="bg-white border-none shadow-2xl rounded-[3rem] max-w-[500px] p-0 overflow-hidden">
           <div className="bg-slate-900 p-6 sm:p-12 text-white flex flex-col items-center">
              <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center mb-6 backdrop-blur-xl ring-1 ring-white/20">
-                <Save className="w-10 h-10 text-emerald-400" />
+                <Save className="w-10 h-10 text-brand-light" />
              </div>
              <AlertDialogTitle className="text-3xl font-black tracking-tight text-center">
                 Mise à jour Système

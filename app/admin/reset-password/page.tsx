@@ -129,7 +129,7 @@ function ResetPasswordForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 p-4">
       <Card className="bg-white rounded-2xl shadow-2xl w-full max-w-md px-10 py-12 border border-red-100">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+          <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-dark rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             {success ? (
               <CheckCircle className="w-10 h-10 text-white" />
             ) : step === "otp" ? (
@@ -326,7 +326,7 @@ function ResetPasswordForm() {
 
             <Button
               type="submit"
-              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-md hover:shadow-lg transition-all disabled:opacity-50"
               disabled={loading || !passwordsMatch}
             >
               {loading ? (
