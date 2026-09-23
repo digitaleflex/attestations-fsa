@@ -29,13 +29,13 @@ export default function UpcomingExamsClient({ initialExams }: UpcomingExamsClien
     return (
       <section className="w-full max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-[0.2em]">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/20 text-brand-dark text-[10px] font-black uppercase tracking-[0.2em]">
             <Calendar className="w-3.5 h-3.5" />
             Prochains Examens
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
             Ne manquez{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-dark">
               aucune session
             </span>
           </h2>
@@ -64,13 +64,13 @@ export default function UpcomingExamsClient({ initialExams }: UpcomingExamsClien
     <section className="w-full max-w-7xl mx-auto px-6 py-24">
       {/* Header */}
       <div className="text-center mb-16 space-y-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-[0.2em]">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/20 text-brand-dark text-[10px] font-black uppercase tracking-[0.2em]">
           <Sparkles className="w-3.5 h-3.5" />
           À ne pas manquer
         </div>
         <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
           Prochains{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-dark">
             Examens
           </span>
         </h2>
@@ -120,9 +120,9 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
       transition={{ duration: 0.4, delay: index * 0.15 }}
       className="group relative"
     >
-      <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-indigo-400/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      <div className="absolute -inset-1 bg-gradient-to-r from-brand/20 to-brand-accent/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-      <div className="relative h-full p-8 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-blue-200">
+      <div className="relative h-full p-8 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-brand/30">
         <div className="flex items-center justify-between mb-6">
           <Badge variant="outline" className={`px-3 py-1 font-bold uppercase text-[9px] tracking-widest ${
             isPast
@@ -139,7 +139,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
 
         <div className="space-y-4">
           <div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight group-hover:text-blue-700 transition-colors">
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight group-hover:text-brand transition-colors">
               {exam.name || exam.title}
             </h3>
             {exam.description && (
@@ -150,7 +150,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
           </div>
 
           <div className="flex items-center gap-3 text-sm text-slate-600 font-bold bg-slate-50 p-3 rounded-2xl">
-            <Calendar className="w-4 h-4 text-blue-500" />
+            <Calendar className="w-4 h-4 text-brand" />
             <span className="capitalize">{formattedDate}</span>
           </div>
 
@@ -164,7 +164,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
             <Button
               className={`w-full h-14 rounded-2xl gap-2 font-black uppercase text-xs tracking-widest transition-all ${
                 isPast
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-200'
+                  ? 'bg-brand hover:bg-brand-dark text-white shadow-xl shadow-brand/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-200'
               }`}
             >
