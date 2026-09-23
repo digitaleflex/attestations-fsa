@@ -163,7 +163,7 @@ export default function UserDashboardPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome Premium */}
-      <Card className="p-8 bg-gradient-to-br from-slate-900 to-blue-900 text-white shadow-2xl relative overflow-hidden group border-none">
+      <Card className="p-8 bg-gradient-to-br from-slate-900 to-slate-900 text-white shadow-2xl relative overflow-hidden group border-none">
         <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand/10 rounded-full blur-3xl group-hover:bg-brand/20 transition-all duration-1000" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
@@ -173,7 +173,7 @@ export default function UserDashboardPage() {
             <h2 className="text-4xl font-black tracking-tighter">
               Bienvenue, {user?.name?.split(" ")[0] || "Candidat"} ! 👋
             </h2>
-            <p className="text-blue-100/70 font-medium">
+            <p className="text-slate-300 font-medium">
               Votre parcours continue. Retrouvez vos succès et vos prochaines
               étapes ici.
             </p>
@@ -546,7 +546,7 @@ export default function UserDashboardPage() {
                 attestationsData.attestations.map((att: Attestation) => (
                   <div
                     key={att.id}
-                    className="p-5 bg-slate-50 rounded-2xl group hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100"
+                    className="p-5 bg-slate-50 rounded-2xl group hover:bg-brand/10 transition-all border border-transparent hover:border-brand/20"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -614,7 +614,7 @@ export default function UserDashboardPage() {
                             <span
                               className={
                                 (att.certificationScore || 0) >= 60
-                                  ? "text-blue-500"
+                                  ? "text-brand"
                                   : "text-slate-300"
                               }
                             >
@@ -638,7 +638,7 @@ export default function UserDashboardPage() {
                             className={cn(
                               "p-2.5 rounded-xl border flex items-center justify-between transition-all",
                               (att.certificationScore || 0) >= 60
-                                ? "bg-blue-50 border-blue-100"
+                                ? "bg-brand/10 border-brand/20"
                                 : "bg-white border-slate-100 opacity-60",
                             )}
                           >
@@ -705,7 +705,7 @@ export default function UserDashboardPage() {
           {/* Progression Info */}
           <Card className="p-6 border-none shadow-premium bg-white">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-500" />
+              <Activity className="w-4 h-4 text-brand" />
               Taux de Réussite
             </h3>
             <div className="flex flex-col items-center justify-center py-4">

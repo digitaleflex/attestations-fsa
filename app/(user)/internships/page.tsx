@@ -114,7 +114,7 @@ export default function UserInternshipsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
+          <div className="animate-spin w-8 h-8 border-4 border-brand border-t-transparent rounded-full mx-auto mb-3" />
           <p className="text-slate-500">Chargement...</p>
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function UserInternshipsPage() {
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all">
+                <Button className="gap-2 bg-brand hover:bg-brand-dark shadow-md transition-all">
                   <PlusCircle className="w-4 h-4" />
                   Nouvelle demande
                 </Button>
@@ -230,7 +230,7 @@ export default function UserInternshipsPage() {
                   <DialogFooter>
                     <Button
                       type="submit"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
+                      className="w-full bg-brand hover:bg-brand-dark"
                       disabled={submitMutation.isPending}
                     >
                       {submitMutation.isPending ? "Envoi..." : "Soumettre ma candidature"}

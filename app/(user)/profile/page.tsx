@@ -208,14 +208,14 @@ export default function UserProfilePage() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       {/* En-tête */}
-      <Card className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-xl">
+      <Card className="p-6 bg-gradient-to-r from-brand to-brand-dark text-white shadow-xl">
         <div className="flex items-center gap-6">
           <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md">
             <User className="w-10 h-10" />
           </div>
           <div>
             <h2 className="text-3xl font-bold">{user?.name}</h2>
-            <p className="text-blue-100 opacity-80">{user?.email}</p>
+            <p className="text-white/80 opacity-80">{user?.email}</p>
             <Badge className="mt-3 bg-white/20 hover:bg-white/30 border-none px-3 py-1">
               Candidat FSA
             </Badge>
@@ -227,7 +227,7 @@ export default function UserProfilePage() {
       <Card className="p-8 bg-white shadow-md border-slate-100 relative overflow-hidden">
         <div className="flex items-center justify-between mb-8 border-b pb-4">
           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <User className="w-6 h-6 text-blue-600" />
+            <User className="w-6 h-6 text-brand" />
             Détails du Profil
           </h3>
           <div className="flex gap-2">
@@ -241,7 +241,7 @@ export default function UserProfilePage() {
                 <Button
                   onClick={handleSubmit}
                   disabled={updateMutation.isPending}
-                  className="bg-blue-600 shadow-lg shadow-blue-200"
+                  className="bg-brand shadow-lg shadow-brand/20"
                 >
                   <Save className="w-4 h-4 mr-2" /> Enregistrer
                 </Button>
@@ -325,7 +325,7 @@ export default function UserProfilePage() {
       {!user?.attestations?.length && (
         <Card className="p-8 bg-white shadow-md border-slate-100">
           <div className="flex items-center gap-3 mb-6 border-b pb-4">
-            <Link2 className="w-6 h-6 text-emerald-600" />
+            <Link2 className="w-6 h-6 text-brand" />
             <h3 className="text-xl font-bold text-slate-800">
               Récupérer mon dossier FSA
             </h3>
@@ -346,7 +346,7 @@ export default function UserProfilePage() {
             <Button
               onClick={handleClaimCode}
               disabled={isClaiming}
-              className="h-11 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold shrink-0"
+              className="h-11 px-6 rounded-xl bg-brand hover:bg-brand-dark font-bold shrink-0"
             >
               {isClaiming ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -362,7 +362,7 @@ export default function UserProfilePage() {
       <Card className="p-8 bg-white shadow-md border-slate-100">
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Lock className="w-6 h-6 text-indigo-600" /> Sécurité & Mot de passe
+            <Lock className="w-6 h-6 text-brand" /> Sécurité & Mot de passe
           </h3>
           <Button
             variant="outline"
@@ -412,7 +412,7 @@ export default function UserProfilePage() {
             <Button
               onClick={handleSubmit}
               disabled={updateMutation.isPending}
-              className="w-full h-11 bg-indigo-600"
+              className="w-full h-11 bg-brand hover:bg-brand-dark"
             >
               {updateMutation.isPending
                 ? "Modification..."
@@ -493,7 +493,7 @@ function ProfileField({
             id={id}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="h-11 flex-1 bg-white border-blue-200 ring-blue-100 rounded-xl"
+            className="h-11 flex-1 bg-white border-brand/30 ring-brand/10 rounded-xl"
           />
         ) : (
           <Input
@@ -503,14 +503,14 @@ function ProfileField({
             placeholder={placeholder}
             onChange={(e) => onChange(e.target.value)}
             disabled={!isEditing}
-            className={`h-11 flex-1 transition-colors ${!isEditing ? "bg-slate-50/50 border-transparent text-slate-800 font-medium" : "bg-white border-blue-200 ring-blue-100"}`}
+            className={`h-11 flex-1 transition-colors ${!isEditing ? "bg-slate-50/50 border-transparent text-slate-800 font-medium" : "bg-white border-brand/30 ring-brand/10"}`}
           />
         )}
         {!isEditing && onCorrection && (
           <Button
             variant="ghost"
             size="icon"
-            className="w-11 h-11 rounded-lg text-slate-300 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
+            className="w-11 h-11 rounded-lg text-slate-300 hover:text-brand hover:bg-brand/10 opacity-0 group-hover:opacity-100 transition-all"
             onClick={onCorrection}
             title="Signaler une erreur sur ce champ"
           >

@@ -129,18 +129,18 @@ export default function NotificationsPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* Header */}
-      <Card className="p-8 bg-gradient-to-br from-blue-900 to-slate-900 text-white shadow-2xl relative overflow-hidden border-none">
-        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
+      <Card className="p-8 bg-gradient-to-br from-slate-900 to-slate-900 text-white shadow-2xl relative overflow-hidden border-none">
+        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand-light/20 rounded-full blur-3xl" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-none px-3 py-1 text-[10px] uppercase font-black tracking-widest mb-2">
+            <Badge className="bg-brand/20 text-brand-light border-none px-3 py-1 text-[10px] uppercase font-black tracking-widest mb-2">
               Centre de notifications
             </Badge>
             <div className="flex items-center gap-3">
-              <Bell className="w-8 h-8 text-emerald-400" />
+              <Bell className="w-8 h-8 text-brand-light" />
               <h2 className="text-3xl font-black tracking-tighter">Notifications</h2>
             </div>
-            <p className="text-blue-100/70 font-medium">
+            <p className="text-slate-300 font-medium">
               {unreadCount > 0
                 ? `Vous avez ${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
                 : "Toutes vos notifications sont à jour"}
@@ -177,7 +177,7 @@ export default function NotificationsPage() {
             variant={filter === "unread" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("unread")}
-            className={filter === "unread" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+            className={filter === "unread" ? "bg-brand hover:bg-brand-dark" : ""}
           >
             Non lues ({unreadCount})
           </Button>
@@ -202,7 +202,7 @@ export default function NotificationsPage() {
               key={notif.id}
               className={`p-5 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${
                 !notif.isRead
-                  ? "border-l-emerald-500 bg-emerald-50/20"
+                  ? "border-l-brand bg-brand/10"
                   : "border-l-slate-200"
               }`}
               onClick={() => handleNotificationClick(notif)}
@@ -218,7 +218,7 @@ export default function NotificationsPage() {
                       {getTypeLabel(notif.type)}
                     </Badge>
                     {!notif.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-brand flex-shrink-0" />
                     )}
                   </div>
                   <p className="text-sm text-slate-500 leading-relaxed">{notif.message}</p>
