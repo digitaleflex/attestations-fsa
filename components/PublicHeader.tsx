@@ -31,7 +31,7 @@ export function PublicHeader() {
     <header className="w-full flex justify-between items-center px-4 md:px-12 py-3 md:py-4 sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-slate-100/50 shadow-sm transition-all duration-500">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 md:gap-3 group">
-            <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg md:rounded-xl shadow-emerald-100 shadow-lg group-hover:scale-105 transition-transform duration-500">
+            <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg md:rounded-xl shadow-brand/20 shadow-lg group-hover:scale-105 transition-transform duration-500">
               <Image src="/logo-fsa.png" alt="Logo FSA" fill sizes="40px" className="object-cover" priority />
             </div>
             <div className="flex flex-col">
@@ -49,12 +49,12 @@ export function PublicHeader() {
               href={link.href} 
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest text-center ${
                 isActive(link.href) 
-                  ? "bg-white shadow-sm text-emerald-600 scale-105" 
+                  ? "bg-white shadow-sm text-brand scale-105" 
                   : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
               }`}
             >
               {link.label}
-              {isActive(link.href) && <div className="w-1 h-1 rounded-full bg-emerald-500 ml-0.5" />}
+              {isActive(link.href) && <div className="w-1 h-1 rounded-full bg-brand/100 ml-0.5" />}
             </Link>
         ))}
 
@@ -69,18 +69,18 @@ export function PublicHeader() {
           </button>
         ) : (
           <>
-            <Link href="/auth" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all text-[10px] uppercase tracking-widest">
+            <Link href="/auth" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-brand bg-brand/10 hover:bg-brand/20 transition-all text-[10px] uppercase tracking-widest">
               <LogIn className="w-3.5 h-3.5" />
               Espace Pro
             </Link>
-            <Link href="/inscription" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-emerald-600 transition-all text-[10px] uppercase tracking-widest">
+            <Link href="/inscription" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-brand transition-all text-[10px] uppercase tracking-widest">
               <UserPlus className="w-3.5 h-3.5" />
               Inscription
             </Link>
           </>
         )}
 
-        <Link href="/verifier" className="ml-1 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.15em] hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-0.5 transition-all active:scale-95 shadow-lg">
+        <Link href="/verifier" className="ml-1 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.15em] hover:bg-brand hover:shadow-xl hover:shadow-brand/30 hover:-translate-y-0.5 transition-all active:scale-95 shadow-lg">
           <ShieldCheck className="w-3.5 h-3.5" />
           Vérifier
         </Link>
@@ -117,12 +117,12 @@ export function PublicHeader() {
                           onClick={() => setOpen(false)} 
                           className={`p-4 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-between transition-all ${
                               isActive(link.href)
-                                  ? "bg-emerald-50 text-emerald-700 shadow-sm"
+                                  ? "bg-brand/10 text-brand-dark shadow-sm"
                                   : "bg-transparent text-slate-500 hover:bg-slate-50"
                           }`}
                       >
                           {link.label}
-                          {isActive(link.href) && <ArrowRight className="w-4 h-4 text-emerald-500" />}
+                          {isActive(link.href) && <ArrowRight className="w-4 h-4 text-brand" />}
                       </Link>
                   ))}
                   
@@ -139,7 +139,7 @@ export function PublicHeader() {
                     <Link 
                       href="/inscription" 
                       onClick={() => setOpen(false)} 
-                      className="p-4 rounded-xl bg-emerald-50 text-emerald-700 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
+                      className="p-4 rounded-xl bg-brand/10 text-brand-dark font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
                     >
                         <UserPlus className="w-4 h-4" /> Inscription
                     </Link>
@@ -147,7 +147,7 @@ export function PublicHeader() {
                   <Link 
                     href="/verifier" 
                     onClick={() => setOpen(false)} 
-                    className="p-4 rounded-xl bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"
+                    className="p-4 rounded-xl bg-brand text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-brand/20"
                   >
                       <ShieldCheck className="w-4 h-4" /> Vérifier
                   </Link>
