@@ -133,19 +133,19 @@ export default function AdminExamsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <LayoutGrid className="w-10 h-10 text-blue-600" />
+            <LayoutGrid className="w-10 h-10 text-brand" />
             Gestion des Examens
           </h1>
           <p className="text-slate-500 font-medium mt-1">Créez, planifiez et suivez les épreuves académiques</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="relative group flex-1 min-w-0 md:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-brand transition-colors" />
             <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Rechercher une épreuve..."
-                className="pl-10 w-full md:w-80 bg-white border-slate-200 focus:ring-blue-500 transition-all rounded-xl"
+                className="pl-10 w-full md:w-80 bg-white border-slate-200 focus:ring-brand transition-all rounded-xl"
             />
           </div>
           <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
@@ -153,7 +153,7 @@ export default function AdminExamsPage() {
                 variant={view === 'grid' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setView('grid')}
-                className={`rounded-lg h-9 px-3 ${view === 'grid' ? 'bg-blue-600 shadow-blue-100' : 'text-slate-400'}`}
+                className={`rounded-lg h-9 px-3 ${view === 'grid' ? 'bg-brand shadow-brand/20' : 'text-slate-400'}`}
             >
                 <LayoutGrid className="w-4 h-4 mr-2" />
                 Grille
@@ -162,7 +162,7 @@ export default function AdminExamsPage() {
                 variant={view === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setView('list')}
-                className={`rounded-lg h-9 px-3 ${view === 'list' ? 'bg-blue-600 shadow-blue-100' : 'text-slate-400'}`}
+                className={`rounded-lg h-9 px-3 ${view === 'list' ? 'bg-brand shadow-brand/20' : 'text-slate-400'}`}
             >
                 <List className="w-4 h-4 mr-2" />
                 Liste
@@ -170,7 +170,7 @@ export default function AdminExamsPage() {
           </div>
 
           <Link href="/admin/exams/new">
-            <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 rounded-xl shadow-lg shadow-blue-100">
+            <Button className="gap-2 bg-brand hover:bg-brand-dark text-white font-bold px-6 rounded-xl shadow-lg shadow-brand/20">
                 <Plus className="w-5 h-5" />
                 Nouvel Examen
             </Button>
@@ -194,7 +194,7 @@ export default function AdminExamsPage() {
             const StatusIcon = config.icon;
 
             return (
-              <Card key={exam.id} className="group relative bg-white border border-slate-100 hover:border-blue-200 rounded-[28px] overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-blue-100 hover:-translate-y-1">
+              <Card key={exam.id} className="group relative bg-white border border-slate-100 hover:border-brand/30 rounded-[28px] overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-brand/10 hover:-translate-y-1">
                 <div className={`h-1.5 w-full ${config.dot === 'bg-emerald-500' ? 'bg-emerald-500' : config.dot === 'bg-blue-500' ? 'bg-blue-500' : 'bg-slate-300'}`} />
 
                 <div className="p-8 flex flex-col h-full">
@@ -217,7 +217,7 @@ export default function AdminExamsPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild className="rounded-xl focus:bg-slate-50 transition-colors">
                                     <Link href={`/admin/submissions?examId=${exam.id}`} className="flex items-center gap-3 font-bold text-slate-700 py-2.5">
-                                        <TrendingUp className="w-4 h-4 text-emerald-400" />
+                                        <TrendingUp className="w-4 h-4 text-brand" />
                                         Résultats
                                     </Link>
                                 </DropdownMenuItem>
@@ -238,7 +238,7 @@ export default function AdminExamsPage() {
                             <Badge variant="outline" className={`h-2 w-2 rounded-full p-0 border-none ${config.dot} animate-pulse`} />
                             <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">{config.label}</span>
                         </div>
-                        <h3 className="text-xl font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors min-h-[3rem] line-clamp-2">
+                        <h3 className="text-xl font-black text-slate-900 leading-tight group-hover:text-brand transition-colors min-h-[3rem] line-clamp-2">
                             {exam.title}
                         </h3>
                         {exam.session && (
@@ -276,7 +276,7 @@ export default function AdminExamsPage() {
                             </div>
                         </div>
                         <Link href={`/admin/exams/${exam.id}/edit`}>
-                            <Button size="sm" variant="outline" className="rounded-xl font-bold bg-slate-50 border-slate-100 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all px-4">
+                            <Button size="sm" variant="outline" className="rounded-xl font-bold bg-slate-50 border-slate-100 hover:bg-brand/10 hover:text-brand-dark hover:border-brand/20 transition-all px-4">
                                 Gérer
                             </Button>
                         </Link>
@@ -340,7 +340,7 @@ export default function AdminExamsPage() {
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                                <Link href={`/admin/exams/${exam.id}/edit`}>
-                                  <Button size="sm" variant="outline" className="rounded-xl h-9 px-4 font-bold bg-slate-50 hover:bg-blue-600 hover:text-white transition-all">
+                                  <Button size="sm" variant="outline" className="rounded-xl h-9 px-4 font-bold bg-slate-50 hover:bg-brand hover:text-white transition-all">
                                      Gérer <ChevronRight className="w-4 h-4 ml-1" />
                                   </Button>
                                </Link>

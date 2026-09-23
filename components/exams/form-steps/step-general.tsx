@@ -117,15 +117,15 @@ export function StepGeneral({ formData, updateFormData }: Props) {
         </div>
 
         {/* ✅ PROGRAMMATION & STATUT */}
-        <div className="p-5 bg-blue-50 border border-blue-200 rounded-xl space-y-5">
+        <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-5">
           <div className="flex items-center gap-2 mb-1">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            <h3 className="font-extrabold text-blue-800 uppercase tracking-tight text-sm">Programmation & Statut</h3>
+            <Calendar className="w-5 h-5 text-brand" />
+            <h3 className="font-extrabold text-slate-800 uppercase tracking-tight text-sm">Programmation & Statut</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-blue-900">
+              <Label className="text-sm font-semibold text-slate-700">
                 Date de l&apos;Examen (JJ/MM/AAAA)
               </Label>
               <DateInput
@@ -135,12 +135,12 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   const time = formData.scheduledAt?.split("T")[1] || "08:00";
                   updateFormData({ scheduledAt: `${date}T${time}` });
                 }}
-                className="h-12 focus:ring-2 focus:ring-blue-500/20 font-bold"
+                className="h-12 focus:ring-2 focus:ring-brand/20 font-bold"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-blue-900">
+              <Label className="text-sm font-semibold text-slate-700">
                 Heure (Format 24h)
               </Label>
               <Input
@@ -151,13 +151,13 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   const date = formData.scheduledAt?.split("T")[0] || new Date().toISOString().split("T")[0];
                   updateFormData({ scheduledAt: `${date}T${time}` });
                 }}
-                className="h-12 focus:ring-2 focus:ring-blue-500/20 font-bold"
+                className="h-12 focus:ring-2 focus:ring-brand/20 font-bold"
               />
             </div>
 
             <div className="md:col-span-2">
               <div className="space-y-2">
-                <Label htmlFor="status" className="text-sm font-semibold text-blue-900">
+                <Label htmlFor="status" className="text-sm font-semibold text-slate-700">
                   Statut de publication
                 </Label>
                 <select
@@ -290,10 +290,10 @@ export function StepGeneral({ formData, updateFormData }: Props) {
         </div>
 
         {/* 🏆 CONFIGURATION DE RÉUSSITE & OPTIONS */}
-        <div className="p-6 bg-emerald-50/30 border border-emerald-100 rounded-2xl space-y-6">
+        <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-6">
           <div className="flex items-center gap-2 mb-2">
-            <Target className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-black text-emerald-800 uppercase tracking-tight text-sm">Paramètres de l&apos;Épreuve</h3>
+            <Target className="w-5 h-5 text-brand" />
+            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm">Paramètres de l&apos;Épreuve</h3>
           </div>
 
           <div className="space-y-6">
@@ -317,27 +317,27 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                         const noteSur20 = parseFloat(e.target.value) || 0;
                         updateFormData({ passingScore: (noteSur20 * 100) / 20 });
                       }}
-                      className="h-10 pr-8 font-black text-emerald-600 text-center"
+                      className="h-10 pr-8 font-black text-brand-dark text-center"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">/20</span>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 shadow-sm">
-                    <span className="text-xs font-bold text-emerald-500">Soit</span>
-                    <span className="text-sm font-black text-emerald-700">{Math.round(formData.passingScore || 65)}%</span>
+                  <div className="flex items-center gap-1 bg-brand/10 px-3 py-1 rounded-lg border border-brand/20 shadow-sm">
+                    <span className="text-xs font-bold text-brand">Soit</span>
+                    <span className="text-sm font-black text-brand-dark">{Math.round(formData.passingScore || 65)}%</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="h-px bg-emerald-100/50" />
+            <div className="h-px bg-slate-200" />
 
             {/* TOGGLES */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-emerald-50 shadow-sm hover:border-emerald-200 transition-colors">
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-brand/30 transition-colors">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Shuffle className="w-4 h-4 text-emerald-500" />
+                    <Shuffle className="w-4 h-4 text-brand" />
                     <Label className="font-bold text-slate-800 cursor-pointer">Aléatoire</Label>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium">Mélanger les questions</p>
@@ -348,10 +348,10 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-emerald-50 shadow-sm hover:border-emerald-200 transition-colors">
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-brand/30 transition-colors">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-emerald-500" />
+                    <Eye className="w-4 h-4 text-brand" />
                     <Label className="font-bold text-slate-800 cursor-pointer">Résultats</Label>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium">Affichage immédiat du score</p>

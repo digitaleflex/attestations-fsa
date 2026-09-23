@@ -30,7 +30,7 @@ export function StepSummary({ formData, saving, onSave }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="border-l-4 border-emerald-500 pl-4 mb-4">
+      <div className="border-l-4 border-brand pl-4 mb-4">
         <h2 className="text-xl font-bold text-slate-800">Prêt à enregistrer ?</h2>
         <p className="text-slate-500 text-sm">Vérifiez les informations avant de finaliser.</p>
       </div>
@@ -43,27 +43,27 @@ export function StepSummary({ formData, saving, onSave }: Props) {
             <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Titre:</span> <span className="font-semibold">{formData.title || "Sans titre"}</span></div>
             <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Statut:</span> <Badge variant="outline" className="uppercase text-[10px]">{formData.status === 'SCHEDULED' ? '📅 Programmé' : formData.status === 'PUBLISHED' ? '✅ Publié' : formData.status === 'DRAFT' ? '📝 Brouillon' : '📦 Archivé'}</Badge></div>
             {formData.session && <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Session:</span> <span className="font-bold text-slate-800 uppercase italic">{formData.session}</span></div>}
-            <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Durée Totale:</span> <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-none font-bold">{formatSeconds(formData.duration || 0)}</Badge></div>
+            <div className="text-sm flex items-center gap-2"><span className="text-slate-400">Durée Totale:</span> <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-none font-bold">{formatSeconds(formData.duration || 0)}</Badge></div>
             <div className="text-sm flex items-center gap-2">
               <span className="text-slate-400">Seuil de Réussite:</span>
-              <span className="font-bold text-emerald-600">{formData.passingScore || 65}%</span>
-              <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-black border border-emerald-100">
+              <span className="font-bold text-brand-dark">{formData.passingScore || 65}%</span>
+              <span className="text-[10px] bg-brand/10 text-brand px-1.5 py-0.5 rounded font-black border border-brand/20">
                 ({((formData.passingScore || 65) * 20) / 100}/20)
               </span>
             </div>
             <div className="flex gap-2 pt-1">
               {formData.randomizeQuestions && <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[9px] font-bold uppercase tracking-tight">🔀 Aléatoire</Badge>}
-              {formData.showResults && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none text-[9px] font-bold uppercase tracking-tight">👁️ Résultats</Badge>}
+              {formData.showResults && <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none text-[9px] font-bold uppercase tracking-tight">👁️ Résultats</Badge>}
             </div>
             {formData.status === 'SCHEDULED' && formData.scheduledAt && (
-              <div className="text-sm text-blue-600 flex items-center gap-2 font-medium">
-                <span className="text-blue-400">📅 Programmé le:</span> {new Date(formData.scheduledAt).toLocaleString("fr-FR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              <div className="text-sm text-slate-600 flex items-center gap-2 font-medium">
+                <span className="text-slate-500">📅 Programmé le:</span> {new Date(formData.scheduledAt).toLocaleString("fr-FR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
           </div>
         </Card>
-        <Card className="p-4 bg-emerald-50/30 border-emerald-100 space-y-4">
-          <h3 className="font-bold text-emerald-700 flex items-center gap-2">
+        <Card className="p-4 bg-slate-50 border-slate-200 space-y-4">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4" /> Structure
           </h3>
           <div className="space-y-3">
@@ -79,7 +79,7 @@ export function StepSummary({ formData, saving, onSave }: Props) {
                   )}
                   <Badge variant="outline" className="bg-white px-1 h-5 text-[10px]">{p.questions.length} Qs</Badge>
                   <Badge variant="outline" className="bg-white px-1 h-5 text-[10px]">{p.duration} Min</Badge>
-                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-none font-bold px-1 h-5 text-[10px]">{p.points} Pts</Badge>
+                  <Badge variant="secondary" className="bg-brand/10 text-brand-dark border-none font-bold px-1 h-5 text-[10px]">{p.points} Pts</Badge>
                 </div>
               </div>
             ))}

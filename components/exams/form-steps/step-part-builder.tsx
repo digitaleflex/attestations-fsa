@@ -111,20 +111,20 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
               <Card
                 className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group ${
                   part.mode === "digital"
-                    ? "border-2 border-blue-500 bg-blue-50/50 shadow-md"
-                    : "border-2 border-slate-200 hover:border-blue-200 bg-white"
+                    ? "border-2 border-brand bg-brand/10 shadow-md"
+                    : "border-2 border-slate-200 hover:border-brand/30 bg-white"
                 }`}
                 onClick={() => onUpdatePart({ mode: "digital" })}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${part.mode === "digital" ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500"}`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${part.mode === "digital" ? "bg-brand text-white" : "bg-slate-100 text-slate-400 group-hover:bg-brand/10 group-hover:text-brand"}`}>
                     <Laptop2 className="w-6 h-6" />
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-800">Numérique</h4>
                     <p className="text-[10px] text-slate-500 font-medium">Rédaction directe en ligne</p>
                   </div>
-                  {part.mode === "digital" && <CheckCircle2 className="w-5 h-5 text-blue-500 ml-auto" />}
+                  {part.mode === "digital" && <CheckCircle2 className="w-5 h-5 text-brand ml-auto" />}
                 </div>
               </Card>
 
