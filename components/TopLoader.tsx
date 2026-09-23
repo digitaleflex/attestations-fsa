@@ -14,7 +14,7 @@ export function TopLoader() {
 
   return (
     <NextTopLoader
-      color="#16a34a"
+      color="#e60023"
       initialPosition={0.08}
       crawlSpeed={200}
       height={3}
@@ -22,7 +22,7 @@ export function TopLoader() {
       showSpinner={false}
       easing="ease"
       speed={200}
-      shadow="0 0 10px #16a34a,0 0 5px #16a34a"
+      shadow="0 0 10px #e60023,0 0 5px #e60023"
     />
   );
 }
