@@ -60,7 +60,7 @@ export default async function AdminDashboardPage() {
           <Card className="p-6 border-none shadow-sm bg-white">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-                <UserPlus className="w-5 h-5 text-blue-600" />
+                <UserPlus className="w-5 h-5 text-brand" />
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-500">Nouveaux Inscrits</p>
@@ -71,8 +71,8 @@ export default async function AdminDashboardPage() {
 
           <Card className="p-6 border-none shadow-sm bg-white">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-emerald-600" />
+              <div className="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-brand" />
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-500">Attestations Délivrées</p>

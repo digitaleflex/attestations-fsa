@@ -164,10 +164,10 @@ export default function UserDashboardPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome Premium */}
       <Card className="p-8 bg-gradient-to-br from-slate-900 to-blue-900 text-white shadow-2xl relative overflow-hidden group border-none">
-        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-1000" />
+        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand/10 rounded-full blur-3xl group-hover:bg-brand/20 transition-all duration-1000" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-none px-3 py-1 text-[10px] uppercase font-black tracking-widest mb-2">
+            <Badge className="bg-brand/20 text-white border-none px-3 py-1 text-[10px] uppercase font-black tracking-widest mb-2">
               Espace Candidat
             </Badge>
             <h2 className="text-4xl font-black tracking-tighter">
@@ -258,7 +258,7 @@ export default function UserDashboardPage() {
                 className={`${
                   hasPendingCorrection
                     ? "bg-amber-100 text-amber-700"
-                    : "bg-blue-100 text-blue-700"
+                    : "bg-brand/10 text-brand-dark"
                 } border-none px-2 py-0.5 text-[9px] uppercase font-bold`}
               >
                 {hasPendingCorrection ? "Demande en cours" : "Étape Importante"}
@@ -305,7 +305,7 @@ export default function UserDashboardPage() {
               <div
                 className={`px-4 py-2 rounded-xl border text-xs transition-all ${
                   user?.emailVerified
-                    ? "bg-emerald-50 border-emerald-100"
+                    ? "bg-brand/10 border-brand/20"
                     : "bg-amber-50 border-amber-100 animate-pulse"
                 }`}
               >
@@ -314,12 +314,12 @@ export default function UserDashboardPage() {
                 </span>
                 <div className="flex items-center gap-1.5">
                   {user?.emailVerified ? (
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-brand" />
                   ) : (
                     <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
                   )}
                   <span
-                    className={`font-black ${user?.emailVerified ? "text-emerald-700" : "text-amber-700"}`}
+                    className={`font-black ${user?.emailVerified ? "text-brand-dark" : "text-amber-700"}`}
                   >
                     {user?.emailVerified ? "CONFIRMÉ" : "À VÉRIFIER"}
                   </span>
@@ -336,7 +336,7 @@ export default function UserDashboardPage() {
               ) : (
                 <>
                   <Link href="/profile">
-                    <Button className="bg-blue-600 hover:bg-blue-700 h-11 px-6 rounded-xl font-bold shadow-lg shadow-blue-100">
+                    <Button className="bg-brand hover:bg-brand-dark h-11 px-6 rounded-xl font-bold shadow-lg shadow-brand/20">
                       Vérifier et Valider
                     </Button>
                   </Link>
@@ -382,19 +382,19 @@ export default function UserDashboardPage() {
                 label: "Attestations",
                 val: statsData?.overview?.totalAttestations || 0,
                 icon: FileText,
-                bg: "bg-blue-600",
+                bg: "bg-brand",
               },
               {
                 label: "Réussites Off.",
                 val: statsData?.overview?.examsPassed || 0,
                 icon: CheckCircle,
-                bg: "bg-emerald-600",
+                bg: "bg-brand-dark",
               },
               {
                 label: "Examen Blanc",
                 val: statsData?.overview?.totalMockExams || 0,
                 icon: GraduationCap,
-                bg: "bg-indigo-500",
+                bg: "bg-brand-accent",
               },
               {
                 label: "Score Moyen",
@@ -430,10 +430,10 @@ export default function UserDashboardPage() {
           {/* Exams Status Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Official Exam Status */}
-            <Card className="p-6 border-none shadow-premium bg-white group hover:shadow-xl transition-all border-l-4 border-l-blue-600">
+            <Card className="p-6 border-none shadow-premium bg-white group hover:shadow-xl transition-all border-l-4 border-l-brand">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-blue-600" /> Session
+                  <ShieldCheck className="w-4 h-4 text-brand" /> Session
                   Officielle
                 </h3>
                 <Link href="/exams">
@@ -459,7 +459,7 @@ export default function UserDashboardPage() {
                   <span className="text-xs font-bold text-slate-500 uppercase">
                     Réussites
                   </span>
-                  <span className="text-sm font-black text-emerald-600">
+                  <span className="text-sm font-black text-brand">
                     {statsData?.overview?.examsPassed || 0}
                   </span>
                 </div>
@@ -472,10 +472,10 @@ export default function UserDashboardPage() {
             </Card>
 
             {/* Mock Exam Status */}
-            <Card className="p-6 border-none shadow-premium bg-white group hover:shadow-xl transition-all border-l-4 border-l-indigo-600">
+            <Card className="p-6 border-none shadow-premium bg-white group hover:shadow-xl transition-all border-l-4 border-l-brand-accent">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4 text-indigo-600" />{" "}
+                  <GraduationCap className="w-4 h-4 text-brand-accent" />{" "}
                   Auto-Évaluation
                 </h3>
                 <Link href="/exams">
@@ -501,14 +501,14 @@ export default function UserDashboardPage() {
                   <span className="text-xs font-bold text-slate-500 uppercase">
                     Objectif atteint
                   </span>
-                  <span className="text-sm font-black text-indigo-600">
+                  <span className="text-sm font-black text-brand-accent">
                     {statsData?.overview?.mockExamsPassed || 0}
                   </span>
                 </div>
                 <Link href="/exams" className="block pt-2">
                   <Button
                     variant="outline"
-                    className="w-full border-indigo-100 text-indigo-600 hover:bg-indigo-50 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider gap-2"
+                    className="w-full border-brand/20 text-brand-accent hover:bg-brand/10 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider gap-2"
                   >
                     <Clock className="w-3 h-3" /> S'entraîner maintenant
                   </Button>
@@ -527,7 +527,7 @@ export default function UserDashboardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="font-bold text-blue-600"
+                  className="font-bold text-brand"
                 >
                   Tout voir
                 </Button>
@@ -550,7 +550,7 @@ export default function UserDashboardPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center font-black text-blue-600">
+                        <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center font-black text-brand">
                           {att.type.charAt(0)}
                         </div>
                         <div>
@@ -625,7 +625,7 @@ export default function UserDashboardPage() {
                             <span
                               className={
                                 (att.stageScore || 0) >= 60
-                                  ? "text-emerald-500"
+                                  ? "text-brand"
                                   : "text-slate-300"
                               }
                             >
@@ -645,7 +645,7 @@ export default function UserDashboardPage() {
                             <span className="text-[9px] font-bold text-slate-500 uppercase">
                               Théorie
                             </span>
-                            <span className="text-sm font-black text-blue-700">
+                            <span className="text-sm font-black text-brand-dark">
                               {((att.certificationScore || 0) / 5).toFixed(2)}
                               /20
                             </span>
@@ -653,18 +653,18 @@ export default function UserDashboardPage() {
 
                           {(att.certificationScore || 0) >= 60 ? (
                             (att.stageScore || 0) > 0 ? (
-                              <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-emerald-600 uppercase">
+                              <div className="bg-brand/10 p-2.5 rounded-xl border border-brand/20 flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-brand uppercase">
                                   Stage
                                 </span>
-                                <span className="text-sm font-black text-emerald-700">
+                                <span className="text-sm font-black text-brand-dark">
                                   {((att.stageScore || 0) / 5).toFixed(2)}/20
                                 </span>
                               </div>
                             ) : (
                               <Link
                                 href="/internships"
-                                className="bg-gradient-to-r from-emerald-600 to-teal-600 p-2.5 rounded-xl text-white flex items-center justify-center gap-2 hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg active:scale-95 shadow-emerald-100"
+                                className="bg-gradient-to-r from-brand to-brand-dark p-2.5 rounded-xl text-white flex items-center justify-center gap-2 hover:from-brand-dark hover:to-brand-dark transition-all shadow-lg active:scale-95 shadow-brand/20"
                               >
                                 <span className="text-[9px] font-black uppercase">
                                   Postuler au Stage
@@ -728,7 +728,7 @@ export default function UserDashboardPage() {
           {/* Recent Submissions (New) */}
           <Card className="p-6 border-none shadow-premium bg-white">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-500" /> Vos Dernières
+              <Activity className="w-4 h-4 text-brand" /> Vos Dernières
               Notes
             </h3>
             <div className="space-y-3">
@@ -751,7 +751,7 @@ export default function UserDashboardPage() {
                           className={cn(
                             "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 transition-transform group-hover:scale-110",
                             isPassed
-                              ? "bg-emerald-100 text-emerald-600"
+                              ? "bg-brand/10 text-brand"
                               : "bg-rose-100 text-rose-600",
                           )}
                         >
@@ -779,7 +779,7 @@ export default function UserDashboardPage() {
                         <div
                           className={cn(
                             "text-lg font-black leading-none",
-                            isPassed ? "text-emerald-600" : "text-rose-600",
+                            isPassed ? "text-brand" : "text-rose-600",
                           )}
                         >
                           {scoreOn20.toFixed(1)}/20
@@ -789,7 +789,7 @@ export default function UserDashboardPage() {
                             "text-[8px] h-4 leading-none font-black uppercase tracking-tighter shadow-sm border-none",
                             isGraded
                               ? isPassed
-                                ? "bg-emerald-500 text-white"
+                                ? "bg-brand text-white"
                                 : "bg-rose-500 text-white"
                               : "bg-amber-100 text-amber-700",
                           )}
@@ -840,7 +840,7 @@ export default function UserDashboardPage() {
               <Link href="/exams">
                 <Button
                   variant="outline"
-                  className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl h-12 font-bold gap-2"
+                  className="w-full border-brand/20 text-brand hover:bg-brand/10 rounded-xl h-12 font-bold gap-2"
                 >
                   <GraduationCap className="w-4 h-4" /> Examen Blanc
                 </Button>
