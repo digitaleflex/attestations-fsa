@@ -295,6 +295,7 @@ model ExamSession {
   submittedAt DateTime?
   updatedAt   DateTime          @updatedAt
   answers     Json?             @default("{}")
+  observations String?          // notes de correction (texte riche)
   scans       CompositionScan[]
   reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)

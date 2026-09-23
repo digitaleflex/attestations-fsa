@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -12,26 +12,11 @@ import {
   Loader2,
   ArrowLeft,
   Save,
-  Upload,
-  Trash2,
-  FileText,
-  Image as ImageIcon,
   CheckCircle2,
   AlertTriangle,
   User,
-  ExternalLink,
-  Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface Scan {
-  id: string;
-  url: string;
-  pageNumber: number;
-  fileName: string;
-  fileSize: number;
-  uploadedAt: string;
-}
 
 interface QuestionOption {
   id: string;
@@ -88,6 +73,7 @@ interface Submission {
   submittedAt: string | null;
   gradedAt: string | null;
   answers: Record<string, unknown> | null;
+  observations: string | null;
   candidate: {
     id: string;
     name: string | null;
@@ -95,7 +81,6 @@ interface Submission {
     phone: string | null;
   };
   exam: Exam;
-  scans: Scan[];
 }
 
 interface CorrectResponse {
@@ -108,31 +93,11 @@ interface CorrectResponse {
   error?: string;
 }
 
-interface UploadResponse {
-  message?: string;
-  error?: string;
-}
-
-const ALLOWED_SCAN_TYPES = ["application/pdf", "image/jpeg", "image/png"];
-const MAX_SCAN_SIZE = 5 * 1024 * 1024;
-const MAX_SCAN_FILES = 10;
-
 function normalizeAnswer(value: unknown): string[] {
   if (value === undefined || value === null) return [];
   if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean);
   if (typeof value === "string") return value ? [value] : [];
   return [String(value)];
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-}
-
-function isImageScan(scan: Scan): boolean {
-  const name = scan.fileName.toLowerCase();
-  return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
 }
 
 function statusBadge(status: string) {
@@ -164,19 +129,17 @@ export default function AdminSubmissionDetailPage() {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [deletingScanId, setDeletingScanId] = useState<string | null>(null);
 
   const [part2Score, setPart2Score] = useState("");
   const [part3Score, setPart3Score] = useState("");
   const [internshipScore, setInternshipScore] = useState("0");
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [observations, setObservations] = useState("");
 
   const applyScores = useCallback((data: Submission) => {
     setPart2Score(data.scorePart2 == null ? "" : String(data.scorePart2));
     setPart3Score(data.scorePart3 == null ? "" : String(data.scorePart3));
     setInternshipScore(String(data.internshipScore ?? 0));
+    setObservations(data.observations ?? "");
   }, []);
 
   const fetchSubmission = useCallback(async () => {
@@ -205,8 +168,9 @@ export default function AdminSubmissionDetailPage() {
     if (!id || !submission) return;
     setSaving(true);
     try {
-      const payload: Record<string, number | null> = {
+      const payload: Record<string, number | null | string> = {
         internshipScore: Number(internshipScore) || 0,
+        observations: observations || null,
       };
       if (submission.exam.part2Enabled) {
         payload.part2Score = part2Score === "" ? null : Number(part2Score);
@@ -245,71 +209,6 @@ export default function AdminSubmissionDetailPage() {
     }
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!id) return;
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    if (files.length === 0) return;
-
-    if (files.length > MAX_SCAN_FILES) {
-      toast.error(`Maximum ${MAX_SCAN_FILES} fichiers par envoi.`);
-      return;
-    }
-
-    for (const file of files) {
-      if (!ALLOWED_SCAN_TYPES.includes(file.type)) {
-        toast.error(`Type non autorisé : ${file.name}`);
-        return;
-      }
-      if (file.size > MAX_SCAN_SIZE) {
-        toast.error(`Fichier trop volumineux : ${file.name} (max 5 Mo).`);
-        return;
-      }
-    }
-
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      files.forEach((file) => formData.append("scans", file));
-
-      const res = await fetch(`/api/admin/submissions/${id}/scans`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = (await res.json()) as UploadResponse;
-      if (!res.ok) throw new Error(data.error || "Erreur lors de l'upload");
-
-      toast.success(data.message || "Scan(s) ajouté(s).");
-      await fetchSubmission();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
-      toast.error(message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteScan = async (scan: Scan) => {
-    if (!id) return;
-    if (!window.confirm(`Supprimer le scan « ${scan.fileName} » ?`)) return;
-    setDeletingScanId(scan.id);
-    try {
-      const res = await fetch(
-        `/api/admin/submissions/${id}/scans?scanId=${encodeURIComponent(scan.id)}`,
-        { method: "DELETE" }
-      );
-      const data = (await res.json()) as UploadResponse;
-      if (!res.ok) throw new Error(data.error || "Erreur lors de la suppression");
-      toast.success("Scan supprimé.");
-      await fetchSubmission();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
-      toast.error(message);
-    } finally {
-      setDeletingScanId(null);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-20 text-slate-400 min-h-screen">
@@ -341,7 +240,6 @@ export default function AdminSubmissionDetailPage() {
     (exam.part1Enabled ? exam.part1Points : 0) +
       (exam.part2Enabled ? exam.part2Points : 0) +
       (exam.part3Enabled ? exam.part3Points : 0) || exam.totalPoints || 100;
-  const scans = [...submission.scans].sort((a, b) => a.pageNumber - b.pageNumber);
   const answers = submission.answers ?? {};
 
   return (
@@ -606,109 +504,23 @@ export default function AdminSubmissionDetailPage() {
         )}
       </Card>
 
-      {/* Scans */}
+      {/* Observations de correction */}
       <Card className="p-6 border-slate-100 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 className="font-black text-slate-900 flex items-center gap-2">
-              <Paperclip className="w-5 h-5 text-slate-400" />
-              Scans de composition
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              PDF, JPG ou PNG — 5 Mo max par fichier, {MAX_SCAN_FILES} fichiers max.
-            </p>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="application/pdf,image/jpeg,image/png"
-            className="hidden"
-            onChange={handleUpload}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={uploading}
-            onClick={() => fileInputRef.current?.click()}
-            className="h-11 rounded-xl font-bold border-slate-200"
-          >
-            {uploading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4 mr-2" />
-            )}
-            Ajouter des scans
-          </Button>
+        <div className="mb-4">
+          <h2 className="font-black text-slate-900 flex items-center gap-2">
+            📝 Observations de correction
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Notes, commentaires et retour pour l'apprenant.
+          </p>
         </div>
-
-        {scans.length === 0 ? (
-          <div className="p-6 sm:p-12 text-center border-dashed border-2 border-slate-200 rounded-2xl bg-slate-50">
-            <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-bold text-sm">Aucun scan pour cette copie.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {scans.map((scan) => (
-              <div
-                key={scan.id}
-                className="rounded-2xl border border-slate-100 overflow-hidden bg-white shadow-sm group"
-              >
-                <div className="h-40 bg-slate-50 flex items-center justify-center overflow-hidden">
-                  {isImageScan(scan) ? (
-                    <img
-                      src={scan.url}
-                      alt={scan.fileName}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <FileText className="w-12 h-12 text-slate-300" />
-                  )}
-                </div>
-                <div className="p-3 space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    {isImageScan(scan) ? (
-                      <ImageIcon className="w-3.5 h-3.5" />
-                    ) : (
-                      <FileText className="w-3.5 h-3.5" />
-                    )}
-                    <span className="truncate font-medium">{scan.fileName}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    Page {scan.pageNumber} · {formatFileSize(scan.fileSize)}
-                  </p>
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      asChild
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 rounded-lg text-xs"
-                    >
-                      <a href={scan.url} target="_blank" rel="noreferrer">
-                        <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                        Voir
-                      </a>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={deletingScanId === scan.id}
-                      onClick={() => handleDeleteScan(scan)}
-                      className="rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                    >
-                      {deletingScanId === scan.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3.5 h-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <textarea
+          value={observations}
+          onChange={(e) => setObservations(e.target.value)}
+          placeholder="Ajoutez vos observations, commentaires ou retour sur la copie..."
+          rows={6}
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-y"
+        />
       </Card>
 
       {/* Résumé attestation */}
