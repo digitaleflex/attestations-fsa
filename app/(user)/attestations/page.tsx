@@ -258,7 +258,7 @@ export default function UserAttestationsPage() {
                   <Card key={att.id} className="p-6 bg-white shadow-lg shadow-slate-200/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden border-none rounded-[2rem] group">
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
                       <div className="flex items-start gap-5 flex-1 min-w-0 w-full">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-110 transition-transform">
                           <Award className="w-7 h-7 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -281,7 +281,7 @@ export default function UserAttestationsPage() {
                           </div>
                           <p className="text-sm font-semibold text-slate-600 mb-3">
                             {att.formation?.name || "-"} <span className="text-slate-300 mx-2">•</span>
-                            <span className="text-blue-600 font-bold uppercase tracking-widest text-[10px]">
+                            <span className="text-brand font-bold uppercase tracking-widest text-[10px]">
                               {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
                             </span>
                           </p>
@@ -383,7 +383,7 @@ export default function UserAttestationsPage() {
                             title={att.isLocked ? "Verrouillé" : (att.status === "CLAIMED" ? "Télécharger à nouveau" : "Télécharger en PDF")}
                           >
                             {downloading === att.code ? (
-                              <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                              <div className="animate-spin w-4 h-4 border-2 border-brand border-t-transparent rounded-full" />
                             ) : (
                               <Download className="w-4 h-4" />
                             )}
@@ -398,16 +398,16 @@ export default function UserAttestationsPage() {
         </TabsContent>
 
         <TabsContent value="releves" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="p-12 border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-gradient-to-br from-blue-50 to-white flex flex-col items-center text-center">
-            <div className="w-24 h-24 rounded-[2rem] bg-blue-100 flex items-center justify-center mb-6 shadow-inner">
-              <FileSpreadsheet className="w-12 h-12 text-blue-600" />
+          <Card className="p-12 border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-gradient-to-br from-brand/10 to-white flex flex-col items-center text-center">
+            <div className="w-24 h-24 rounded-[2rem] bg-brand/10 flex items-center justify-center mb-6 shadow-inner">
+              <FileSpreadsheet className="w-12 h-12 text-brand" />
             </div>
             <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Mes Relevés de Notes</h3>
             <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-10">
               Retrouvez ici tous vos relevés de notes détaillés par module pour chaque session d'examen.
             </p>
             <Link href="/exams">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1">
+              <Button className="bg-brand hover:bg-brand-dark text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-brand/20 transition-all hover:-translate-y-1">
                 Accéder à mes examens <ChevronRight className="w-4 h-4" />
               </Button>
             </Link>
@@ -415,16 +415,16 @@ export default function UserAttestationsPage() {
         </TabsContent>
 
         <TabsContent value="resultats" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="p-12 border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-gradient-to-br from-emerald-50 to-white flex flex-col items-center text-center">
-            <div className="w-24 h-24 rounded-[2rem] bg-emerald-100 flex items-center justify-center mb-6 shadow-inner">
-              <BarChart3 className="w-12 h-12 text-emerald-600" />
+          <Card className="p-12 border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-gradient-to-br from-brand/10 to-white flex flex-col items-center text-center">
+            <div className="w-24 h-24 rounded-[2rem] bg-brand/10 flex items-center justify-center mb-6 shadow-inner">
+              <BarChart3 className="w-12 h-12 text-brand" />
             </div>
             <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Détail de mes Résultats</h3>
             <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-10">
               Consultez vos statistiques, votre progression et le détail de vos performances aux examens.
             </p>
             <Link href="/exams">
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1">
+              <Button className="bg-brand hover:bg-brand-dark text-white rounded-2xl h-14 px-10 font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-brand/20 transition-all hover:-translate-y-1">
                 Voir mes statistiques <ChevronRight className="w-4 h-4" />
               </Button>
             </Link>

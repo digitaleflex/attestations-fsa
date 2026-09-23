@@ -166,7 +166,7 @@ export default function AttestationPreviewPage() {
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={handleDownload} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 gap-2">
+          <Button onClick={handleDownload} className="flex-1 md:flex-none bg-brand hover:bg-brand-dark gap-2">
             <Download className="w-4 h-4" />
             Télécharger (PDF)
           </Button>
@@ -178,7 +178,7 @@ export default function AttestationPreviewPage() {
       </div>
 
       {/* Zone de Certificat (Paysage) */}
-      <Card className="overflow-hidden bg-slate-50 border-none shadow-2xl transition-all duration-500 hover:shadow-emerald-500/10">
+      <Card className="overflow-hidden bg-slate-50 border-none shadow-2xl transition-all duration-500 hover:shadow-brand/10">
         <div className="p-4 md:p-8 flex justify-center">
              <div className="w-full max-w-[1000px] shadow-2xl origin-top transition-transform">
                 <OfficialDocument 
@@ -215,8 +215,8 @@ export default function AttestationPreviewPage() {
         
         <Card className="p-4 sm:p-6 bg-white border border-slate-100 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <QrCode className="w-5 h-5 text-blue-500" />
+                <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0">
+                    <QrCode className="w-5 h-5 text-brand" />
                 </div>
                 <div className="min-w-0">
                    <p className="font-bold text-slate-800">Partageable</p>
