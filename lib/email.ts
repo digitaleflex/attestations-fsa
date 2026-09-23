@@ -164,10 +164,10 @@ export const emailService = {
                 isSuccess
                   ? isMock
                     ? `
-                    <p>Bravo pour ce score ! Continuez à vous entraîner pour être prêt lors de la session officielle. Vos notes d'entraînement sont consultables sur votre relevé de notes.</p>
+                    <p>Bravo pour ce score ! Continuez à vous entraîner pour être prêt lors de la session officielle.</p>
                     <div style="text-align: center; margin-top: 32px;">
-                      <a href="${APP_URL}/transcript" style="display: inline-block; padding: 16px 32px; background-color: #6366f1; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
-                        Voir mon relevé de notes
+                      <a href="${APP_URL}/results" style="display: inline-block; padding: 16px 32px; background-color: #6366f1; color: white; text-decoration: none; font-weight: bold; border-radius: 12px;">
+                        Voir mes résultats
                       </a>
                     </div>
                     `

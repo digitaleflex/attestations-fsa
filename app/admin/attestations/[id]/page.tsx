@@ -368,18 +368,6 @@ export default function AttestationDetailsPage() {
           </div>
           <div className="flex flex-wrap gap-2 w-full lg:w-auto">
             <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-              <Link href={`/transcript?userId=${data.userId}`} target="_blank" className="flex-1 sm:flex-none">
-                <Button variant="outline" className="gap-2 bg-indigo-50 text-indigo-600 border-indigo-200 w-full sm:w-auto">
-                    <ClipboardList className="w-4 h-4" />
-                    Voir Relevé
-                </Button>
-              </Link>
-              <Link href={`/transcript?userId=${data.userId}&download=true`} target="_blank" className="flex-1 sm:flex-none">
-                <Button variant="outline" className="gap-2 bg-emerald-50 text-emerald-600 border-emerald-200 w-full sm:w-auto">
-                    <HistoryIcon className="w-4 h-4" />
-                    Télécharger Global
-                </Button>
-              </Link>
               <Link href={`/admin/attestations/${id}/edit`} className="flex-1 sm:flex-none">
                 <Button variant="outline" className="gap-2 w-full sm:w-auto">
                   <Edit className="w-4 h-4" />
@@ -522,15 +510,6 @@ export default function AttestationDetailsPage() {
             <Card className="p-6 bg-white shadow-sm">
               <h3 className="font-semibold text-lg mb-4 text-slate-800">⚡ Actions</h3>
               <div className="space-y-3">
-                <Link href={`/transcript?userId=${data.userId}`} className="block">
-                  <Button
-                    className="w-full gap-2 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100"
-                    disabled={actionLoading}
-                  >
-                    <Send className="w-4 h-4" />
-                    Voir/Transmettre le Relevé
-                  </Button>
-                </Link>
                 <div className="h-px bg-slate-100 my-4" />
                 <div className="flex flex-col gap-3">
                     {data.status !== "REJECTED" && (

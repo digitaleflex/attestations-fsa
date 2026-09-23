@@ -186,35 +186,7 @@ export default function UserDashboardPage() {
         </div>
       </Card>
 
-      {/* Section Relevé de Notes Prompt (New) */}
-      {(statsData?.overview?.totalExams || 0) > 0 && (
-        <Card className="p-6 border-none shadow-premium bg-gradient-to-r from-blue-700 to-indigo-800 text-white relative overflow-hidden group animate-in slide-in-from-right duration-700">
-          <div className="absolute top-[-50%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-1000" />
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white shadow-sm shrink-0 backdrop-blur-md border border-white/10">
-                <FileText className="w-7 h-7" />
-              </div>
-              <div>
-                <h3 className="font-black text-white tracking-tight text-lg mb-1 uppercase">
-                  Votre relevé de notes est prêt ! 📜
-                </h3>
-                <p className="text-blue-100/80 text-sm font-medium max-w-xl">
-                  Votre parcours académique a été validé. Vous pouvez dès
-                  maintenant télécharger votre relevé de notes officiel certifié
-                  par la direction.
-                </p>
-              </div>
-            </div>
-            <Link href="/transcript">
-              <Button className="bg-white text-blue-700 hover:bg-blue-50 h-12 px-8 rounded-xl font-black text-sm uppercase tracking-wider shadow-2xl flex items-center gap-2 group/btn">
-                Voir mon relevé de notes
-                <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </div>
-        </Card>
-      )}
+      {/* Section attestation prompt */}
 
       {/* 📢 Nouvelles de la Direction */}
       {notificationsData?.notifications &&

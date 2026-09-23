@@ -33,9 +33,7 @@ type Attestation = {
   status: string;
   issuedAt: string;
   userId?: string;
-  user?: {
-    examSessions?: Array<{ transcriptDownloadedAt: string | null }>;
-  };
+  user?: Record<string, never>;
 };
 
 export default function AdminAttestationsPage() {
@@ -224,19 +222,6 @@ export default function AdminAttestationsPage() {
               </div>
             </div>
           </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-indigo-500 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-50 rounded-lg">
-                <Award className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Relevés vus</p>
-                <p className="text-xl font-black text-indigo-600">
-                  {attestations.filter(a => a.user?.examSessions?.[0]?.transcriptDownloadedAt).length}
-                </p>
-              </div>
-            </div>
-          </Card>
         </div>
 
         {/* Filtres */}
@@ -344,7 +329,6 @@ export default function AdminAttestationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredAttestations.map((a) => {
               const TypeIcon = getTypeIcon(a.type);
-              const isDownloaded = !!a.user?.examSessions?.[0]?.transcriptDownloadedAt;
               return (
                 <Card key={a.id} className="p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200">
                   <div className="flex items-start justify-between mb-3">
@@ -400,25 +384,6 @@ export default function AdminAttestationsPage() {
                         Modif.
                       </Button>
                     </Link>
-                    <Link href={`/transcript?userId=${a.userId}&download=true`} target="_blank">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!a.userId}
-                        className={cn(
-                          "h-9 w-10 p-0 relative flex items-center justify-center transition-all",
-                          isDownloaded ? 'border-indigo-200 bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-blue-600'
-                        )}
-                        title={isDownloaded ? "Déjà téléchargé" : "Télécharger le relevé"}
-                      >
-                        <Download className="w-4 h-4" />
-                        {isDownloaded && (
-                          <div className="absolute -top-1 -right-1 bg-indigo-500 text-white rounded-full p-0.5 border-2 border-white shadow-sm">
-                            <Check className="w-2 h-2" />
-                          </div>
-                        )}
-                      </Button>
-                    </Link>
                     <Button
                       variant="outline"
                       size="sm"
@@ -437,7 +402,6 @@ export default function AdminAttestationsPage() {
             <div className="divide-y divide-slate-50">
               {filteredAttestations.map((a) => {
                 const TypeIcon = getTypeIcon(a.type);
-                const isDownloaded = !!a.user?.examSessions?.[0]?.transcriptDownloadedAt;
                 return (
                   <div key={a.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 transition-colors group">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -469,21 +433,9 @@ export default function AdminAttestationsPage() {
                               <Eye className="w-4 h-4" />
                             </Button>
                           </Link>
-                          <Link href={`/admin/attestations/${a.id}/edit`}>
+                           <Link href={`/admin/attestations/${a.id}/edit`}>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600">
                               <Edit className="w-4 h-4" />
-                            </Button>
-                          </Link>
-                          <Link href={`/transcript?userId=${a.userId}&download=true`} target="_blank">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              disabled={!a.userId}
-                              className={cn("h-8 w-8 relative", isDownloaded ? 'text-indigo-600' : 'text-slate-400 hover:text-blue-600')}
-                              title={isDownloaded ? "Déjà téléchargé" : "Télécharger le relevé"}
-                            >
-                               <Download className="w-4 h-4" />
-                               {isDownloaded && <Check className="absolute -top-0.5 -right-0.5 w-2 h-2 text-indigo-500 font-bold" />}
                             </Button>
                           </Link>
                           <Button
