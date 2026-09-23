@@ -89,11 +89,11 @@ function VerifierContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafbfc] relative overflow-hidden p-4 md:p-8 pt-24 md:pt-32 selection:bg-emerald-100 selection:text-emerald-900 w-full font-sans">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafbfc] relative overflow-hidden p-4 md:p-8 pt-24 md:pt-32 selection:bg-brand selection:text-white w-full font-sans">
       
       {/* Arrière-plan épuré et captivant */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-30%] right-[-20%] w-[90vw] h-[90vw] bg-emerald-500/[0.03] rounded-full blur-[140px]" />
+        <div className="absolute top-[-30%] right-[-20%] w-[90vw] h-[90vw] bg-brand/[0.03] rounded-full blur-[140px]" />
         <div className="absolute bottom-[-30%] left-[-20%] w-[90vw] h-[90vw] bg-blue-500/[0.03] rounded-full blur-[140px]" />
       </div>
 
@@ -120,7 +120,7 @@ function VerifierContent() {
 
               {/* Formulaire de recherche minimaliste */}
               <div className="relative w-full max-w-xl mx-auto">
-                <div className="bg-white rounded-2xl border border-slate-200/60 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-300">
+                <div className="bg-white rounded-2xl border border-slate-200/60 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/5 transition-all duration-300">
                   <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-2">
                     <div className="relative flex-1 flex items-center">
                       <Search className="w-5 h-5 text-slate-400 absolute left-4" />
@@ -136,7 +136,7 @@ function VerifierContent() {
                     <Button 
                       disabled={loading}
                       type="submit"
-                      className="h-11 px-6 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-bold tracking-wide text-sm transition-all duration-300 shrink-0"
+                      className="h-11 px-6 rounded-xl bg-slate-900 hover:bg-brand-dark text-white font-bold tracking-wide text-sm transition-all duration-300 shrink-0"
                     >
                       Vérifier
                     </Button>
@@ -152,7 +152,7 @@ function VerifierContent() {
                 {/* Exemples de format discrets */}
                 <div className="mt-4 flex flex-col items-center gap-1.5 text-[11px] text-slate-400 font-medium tracking-wide">
                   <span className="flex items-center gap-1">
-                    <Info className="w-3.5 h-3.5 text-emerald-500" />
+                    <Info className="w-3.5 h-3.5 text-brand" />
                     Format standard : FSA-2026-04-00001-A3F7C ou le hash final (ex : A3F7C)
                   </span>
                 </div>
@@ -168,7 +168,7 @@ function VerifierContent() {
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-20 space-y-4"
             >
-              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+              <Loader2 className="w-8 h-8 animate-spin text-brand" />
               <p className="text-sm font-semibold text-slate-400 tracking-wide uppercase">Vérification en cours...</p>
             </motion.div>
           )}
@@ -263,7 +263,7 @@ function VerifierContent() {
 
 export default function VerifierPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-emerald-600" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-brand" /></div>}>
       <VerifierContent />
     </Suspense>
   );
