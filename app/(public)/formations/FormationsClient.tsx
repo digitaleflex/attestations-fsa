@@ -52,20 +52,20 @@ const getCategoryStyle = (category: string) => {
   const cat = category.toLowerCase();
   if (cat.includes("pisciculture") || cat.includes("aqua")) {
     return {
-      bg: "bg-blue-50/80 text-blue-700 border-blue-100/50",
+      bg: "bg-brand/10 text-brand-dark border-brand/20",
       accent: "text-blue-500",
       cardBg: "from-blue-500/[0.015] to-transparent",
       badge: "bg-blue-100 text-blue-800",
-      btnHover: "hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/20"
+      btnHover: "hover:bg-brand-dark hover:shadow-lg hover:shadow-brand/20"
     };
   }
   if (cat.includes("agri") || cat.includes("mara")) {
     return {
-      bg: "bg-emerald-50/80 text-emerald-700 border-emerald-100/50",
-      accent: "text-emerald-500",
-      cardBg: "from-emerald-500/[0.015] to-transparent",
-      badge: "bg-emerald-100 text-emerald-800",
-      btnHover: "hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20"
+      bg: "bg-brand/10 text-brand-dark border-brand/20",
+      accent: "text-brand",
+      cardBg: "from-brand/[0.015] to-transparent",
+      badge: "bg-brand/10 text-brand-dark",
+      btnHover: "hover:bg-brand-dark hover:shadow-lg hover:shadow-brand/20"
     };
   }
   if (cat.includes("elevage") || cat.includes("élevage") || cat.includes("avi")) {
@@ -79,10 +79,10 @@ const getCategoryStyle = (category: string) => {
   }
   return {
     bg: "bg-slate-50/80 text-slate-700 border-slate-100/50",
-    accent: "text-emerald-500",
+    accent: "text-brand",
     cardBg: "from-slate-500/[0.015] to-transparent",
     badge: "bg-slate-100 text-slate-800",
-    btnHover: "hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20"
+    btnHover: "hover:bg-brand-dark hover:shadow-lg hover:shadow-brand/20"
   };
 };
 
@@ -112,11 +112,11 @@ export default function FormationsClient({ initialFormations }: FormationsClient
   });
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] selection:bg-emerald-100 selection:text-emerald-900 pb-24 overflow-x-hidden w-full font-sans">
+    <div className="min-h-screen bg-[#fafbfc] selection:bg-brand selection:text-white pb-24 overflow-x-hidden w-full font-sans">
       
       {/* Arrière-plan épuré */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-emerald-500/[0.02] rounded-full blur-[140px]" />
+        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-brand/[0.02] rounded-full blur-[140px]" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-blue-500/[0.015] rounded-full blur-[120px]" />
       </div>
 
@@ -129,14 +129,14 @@ export default function FormationsClient({ initialFormations }: FormationsClient
             transition={{ duration: 0.6 }}
             className="flex flex-col items-center text-center space-y-6"
           >
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] text-emerald-600">
-               <Sparkles className="w-4 h-4 fill-emerald-500" />
+            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] text-brand">
+               <Sparkles className="w-4 h-4 fill-brand" />
                <span className="text-[10px] font-black uppercase tracking-[0.25em]">Excellence FSA</span>
             </div>
             
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 leading-[0.95] tracking-tight max-w-4xl">
               Devenez un expert de <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-500 to-blue-600">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand via-brand-dark to-brand-dark">
                 l'Or Vert & Bleu.
               </span>
             </h1>
@@ -148,7 +148,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
 
             {/* Barre de recherche minimaliste */}
             <div className="w-full max-w-xl mx-auto pt-6 px-2 md:px-0">
-              <div className="bg-white rounded-2xl border border-slate-200/60 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-300">
+              <div className="bg-white rounded-2xl border border-slate-200/60 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/5 transition-all duration-300">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1 flex items-center">
                     <Search className="w-5 h-5 text-slate-400 absolute left-4" />
@@ -231,7 +231,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
 
                     {/* Badge Format d'apprentissage */}
                     <div className="flex items-center gap-2 mb-8 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50 w-fit relative z-10">
-                      <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
+                      <Activity className="w-4 h-4 text-brand animate-pulse" />
                       <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{format}</span>
                     </div>
 
@@ -279,7 +279,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
             <p className="text-slate-400 max-w-sm mx-auto font-medium text-sm">Recherchez avec d'autres termes ou parcourez une autre catégorie.</p>
             <Button 
                 variant="link" 
-                className="mt-6 text-emerald-600 font-bold hover:text-emerald-700 transition-all text-sm"
+                className="mt-6 text-brand font-bold hover:text-brand-dark transition-all text-sm"
                 onClick={() => {setSearchTerm(""); setActiveCategory("Toutes");}}
             >
               Réinitialiser la recherche

@@ -105,9 +105,9 @@ export default function FormInscription({ formations }: { formations: Formation[
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 selection:bg-emerald-100 selection:text-emerald-900 w-full">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 selection:bg-brand selection:text-white w-full">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-emerald-500/[0.02] rounded-full blur-[140px]" />
+        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-brand/[0.02] rounded-full blur-[140px]" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-blue-500/[0.015] rounded-full blur-[120px]" />
       </div>
 
@@ -118,13 +118,13 @@ export default function FormInscription({ formations }: { formations: Formation[
           className="space-y-8"
         >
           <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-100 shadow-sm text-emerald-600 text-[10px] font-black uppercase tracking-[0.25em]">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-100 shadow-sm text-brand text-[10px] font-black uppercase tracking-[0.25em]">
               <Sparkles className="w-4 h-4" />
               Inscription
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
               Inscription aux{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-dark">
                 Formations
               </span>
             </h1>
@@ -137,12 +137,12 @@ export default function FormInscription({ formations }: { formations: Formation[
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3"
+              className="p-4 rounded-2xl bg-brand/10 border border-brand/20 flex items-center gap-3"
             >
-              <GraduationCap className="w-5 h-5 text-emerald-600 shrink-0" />
+              <GraduationCap className="w-5 h-5 text-brand shrink-0" />
               <div>
-                <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">Formation sélectionnée</span>
-                <p className="text-sm font-bold text-emerald-900">{selectedFormation.name}</p>
+                <span className="text-xs font-black text-brand-dark uppercase tracking-widest">Formation sélectionnée</span>
+                <p className="text-sm font-bold text-brand-dark">{selectedFormation.name}</p>
               </div>
             </motion.div>
           )}
@@ -213,7 +213,7 @@ export default function FormInscription({ formations }: { formations: Formation[
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-16 rounded-2xl bg-slate-900 text-white font-black text-sm uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
+              className="w-full h-16 rounded-2xl bg-slate-900 text-white font-black text-sm uppercase tracking-widest hover:bg-brand-dark transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
