@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Bell,
   AlertTriangle,
@@ -15,12 +15,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { getPusherClient } from "@/lib/pusher";
-import { toast } from "sonner";
 
 interface BaseNotification {
   id: string;
@@ -39,7 +37,6 @@ interface CorrectionNotification extends BaseNotification {
 
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data: reports = [] } = useQuery<ReportNotification[]>({
     queryKey: ["admin-notifications-reports"],
@@ -60,28 +57,6 @@ export default function NotificationCenter() {
     },
     refetchInterval: 45000,
   });
-
-  useEffect(() => {
-    const pusher = getPusherClient();
-    if (!pusher) return;
-    const channel = pusher.subscribe("admin-events");
-
-    const refresh = (type: string, data: { content?: string; motif?: string; userName?: string }) => {
-        queryClient.invalidateQueries({ queryKey: ["admin-notifications-reports"] });
-        queryClient.invalidateQueries({ queryKey: ["admin-notifications-corrections"] });
-
-        toast.info(type === "report" ? "Nouveau Signalement" : "Demande de Correction", {
-            description: data.content || data.motif || data.userName || "Action requise",
-        });
-    };
-
-    channel.bind("report", (data: { motif?: string }) => refresh("report", data));
-    channel.bind("correction", (data: { userName?: string }) => refresh("correction", data));
-
-    return () => {
-      pusher.unsubscribe("admin-events");
-    };
-  }, [queryClient]);
 
   const allNotifications = [
     ...reports.map((r) => ({

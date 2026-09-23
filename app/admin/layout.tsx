@@ -9,7 +9,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import NotificationCenter from "@/components/admin/NotificationCenter";
-import PusherAdminListener from "@/components/admin/PusherAdminListener";
 
 /**
  * Layout Admin optimisé (Server Component)
@@ -72,8 +71,6 @@ export default async function AdminLayout({
         </header>
         <main id="contenu-principal" className="flex-1 overflow-y-auto">{children}</main>
       </SidebarInset>
-
-      <PusherAdminListener />
     </SidebarProvider>
   );
 }
