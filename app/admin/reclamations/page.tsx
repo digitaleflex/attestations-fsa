@@ -77,7 +77,7 @@ export default function AdminReclamationsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+        <Loader2 className="w-10 h-10 animate-spin text-brand" />
         <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Chargement des réclamations...</p>
       </div>
     );
@@ -92,7 +92,7 @@ export default function AdminReclamationsPage() {
           </Badge>
           <div className="flex items-center gap-3">
              <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center shadow-xl">
-               <MessageSquare className="w-6 h-6 text-emerald-400" />
+               <MessageSquare className="w-6 h-6 text-brand" />
              </div>
              <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Réclamations Candidats</h1>
           </div>
@@ -173,7 +173,7 @@ export default function AdminReclamationsPage() {
 
                 <div className="flex flex-col h-full bg-slate-50/50 rounded-[28px] p-4 sm:p-8 border border-white shadow-inner">
                   <div className="flex items-center gap-2 mb-6">
-                    <Send className="w-4 h-4 text-emerald-500" />
+                    <Send className="w-4 h-4 text-brand" />
                     <span className="text-xs font-black uppercase tracking-widest text-slate-800">Action Corrective</span>
                   </div>
 
@@ -202,7 +202,7 @@ export default function AdminReclamationsPage() {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Réponse à l'élève</label>
                         <Textarea 
                           placeholder="Expliquez la décision ou annoncez une modification de note..."
-                          className="min-h-[150px] bg-white border-2 border-slate-200 rounded-2xl text-sm font-medium focus:border-emerald-500 transition-colors"
+                          className="min-h-[150px] bg-white border-2 border-slate-200 rounded-2xl text-sm font-medium focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
                           value={replies[reclamation.id] || ""}
                           onChange={(e) => setReplies({ ...replies, [reclamation.id]: e.target.value })}
                         />
@@ -212,7 +212,7 @@ export default function AdminReclamationsPage() {
                         <Button 
                           onClick={() => replyMutation.mutate({ id: reclamation.id, status: 'RESOLVED', adminReply: replies[reclamation.id] })}
                           disabled={!replies[reclamation.id] || replyMutation.isPending}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] h-12 rounded-xl gap-2 shadow-lg shadow-emerald-200"
+                          className="bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest text-[10px] h-12 rounded-xl gap-2 shadow-lg shadow-brand/20"
                         >
                           <CheckCircle className="w-4 h-4" /> Accepter / Valider
                         </Button>

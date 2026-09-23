@@ -135,9 +135,9 @@ export default function AdminCorrectionsPage() {
                     <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Actuel ({c.field})</p>
                     <p className="text-sm font-bold text-rose-900">{c.oldValue || "--"}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
-                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Souhaité</p>
-                    <p className="text-sm font-bold text-emerald-900">{c.newValue}</p>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Souhaité</p>
+                    <p className="text-sm font-bold text-slate-800">{c.newValue}</p>
                   </div>
                </div>
 

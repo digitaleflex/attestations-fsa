@@ -260,7 +260,7 @@ export default function AdminContactsPage() {
         </Badge>
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
-            <Inbox className="w-6 h-6 text-emerald-400" />
+            <Inbox className="w-6 h-6 text-brand" />
           </div>
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">

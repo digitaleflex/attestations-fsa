@@ -194,7 +194,7 @@ export default function AdminInternshipsPage() {
                    </div>
                 </div>
                 <div className="flex items-center gap-2">
-                   <Button variant="ghost" size="icon" className="hover:bg-blue-50 hover:text-blue-600" onClick={() => setSelected(r)}>
+                   <Button variant="ghost" size="icon" aria-label="Voir la demande" className="h-11 w-11 hover:bg-brand/10 hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" onClick={() => setSelected(r)}>
                       <Eye className="w-4 h-4" />
                    </Button>
                    <Button variant="ghost" size="icon" className="text-emerald-500 hover:bg-emerald-50" onClick={() => updateStatus(r.id, 'ACCEPTED')}>
@@ -300,7 +300,7 @@ export default function AdminInternshipsPage() {
           <DialogContent className="max-w-md p-6">
               <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-amber-500" />
+                    <Award className="w-5 h-5 text-brand" />
                     Générer une Attestation de Stage
                   </DialogTitle>
                   <DialogDescription>
@@ -365,7 +365,7 @@ export default function AdminInternshipsPage() {
               <div className="flex gap-2 mt-6">
                   <Button variant="outline" className="flex-1" onClick={() => setAttestModal(null)}>Annuler</Button>
                   <Button
-                    className="flex-1 bg-amber-600 hover:bg-amber-700 gap-2 text-white"
+                    className="flex-1 bg-brand hover:bg-brand-dark gap-2 text-white"
                     onClick={generateAttestation}
                     disabled={isGenerating}
                   >
