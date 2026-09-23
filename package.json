@@ -66,8 +66,6 @@
     "next": "^16.3.4",
     "nextjs-toploader": "^3.9.17",
     "pg": "^8.11.5",
-    "pusher": "^5.3.3",
-    "pusher-js": "^8.5.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

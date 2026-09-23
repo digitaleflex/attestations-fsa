@@ -7,7 +7,6 @@ import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
 import { emailService } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
-import { pusherServer } from '@/lib/pusher';
 import {
   computeFinalScore,
   isPassed,
@@ -233,13 +232,6 @@ export async function POST(
             : `Félicitations ! Votre examen "${exam.title}" a été corrigé avec une moyenne globale de ${finalScore.toFixed(2)}/100.${attestationGenerated ? ' Votre attestation est prête.' : ''}`
           : `La correction de "${exam.title}" est terminée. Moyenne: ${finalScore.toFixed(2)}/100.`,
         link: isMock ? '/transcript' : passed ? '/attestations' : '/results',
-      });
-
-      // Déclenchement Pusher
-      await pusherServer.trigger(`user-${submission.userId}`, 'notification', {
-        title: passed ? 'Résultat disponible ! 🎉' : 'Correction terminée',
-        message: `Votre copie pour "${exam.title}" a été corrigée.`,
-        score: Math.round(finalScore),
       });
     }
 

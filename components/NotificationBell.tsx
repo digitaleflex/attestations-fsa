@@ -5,8 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell, CheckCheck, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getPusherClient } from "@/lib/pusher";
-import { toast } from "sonner";
 import { Notification } from "@/types";
 
 export default function NotificationBell() {
@@ -20,51 +18,11 @@ export default function NotificationBell() {
     queryFn: async () => {
       const res = await fetch("/api/user/notifications?limit=10");
       if (!res.ok) return { notifications: [], unreadCount: 0 };
-      const data = await res.json();
-
-      // On déclenche l'écouteur Pusher une fois qu'on a le userId des notifs
-      if (data.notifications?.length > 0 || data.unreadCount >= 0) {
-          // Note: on pourrait aussi récupérer le userId via une API de profil
-      }
-      return data;
+      return res.json();
     },
-    refetchInterval: 30000, // On réduit le polling car on a Pusher
+    refetchInterval: 30000,
     staleTime: 10000,
   });
-
-  // Écouteur Pusher pour notifications temps réel
-  useEffect(() => {
-    // On essaie de récupérer le userId via les cookies ou les données fetchées
-    // Pour simplifier ici, on va fetch le profil si besoin, ou utiliser le premier message
-    const setupPusher = async () => {
-        const profilRes = await fetch("/api/user/profile");
-        const profil = await profilRes.json();
-
-        if (profil?.id) {
-            const pusher = getPusherClient();
-            if (!pusher) return;
-            const channel = pusher.subscribe(`user-${profil.id}`);
-
-            channel.bind("notification", (newNotif: Notification) => {
-                queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
-                toast.success(newNotif.message, {
-                    description: newNotif.title,
-                    action: newNotif.link ? {
-                        label: "Voir",
-                        onClick: () => router.push(newNotif.link!)
-                    } : undefined
-                });
-            });
-
-            return () => pusher.unsubscribe(`user-${profil.id}`);
-        }
-    };
-
-    const cleanup = setupPusher();
-    return () => {
-        cleanup.then(fn => fn && fn());
-    };
-  }, []);
 
   const markReadMutation = useMutation({
     mutationFn: async (notificationId?: string) => {

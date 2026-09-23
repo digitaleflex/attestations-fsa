@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { applyRateLimitByUser } from '@/lib/rate-limit';
 import { createAuditLog } from '@/lib/audit';
-import { pusherServer } from '@/lib/pusher';
 import {
   computeFinalScore,
   computePart1Score,
@@ -249,18 +248,6 @@ export async function POST(
       maxScore: totalPoints,
       status: finalStatus,
     };
-
-    // Déclenchement Pusher pour l'admin (non-bloquant)
-    try {
-        await pusherServer.trigger('admin-updates', 'new-submission', {
-            candidateName: user.name,
-            examId: examId,
-            status: finalStatus,
-            timestamp: new Date().toISOString()
-        });
-    } catch (pushError) {
-        console.error('[PUSHER_ERROR] Failed to notify admin:', pushError);
-    }
 
     return NextResponse.json(response, { status: 201 });
 

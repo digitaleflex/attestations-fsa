@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { pusherServer } from '@/lib/pusher';
 import { getCurrentUser, getAdminUser } from '@/lib/auth';
 
 // GET /api/user/notifications - Récupérer les notifications de l'utilisateur
@@ -102,15 +101,6 @@ export async function POST(request: Request) {
         metadata: metadata || null,
       },
     });
-
-    // Déclencher l'événement temps réel Pusher pour les notifications
-    try {
-      if (process.env.PUSHER_APP_ID) {
-        await pusherServer.trigger(`user-${userId}`, "notification", notification);
-      }
-    } catch (pusherError) {
-      console.error("Erreur Pusher Notification:", pusherError);
-    }
 
     return NextResponse.json(notification);
   } catch (error: unknown) {

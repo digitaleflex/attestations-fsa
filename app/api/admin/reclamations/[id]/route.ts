@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
-import { pusherServer } from "@/lib/pusher";
 
 export async function PATCH(
   request: Request,
@@ -34,14 +33,6 @@ export async function PATCH(
       resourceId: id,
       newValue: { status, adminReply }
     });
-
-    // Déclenchement Pusher
-    if (updated.userId) {
-      await pusherServer.trigger(`user-${updated.userId}`, "notification", {
-        title: "🖋️ Réponse à votre réclamation",
-        message: `L'administration a traité votre demande de réclamation. État : ${status === 'ACCEPTED' ? 'Acceptée' : 'Refusée'}`
-      });
-    }
 
     return NextResponse.json(updated);
   } catch (error) {
