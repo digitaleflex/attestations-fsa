@@ -92,7 +92,7 @@ export default function UserLayout({
   /* if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+        <div className="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin"></div>
       </div>
     );
   } */
@@ -110,7 +110,7 @@ export default function UserLayout({
             className="flex items-center gap-3 overflow-hidden"
             title="Ferme Agro-piscicole St Andre"
           >
-            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white font-bold shadow-sm">
               FSA
             </div>
             {isSidebarOpen && (
@@ -136,13 +136,13 @@ export default function UserLayout({
                 <div
                   className={`flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-300 group ${
                     isActive
-                      ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-100"
+                      ? "bg-brand text-white shadow-md shadow-brand/25 scale-100"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 active:scale-95"
                   }`}
                   title={!isSidebarOpen ? item.name : undefined}
                 >
                   <item.icon
-                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-400 group-hover:text-emerald-500"}`}
+                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-400 group-hover:text-brand"}`}
                   />
                   {isSidebarOpen && (
                     <span className="font-medium whitespace-nowrap tracking-wide text-sm">
@@ -183,7 +183,7 @@ export default function UserLayout({
               <Menu className="w-6 h-6" />
             </button>
             <button
-              className="hidden lg:flex items-center justify-center w-10 h-10 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
+              className="hidden lg:flex items-center justify-center w-10 h-10 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-colors"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
               <Menu className="w-5 h-5" />
@@ -200,7 +200,7 @@ export default function UserLayout({
           <div className="flex items-center gap-5">
             <NotificationBell />
             <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-default">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-100 to-blue-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-sm shadow-inner">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand/20 to-brand-accent/10 text-brand border border-brand/20 flex items-center justify-center font-bold text-sm shadow-inner">
                 {user?.name?.charAt(0) || <User className="w-4 h-4" />}
               </div>
               <span className="hidden md:block text-sm font-semibold text-slate-700 pr-3">
@@ -231,7 +231,7 @@ export default function UserLayout({
           <div className="relative w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300 ease-out">
             <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white font-bold text-sm shadow-md">
                   FSA
                 </div>
                 <span className="font-bold text-slate-800 tracking-tight">
@@ -259,12 +259,12 @@ export default function UserLayout({
                     <div
                       className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors font-medium border border-transparent ${
                         isActive
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm"
+                          ? "bg-brand/10 text-brand-dark border-brand/20 shadow-sm"
                           : "text-slate-600 hover:bg-slate-50"
                       }`}
                     >
                       <item.icon
-                        className={`w-5 h-5 ${isActive ? "text-emerald-500" : "text-slate-400"}`}
+                        className={`w-5 h-5 ${isActive ? "text-brand" : "text-slate-400"}`}
                       />
                       {item.name}
                     </div>
@@ -288,7 +288,7 @@ export default function UserLayout({
       <nav className="lg:hidden fixed bottom-6 left-6 right-6 z-40">
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] rounded-3xl px-4 py-2 flex items-center justify-between relative overflow-hidden">
           {/* Subtle background glow */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-blue-500/5 -z-10" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-brand/5 to-brand-accent/5 -z-10" />
 
           {[
             { name: "Accueil", href: "/dashboard", icon: LayoutDashboard },
@@ -307,7 +307,7 @@ export default function UserLayout({
                 className="relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all active:scale-90"
               >
                 {isActive && (
-                  <div className="absolute inset-x-1 inset-y-1 bg-emerald-500 rounded-2xl -z-10 shadow-lg shadow-emerald-500/20 animate-in fade-in zoom-in duration-300" />
+                  <div className="absolute inset-x-1 inset-y-1 bg-brand rounded-2xl -z-10 shadow-lg shadow-brand/20 animate-in fade-in zoom-in duration-300" />
                 )}
                 <item.icon
                   className={`w-5 h-5 transition-colors duration-300 ${

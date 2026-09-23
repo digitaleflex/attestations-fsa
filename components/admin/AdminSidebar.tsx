@@ -83,12 +83,12 @@ export function AdminSidebar({ admin }: { admin: any }) {
                   tooltip={item.label}
                   className={`transition-all duration-200 ${
                     isActive
-                       ? "bg-slate-900 text-white shadow-md shadow-slate-200 hover:bg-slate-800 hover:text-white"
+                       ? "bg-brand text-white shadow-md shadow-brand/30 hover:bg-brand-dark hover:text-white"
                        : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
                   <Link href={item.href}>
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
                     <span className="font-medium text-sm">{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -109,14 +109,14 @@ export function AdminSidebar({ admin }: { admin: any }) {
               tooltip="Paramètres"
               className={`transition-all duration-200 ${
                 pathname === "/admin/settings" || pathname?.startsWith("/admin/settings")
-                  ? "bg-slate-900 text-white shadow-md shadow-slate-200 hover:bg-slate-800 hover:text-white"
+                  ? "bg-brand text-white shadow-md shadow-brand/30 hover:bg-brand-dark hover:text-white"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               <Link href="/admin/settings">
                 <Settings className={`w-4 h-4 shrink-0 ${
                   pathname === "/admin/settings" || pathname?.startsWith("/admin/settings")
-                    ? "text-emerald-400" 
+                    ? "text-white" 
                     : "text-slate-400"
                 }`} />
                 <span className="font-medium text-sm">Paramètres</span>
