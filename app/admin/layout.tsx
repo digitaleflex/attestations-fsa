@@ -9,6 +9,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
+import { AdminCommandPaletteTrigger } from "@/components/admin/AdminCommandPaletteTrigger";
+import { AdminCommandPalette } from "@/components/admin/AdminCommandPalette";
 import NotificationCenter from "@/components/admin/NotificationCenter";
 
 /**
@@ -63,13 +65,15 @@ export default async function AdminLayout({
               <AdminBreadcrumbs className="hidden sm:block" />
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <AdminCommandPaletteTrigger />
               <NotificationCenter />
             </div>
           </div>
         </header>
         <main id="contenu-principal" className="flex-1 overflow-y-auto">{children}</main>
       </SidebarInset>
+      <AdminCommandPalette />
     </SidebarProvider>
   );
 }
