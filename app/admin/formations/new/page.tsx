@@ -162,7 +162,7 @@ export default function NewFormationPage() {
 
             <div>
               <Label htmlFor="description" className="text-sm font-semibold text-slate-700">Description</Label>
-              <textarea id="description" name="description" value={form.description} onChange={handleChange} placeholder="Decrivez la formation..." rows={4} className="w-full px-4 py-3 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1.5 resize-none" />
+              <textarea id="description" name="description" value={form.description} onChange={handleChange} placeholder="Decrivez la formation..." rows={4} className="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand mt-1.5 resize-none" />
             </div>
 
             <div>
@@ -174,9 +174,9 @@ export default function NewFormationPage() {
               {form.skills.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {form.skills.map((skill) => (
-                    <Badge key={skill} variant="secondary" className="bg-blue-100 text-blue-700 gap-2 pr-1">
+                    <Badge key={skill} variant="secondary" className="bg-slate-100 text-slate-700 gap-2 pr-1">
                       {skill}
-                      <button type="button" onClick={() => handleRemoveSkill(skill)} className="hover:bg-blue-200 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                      <button type="button" onClick={() => handleRemoveSkill(skill)} className="hover:bg-slate-200 rounded-full p-0.5"><X className="w-3 h-3" /></button>
                     </Badge>
                   ))}
                 </div>
@@ -185,7 +185,7 @@ export default function NewFormationPage() {
 
             <div className="flex gap-3 pt-6 border-t">
               <Link href="/admin/formations"><Button type="button" variant="outline">Annuler</Button></Link>
-              <Button type="submit" disabled={loading} className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700">
+              <Button type="submit" disabled={loading} className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark">
                 {loading ? <><Loader2 className="animate-spin w-4 h-4" /> Creation...</> : <><Check className="w-4 h-4" /> Creer</>}
               </Button>
             </div>

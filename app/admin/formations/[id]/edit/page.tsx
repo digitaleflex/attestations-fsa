@@ -183,7 +183,7 @@ export default function EditFormationPage() {
                 value={form.description}
                 onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                 rows={4}
-                className="w-full px-4 py-3 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand resize-none"
               />
             </div>
 
@@ -218,13 +218,13 @@ export default function EditFormationPage() {
                     <Badge
                       key={skill}
                       variant="secondary"
-                      className="bg-blue-100 text-blue-700 gap-2 pr-1"
+                      className="bg-slate-100 text-slate-700 gap-2 pr-1"
                     >
                       {skill}
                       <button
                         type="button"
                         onClick={() => handleRemoveSkill(skill)}
-                        className="hover:bg-blue-200 rounded-full p-0.5"
+                        className="hover:bg-slate-200 rounded-full p-0.5"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -243,7 +243,7 @@ export default function EditFormationPage() {
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">👁️ Aperçu</h3>
                 <Card className="p-4 bg-slate-50 border-slate-200">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-bold text-sm">🎓</span>
                     </div>
                     <div className="flex-1">
@@ -290,7 +290,7 @@ export default function EditFormationPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+                className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark"
               >
                 {loading ? (
                   <>

@@ -83,7 +83,7 @@ export default function AdminFormationsPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Navigation Pédagogique */}
         <div className="flex gap-6 border-b border-slate-200">
-          <Link href="/admin/formations" className="pb-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 flex items-center gap-2">
+          <Link href="/admin/formations" className="pb-3 text-sm font-bold text-brand border-b-2 border-brand flex items-center gap-2">
             <GraduationCap className="w-4 h-4" /> Formations
           </Link>
           <Link href="/admin/exams" className="pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
@@ -98,7 +98,7 @@ export default function AdminFormationsPage() {
             <p className="text-slate-500 mt-1">Gérez le catalogue des formations</p>
           </div>
           <Link href="/admin/formations/new" className="w-full sm:w-auto">
-            <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 w-full sm:w-auto">
+            <Button className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               Nouvelle formation
             </Button>
@@ -107,40 +107,40 @@ export default function AdminFormationsPage() {
 
         {/* Statistiques */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-blue-500">
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-brand">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Total</p>
                 <p className="text-2xl font-bold text-slate-800">{formations.length}</p>
               </div>
-              <GraduationCap className="w-8 h-8 text-blue-500 opacity-50" />
+              <GraduationCap className="w-8 h-8 text-brand opacity-50" />
             </div>
           </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-emerald-500">
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-brand">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Catégories</p>
-                <p className="text-2xl font-bold text-emerald-600">{categories.length}</p>
+                <p className="text-2xl font-bold text-slate-800">{categories.length}</p>
               </div>
-              <Star className="w-8 h-8 text-emerald-500 opacity-50" />
+              <Star className="w-8 h-8 text-brand opacity-50" />
             </div>
           </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-purple-500">
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-brand">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Avec attestations</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-slate-800">
                   {formations.filter(f => f.attestationsCount && f.attestationsCount > 0).length}
                 </p>
               </div>
-              <Users className="w-8 h-8 text-purple-500 opacity-50" />
+              <Users className="w-8 h-8 text-brand opacity-50" />
             </div>
           </Card>
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-amber-500">
+          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-brand">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Nouvelles (30j)</p>
-                <p className="text-2xl font-bold text-amber-600">
+                <p className="text-2xl font-bold text-slate-800">
                   {formations.filter(f => {
                     const date = new Date(f.createdAt);
                     const now = new Date();
@@ -149,7 +149,7 @@ export default function AdminFormationsPage() {
                   }).length}
                 </p>
               </div>
-              <Calendar className="w-8 h-8 text-amber-500 opacity-50" />
+              <Calendar className="w-8 h-8 text-brand opacity-50" />
             </div>
           </Card>
         </div>
@@ -170,7 +170,7 @@ export default function AdminFormationsPage() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-11 px-3 rounded-2xl border-2 border-slate-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
               >
                 <option value="">Toutes les catégories</option>
                 {categories.map(cat => (
@@ -218,7 +218,7 @@ export default function AdminFormationsPage() {
             {filteredFormations.map((f) => (
               <Card key={f.id} className="bg-white shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
                 {/* En-tête coloré */}
-                <div className="h-2 bg-gradient-to-r from-emerald-500 to-blue-600" />
+                <div className="h-2 bg-gradient-to-r from-brand to-brand-dark" />
 
                 <div className="p-5">
                   {/* Badge catégorie */}
@@ -242,7 +242,7 @@ export default function AdminFormationsPage() {
                       <p className="text-xs text-slate-500 mb-2">Compétences :</p>
                       <div className="flex flex-wrap gap-1">
                         {f.skills.slice(0, 5).map((skill, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge key={idx} variant="outline" className="text-xs bg-slate-100 text-slate-600 border-slate-200">
                             {skill}
                           </Badge>
                         ))}
