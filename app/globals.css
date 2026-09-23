@@ -40,6 +40,19 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  /* ── Marque Pinterest (Épic #42 · #43) ─────────────────────────────
+     Primaire #e60023 partout · secondaire #fa5f2e · fond #ffffff ·
+     texte #211922 · texte secondaire #666666 · bordure #e5e5e0.
+     Contraste AA : texte sur primaire blanc 4.6:1. */
+  --color-brand: #e60023;
+  --color-brand-dark: #c8001e;
+  --color-brand-light: #ff4d6a;
+  --color-brand-ink: #211922;
+  --color-brand-muted: #666666;
+  --color-brand-line: #e5e5e0;
+  --color-brand-accent: #fa5f2e;
+  --color-brand-bg: #ffffff;
+
   /* Force HSL for all Tailwind color utilities to avoid oklch */
   --color-slate-50: hsl(210 40% 98%);
   --color-slate-100: hsl(214.3 31.8% 96%);
@@ -155,7 +168,7 @@
 .skip-link:focus {
   left: 0;
   padding: 0.75rem 1.25rem;
-  background: #16a34a;
+  background: #e60023;
   color: #fff;
   font-weight: 700;
   border-radius: 0 0 0.75rem 0;
@@ -175,38 +188,41 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 243.4 75.4% 58.6%;
-    /* Indigo-600 */
-    --primary-foreground: 210 40% 98%;
+    --primary: 353 100% 45%;
+    /* Pinterest #e60023 */
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary-foreground: 353 100% 45%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 0 0% 40%;
+    /* #666666 */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 20 97% 58%;
+    /* #fa5f2e */
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 243.4 75.4% 58.6%;
+    --border: 60 4% 90%;
+    /* #e5e5e0 */
+    --input: 60 4% 90%;
+    --ring: 353 100% 45%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
+    /* 16px — arrondi généreux Pinterest */
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 243.4 75.4% 58.6%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 226 100% 97%;
-    /* Indigo-50 */
-    --sidebar-accent-foreground: 243.4 75.4% 58.6%;
-    /* Indigo-600 */
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 243.4 75.4% 58.6%;
+    --sidebar-foreground: 340 6% 13%;
+    /* #211922 */
+    --sidebar-primary: 353 100% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 353 100% 97%;
+    --sidebar-accent-foreground: 353 100% 45%;
+    --sidebar-border: 60 4% 90%;
+    --sidebar-ring: 353 100% 45%;
   }
 
   .dark {

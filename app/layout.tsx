@@ -1,12 +1,12 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import * as React from "react";
 import Script from "next/script";
 import { TopLoader } from "@/components/TopLoader";
 import { BotIdClient } from "botid/client";
 
-const inter = Inter({ subsets: ["latin"], display: "swap" });
+const inter = Plus_Jakarta_Sans({ subsets: ["latin"], display: "swap" });
 
 // Force all pages to use dynamic rendering instead of static generation
 // This prevents build errors with client components that use React hooks
@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#16a34a" />
+        <meta name="theme-color" content="#e60023" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <a href="#contenu-principal" className="skip-link">
