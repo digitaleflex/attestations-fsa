@@ -12,7 +12,7 @@ export default function AttestationsPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-16">
       <div className="mb-10">
-        <Link href="/" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors inline-flex items-center gap-1">
+        <Link href="/" className="text-sm font-bold text-brand hover:text-brand-dark transition-colors inline-flex items-center gap-1">
           ← Retour à l'accueil
         </Link>
       </div>
@@ -101,7 +101,7 @@ export default function AttestationsPage() {
           <p>
             Toute personne peut vérifier l'authenticité d'une attestation en saisissant le
             code unique de vérification sur la page{" "}
-            <Link href="/verifier" className="text-emerald-600 underline hover:text-emerald-700">
+            <Link href="/verifier" className="text-brand underline hover:text-brand-dark">
               Vérifier un certificat
             </Link>.
           </p>
@@ -180,7 +180,7 @@ export default function AttestationsPage() {
           </ul>
           <p className="mt-2">
             Si vous suspectez une fraude, utilisez le{" "}
-            <Link href="/signalement" className="text-emerald-600 underline hover:text-emerald-700">
+            <Link href="/signalement" className="text-brand underline hover:text-brand-dark">
               formulaire de signalement
             </Link>.
           </p>

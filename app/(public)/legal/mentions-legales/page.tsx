@@ -10,7 +10,7 @@ export default function MentionsLegalesPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-16">
       <div className="mb-10">
-        <Link href="/" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors inline-flex items-center gap-1">
+        <Link href="/" className="text-sm font-bold text-brand hover:text-brand-dark transition-colors inline-flex items-center gap-1">
           ← Retour à l'accueil
         </Link>
       </div>
@@ -69,7 +69,7 @@ export default function MentionsLegalesPage() {
           <h2 className="text-xl font-bold text-slate-900 mb-3">4. Données personnelles</h2>
           <p>
             La collecte et le traitement des données personnelles sont régis par notre
-            <Link href="/legal/confidentialite" className="text-emerald-600 underline hover:text-emerald-700 mx-1">
+            <Link href="/legal/confidentialite" className="text-brand underline hover:text-brand-dark mx-1">
               Politique de Confidentialité
             </Link>.
           </p>
@@ -81,7 +81,7 @@ export default function MentionsLegalesPage() {
           <p>
             Le site utilise des cookies pour assurer son fonctionnement et améliorer l'expérience
             utilisateur. Pour plus d'informations, consultez notre
-            <Link href="/legal/cookies" className="text-emerald-600 underline hover:text-emerald-700 mx-1">
+            <Link href="/legal/cookies" className="text-brand underline hover:text-brand-dark mx-1">
               Politique de cookies
             </Link>.
           </p>

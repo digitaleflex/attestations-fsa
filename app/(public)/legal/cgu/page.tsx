@@ -10,7 +10,7 @@ export default function CGUPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-16">
       <div className="mb-10">
-        <Link href="/" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors inline-flex items-center gap-1">
+        <Link href="/" className="text-sm font-bold text-brand hover:text-brand-dark transition-colors inline-flex items-center gap-1">
           ← Retour à l'accueil
         </Link>
       </div>
@@ -188,7 +188,7 @@ export default function CGUPage() {
           <p>
             La collecte et le traitement des données personnelles des Utilisateurs sont régis par
             notre{" "}
-            <Link href="/legal/confidentialite" className="text-emerald-600 underline hover:text-emerald-700">
+            <Link href="/legal/confidentialite" className="text-brand underline hover:text-brand-dark">
               Politique de Confidentialité
             </Link>
             , qui fait partie intégrante des présentes CGU.
