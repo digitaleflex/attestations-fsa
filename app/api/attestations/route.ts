@@ -48,6 +48,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
+    const type = url.searchParams.get('type');
     const countOnly = url.searchParams.get('count') === '1';
     const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined;
     const order = url.searchParams.get('order') === 'asc' ? 'asc' : 'desc';
@@ -58,6 +59,7 @@ export async function GET(request: Request) {
     // Filtre dynamique
     const where: Record<string, unknown> = {};
     if (status) where.status = status;
+    if (type) where.type = type;
     if (search) {
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
