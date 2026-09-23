@@ -89,7 +89,7 @@ export default function UserResultsPage() {
       label: "Examens passés",
       value: stats?.totalExams ?? 0,
       icon: BarChart3,
-      tone: "text-blue-600 bg-blue-50",
+      tone: "text-brand bg-brand/10",
     },
     {
       label: "Réussis",
@@ -107,7 +107,7 @@ export default function UserResultsPage() {
       label: "Moyenne générale",
       value: `${stats?.averageScore ?? 0}%`,
       icon: Target,
-      tone: "text-indigo-600 bg-indigo-50",
+      tone: "text-slate-600 bg-slate-100",
     },
   ];
 
@@ -124,7 +124,7 @@ export default function UserResultsPage() {
           </p>
         </div>
         <Link href="/exams">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 rounded-xl h-11 px-6 font-bold gap-2">
+          <Button className="bg-brand hover:bg-brand-dark rounded-xl h-11 px-6 font-bold gap-2">
             Passer un examen
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -133,7 +133,7 @@ export default function UserResultsPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
         </div>
       ) : isError ? (
         <Card className="rounded-2xl border border-rose-100 bg-rose-50/50 p-10 text-center">
@@ -185,7 +185,7 @@ export default function UserResultsPage() {
                 Vous n&apos;avez pas encore passé d&apos;examen.
               </p>
               <Link href="/exams">
-                <Button className="bg-emerald-600 hover:bg-emerald-700 rounded-xl h-11 px-6 font-bold gap-2">
+                <Button className="bg-brand hover:bg-brand-dark rounded-xl h-11 px-6 font-bold gap-2">
                   Voir les examens disponibles
                   <ArrowRight className="w-4 h-4" />
                 </Button>

@@ -182,7 +182,7 @@ export default function UserExamsPage() {
             }}
             className={`px-5 h-10 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
               tab === t.key
-                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25"
+                ? "bg-brand text-white shadow-md shadow-brand/25"
                 : "text-slate-500 hover:bg-slate-50"
             }`}
           >
@@ -240,7 +240,7 @@ export default function UserExamsPage() {
         scheduledData.exams.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -334,11 +334,11 @@ export default function UserExamsPage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-brand to-brand-accent flex items-center justify-center flex-shrink-0 shadow-md">
                       <BookOpen className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-brand transition-colors">
                         {exam.examName}
                       </h3>
                       <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">

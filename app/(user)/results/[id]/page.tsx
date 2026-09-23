@@ -116,7 +116,7 @@ export default function ResultDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
@@ -294,7 +294,7 @@ export default function ResultDetailPage() {
                   </p>
                   <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                      className="h-full bg-gradient-to-r from-brand to-brand-dark rounded-full"
                       style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
                     />
                   </div>
@@ -311,7 +311,7 @@ export default function ResultDetailPage() {
           {data.internshipScore > 0 && (
             <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm">
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
                   <Briefcase className="w-5 h-5" />
                 </div>
                 <div>
@@ -328,7 +328,7 @@ export default function ResultDetailPage() {
           {(data.finalScore ?? 0) > 0 && (
             <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm">
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center", passed ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
                   {passed ? (
                     <CheckCircle2 className="w-5 h-5" />
                   ) : (
