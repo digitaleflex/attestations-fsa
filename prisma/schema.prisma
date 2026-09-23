@@ -77,15 +77,10 @@ model User {
   birthDate             DateTime?
   birthPlace            String?
   phone                 String?
-  attestationCode       String?             @unique
-  attestationStatus     String              @default("PENDING")
-  enrolledAt            DateTime?
   examId                String?
   examScheduledAt       DateTime?
   formationId           String?
   gender                Gender?
-  blockedReason         String?
-  lastBlockedAt         DateTime?
   resetPasswordRequired Boolean             @default(false)
   status                UserStatus          @default(ACTIVE)
   accounts              Account[]
@@ -103,7 +98,6 @@ model User {
 
   @@index([role])
   @@index([status])
-  @@index([attestationStatus])
   @@index([formationId])
 }
 
@@ -299,7 +293,6 @@ model ExamSession {
   scans       CompositionScan[]
   reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)
-  transcriptDownloadedAt DateTime?
   exam        Exam              @relation(fields: [examId], references: [id])
   candidate   User              @relation(fields: [userId], references: [id])
 
@@ -361,26 +354,6 @@ model CorrectionRequest {
   @@index([userId])
   @@index([status])
   @@index([status, createdAt])
-}
-
-model SecurityLog {
-  id         String   @id @default(uuid())
-  eventType  String
-  userId     String?
-  ipAddress  String?
-  userAgent  String?
-  resource   String?
-  resourceId String?
-  action     String?
-  status     String
-  severity   String
-  details    Json?
-  timestamp  DateTime @default(now())
-
-  @@index([eventType])
-  @@index([userId])
-  @@index([timestamp])
-  @@index([severity])
 }
 
 model AuditLog {

@@ -77,16 +77,6 @@ export async function GET(request: Request) {
       orderBy: { issuedAt: (order === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc' },
       include: { 
         formation: { select: { name: true } },
-        user: {
-          select: {
-            examSessions: {
-              where: { status: 'GRADED' },
-              select: { transcriptDownloadedAt: true },
-              orderBy: { updatedAt: 'desc' },
-              take: 1
-            }
-          }
-        }
       },
       ...(limit ? { take: limit } : {}),
       skip: offset,
