@@ -390,9 +390,9 @@ export default function SettingsPage() {
                             type="number"
                             value={formData.targetValidations || 0}
                             onChange={handleChange}
-                            className="bg-white/5 border-white/5 h-24 text-5xl font-black text-emerald-400 rounded-[2rem] text-center focus:ring-0 focus:border-emerald-500/40 transition-all selection:bg-emerald-500/30"
+                            className="bg-white/5 border-white/5 h-24 text-5xl font-black text-brand-400 rounded-[2rem] text-center focus:ring-0 focus:border-brand/40 transition-all selection:bg-brand/30"
                         />
-                        <div className="absolute -bottom-1 left-8 right-8 h-1 bg-emerald-500/20 rounded-full blur-sm opacity-0 group-hover/kpi:opacity-100 transition-opacity" />
+                        <div className="absolute -bottom-1 left-8 right-8 h-1 bg-brand/30 rounded-full blur-sm opacity-0 group-hover/kpi:opacity-100 transition-opacity" />
                     </div>
                 </div>
             </div>

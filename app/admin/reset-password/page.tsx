@@ -163,8 +163,8 @@ function ResetPasswordForm() {
 
         {success ? (
           <div className="space-y-4 text-center">
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <p className="text-sm text-emerald-700">
+            <div className="p-4 bg-brand/10 border border-brand/20 rounded-xl">
+              <p className="text-sm text-brand-dark">
                 Votre mot de passe a été modifié avec succès.
               </p>
             </div>

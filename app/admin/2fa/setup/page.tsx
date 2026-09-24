@@ -121,11 +121,11 @@ export default function Admin2FASetupPage() {
               vérification en deux étapes
             </p>
 
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 mb-6">
-              <h3 className="font-semibold text-emerald-900 mb-2">
+            <div className="bg-brand/10 border border-brand/20 rounded-xl p-6 mb-6">
+              <h3 className="font-semibold text-slate-800 mb-2">
                 🔐 Méthodes de vérification disponibles :
               </h3>
-              <ul className="text-left text-sm text-emerald-800 space-y-1">
+              <ul className="text-left text-sm text-slate-700 space-y-1">
                 <li>✅ Application d'authentification (TOTP)</li>
                 <li>✅ Code par email</li>
                 <li>✅ Codes de secours ({backupCodes.length} restants)</li>
