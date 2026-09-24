@@ -21,8 +21,8 @@ services:
     # Persistance des fichiers uploadés. Sans ces volumes, ils vivent dans la
     # couche d'écriture du conteneur : détruits à chaque recréation (donc à
     # chaque déploiement) et absents de toute sauvegarde — vps-pre-deploy-backup.sh
-    # ne fait qu'un pg_dump. Le dump contient les lignes CompositionScan (et leurs
-    # url) mais jamais les octets : restaurer produirait des preuves illisibles.
+    # ne fait qu'un pg_dump. Le dump contient les lignes (et leurs url) mais
+    # jamais les octets : restaurer produirait des preuves illisibles.
     # Le Dockerfile crée ces dossiers et les cède à l'utilisateur applicatif.
     volumes:
       - fsa-uploads-public:/app/public/uploads
@@ -176,8 +176,8 @@ volumes:
     driver: local
     name: attestations-fsa-postgres-prod-data
 
-  # Fichiers uploadés — CV/images (public) et scans d'examen (private, la preuve
-  # en cas de réclamation, arbitrage #95).
+  # Fichiers uploadés — CV/images (public) et pièces nominatives (private, la
+  # preuve en cas de réclamation).
   # Volumes NOMMÉS plutôt que bind mounts : portables entre machines, et leur
   # propriété est initialisée depuis l'image au premier montage (le Dockerfile
   # cède ces dossiers à l'utilisateur applicatif uid 1001).

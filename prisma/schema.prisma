@@ -290,7 +290,6 @@ model ExamSession {
   updatedAt   DateTime          @updatedAt
   answers     Json?             @default("{}")
   observations String?          // notes de correction (texte riche)
-  scans       CompositionScan[]
   reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)
   exam        Exam              @relation(fields: [examId], references: [id])
@@ -302,18 +301,6 @@ model ExamSession {
   @@index([userId, status])
   @@index([submittedAt])
   @@index([gradedAt])
-}
-
-model CompositionScan {
-  id           String      @id @default(uuid())
-  submissionId String
-  url          String
-  pageNumber   Int         @default(1)
-  fileName     String
-  fileSize     Int
-  uploadedBy   String
-  uploadedAt   DateTime    @default(now())
-  session      ExamSession @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }
 
 model InternshipRequest {

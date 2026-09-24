@@ -28,8 +28,8 @@ mkdir -p "$FIXTURE" "$BIN" "$BACKUPS"
 # --- Faux système de fichiers « conteneur » ------------------------------
 mkdir -p "$FIXTURE/public/uploads/cv"
 echo "cv-de-test" > "$FIXTURE/public/uploads/cv/a.txt"
-mkdir -p "$FIXTURE/private/uploads/scans/sub1"
-echo "scan-de-test" > "$FIXTURE/private/uploads/scans/sub1/s.pdf"
+mkdir -p "$FIXTURE/private/uploads/pieces"
+echo "piece-de-test" > "$FIXTURE/private/uploads/pieces/p.pdf"
 # Un dossier volontairement VIDE, pour prouver le saut.
 mkdir -p "$FIXTURE/empty/uploads"
 

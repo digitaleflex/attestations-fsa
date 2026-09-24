@@ -109,16 +109,16 @@ const tableOrder = [
   { table: "Exam", data: dump.tables.exams, fields: ["id","title","description","status","totalPoints","createdAt","updatedAt","formationId","duration","name","part1Enabled","part1Points","part1Questions","part2Enabled","part2Points","part2Questions","part3Enabled","part3Mode","part3Points","part3Subject","passingScore","randomizeQuestions","showResults","scheduledAt","session","type"] },
   { table: "ExamPart", data: dump.tables.examParts, fields: ["id","examId","title","type","duration","points","order","scenario"] },
   { table: "Attestation", data: dump.tables.attestations, fields: ["id","code","issuedAt","type","fullName","email","birthDate","birthPlace","formationId","startDate","endDate","location","instructor","issuingCompany","status","pdfUrl","certificationHours","certificationMention","certificationObservations","certificationScore","gender","stageHours","stageObservations","stageScore","userId"] },
-  { table: "ExamSession", data: dump.tables.examSessions, fields: ["id","examId","userId","status","scorePart1","scorePart2","scorePart3","score","totalScore","internshipScore","finalScore","gradedBy","gradedAt","startedAt","submittedAt","updatedAt","answers","type","transcriptDownloadedAt"] },
+  { table: "ExamSession", data: dump.tables.examSessions, fields: ["id","examId","userId","status","scorePart1","scorePart2","scorePart3","score","totalScore","internshipScore","finalScore","gradedBy","gradedAt","startedAt","submittedAt","updatedAt","answers","type",] },
   { table: "InternshipRequest", data: dump.tables.internshipRequests, fields: ["id","fullName","email","phone","university","level","position","cvUrl","message","status","createdAt","updatedAt","userId"] },
   { table: "CorrectionRequest", data: dump.tables.correctionRequests, fields: ["id","userId","attestationId","field","oldValue","newValue","reason","status","createdAt","updatedAt"] },
-  { table: "SecurityLog", data: dump.tables.securityLogs, fields: ["id","eventType","userId","ipAddress","userAgent","resource","resourceId","action","status","severity","details","timestamp"] },
+
   { table: "AuditLog", data: dump.tables.auditLogs, fields: ["id","userId","action","resource","resourceId","oldValue","newValue","ipAddress","timestamp"] },
   { table: "Notification", data: dump.tables.notifications, fields: ["id","userId","type","title","message","isRead","link","metadata","createdAt"] },
   { table: "Reclamation", data: dump.tables.reclamations, fields: ["id","userId","submissionId","subject","message","status","adminReply","createdAt","updatedAt"] },
   { table: "Question", data: dump.tables.questions, fields: ["id","partId","text","type","points","order"] },
   { table: "QuestionOption", data: dump.tables.questionOptions, fields: ["id","questionId","text","isCorrect","feedback"] },
-  { table: "CompositionScan", data: dump.tables.compositionScans, fields: ["id","submissionId","url","pageNumber","fileName","fileSize","uploadedBy","uploadedAt"] },
+
 ];
 
 console.log("\nStarting import...\n");
