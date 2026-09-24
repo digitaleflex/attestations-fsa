@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { DateInput } from "@/components/ui/date-input";
-import { Loader2, User, Mail, Phone, MapPin, Calendar, Lock, CheckCircle, Edit2, Save, X, Shield } from "lucide-react";
+import { Loader2, User, Mail, Phone, MapPin, Calendar, Lock, CheckCircle, Edit2, Save, X, Shield, ShieldCheck, QrCode, AlertTriangle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -319,7 +319,75 @@ export default function AdminProfilePage() {
             )}
 
             {activeTab === "security" && (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* 2FA Section */}
+                <div className="bg-gradient-to-r from-brand/5 to-brand/10 border border-brand/20 rounded-xl p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-brand/10 rounded-xl">
+                        <ShieldCheck className="w-6 h-6 text-brand" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-800">Vérification en deux étapes (2FA)</h4>
+                        <p className="text-sm text-slate-600 mt-1">
+                          Ajoutez une couche de sécurité supplémentaire à votre compte administrateur.
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-sm font-medium px-3 py-1 shrink-0",
+                        admin?.twoFactorEnabled
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      )}
+                    >
+                      {admin?.twoFactorEnabled ? (
+                        <>
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          Activée
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Désactivée
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                  <div className="mt-4 flex gap-3">
+                    {admin?.twoFactorEnabled ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => {
+                          // TODO: Add disable 2FA functionality
+                          toast("Désactivation 2FA à implémenter", { description: "Utilisez l'API Better Auth twoFactor.disable()" });
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                        Désactiver la 2FA
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="gap-2 bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark"
+                        onClick={() => window.location.href = "/admin/2fa/setup"}
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        Configurer la 2FA
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-3">
+                    La 2FA est optionnelle pour les administrateurs. Une fois activée, vous devrez fournir un code
+                    TOTP (application d'authentification) ou un code par email à chaque connexion.
+                  </p>
+                </div>
+
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <p className="text-sm text-slate-700">
                     💡 <strong>Conseil :</strong> Utilisez un mot de passe fort avec au moins 8 caractères, une majuscule, une minuscule et un chiffre.
