@@ -352,7 +352,6 @@ async function resetPreviousRun(
     ...(sessionIds.length > 0
       ? [
           prisma.reclamation.deleteMany({ where: { submissionId: { in: sessionIds } } }),
-          prisma.compositionScan.deleteMany({ where: { submissionId: { in: sessionIds } } }),
           prisma.examSession.deleteMany({ where: { id: { in: sessionIds } } }),
         ]
       : []),

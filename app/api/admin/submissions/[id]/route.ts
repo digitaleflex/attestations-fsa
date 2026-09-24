@@ -38,8 +38,7 @@ export async function GET(
               }
             }
           }
-        },
-        scans: true
+        }
       }
     });
 

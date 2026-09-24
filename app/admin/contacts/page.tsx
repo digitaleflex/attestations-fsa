@@ -54,13 +54,15 @@ import { cn } from "@/lib/utils";
 
 interface Contact {
   id: string;
-  name: string;
-  email: string;
+  name: string | null;
+  email: string | null;
   phone: string | null;
   subject: string | null;
   message: string;
   status: string;
-  type: string;
+  category: string;
+  codeAttestation: string | null;
+  motif: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,21 +74,23 @@ interface ContactsResponse {
 
 type ContactStatus = "READ" | "UNREAD";
 
-const TYPE_OPTIONS = [
+const CATEGORY_OPTIONS = [
   { value: "ALL", label: "Tous les types" },
   { value: "FORMATION_INSCRIPTION", label: "Inscriptions formations" },
   { value: "CONTACT", label: "Contact" },
   { value: "RDV", label: "Rendez-vous" },
   { value: "SUPPORT", label: "Support" },
+  { value: "SIGNALEMENT", label: "Signalements" },
 ];
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "Tous les statuts" },
   { value: "UNREAD", label: "Non lus" },
   { value: "READ", label: "Lus" },
+  { value: "NOUVEAU", label: "Nouveaux" },
 ];
 
-const TYPE_META: Record<string, { label: string; className: string }> = {
+const CATEGORY_META: Record<string, { label: string; className: string }> = {
   FORMATION_INSCRIPTION: {
     label: "Inscription formation",
     className: "bg-indigo-50 text-indigo-700 border-indigo-100",
@@ -103,12 +107,16 @@ const TYPE_META: Record<string, { label: string; className: string }> = {
     label: "Support",
     className: "bg-sky-50 text-sky-700 border-sky-100",
   },
+  SIGNALEMENT: {
+    label: "Signalement",
+    className: "bg-rose-50 text-rose-700 border-rose-100",
+  },
 };
 
-function getTypeMeta(type: string) {
+function getCategoryMeta(category: string) {
   return (
-    TYPE_META[type] ?? {
-      label: type.replace(/_/g, " ").toLowerCase(),
+    CATEGORY_META[category] ?? {
+      label: category.replace(/_/g, " ").toLowerCase(),
       className: "bg-slate-100 text-slate-600 border-slate-200",
     }
   );
@@ -129,6 +137,13 @@ function getStatusMeta(status: string) {
       dot: "bg-rose-500",
     };
   }
+  if (status === "NOUVEAU") {
+    return {
+      label: "Nouveau",
+      className: "bg-amber-50 text-amber-700 border-amber-100",
+      dot: "bg-amber-500",
+    };
+  }
   return {
     label: status.replace(/_/g, " ").toLowerCase(),
     className: "bg-slate-100 text-slate-600 border-slate-200",
@@ -146,22 +161,32 @@ function formatDate(value: string) {
   });
 }
 
+function getDisplayName(contact: Contact): string {
+  if (contact.name) return contact.name;
+  if (contact.category === "SIGNALEMENT") return "Signalement anonyme";
+  return "Anonyme";
+}
+
+function getDisplayEmail(contact: Contact): string {
+  return contact.email ?? "—";
+}
+
 export default function AdminContactsPage() {
   const queryClient = useQueryClient();
-  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [detailContact, setDetailContact] = useState<Contact | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
 
-  const queryKey = ["admin-contacts", typeFilter, statusFilter];
+  const queryKey = ["admin-contacts", categoryFilter, statusFilter];
 
   const { data, isLoading, isError, isFetching, refetch } =
     useQuery<ContactsResponse>({
       queryKey,
       queryFn: async () => {
         const params = new URLSearchParams({ limit: "100" });
-        if (typeFilter !== "ALL") params.set("type", typeFilter);
+        if (categoryFilter !== "ALL") params.set("category", categoryFilter);
         if (statusFilter !== "ALL") params.set("status", statusFilter);
 
         const res = await fetch(`/api/admin/contacts?${params.toString()}`);
@@ -236,20 +261,26 @@ export default function AdminContactsPage() {
     const term = search.trim().toLowerCase();
     if (!term) return contacts;
     return contacts.filter((contact) => {
-      const haystack = [contact.name, contact.email, contact.subject ?? ""]
+      const haystack = [
+        getDisplayName(contact),
+        getDisplayEmail(contact),
+        contact.subject ?? "",
+        contact.motif ?? "",
+        contact.codeAttestation ?? "",
+      ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(term);
     });
   }, [contacts, search]);
 
-  const unreadCount = contacts.filter((c) => c.status === "UNREAD").length;
+  const unreadCount = contacts.filter(
+    (c) => c.status === "UNREAD" || c.status === "NOUVEAU"
+  ).length;
 
   const handleToggleStatus = (contact: Contact) => {
-    updateStatus.mutate({
-      id: contact.id,
-      status: contact.status === "READ" ? "UNREAD" : "READ",
-    });
+    const newStatus: ContactStatus = contact.status === "READ" ? "UNREAD" : "READ";
+    updateStatus.mutate({ id: contact.id, status: newStatus });
   };
 
   return (
@@ -267,7 +298,7 @@ export default function AdminContactsPage() {
               Messages et demandes
             </h1>
             <p className="text-slate-500 font-medium">
-              Consultez les inscriptions aux formations et les messages reçus.
+              Consultez les inscriptions aux formations, messages et signalements reçus.
             </p>
           </div>
         </div>
@@ -281,12 +312,12 @@ export default function AdminContactsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Rechercher une demande"
-              placeholder="Rechercher par nom, email ou sujet..."
+              placeholder="Rechercher par nom, email, sujet, motif, code..."
               className="pl-9 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus-visible:ring-slate-900"
             />
           </div>
 
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger
               aria-label="Filtrer par type de demande"
               className="h-11 rounded-xl border-slate-200 bg-slate-50/50"
@@ -294,7 +325,7 @@ export default function AdminContactsPage() {
               <SelectValue placeholder="Type de demande" />
             </SelectTrigger>
             <SelectContent>
-              {TYPE_OPTIONS.map((option) => (
+              {CATEGORY_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -383,9 +414,9 @@ export default function AdminContactsPage() {
       ) : (
         <div className="grid gap-4">
           {filtered.map((contact) => {
-            const typeMeta = getTypeMeta(contact.type);
+            const categoryMeta = getCategoryMeta(contact.category);
             const statusMeta = getStatusMeta(contact.status);
-            const isUnread = contact.status === "UNREAD";
+            const isUnread = contact.status === "UNREAD" || contact.status === "NOUVEAU";
             const isUpdating =
               updateStatus.isPending && updateStatus.variables?.id === contact.id;
 
@@ -416,26 +447,26 @@ export default function AdminContactsPage() {
                               : "font-bold text-slate-700"
                           )}
                         >
-                          {contact.name}
+                          {getDisplayName(contact)}
                         </h3>
                         <Badge
                           variant="outline"
                           className={cn(
                             "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5",
-                            typeMeta.className
+                            categoryMeta.className
                           )}
                         >
-                          {typeMeta.label}
+                          {categoryMeta.label}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-500">
                         <span className="inline-flex items-center gap-1.5">
                           <Mail className="w-3.5 h-3.5 text-slate-400" />
                           <a
-                            href={`mailto:${contact.email}`}
+                            href={contact.email ? `mailto:${contact.email}` : "#"}
                             className="hover:text-slate-900 hover:underline"
                           >
-                            {contact.email}
+                            {getDisplayEmail(contact)}
                           </a>
                         </span>
                         {contact.phone && (
@@ -472,6 +503,18 @@ export default function AdminContactsPage() {
                   {contact.subject && (
                     <p className="text-sm font-semibold text-slate-700">
                       {contact.subject}
+                    </p>
+                  )}
+
+                  {contact.motif && (
+                    <p className="text-sm font-medium text-rose-700">
+                      Motif : {contact.motif}
+                    </p>
+                  )}
+
+                  {contact.codeAttestation && (
+                    <p className="text-sm font-mono text-sky-700">
+                      Code : {contact.codeAttestation}
                     </p>
                   )}
 
@@ -544,10 +587,10 @@ export default function AdminContactsPage() {
                     variant="outline"
                     className={cn(
                       "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5",
-                      getTypeMeta(detailContact.type).className
+                      getCategoryMeta(detailContact.category).className
                     )}
                   >
-                    {getTypeMeta(detailContact.type).label}
+                    {getCategoryMeta(detailContact.category).label}
                   </Badge>
                   <Badge
                     variant="outline"
@@ -570,15 +613,15 @@ export default function AdminContactsPage() {
               <div className="grid gap-3 rounded-xl bg-slate-50 p-4 border border-slate-100">
                 <div className="flex items-center gap-2 text-sm text-slate-700">
                   <UserIcon className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span className="font-semibold">{detailContact.name}</span>
+                  <span className="font-semibold">{getDisplayName(detailContact)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-700">
                   <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                   <a
-                    href={`mailto:${detailContact.email}`}
+                    href={detailContact.email ? `mailto:${detailContact.email}` : "#"}
                     className="hover:underline"
                   >
-                    {detailContact.email}
+                    {getDisplayEmail(detailContact)}
                   </a>
                 </div>
                 {detailContact.phone && (
@@ -590,6 +633,22 @@ export default function AdminContactsPage() {
                     >
                       {detailContact.phone}
                     </a>
+                  </div>
+                )}
+                {detailContact.motif && (
+                  <div className="flex items-center gap-2 text-sm text-slate-700">
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span className="font-medium text-rose-700">
+                      Motif : {detailContact.motif}
+                    </span>
+                  </div>
+                )}
+                {detailContact.codeAttestation && (
+                  <div className="flex items-center gap-2 text-sm text-slate-700">
+                    <Calendar className="w-4 h-4 text-sky-500 shrink-0" />
+                    <span className="font-mono text-sky-700">
+                      Code attestation : {detailContact.codeAttestation}
+                    </span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm text-slate-700">
@@ -654,7 +713,7 @@ export default function AdminContactsPage() {
             <AlertDialogDescription>
               La demande de{" "}
               <span className="font-semibold text-slate-700">
-                {deleteTarget?.name}
+                {deleteTarget ? getDisplayName(deleteTarget) : "cette personne"}
               </span>{" "}
               sera définitivement supprimée. Cette action est irréversible.
             </AlertDialogDescription>

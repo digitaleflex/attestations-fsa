@@ -2,13 +2,13 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 const db = vi.hoisted(() => ({
   attestationFindUnique: vi.fn(),
-  correctionCreate: vi.fn(),
+  reclamationCreate: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     attestation: { findUnique: db.attestationFindUnique },
-    correctionRequest: { create: db.correctionCreate },
+    reclamation: { create: db.reclamationCreate },
   },
 }));
 
@@ -40,7 +40,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   deps.getCurrentUser.mockResolvedValue({ id: "user-1" } as never);
   db.attestationFindUnique.mockResolvedValue(makeAttestation() as never);
-  db.correctionCreate.mockResolvedValue({ id: "corr-1" } as never);
+  db.reclamationCreate.mockResolvedValue({ id: "corr-1" } as never);
 });
 
 describe("POST /api/user/attestations/[id]/correction", () => {
@@ -53,7 +53,7 @@ describe("POST /api/user/attestations/[id]/correction", () => {
   it("400 si champ ou nouvelle valeur manquant", async () => {
     const res = await callCorrection({ field: "fullName" });
     expect(res.status).toBe(400);
-    expect(db.correctionCreate).not.toHaveBeenCalled();
+    expect(db.reclamationCreate).not.toHaveBeenCalled();
   });
 
   it("404 si attestation introuvable", async () => {
@@ -68,7 +68,7 @@ describe("POST /api/user/attestations/[id]/correction", () => {
     );
     const res = await callCorrection({ field: "fullName", newValue: "Bob" });
     expect(res.status).toBe(404);
-    expect(db.correctionCreate).not.toHaveBeenCalled();
+    expect(db.reclamationCreate).not.toHaveBeenCalled();
   });
 
   it("happy path fullName → crée la demande avec l'ancienne valeur", async () => {
@@ -80,9 +80,10 @@ describe("POST /api/user/attestations/[id]/correction", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe("corr-1");
-    expect(db.correctionCreate).toHaveBeenCalledWith({
+    expect(db.reclamationCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: "user-1",
+        type: "CORRECTION",
         attestationId: "att-1",
         field: "fullName",
         oldValue: "Alice Dupont",
@@ -98,7 +99,7 @@ describe("POST /api/user/attestations/[id]/correction", () => {
       newValue: "2001-03-04",
     });
     expect(res.status).toBe(200);
-    expect(db.correctionCreate).toHaveBeenCalledWith({
+    expect(db.reclamationCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         field: "birthDate",
         oldValue: "2000-01-02",
@@ -107,7 +108,7 @@ describe("POST /api/user/attestations/[id]/correction", () => {
   });
 
   it("500 si la création de la demande échoue", async () => {
-    db.correctionCreate.mockRejectedValue(new Error("db down") as never);
+    db.reclamationCreate.mockRejectedValue(new Error("db down") as never);
     const res = await callCorrection({
       field: "birthPlace",
       newValue: "Yaoundé",

@@ -39,8 +39,8 @@ export async function GET(request: Request) {
         gender: true,
         emailVerified: true,
         createdAt: true,
-        correctionRequests: {
-          where: { status: "PENDING" },
+        reclamations: {
+          where: { type: "CORRECTION", status: "PENDING" },
           take: 1
         }
       }

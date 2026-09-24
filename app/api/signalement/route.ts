@@ -1,6 +1,7 @@
 // app/api/signalement/route.ts
 // Route de signalement (whistleblowing) avec rate limiting et sanitization
 // Endpoint public - protection renforcée contre le spam
+// Fusion #98/#110 : les signalements sont stockés dans le canal « support général » (Contact, category SIGNALEMENT).
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
@@ -50,13 +51,15 @@ export async function POST(req: Request) {
       code = sanitizeInput(code)
     }
 
-    // Création du signalement
-    const report = await prisma.report.create({
+    // Création du signalement sur le canal support général (Contact)
+    const report = await prisma.contact.create({
       data: {
+        category: "SIGNALEMENT",
         codeAttestation: code || null,
         motif,
         message,
         email: email || null,
+        status: "NOUVEAU",
       },
     })
 
@@ -95,9 +98,9 @@ export async function GET(req: NextRequest) {
     const countOnly = url.searchParams.get('countOnly') === '1'
 
     if (id) {
-      const report = await prisma.report.findUnique({ where: { id } })
+      const report = await prisma.contact.findUnique({ where: { id } })
 
-      if (!report) {
+      if (!report || report.category !== "SIGNALEMENT") {
         return NextResponse.json({
           message: "Signalement introuvable"
         }, { status: 404 })
@@ -108,12 +111,13 @@ export async function GET(req: NextRequest) {
 
     // Si countOnly, retourner juste le nombre
     if (countOnly) {
-      const count = await prisma.report.count()
+      const count = await prisma.contact.count({ where: { category: "SIGNALEMENT" } })
       return NextResponse.json({ count })
     }
 
     // Retourner la liste complète (admin uniquement normalement)
-    const reports = await prisma.report.findMany({
+    const reports = await prisma.contact.findMany({
+      where: { category: "SIGNALEMENT" },
       orderBy: { createdAt: 'desc' },
       take: 100  // Limiter à 100 résultats
     })
@@ -147,7 +151,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "ID manquant" }, { status: 400 })
     }
 
-    await prisma.report.delete({ where: { id } })
+    await prisma.contact.delete({ where: { id } })
 
     console.log(`[REPORT] Signalement supprimé via query param: ${id}`)
     return NextResponse.json({ success: true, message: "Signalement supprimé" })

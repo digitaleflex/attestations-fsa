@@ -12,13 +12,13 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
-    const type = searchParams.get('type');
+    const category = searchParams.get('category');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     const where: any = {};
     if (status) where.status = status;
-    if (type) where.type = type;
+    if (category) where.category = category;
 
     const [contacts, total] = await Promise.all([
       prisma.contact.findMany({

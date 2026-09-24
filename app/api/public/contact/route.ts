@@ -9,7 +9,7 @@ const ContactSchema = z.object({
   phone: z.string().optional(),
   subject: z.string().optional(),
   message: z.string().min(10, 'Message trop court (min 10 caractères)'),
-  type: z.enum(['CONTACT', 'RDV', 'SUPPORT']).default('CONTACT'),
+  category: z.enum(['CONTACT', 'RDV', 'SUPPORT']).default('CONTACT'),
 });
 
 export async function POST(request: Request) {
@@ -30,8 +30,13 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    const { category, ...rest } = parse.data;
+
     const contact = await prisma.contact.create({
-      data: parse.data,
+      data: {
+        ...rest,
+        category,
+      },
     });
 
     return NextResponse.json({ 

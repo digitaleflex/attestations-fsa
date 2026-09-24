@@ -64,10 +64,10 @@ describe("GET /api/admin/contacts (#137)", () => {
     );
   });
 
-  it("filtre par status et type", async () => {
-    await callGet("?status=UNREAD&type=CONTACT");
+  it("filtre par status et category", async () => {
+    await callGet("?status=UNREAD&category=CONTACT");
     expect(db.contactFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { status: "UNREAD", type: "CONTACT" } }),
+      expect.objectContaining({ where: { status: "UNREAD", category: "CONTACT" } }),
     );
   });
 });
