@@ -73,7 +73,7 @@ describe("POST /api/formations/inscription", () => {
         email: "alice@example.com",
         phone: "+237600000000",
         subject: "Inscription formation: Licence FSA",
-        type: "FORMATION_INSCRIPTION",
+        category: "FORMATION_INSCRIPTION",
       }),
     });
     expect(emailDeps.sendGeneralNotification).toHaveBeenCalledWith(
