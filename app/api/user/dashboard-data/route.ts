@@ -86,8 +86,8 @@ export async function GET(request: Request) {
           emailVerified: true,
           createdAt: true,
           examId: true,
-          correctionRequests: {
-            where: { status: 'PENDING' },
+          reclamations: {
+            where: { type: "CORRECTION", status: 'PENDING' },
             take: 1
           }
         }

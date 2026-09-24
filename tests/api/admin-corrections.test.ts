@@ -1,19 +1,19 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 const db = vi.hoisted(() => ({
-  correctionFindMany: vi.fn(),
-  correctionFindUnique: vi.fn(),
-  correctionUpdate: vi.fn(),
+  reclamationFindMany: vi.fn(),
+  reclamationFindUnique: vi.fn(),
+  reclamationUpdate: vi.fn(),
   userUpdate: vi.fn(),
   attestationUpdate: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    correctionRequest: {
-      findMany: db.correctionFindMany,
-      findUnique: db.correctionFindUnique,
-      update: db.correctionUpdate,
+    reclamation: {
+      findMany: db.reclamationFindMany,
+      findUnique: db.reclamationFindUnique,
+      update: db.reclamationUpdate,
     },
     $transaction: vi.fn(async (cb: (tx: unknown) => unknown) =>
       cb({
@@ -57,17 +57,18 @@ beforeEach(() => {
   deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
   deps.createAuditLog.mockResolvedValue(undefined as never);
   deps.createNotification.mockResolvedValue(undefined as never);
-  db.correctionFindMany.mockResolvedValue([] as never);
-  db.correctionFindUnique.mockResolvedValue({
+  db.reclamationFindMany.mockResolvedValue([] as never);
+  db.reclamationFindUnique.mockResolvedValue({
     id: "corr-1",
     userId: "user-1",
+    type: "CORRECTION",
     field: "fullName",
     newValue: "Alice Dupont",
     attestationId: "att-1",
     user: { id: "user-1" },
     attestation: { id: "att-1" },
   } as never);
-  db.correctionUpdate.mockResolvedValue({ id: "corr-1", status: "APPROVED" } as never);
+  db.reclamationUpdate.mockResolvedValue({ id: "corr-1", status: "APPROVED" } as never);
   db.userUpdate.mockResolvedValue({ id: "user-1" } as never);
   db.attestationUpdate.mockResolvedValue({ id: "att-1" } as never);
 });
@@ -82,7 +83,7 @@ describe("GET /api/admin/corrections (#137)", () => {
   it("retourne la liste des demandes", async () => {
     const res = await callGet();
     expect(res.status).toBe(200);
-    expect(db.correctionFindMany).toHaveBeenCalled();
+    expect(db.reclamationFindMany).toHaveBeenCalled();
   });
 });
 
@@ -99,16 +100,16 @@ describe("PATCH /api/admin/corrections (#137)", () => {
   });
 
   it("404 si demande introuvable", async () => {
-    db.correctionFindUnique.mockResolvedValue(null as never);
+    db.reclamationFindUnique.mockResolvedValue(null as never);
     const res = await callPatch({ id: "corr-x", status: "APPROVED" });
     expect(res.status).toBe(404);
   });
 
   it("REJECTED → met à jour le statut sans toucher au profil", async () => {
-    db.correctionUpdate.mockResolvedValue({ id: "corr-1", status: "REJECTED" } as never);
+    db.reclamationUpdate.mockResolvedValue({ id: "corr-1", status: "REJECTED" } as never);
     const res = await callPatch({ id: "corr-1", status: "REJECTED" });
     expect(res.status).toBe(200);
-    expect(db.correctionUpdate).toHaveBeenCalledWith({
+    expect(db.reclamationUpdate).toHaveBeenCalledWith({
       where: { id: "corr-1" },
       data: { status: "REJECTED" },
     });

@@ -33,14 +33,17 @@ export async function POST(req: Request) {
 
     const { field, newValue, attestationId, reason } = parse.data;
 
-    // Créer la demande de correction
-    const correctionRequest = await prisma.correctionRequest.create({
+    // Créer la demande de correction dans le canal unifié Reclamation (type CORRECTION)
+    const reclamation = await prisma.reclamation.create({
       data: {
         userId: user.id,
-        attestationId,
+        type: "CORRECTION",
+        subject: `Correction de ${field}`,
+        message: reason ?? `Demande de correction du champ ${field}`,
         field,
         newValue,
         reason,
+        attestationId,
         status: "PENDING",
       },
     });
@@ -48,7 +51,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Demande de correction envoyée !",
-      data: correctionRequest,
+      data: reclamation,
     });
   } catch (error) {
     console.error("[POST /api/user/profile/correction ERROR]", error);

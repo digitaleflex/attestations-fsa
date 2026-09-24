@@ -163,6 +163,7 @@ model Attestation {
   formation                 Formation             @relation(fields: [formationId], references: [id])
   user                      User?                 @relation(fields: [userId], references: [id])
   correctionRequests        CorrectionRequest[]
+  reclamations              Reclamation[]
 
   @@index([userId])
   @@index([sessionId])
@@ -379,33 +380,42 @@ model Notification {
 }
 
 model Contact {
-  id          String   @id @default(uuid())
-  name        String
-  email       String
-  phone       String?
-  subject     String?
-  message     String
-  status      String   @default("UNREAD")
-  type        String   @default("CONTACT")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  name            String?
+  email           String?
+  phone           String?
+  subject         String?
+  message         String
+  status          String   @default("UNREAD")
+  category        String   @default("CONTACT") // CONTACT | RDV | SUPPORT | FORMATION_INSCRIPTION | SIGNALEMENT
+  codeAttestation String?
+  motif           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // Admin model removed — orphan table, no relations. Auth uses User.role = "admin" instead.
 // Migration required: prisma migrate dev --name remove_legacy_models
 
 model Reclamation {
-  id            String           @id @default(uuid())
+  id            String        @id @default(uuid())
   userId        String
-  submissionId  String
-  subject       String
+  type          String        @default("RECLAMATION") // RECLAMATION | CORRECTION
+  submissionId  String?
+  subject       String?
   message       String
-  status        String           @default("PENDING")
+  status        String        @default("PENDING")
   adminReply    String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  user          User             @relation(fields: [userId], references: [id])
-  submission    ExamSession      @relation(fields: [submissionId], references: [id])
+  attestationId String?
+  field         String?
+  oldValue      String?
+  newValue      String?
+  reason        String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id])
+  submission    ExamSession?  @relation(fields: [submissionId], references: [id])
+  attestation   Attestation?  @relation(fields: [attestationId], references: [id])
 
   @@index([userId])
   @@index([submissionId])

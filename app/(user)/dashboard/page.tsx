@@ -63,7 +63,7 @@ export default function UserDashboardPage() {
   if (dashboardLoading)
     return <div className="min-h-screen flex items-center justify-center"><LoaderIcon className="animate-spin text-brand w-8 h-8" /></div>;
 
-  const hasPendingCorrection = (user?.correctionRequests?.length || 0) > 0;
+  const hasPendingCorrection = (user?.reclamations?.length || 0) > 0;
 
   return (
     <div className="space-y-8 animate-in fade-in max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
