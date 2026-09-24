@@ -2,7 +2,7 @@ import { vi, describe, it, expect } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    report: {
+    contact: {
       create: vi.fn().mockResolvedValue({ id: 1 }),
     },
   },

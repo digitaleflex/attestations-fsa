@@ -36,15 +36,18 @@ export async function POST(
     else if (field === "birthDate") oldValue = attestation.birthDate.toISOString().split('T')[0];
     else if (field === "birthPlace") oldValue = attestation.birthPlace;
 
-    // Créer la demande de correction
-    const correctionRequest = await prisma.correctionRequest.create({
+    // Créer la demande de correction dans le canal unifié Reclamation (type CORRECTION)
+    const reclamation = await prisma.reclamation.create({
       data: {
         userId: user.id,
-        attestationId: id,
+        type: "CORRECTION",
+        subject: `Correction de ${field}`,
+        message: reason ?? `Demande de correction du champ ${field}`,
         field,
-        oldValue,
+        oldValue: oldValue || null,
         newValue,
         reason,
+        attestationId: id,
         status: "PENDING",
       }
     });
@@ -53,7 +56,7 @@ export async function POST(
     
     return NextResponse.json({
       message: "Demande de correction envoyée avec succès",
-      id: correctionRequest.id
+      id: reclamation.id
     });
 
   } catch (error) {

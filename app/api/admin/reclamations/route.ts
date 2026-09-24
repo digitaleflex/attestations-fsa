@@ -10,12 +10,16 @@ export async function GET(request: Request) {
     }
 
     const reclamations = await prisma.reclamation.findMany({
+      where: { type: "RECLAMATION" },
       include: {
         user: {
           select: { name: true, email: true }
         },
         submission: {
           include: { exam: true }
+        },
+        attestation: {
+          select: { code: true }
         }
       },
       orderBy: { createdAt: "desc" },

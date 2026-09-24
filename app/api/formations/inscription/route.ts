@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         phone: telephone,
         subject: `Inscription formation: ${formation.name}`,
         message: message || `Inscription à la formation: ${formation.name} (ID: ${formationId})`,
-        type: "FORMATION_INSCRIPTION",
+        category: "FORMATION_INSCRIPTION",
       },
     });
 

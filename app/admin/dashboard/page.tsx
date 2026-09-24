@@ -23,7 +23,7 @@ async function getDashboardData() {
     prisma.user.count({ where: { role: "admin" } }),
     prisma.attestation.count(),
     prisma.examSession.count({ where: { status: "PASSED" } }),
-    prisma.correctionRequest.count(),
+    prisma.reclamation.count({ where: { type: "CORRECTION" } }),
   ]);
 
   return {
