@@ -4,7 +4,6 @@ import { Providers } from "./providers";
 import * as React from "react";
 import Script from "next/script";
 import { TopLoader } from "@/components/TopLoader";
-import { BotIdClient } from "botid/client";
 
 const inter = Plus_Jakarta_Sans({ subsets: ["latin"], display: "swap" });
 
@@ -31,7 +30,6 @@ export default function RootLayout({
         <a href="#contenu-principal" className="skip-link">
           Aller au contenu principal
         </a>
-        <BotIdClient protect={[{ path: "/api/exams/*/submit", method: "POST" }]} />
         <Script
           id="sw-cleanup"
           strategy="afterInteractive"

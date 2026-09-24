@@ -345,8 +345,6 @@ PUSHER_CLUSTER="${PUSHER_CLUSTER:-eu}"
 NEXT_PUBLIC_PUSHER_KEY="${NEXT_PUBLIC_PUSHER_KEY:-your_key}"
 NEXT_PUBLIC_PUSHER_CLUSTER="${NEXT_PUBLIC_PUSHER_CLUSTER:-eu}"
 
-# BOTID (Bot Detection)
-BOTID_SECRET="${BOTID_SECRET:-your_secret}"
 
 # DATABASE POOLING (optional, for Prisma Accelerate or PgBouncer)
 # DATABASE_URL="postgresql://user:pass@host:5432/db?pgbouncer=true&connection_limit=5"
@@ -360,7 +358,6 @@ ENVEOF
   echo "  - UPSTASH_REDIS_REST_URL and TOKEN"
   echo "  - RESEND_API_KEY"
   echo "  - PUSHER credentials"
-  echo "  - BOTID_SECRET"
 }
 
 # =================================================================

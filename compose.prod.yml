@@ -58,7 +58,6 @@ services:
       NEXT_PUBLIC_PUSHER_CLUSTER: ${NEXT_PUBLIC_PUSHER_CLUSTER}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
-      BOTID_SECRET: ${BOTID_SECRET}
       # Scellement HMAC-SHA256 des certificats (#155) — valeur probante
       CERT_SEAL_SECRET: ${CERT_SEAL_SECRET}
       # Plugin admin Better Auth : IDs des utilisateurs promus admin

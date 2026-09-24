@@ -189,7 +189,7 @@ docker compose --env-file .env.production -f compose.prod.yml up -d fsa-app
 | `/home/audest/attestations-fsa/.env.production` (VPS) | secrets runtime injectés dans les conteneurs | `deploy.yml:45` (`--env-file .env.production`), `compose.prod.yml:32-52` |
 | Secrets du dépôt GitHub (environment `production`) | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_PORT` | `deploy.yml:19,28-31` |
 | `~/.config/attestations-fsa/backup.env` (VPS) | `BACKUP_REMOTE` (rclone), `BACKUP_AGE_RECIPIENT` (clé publique age) | `vps-pre-deploy-backup.sh:18-24` |
-| Fournisseurs amont | clés Resend / Upstash / Pusher / Botid (les **valeurs** sont dans .env.production) | `.env.example:18-68` |
+| Fournisseurs amont | clés Resend / Upstash / Pusher (les **valeurs** sont dans .env.production) | `.env.example:18-68` |
 
 ### 4.2 Séquence standard
 
@@ -218,7 +218,6 @@ Cas particulier **`NEXT_PUBLIC_*`** (`NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PUSHER_
 | `RESEND_API_KEY` | sans clé, tout envoi lève une erreur en prod (`lib/email-health.ts:41-50`) | fsa-app (restart) |
 | `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | les deux absents/invalides → fallback mémoire du rate-limit (`lib/redis.ts:6-16`, `lib/rate-limit.ts:326-336`) | fsa-app (restart) |
 | `PUSHER_*` (+ `NEXT_PUBLIC_PUSHER_*`) | notifications temps réel ; les clés publiques sont dans le bundle → rebuild (voir § 4.2) | fsa-app (**--build**) |
-| `BOTID_SECRET` | détection bot (dépendance `botid`, `.env.example:56`) | fsa-app (restart) |
 | `POSTGRES_PASSWORD` (VPS `.env.production`) | ⚠️ **piggyback trap** : changer la variable ne change PAS le mot de passe dans la base existante (initialisé à la création du volume). Séquence : (a) `docker exec attestations-fsa-postgres-prod psql -U attestation_fsa_user -d postgres -c "ALTER USER attestation_fsa_user WITH PASSWORD '<nouveau>'"` (gabarit — nom du conteneur/usager : `compose.prod.yml:87,90`, pattern `docker exec … psql -U …` : `deploy.yml:67-69`) ; (b) mettre la même valeur dans `.env.production` ; (c) recréer fsa-app (`DATABASE_URL` est construit avec cette variable, `compose.prod.yml:33`). Un ordre inversé verrouille l'app hors de sa base. | fsa-app (restart) ; fsa-postgres sans redémarrage nécessaire pour ALTER USER |
 | `VPS_SSH_KEY` (secret GitHub) | la CI perd l'accès → plus aucun deploy. Mettre à jour la clé publique dans `authorized_keys` sur le VPS **avant** de révoquer l'ancienne. | aucun conteneur (CI uniquement) |
 | `ADMIN_USER_IDS` | pas un secret à proprement parler (UUIDs admin, `lib/auth.ts:113-118`) mais changer la valeur modifie qui est admin → recréer fsa-app | fsa-app (restart) |

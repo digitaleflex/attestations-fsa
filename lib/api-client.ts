@@ -26,7 +26,7 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   // #142 A1 — couche CSRF factice retirée : le cookie csrf_token n'était
   // jamais posé ni validé côté serveur. La protection réelle = SameSite=Lax
-  // (Better Auth) + BotID sur /api/exams/*/submit.
+  // (Better Auth).
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((options.headers as Record<string, string>) || {}),

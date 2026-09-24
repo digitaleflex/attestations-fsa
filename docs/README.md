@@ -99,9 +99,9 @@ La plateforme FSA est structurée en modules fonctionnels indépendants et haute
 | 🎓 Résultats & Transcripts | 80% | ✅ Complet | [docs/results-transcripts/01-consultation-resultats.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/results-transcripts/01-consultation-resultats.md) |
 | ✏️ Demandes de Correction | 80% | ✅ Complet | Permet aux candidats de modifier leurs données personnelles d'identité sous validation admin. |
 | 💼 Gestion des Stages | 75% | ⚠️ Améliorable | [docs/internship-management/01-demandes-stage.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/internship-management/01-demandes-stage.md) |
-| 📚 Ressources pédagogiques | — | 🗑️ Retiré (2026-06-22, `960852f`) | Module supprimé du produit ; doc conservée à titre d'historique : [docs/resources-management/01-ressources.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/resources-management/01-ressources.md) |
+| 📚 Ressources pédagogiques | — | 🗑️ Retiré (2026-06-22, `960852f`) + docs supprimées (#67) | Module supprimé du produit. |
 | 🔔 Notifications (Pusher) | 70% | ⚠️ Améliorable | [docs/notifications/01-notifications.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/notifications/01-notifications.md) |
-| 💬 Système de Chat | — | 🗑️ Retiré (2026-06-22, `960852f`) | Module supprimé du produit ; doc conservée à titre d'historique : [docs/chat-system/01-chat.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/chat-system/01-chat.md) |
+| 💬 Système de Chat | — | 🗑️ Retiré (2026-06-22, `960852f`) + docs supprimées (#67) | Module supprimé du produit. |
 | 📋 Audit Logging | 65% | ⚠️ Améliorable | [docs/audit-logging/01-journal-audit.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/audit-logging/01-journal-audit.md) |
 | 📹 Suivi d'Examen | 40% | 🔧 Partiel | [docs/EXAM_MONITORING.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/EXAM_MONITORING.md) |
 

@@ -190,7 +190,7 @@ Vérifier aussi : runs GitHub Actions récents (les secrets GitHub sont masqués
    machine concernée.
 2. Rotater **tous** les secrets concernés selon [`procedures.md`](procedures.md) § Rotation :
    `BETTER_AUTH_SECRET`/`AUTH_SECRET`, `RESEND_API_KEY`, `UPSTASH_REDIS_REST_TOKEN`,
-   `PUSHER_SECRET`/`PUSHER_KEY`, `BOTID_SECRET`, `POSTGRES_PASSWORD`, clés du fournisseur
+   `PUSHER_SECRET`/`PUSHER_KEY`, `POSTGRES_PASSWORD`, clés du fournisseur
    d'objets si applicable (voir écart EPIC #148), et `VPS_SSH_KEY` côté GitHub
    (`deploy.yml:28-31`) si l'accès SSH est en cause.
 3. Si le VPS lui-même est compromis : considérer la machine comme perdue →

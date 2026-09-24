@@ -60,7 +60,6 @@ docker exec attestations-fsa-prod sh -c 'for v in BETTER_AUTH_SECRET AUTH_SECRET
       lib/auth.ts:66 — lequel est la vérité ?`
 - [ ] `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` : notifications temps réel (défaut cluster `eu`,
       `deploy-to-vps.sh:174-176`).
-- [ ] `BOTID_SECRET` : détection bot (`.env.example:52-56`).
 - [ ] `ADMIN_USER_IDS` : liste des admins (sinon personne n'est promu via ce canal,
       `lib/auth.ts:112-118`).
 - [ ] `EMAIL_FROM` / `RESEND_DOMAIN` : domaine d'envoi légitime et validé chez Resend
