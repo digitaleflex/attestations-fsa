@@ -252,4 +252,33 @@ describe("classifySnapshot — statuts de migration (#259)", () => {
     expect(report.distributions.bySealState).toEqual({ UNSEALED: 1 });
     expect(classifySnapshot(snapshot(), NOW).records).toEqual(report.records);
   });
+
+  it("produit un rapport DÉTERMINISTE : l'ordre de lecture des lignes n'y change rien", () => {
+    const base = snapshot();
+    const extra = attestation({ id: "attestation-2", code: "FSA-2026-M09-00002-bcdef" });
+    const multi = { ...base, attestations: [extra, ...base.attestations] };
+    const first = classifySnapshot(multi, NOW);
+    const second = classifySnapshot({ ...multi, attestations: [...multi.attestations].reverse() }, NOW);
+
+    const stable = (report: typeof first) => {
+      const { generatedAt, ...rest } = report;
+      void generatedAt;
+      return JSON.stringify(rest);
+    };
+    expect(stable(second)).toBe(stable(first));
+    // L'horodatage d'exécution est la SEULE variation tolérée.
+    expect(classifySnapshot(multi, new Date("2027-01-02T03:04:05.000Z")).generatedAt).not.toBe(first.generatedAt);
+  });
+
+  it("classe la période inversée en MIGRATION_BLOCKED sans la corriger", () => {
+    const report = classifySnapshot(
+      snapshot({ attestations: [attestation({ startDate: new Date("2026-09-20T00:00:00.000Z"), endDate: new Date("2026-09-01T00:00:00.000Z") })] }),
+      NOW,
+    );
+    expect(report.records[0].migrationStatus).toBe("MIGRATION_BLOCKED");
+    expect(report.records[0].blockers).toContain("PERIOD_INVERTED");
+    expect(report.records[0].proposedActions).toEqual(["AUCUNE_ACTION_AUTOMATIQUE", "DECISION_METIER_OBLIGATOIRE"]);
+    expect(report.summary.blockingAnomalies).toBeGreaterThan(0);
+    expect(report.findings.some((finding) => finding.check === "MIGRATION.PERIOD_INVERTED" && finding.severity === "CRITICAL")).toBe(true);
+  });
 });
