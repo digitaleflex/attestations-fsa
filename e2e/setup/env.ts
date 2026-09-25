@@ -10,6 +10,7 @@
  * ne doit JAMAIS être touchée par la suite E2E.
  */
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { parse as parseDotenv } from "dotenv";
 
@@ -32,6 +33,44 @@ export const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD ?? "Candida
 /** Compte administrateur semé par `prisma/seed.ts` (fixture de test, pas un secret de prod). */
 export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@fsa.bj";
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "AdminFSA1452.";
+
+// ── Émission d'attestation en E2E (#258) ────────────────────────────────────
+// Le flux applicatif refuse d'émettre une CERTIFICATION sans générateur PDF
+// serveur (`ATTESTATION_PDF_GENERATOR_MODULE`) et sans clé de scellement
+// (`CERT_SEAL_SECRET`). La suite fournit donc, explicitement et localement :
+//
+//  - une FIXTURE de générateur (`e2e/fixtures/pdf-generator.mjs`) qui produit
+//    un PDF minimal réellement valide — aucun document officiel n'est imité,
+//    et la fixture refuse de s'exécuter sans `E2E_TEST_PDF_GENERATOR=1` ou en
+//    `NODE_ENV=production` ;
+//  - une clé de scellement factice, propre à la suite (fixture de test, pas un
+//    secret : elle n'authentifie que les attestations de la base E2E, que
+//    `e2e/setup/env.ts` refuse de laisser pointer ailleurs que 5434).
+//
+// Ces valeurs sont posées dans l'environnement du `webServer` Playwright :
+// une variable déjà présente dans `process.env` n'est jamais écrasée par
+// `.env.local`, donc un secret de développement ne fuite jamais dans le run E2E.
+
+/** Module générateur PDF de la suite (fixture locale, hors production). */
+export const E2E_PDF_GENERATOR_MODULE = path.join(
+  PROJECT_ROOT,
+  "e2e",
+  "fixtures",
+  "pdf-generator.mjs",
+);
+
+/** Marqueur qui arme la fixture : double garde « test only ». */
+export const E2E_TEST_PDF_GENERATOR = "1";
+
+/** Clé HMAC factice (≥ 16 caractères requis par `lib/crypto/seal.ts`). */
+export const E2E_CERT_SEAL_SECRET = "e2e-local-only-seal-key-not-a-secret";
+
+/**
+ * Stockage local des PDF du run, hors `public/` et hors de l'arbre de travail :
+ * en production le bucket est privé, aucun PDF ne doit donc être servi en
+ * statique par `next dev`, ni laisser d'artefact non suivi dans le dépôt.
+ */
+export const E2E_STORAGE_DIR = path.join(os.tmpdir(), "attestations-fsa-e2e-storage");
 
 function readEnvLocal(): Record<string, string> {
   if (!fs.existsSync(ENV_LOCAL_PATH)) {

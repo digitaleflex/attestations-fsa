@@ -267,6 +267,11 @@ export async function issueExamAttestation(
       data: {
         code,
         fullName,
+        // `issuedAt` est ÉCRIT explicitement, pas laissé au `@default(now())` de
+        // Prisma : le sceau ci-dessus porte `now`, et une preuve qui diverge de
+        // la ligne persistée se recalcule en « empreinte incohérente » — le
+        // vérificateur public et le téléchargement du PDF le refuseraient.
+        issuedAt: now,
         email: session.candidate.email,
         gender: session.candidate.gender,
         birthDate: session.candidate.birthDate ?? new Date(),

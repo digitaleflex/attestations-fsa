@@ -32,9 +32,18 @@ test.describe("Vérification publique et verrouillage des examens", () => {
     await page.getByPlaceholder(/FSA-2026/).fill("ab");
     await page.getByRole("button", { name: "Vérifier" }).click();
 
-    await expect(
-      page.getByText("Veuillez entrer au moins 3 caractères"),
-    ).toBeVisible();
+    // Le message de validation est rendu DEUX fois : le résumé visible
+    // (`role="alert"`, focalisé) et un `<p class="sr-only">` relié au champ par
+    // `aria-describedby`. `getByText` seul voit les deux (strict mode : 2
+    // éléments). On cible donc le résumé par son rôle, sans relâcher
+    // l'assertion sur le texte du message.
+    const validationSummary = page
+      .getByRole("alert")
+      .filter({ hasText: "Veuillez entrer au moins 3 caractères" });
+    await expect(validationSummary).toBeVisible();
+    await expect(validationSummary).toHaveText(
+      "Le code saisi contient une erreur : Veuillez entrer au moins 3 caractères",
+    );
   });
 
   test("un OFFICIAL sans enrollment est interdit en lecture et au démarrage", async ({

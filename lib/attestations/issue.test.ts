@@ -344,19 +344,22 @@ describe("issueExamAttestation — preuve officielle (#258)", () => {
     expect(issueOptions.storage.put).not.toHaveBeenCalled();
   });
 
-  it("le sceau émis se revérifie avec la clé de production du test", async () => {
+  it("le sceau émis se revérifie depuis la ligne réellement persistée", async () => {
     mocks.sessionFindUnique.mockResolvedValue(baseSession());
     mocks.attestationFindFirst.mockResolvedValue(null);
 
     await issueExamAttestation("session-1", issueOptions);
 
     const data = (mocks.attestationCreate.mock.calls[0][0] as { data: Record<string, unknown> }).data;
+    // Rien n'est restitué à la main : c'est la LIGNE créée qui doit porter
+    // exactement l'instant scellé. Si `issuedAt` était laissé au défaut
+    // Prisma, le vérificateur public recalculerait une empreinte différente et
+    // déclarerait le certificat « altéré » — défaut attrapé par l'E2E #258,
+    // qui exige `proof.valid === true` puis le téléchargement du PDF.
+    expect(data.issuedAt).toEqual(issueOptions.now);
     const verification = verifyCertificateSeal(
       attestationSealPayload({
         ...data,
-        // `issuedAt` est un default Prisma : on le restitue pour reconstruire
-        // exactement l'instant couvert par le sceau.
-        issuedAt: issueOptions.now,
         formation: { name: "Formation FSA" },
         sealHash: data.sealHash as string,
       } as never),
