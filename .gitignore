@@ -82,3 +82,6 @@ package-lock.json
 
 # Rapports d'intégrité et d'inventaire générés localement
 /reports/
+
+# Worktrees isolés pour les lots de développement
+/.worktrees/
