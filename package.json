@@ -2,6 +2,9 @@
   "name": "attestation-fsa",
   "version": "3.0.1",
   "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build --webpack",

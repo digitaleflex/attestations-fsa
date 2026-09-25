@@ -28,7 +28,7 @@ Next.js 16 (App Router) + TypeScript
 
 ### Prérequis
 
-- [Node.js](https://nodejs.org/) 22+
+- [Node.js](https://nodejs.org/) 24+
 - [pnpm](https://pnpm.io/) 9+
 - [Docker](https://docker.com/) (optionnel, pour PostgreSQL)
 - [PostgreSQL](https://postgresql.org/) 17 (ou Docker)
