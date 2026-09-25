@@ -105,6 +105,10 @@ mettre à jour côté application.
 
 ## 6. Développement local
 
+Pour les procédures de sauvegarde, restauration, versioning et alerting R2,
+voir [`r2-operations.md`](r2-operations.md). Ces scripts sont volontairement
+hors des routes applicatives et ne contiennent aucune donnée de production.
+
 Sans `S3_BUCKET`, le driver local écrit dans `public/uploads` et renvoie
 `/uploads/<clé>` (comportement identique à avant). Avec MinIO :
 
