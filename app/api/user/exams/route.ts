@@ -56,13 +56,13 @@ export async function GET(request: Request) {
     await autoOpenDueExams();
 
     // Requêtes PARALLÈLES (Gain de temps massif)
-    const { user, availableExams, enrollments, submissions } =
-      await Promise.all({
-        user: prisma.user.findUnique({
+    const [user, availableExams, enrollments, submissions] =
+      await Promise.all([
+        prisma.user.findUnique({
           where: { id: userId },
           select: { id: true },
         }),
-        availableExams: prisma.exam.findMany({
+        prisma.exam.findMany({
           where: {
             status: { in: ["SCHEDULED", "PUBLISHED"] },
             type: params.data.type || undefined,
@@ -85,11 +85,11 @@ export async function GET(request: Request) {
           },
           ...(params.data.limit ? { take: params.data.limit } : {}),
         }),
-        enrollments: prisma.examEnrollment.findMany({
+        prisma.examEnrollment.findMany({
           where: { userId },
           select: { examId: true },
         }),
-        submissions: prisma.examSession.findMany({
+        prisma.examSession.findMany({
           where: {
             userId,
             exam: {
@@ -125,7 +125,7 @@ export async function GET(request: Request) {
             },
           },
         }),
-      });
+      ]);
 
     if (!user) {
       return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
@@ -39,7 +40,9 @@ export async function POST(
 
     if (action === 'REVOKE') {
       // 🚩 RÉVOQUER : Simplement passer en rejeté
-      const mutation = { status: 'REJECTED' };
+      const mutation = {
+        status: 'REJECTED',
+      } satisfies Prisma.AttestationUncheckedUpdateInput;
       const updated = await prisma.attestation.update({
         where: { id },
         data: attestation.type === 'CERTIFICATION' && attestation.sessionId
@@ -91,7 +94,7 @@ export async function POST(
         stageScore: 0,
         certificationHours: 0,
         stageHours: 0,
-      };
+      } satisfies Prisma.AttestationUncheckedUpdateInput;
       await prisma.attestation.update({
         where: { id },
         data: attestation.type === 'CERTIFICATION' && attestation.sessionId

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { mutationSealData } from "@/lib/attestations/proof";
@@ -30,7 +31,9 @@ export async function POST(
 
     // On passe en statut CLAIMED seulement si elle était VALIDATED
     if (attestation.status === "VALIDATED") {
-      const mutation = { status: "CLAIMED" };
+      const mutation = {
+        status: "CLAIMED",
+      } satisfies Prisma.AttestationUncheckedUpdateInput;
       await prisma.attestation.update({
         where: { id },
         data: attestation.type === "CERTIFICATION" && attestation.sessionId
