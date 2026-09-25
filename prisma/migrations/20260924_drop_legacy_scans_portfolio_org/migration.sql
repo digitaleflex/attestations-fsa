@@ -1,24 +1,3 @@
--- DropForeignKey
-ALTER TABLE "ChatMessage" DROP CONSTRAINT "ChatMessage_userId_fkey";
-
--- DropForeignKey
-ALTER TABLE "ChatMessage" DROP CONSTRAINT "ChatMessage_userPortfolioMissionId_fkey";
-
--- DropForeignKey
-ALTER TABLE "CompositionScan" DROP CONSTRAINT "CompositionScan_submissionId_fkey";
-
--- DropForeignKey
-ALTER TABLE "PortfolioMission" DROP CONSTRAINT "PortfolioMission_formationId_fkey";
-
--- DropForeignKey
-ALTER TABLE "PortfolioProof" DROP CONSTRAINT "PortfolioProof_userMissionId_fkey";
-
--- DropForeignKey
-ALTER TABLE "UserPortfolioMission" DROP CONSTRAINT "UserPortfolioMission_missionId_fkey";
-
--- DropForeignKey
-ALTER TABLE "UserPortfolioMission" DROP CONSTRAINT "UserPortfolioMission_userId_fkey";
-
 -- DropIndex
 DROP INDEX "ExamSession_userId_examId_idx";
 
@@ -39,44 +18,26 @@ ALTER TABLE "User" DROP COLUMN "attestationCode",
 DROP COLUMN "attestationStatus",
 DROP COLUMN "blockedReason",
 DROP COLUMN "enrolledAt",
-DROP COLUMN "lastBlockedAt",
-DROP COLUMN "portfolioEnabled",
-DROP COLUMN "portfolioSlug",
-DROP COLUMN "portfolioStatus";
+DROP COLUMN "lastBlockedAt";
 
--- DropTable
-DROP TABLE "ChatMessage";
+-- Portfolio columns were only present on some legacy databases.
+ALTER TABLE "User" DROP COLUMN IF EXISTS "portfolioEnabled",
+DROP COLUMN IF EXISTS "portfolioSlug",
+DROP COLUMN IF EXISTS "portfolioStatus";
 
--- DropTable
-DROP TABLE "CompositionScan";
+-- DropTable (some legacy tables were never added to the migration history)
+DROP TABLE IF EXISTS "ChatMessage";
+DROP TABLE IF EXISTS "PortfolioProof";
+DROP TABLE IF EXISTS "UserPortfolioMission";
+DROP TABLE IF EXISTS "PortfolioMission";
+DROP TABLE IF EXISTS "CompositionScan";
+DROP TABLE IF EXISTS "Resource";
+DROP TABLE IF EXISTS "SecurityLog";
+DROP TABLE IF EXISTS "Waitlist";
 
--- DropTable
-DROP TABLE "PortfolioMission";
-
--- DropTable
-DROP TABLE "PortfolioProof";
-
--- DropTable
-DROP TABLE "Resource";
-
--- DropTable
-DROP TABLE "SecurityLog";
-
--- DropTable
-DROP TABLE "UserPortfolioMission";
-
--- DropTable
-DROP TABLE "Waitlist";
-
--- DropEnum
-DROP TYPE "MissionType";
-
--- DropEnum
-DROP TYPE "PortfolioStatus";
-
--- DropEnum
-DROP TYPE "ProjectLevel";
-
--- DropEnum
-DROP TYPE "ResourceType";
+-- DropEnum (some legacy enums were never added to the migration history)
+DROP TYPE IF EXISTS "MissionType";
+DROP TYPE IF EXISTS "PortfolioStatus";
+DROP TYPE IF EXISTS "ProjectLevel";
+DROP TYPE IF EXISTS "ResourceType";
 
