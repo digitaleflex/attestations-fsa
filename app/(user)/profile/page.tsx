@@ -52,6 +52,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CorrectionModal } from "@/components/CorrectionModal";
+import {
+  CandidateErrorState,
+  CandidateLoading,
+} from "@/components/CandidateStates";
 
 export default function UserProfilePage() {
   const router = useRouter();
@@ -71,7 +75,13 @@ export default function UserProfilePage() {
   const [claimCode, setClaimCode] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
 
-  const { data: user, isLoading } = useQuery({
+  const {
+    data: user,
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["user-profile"],
     queryFn: async () => {
       const res = await fetch("/api/user/profile");
@@ -82,6 +92,7 @@ export default function UserProfilePage() {
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   const [form, setForm] = useState({
@@ -203,7 +214,30 @@ export default function UserProfilePage() {
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center">Chargement...</div>;
+  if (isLoading) {
+    return (
+      <div className="py-16 flex justify-center">
+        <CandidateLoading label="Chargement de votre profil…" />
+      </div>
+    );
+  }
+
+  // Le profil ne s'affiche pas : message explicite + relance, plutôt qu'un
+  // formulaire vide qui ferait croire à un compte sans données.
+  if (isError || !user) {
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto py-10">
+        <CandidateErrorState
+          onRetry={() => {
+            void refetch();
+          }}
+          isRetrying={isFetching}
+          title="Impossible de charger votre profil"
+          description="Vos informations n'ont pas pu être récupérées. Vérifiez votre connexion internet puis relancez le chargement."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
@@ -214,9 +248,9 @@ export default function UserProfilePage() {
             <User className="w-10 h-10" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold">{user?.name}</h2>
-            <p className="text-white/80 opacity-80">{user?.email}</p>
-            <Badge className="mt-3 bg-white/20 hover:bg-white/30 border-none px-3 py-1">
+            <h1 className="text-3xl font-bold">{user?.name}</h1>
+            <p className="text-white/90">{user?.email}</p>
+            <Badge className="mt-3 bg-white text-brand-dark hover:bg-white/90 border-none px-3 py-1 font-bold">
               Candidat FSA
             </Badge>
           </div>
@@ -421,7 +455,7 @@ export default function UserProfilePage() {
           </form>
         ) : (
           <div className="p-4 bg-slate-50 rounded-xl flex items-center gap-4 text-slate-600 border border-slate-100 italic">
-            <Lock className="w-5 h-5 text-slate-400" /> Vos accès sont protégés
+            <Lock className="w-5 h-5 text-slate-600" aria-hidden="true" /> Vos accès sont protégés
             de bout en bout.
           </div>
         )}
@@ -510,7 +544,7 @@ function ProfileField({
           <Button
             variant="ghost"
             size="icon"
-            className="w-11 h-11 rounded-lg text-slate-300 hover:text-brand hover:bg-brand/10 opacity-0 group-hover:opacity-100 transition-all"
+            className="w-11 h-11 rounded-lg text-slate-600 hover:text-brand hover:bg-brand/10 opacity-0 group-hover:opacity-100 transition-all"
             onClick={onCorrection}
             title="Signaler une erreur sur ce champ"
           >

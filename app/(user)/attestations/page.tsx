@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FileText, Download, Search, Filter, X, QrCode, Eye, 
   Share2, ChevronRight, Clock, Lock, AlertCircle, Send, 
-  CheckCircle, ClipboardList, Loader2, Award, FileSpreadsheet, BarChart3, RotateCcw
+  CheckCircle, ClipboardList, Loader2, Award, FileSpreadsheet, BarChart3
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -21,6 +21,10 @@ import { QRCodeSVG } from "qrcode.react";
 import dynImport from "next/dynamic";
 import CertificateTemplate from "@/components/CertificateTemplate";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
+import {
+  CandidateEmptyState,
+  CandidateErrorState,
+} from "@/components/CandidateStates";
 
 // Import dynamique de html2pdf pour éviter les erreurs SSR
 const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
@@ -52,7 +56,7 @@ export default function UserAttestationsPage() {
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["user-attestations"],
     queryFn: async () => {
       const res = await fetch("/api/user/attestations");
@@ -103,25 +107,17 @@ export default function UserAttestationsPage() {
     }
   };
 
+  const hasActiveFilters =
+    search.trim() !== "" || statusFilter !== "all" || typeFilter !== "all";
+
   const filteredAttestations = data?.attestations?.filter((att: any) => {
-    const needle = search.trim().toLowerCase();
-    const matchSearch =
-      !needle ||
-      (att.fullName || "").toLowerCase().includes(needle) ||
-      (att.code || "").toLowerCase().includes(needle) ||
-      (att.formation?.name || "").toLowerCase().includes(needle);
+    const matchSearch = att.fullName.toLowerCase().includes(search.toLowerCase()) ||
+      att.code.toLowerCase().includes(search.toLowerCase()) ||
+      att.formation?.name.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || att.status === statusFilter;
     const matchType = typeFilter === "all" || att.type === typeFilter;
     return matchSearch && matchStatus && matchType;
   });
-
-  const hasActiveFilters = Boolean(search.trim()) || statusFilter !== "all" || typeFilter !== "all";
-
-  const resetFilters = () => {
-    setSearch("");
-    setStatusFilter("all");
-    setTypeFilter("all");
-  };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -143,61 +139,39 @@ export default function UserAttestationsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8" role="status" aria-live="polite" aria-busy="true">
-        <span className="sr-only">Chargement de vos attestations…</span>
+      <div className="space-y-8">
         <div className="space-y-4">
            <SkeletonStats />
         </div>
         <Card className="p-4 bg-white shadow-sm h-16 animate-pulse" aria-hidden="true" />
-        <div className="grid grid-cols-1 gap-4" aria-hidden="true">
+        <div className="grid grid-cols-1 gap-4">
           {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </div>
       </div>
     );
   }
 
-  /* Erreur réseau / serveur : la page ne doit jamais rester vide. On explique,
-     on relance la requête et on propose la sortie de secours. */
+  // Échec de chargement : message d'erreur + relance, jamais « zéro document ».
   if (isError) {
     return (
-      <Card
-        role="alert"
-        className="p-10 sm:p-14 bg-white shadow-xl shadow-slate-200/50 border-none rounded-[2.5rem] text-center flex flex-col items-center"
-      >
-        <div className="w-20 h-20 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mb-6">
-          <AlertCircle aria-hidden="true" className="w-9 h-9 text-rose-600" />
-        </div>
-        <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-2 tracking-tight">
-          Impossible de charger vos attestations
-        </h2>
-        <p className="text-sm font-medium text-slate-600 max-w-md leading-relaxed">
-          {error instanceof Error && error.message
-            ? error.message
-            : "Une erreur est survenue lors de la communication avec nos serveurs."}{" "}
-          Vérifiez votre connexion internet puis réessayez.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
-          <Button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="bg-brand hover:bg-brand-dark text-white rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-xs gap-2 w-full sm:w-auto"
-          >
-            {isFetching ? (
-              <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />
-            ) : (
-              <RotateCcw aria-hidden="true" className="w-4 h-4" />
-            )}
-            {isFetching ? "Nouvelle tentative…" : "Réessayer"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => router.push("/dashboard")}
-            className="rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-xs w-full sm:w-auto"
-          >
-            Retour au tableau de bord
-          </Button>
-        </div>
-      </Card>
+      <div className="space-y-8">
+        <header>
+          <h1 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight">
+            Mes Attestations
+          </h1>
+          <p className="text-slate-600 text-sm font-medium mt-1">
+            Consultez et téléchargez vos documents officiels.
+          </p>
+        </header>
+        <CandidateErrorState
+          onRetry={() => {
+            void refetch();
+          }}
+          isRetrying={isFetching}
+          title="Impossible de charger vos attestations"
+          description="Vos documents n'ont pas pu être récupérés. Vérifiez votre connexion internet puis relancez le chargement."
+        />
+      </div>
     );
   }
 
@@ -240,12 +214,12 @@ export default function UserAttestationsPage() {
             {/* Filters */}
             <Card className="p-6 bg-white shadow-xl shadow-slate-200/50 rounded-3xl border-none">
               <div className="flex items-center gap-2 mb-4">
-                <Filter className="w-4 h-4 text-slate-500" />
+                <Filter className="w-4 h-4 text-slate-600" aria-hidden="true" />
                 <span className="text-sm font-black uppercase tracking-widest text-slate-700">Filtres</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2 relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" aria-hidden="true" />
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -276,15 +250,19 @@ export default function UserAttestationsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {hasActiveFilters && (
+              {(search || statusFilter !== "all" || typeFilter !== "all") && (
                 <div className="mt-4 flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={resetFilters}
+                    onClick={() => {
+                      setSearch("");
+                      setStatusFilter("all");
+                      setTypeFilter("all");
+                    }}
                     className="gap-2 text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-slate-100"
                   >
-                    <X aria-hidden="true" className="w-3 h-3" />
+                    <X className="w-3 h-3" />
                     Réinitialiser
                   </Button>
                   <Badge variant="secondary" className="rounded-lg">{filteredAttestations?.length || 0} résultat(s)</Badge>
@@ -292,49 +270,33 @@ export default function UserAttestationsPage() {
               )}
             </Card>
 
-            {/* List — deux vides distincts : « rien du tout » vs « filtres » */}
+            {/* List */}
             {!filteredAttestations || filteredAttestations.length === 0 ? (
-              <Card className="p-10 sm:p-16 bg-white shadow-xl shadow-slate-200/50 border-none rounded-[2.5rem]">
-                <div className="text-center flex flex-col items-center">
-                  <div className="w-24 h-24 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mb-6">
-                    {hasActiveFilters ? (
-                      <Search aria-hidden="true" className="w-10 h-10 text-slate-400" />
-                    ) : (
-                      <FileText aria-hidden="true" className="w-10 h-10 text-slate-400" />
-                    )}
-                  </div>
-                  <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">
-                    {hasActiveFilters
-                      ? "Aucune attestation ne correspond à ces filtres"
-                      : "Vous n'avez pas encore d'attestation"}
-                  </h2>
-                  <p className="text-sm font-medium text-slate-600 max-w-md leading-relaxed">
-                    {hasActiveFilters
-                      ? "Aucun document ne correspond à votre recherche. Élargissez vos critères ou réinitialisez les filtres pour voir toutes vos attestations."
-                      : "Vos attestations apparaîtront ici dès qu'elles seront émises, puis vous pourrez les télécharger en PDF et les partager."}
-                  </p>
-                  {hasActiveFilters && (
-                    <Button
-                      variant="outline"
-                      onClick={resetFilters}
-                      className="mt-8 gap-2 rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-xs"
-                    >
-                      <X aria-hidden="true" className="w-3.5 h-3.5" />
-                      Réinitialiser les filtres
-                    </Button>
-                  )}
-                  {!hasActiveFilters && (
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push("/exams")}
-                      className="mt-8 gap-2 rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-xs"
-                    >
-                      Voir mes examens
-                      <ChevronRight aria-hidden="true" className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </Card>
+              hasActiveFilters ? (
+                <CandidateEmptyState
+                  icon={
+                    <Search className="h-8 w-8 text-slate-500" aria-hidden="true" />
+                  }
+                  title="Aucune attestation ne correspond à vos filtres"
+                  description="Aucune attestation ne correspond à la recherche, au statut ou au type sélectionné. Ajustez ou réinitialisez vos filtres pour revoir vos documents."
+                  primaryAction={{
+                    label: "Réinitialiser les filtres",
+                    onClick: () => {
+                      setSearch("");
+                      setStatusFilter("all");
+                      setTypeFilter("all");
+                    },
+                  }}
+                />
+              ) : (
+                <CandidateEmptyState
+                  icon={
+                    <FileText className="h-8 w-8 text-slate-500" aria-hidden="true" />
+                  }
+                  title="Vous n'avez pas encore d'attestation"
+                  description="Vos attestations apparaîtront ici dès qu'elles seront émises et validées par la Ferme Saint André."
+                />
+              )
             ) : (
               <div className="grid grid-cols-1 gap-6">
                 {filteredAttestations.map((att: any) => (
@@ -363,19 +325,19 @@ export default function UserAttestationsPage() {
                             </Badge>
                           </div>
                           <p className="text-sm font-semibold text-slate-600 mb-3">
-                            {att.formation?.name || "-"} <span className="text-slate-300 mx-2">•</span>
+                            {att.formation?.name || "-"} <span className="text-slate-500 mx-2" aria-hidden="true">•</span>
                             <span className="text-brand font-bold uppercase tracking-widest text-[10px]">
                               {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
                             </span>
                           </p>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-medium text-slate-500 bg-slate-50 p-3 sm:p-2 sm:bg-transparent rounded-xl sm:rounded-none">
                             <div className="flex items-center gap-2">
-                              <QrCode className="w-4 h-4 text-slate-400" />
+                              <QrCode className="w-4 h-4 text-slate-500" aria-hidden="true" />
                               <span>Code: <span className="font-mono font-bold bg-white sm:bg-slate-100 px-2 py-1 rounded-md shadow-sm sm:shadow-none">{att.isLocked ? "••••-••••-••••" : att.code}</span></span>
                             </div>
-                            <span className="hidden sm:inline text-slate-300">•</span>
+                            <span className="hidden sm:inline text-slate-500" aria-hidden="true">•</span>
                             <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-slate-400" />
+                              <Clock className="w-4 h-4 text-slate-500" aria-hidden="true" />
                               <span>Obtenue le {new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
                             </div>
                           </div>
@@ -384,7 +346,7 @@ export default function UserAttestationsPage() {
                             <Button
                               variant="link"
                               size="sm"
-                              className="h-auto p-0 text-amber-700 text-[11px] font-bold uppercase tracking-widest mt-3 hover:text-amber-800 flex items-center gap-1.5"
+                              className="h-auto p-0 text-amber-600 text-[11px] font-bold uppercase tracking-widest mt-3 hover:text-amber-700 flex items-center gap-1.5"
                               onClick={() => {
                                 setReportingAtt(att);
                                 setReportLostOpen(true);
@@ -398,11 +360,7 @@ export default function UserAttestationsPage() {
                       </div>
 
                       <div className="flex items-center gap-3 w-full sm:w-auto pt-5 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                        <Link
-                          href={att.isLocked ? "#" : `/attestations/${att.id}`}
-                          className="flex-1 sm:flex-none"
-                          aria-label={`${att.status === "CLAIMED" ? "Revoir" : "Aperçu"} l'attestation ${att.code} de ${att.fullName}`}
-                        >
+                        <Link href={att.isLocked ? "#" : `/attestations/${att.id}`} className="flex-1 sm:flex-none">
                           <Button
                             variant="outline"
                             size="sm"
@@ -447,16 +405,9 @@ export default function UserAttestationsPage() {
                               setQrDialogOpen(true);
                             }}
                             title={att.isLocked ? "Verrouillé" : "Partager le QR Code"}
-                            /* Bouton icône seule : `title` ne suffit pas aux lecteurs
-                               d'écran, qui annoncent parfois « bouton » tout court. */
-                            aria-label={
-                              att.isLocked
-                                ? `QR code indisponible : attestation ${att.code} verrouillée jusqu'à la délibération`
-                                : `Afficher le QR code de vérification de l'attestation ${att.code}`
-                            }
                             disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED")}
                           >
-                            <QrCode aria-hidden="true" className="w-4 h-4" />
+                            <QrCode className="w-4 h-4" />
                           </Button>
 
                           <Button
@@ -475,21 +426,11 @@ export default function UserAttestationsPage() {
                             }}
                             disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || downloading === att.code || att.isLocked}
                             title={att.isLocked ? "Verrouillé" : (att.status === "CLAIMED" ? "Télécharger à nouveau" : "Télécharger en PDF")}
-                            aria-busy={downloading === att.code}
-                            aria-label={
-                              downloading === att.code
-                                ? `Génération du PDF de l'attestation ${att.code} en cours`
-                                : att.isLocked
-                                  ? `Téléchargement indisponible : attestation ${att.code} verrouillée jusqu'à la délibération`
-                                  : att.status === "CLAIMED"
-                                    ? `Télécharger à nouveau l'attestation ${att.code} au format PDF`
-                                    : `Télécharger l'attestation ${att.code} au format PDF`
-                            }
                           >
                             {downloading === att.code ? (
-                              <div aria-hidden="true" className="animate-spin w-4 h-4 border-2 border-brand border-t-transparent rounded-full" />
+                              <div className="animate-spin w-4 h-4 border-2 border-brand border-t-transparent rounded-full" />
                             ) : (
-                              <Download aria-hidden="true" className="w-4 h-4" />
+                              <Download className="w-4 h-4" />
                             )}
                           </Button>
                         </div>
@@ -591,7 +532,7 @@ export default function UserAttestationsPage() {
                 onChange={(e) => setReportReason(e.target.value)}
               />
             </div>
-            <div className="bg-amber-50 p-4 rounded-2xl text-xs font-medium text-amber-800 flex gap-3 items-start">
+            <div className="bg-amber-50/50 p-4 rounded-2xl text-xs font-medium text-amber-800 flex gap-3 items-start">
               <Clock className="w-4 h-4 shrink-0 mt-0.5" />
               L'administration recevra votre demande et vous contactera par email sous 48h.
             </div>
@@ -634,11 +575,8 @@ export default function UserAttestationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Templates cachés pour la génération PDF (Capture technique).
-          `aria-hidden` : ces clones dupliquent le code et le nom du titulaire
-          dans l'arbre d'accessibilité — un lecteur d'écran les lirait une
-          seconde fois. Ils n'apportent rien à l'utilisateur. */}
-      <div aria-hidden="true" className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
+      {/* Templates cachés pour la génération PDF (Capture technique) */}
+      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
         {data?.attestations?.filter((a: any) => (a.status === "VALIDATED" || a.status === "CLAIMED") && !a.isLocked).map((att: any) => (
           <div key={`capture-${att.id}`}>
              <CertificateTemplate

@@ -11,11 +11,16 @@ import {
   XCircle,
   Clock,
   ArrowRight,
-  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  CandidateEmptyState,
+  CandidateErrorState,
+  CandidateLoading,
+  ScoreProgressBar,
+} from "@/components/CandidateStates";
 import { cn } from "@/lib/utils";
 
 interface ExamResult {
@@ -66,20 +71,21 @@ function formatDate(value: string | null): string {
 export default function UserResultsPage() {
   const router = useRouter();
 
-  const { data, isLoading, isError } = useQuery<ResultsResponse>({
-    queryKey: ["user-results"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/results");
-      if (res.status === 401) {
-        router.push("/auth");
-        throw new Error("Non autorisé");
-      }
-      if (!res.ok) {
-        throw new Error("Erreur lors du chargement des résultats");
-      }
-      return res.json();
-    },
-  });
+  const { data, isLoading, isError, isFetching, refetch } =
+    useQuery<ResultsResponse>({
+      queryKey: ["user-results"],
+      queryFn: async () => {
+        const res = await fetch("/api/user/results");
+        if (res.status === 401) {
+          router.push("/auth");
+          throw new Error("Non autorisé");
+        }
+        if (!res.ok) {
+          throw new Error("Erreur lors du chargement des résultats");
+        }
+        return res.json();
+      },
+    });
 
   const results = data?.results ?? [];
   const stats = data?.stats;
@@ -119,7 +125,7 @@ export default function UserResultsPage() {
           <h1 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight">
             Mes Résultats
           </h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
+          <p className="text-slate-600 text-sm font-medium mt-1">
             Consultez vos notes et votre progression aux examens officiels.
           </p>
         </div>
@@ -132,15 +138,19 @@ export default function UserResultsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="w-8 h-8 animate-spin text-brand" />
-        </div>
+        <CandidateLoading
+          label="Chargement de vos résultats…"
+          className="py-16 justify-center"
+        />
       ) : isError ? (
-        <Card className="rounded-2xl border border-rose-100 bg-rose-50/50 p-10 text-center">
-          <p className="text-rose-700 font-semibold">
-            Impossible de charger vos résultats. Veuillez réessayer plus tard.
-          </p>
-        </Card>
+        <CandidateErrorState
+          onRetry={() => {
+            void refetch();
+          }}
+          isRetrying={isFetching}
+          title="Impossible de charger vos résultats"
+          description="Vérifiez votre connexion internet puis relancez le chargement. Vos résultats n'ont pas été perdus."
+        />
       ) : (
         <>
           {/* Statistiques */}
@@ -152,7 +162,7 @@ export default function UserResultsPage() {
               >
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                       {card.label}
                     </span>
                     <div
@@ -174,23 +184,15 @@ export default function UserResultsPage() {
 
           {/* Liste */}
           {results.length === 0 ? (
-            <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm p-12 text-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Trophy className="w-8 h-8 text-slate-300" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-800">
-                Aucun résultat pour le moment
-              </h3>
-              <p className="text-sm text-slate-500 mt-1 mb-6">
-                Vous n&apos;avez pas encore passé d&apos;examen.
-              </p>
-              <Link href="/exams">
-                <Button className="bg-brand hover:bg-brand-dark rounded-xl h-11 px-6 font-bold gap-2">
-                  Voir les examens disponibles
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </Card>
+            <CandidateEmptyState
+              icon={<Trophy className="h-8 w-8 text-slate-500" aria-hidden="true" />}
+              title="Aucun résultat pour le moment"
+              description="Vous n'avez pas encore passé d'examen. Une fois votre copie corrigée, vos notes apparaîtront ici."
+              primaryAction={{
+                label: "Voir les examens disponibles",
+                onClick: () => router.push("/exams"),
+              }}
+            />
           ) : (
             <div className="space-y-4">
               {results.map((result) => {
@@ -271,8 +273,8 @@ export default function UserResultsPage() {
                                     : "Échoué"}
                             </Badge>
                           </div>
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1.5">
-                            <Clock className="w-3 h-3" />
+                          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                            <Clock className="w-3 h-3" aria-hidden="true" />
                             {formatDate(result.completedAt)}
                           </p>
                         </div>
@@ -289,7 +291,7 @@ export default function UserResultsPage() {
                               >
                                 {pct}%
                               </p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                 Seuil {result.passingScore}%
                               </p>
                             </>
@@ -305,22 +307,21 @@ export default function UserResultsPage() {
                         </div>
                       </div>
 
-                      {/* Barre de progression */}
-                      <div className="mt-5 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-all duration-1000",
-                            !isGraded
-                              ? "bg-amber-300"
-                              : !gradesVisible
-                                ? "bg-slate-200"
-                                : passed
-                                  ? "bg-gradient-to-r from-emerald-500 to-teal-500"
-                                  : "bg-gradient-to-r from-rose-500 to-orange-500",
-                          )}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
+                      {/* Barre de progression (exposée aux lecteurs d'écran) */}
+                      <ScoreProgressBar
+                        value={pct}
+                        label={`Progression globale de ${result.examName}`}
+                        className="mt-5"
+                        indicatorClassName={cn(
+                          !isGraded
+                            ? "bg-amber-400"
+                            : !gradesVisible
+                              ? "bg-slate-400"
+                              : passed
+                                ? "bg-gradient-to-r from-emerald-600 to-teal-600"
+                                : "bg-gradient-to-r from-rose-600 to-orange-600",
+                        )}
+                      />
 
                       {/* Détail par partie */}
                       {gradesVisible && parts.length > 0 && (
@@ -330,7 +331,7 @@ export default function UserResultsPage() {
                               key={part.label}
                               className="bg-slate-50/70 rounded-xl p-3 border border-slate-100"
                             >
-                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">
                                 {part.label}
                               </p>
                               <p className="text-sm font-bold text-slate-700">

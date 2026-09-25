@@ -7,6 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, CheckCheck, Trash2, ExternalLink, Filter } from "lucide-react";
+import {
+  CandidateEmptyState,
+  CandidateErrorState,
+  CandidateLoading,
+} from "@/components/CandidateStates";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -15,11 +20,21 @@ export default function NotificationsPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["user-notifications", filter],
     queryFn: async () => {
       const res = await fetch(`/api/user/notifications?limit=100&${filter === "unread" ? "unread=true" : ""}`);
-      if (!res.ok) return { notifications: [], unreadCount: 0 };
+      // Une panne réseau ne doit JAMAIS être rendue comme « aucune
+      // notification » : on remonte l'erreur, l'écran d'erreur avec retry
+      // prend le relais.
+      if (!res.ok) {
+        if (res.status === 401) router.push("/auth");
+        throw new Error(
+          res.status === 401
+            ? "Session expirée"
+            : "Erreur lors du chargement des notifications",
+        );
+      }
       return res.json();
     },
     refetchInterval: 15000,
@@ -104,64 +119,90 @@ export default function NotificationsPage() {
     }
   };
 
+  const notifications = data?.notifications || [];
+  const unreadCount = data?.unreadCount || 0;
+
+  // En-tête réutilisé dans les états nominal, d'erreur et de chargement :
+  // le titre de la page ne disparaît jamais.
+  const headerCard = (
+    <Card className="p-8 bg-gradient-to-br from-slate-900 to-slate-900 text-white shadow-2xl relative overflow-hidden border-none">
+      <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand-light/20 rounded-full blur-3xl" aria-hidden="true" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+        <div className="space-y-2">
+          <Badge className="bg-white/10 text-white border border-white/20 px-3 py-1 text-[10px] uppercase font-black tracking-widest mb-2">
+            Centre de notifications
+          </Badge>
+          <div className="flex items-center gap-3">
+            <Bell className="w-8 h-8 text-brand-light" aria-hidden="true" />
+            <h1 className="text-3xl font-black tracking-tighter">Notifications</h1>
+          </div>
+          <p className="text-slate-200 font-medium">
+            {unreadCount > 0
+              ? `Vous avez ${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
+              : "Toutes vos notifications sont à jour"}
+          </p>
+        </div>
+        {unreadCount > 0 && (
+          <Button
+            onClick={() => markAllReadMutation.mutate()}
+            className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20 rounded-xl px-6 font-bold gap-2"
+          >
+            <CheckCheck className="w-4 h-4" aria-hidden="true" />
+            Tout marquer comme lu
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+
   if (isLoading) {
     return (
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="p-6 animate-pulse">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-slate-100" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-slate-100 rounded w-3/4" />
-                <div className="h-3 bg-slate-100 rounded w-1/2" />
-              </div>
-            </div>
-          </Card>
-        ))}
+      <div className="space-y-6">
+        {headerCard}
+        <CandidateLoading label="Chargement de vos notifications…">
+          <div className="mt-6 space-y-3" aria-hidden="true">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="p-6 animate-pulse">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-100 rounded w-3/4" />
+                    <div className="h-3 bg-slate-100 rounded w-1/2" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </CandidateLoading>
       </div>
     );
   }
 
-  const notifications = data?.notifications || [];
-  const unreadCount = data?.unreadCount || 0;
+  // Panne réseau / serveur : message dédié + relance, distinct de l'état vide.
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        {headerCard}
+        <CandidateErrorState
+          onRetry={() => {
+            void refetch();
+          }}
+          isRetrying={isFetching}
+          title="Impossible de charger vos notifications"
+          description="Le serveur n'a pas répondu. Vérifiez votre connexion internet puis relancez le chargement. Vos notifications vous attendront ici."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-      {/* Header */}
-      <Card className="p-8 bg-gradient-to-br from-slate-900 to-slate-900 text-white shadow-2xl relative overflow-hidden border-none">
-        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand-light/20 rounded-full blur-3xl" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2">
-            <Badge className="bg-brand/20 text-brand-light border-none px-3 py-1 text-[10px] uppercase font-black tracking-widest mb-2">
-              Centre de notifications
-            </Badge>
-            <div className="flex items-center gap-3">
-              <Bell className="w-8 h-8 text-brand-light" />
-              <h2 className="text-3xl font-black tracking-tighter">Notifications</h2>
-            </div>
-            <p className="text-slate-300 font-medium">
-              {unreadCount > 0
-                ? `Vous avez ${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
-                : "Toutes vos notifications sont à jour"}
-            </p>
-          </div>
-          {unreadCount > 0 && (
-            <Button
-              onClick={() => markAllReadMutation.mutate()}
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20 rounded-xl px-6 font-bold gap-2"
-            >
-              <CheckCheck className="w-4 h-4" />
-              Tout marquer comme lu
-            </Button>
-          )}
-        </div>
-      </Card>
+      {headerCard}
 
       {/* Filters */}
       <Card className="p-4 bg-white shadow-sm">
         <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-slate-500" />
+          <Filter className="w-4 h-4 text-slate-600" aria-hidden="true" />
           <span className="text-sm font-semibold text-slate-700">Filtres</span>
         </div>
         <div className="flex gap-2">
@@ -186,15 +227,24 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       {!notifications.length ? (
-        <Card className="p-12 bg-white shadow-sm">
-          <div className="text-center">
-            <Bell className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-            <p className="text-lg font-bold text-slate-600">Aucune notification</p>
-            <p className="text-sm text-slate-400 mt-1">
-              Vous serez notifié des mises à jour importantes concernant vos attestations, examens et stages.
-            </p>
-          </div>
-        </Card>
+        <CandidateEmptyState
+          icon={<Bell className="h-8 w-8 text-slate-500" aria-hidden="true" />}
+          title={
+            filter === "unread"
+              ? "Aucune notification non lue"
+              : "Aucune notification pour le moment"
+          }
+          description={
+            filter === "unread"
+              ? "Vous avez lu toutes vos notifications. Basculez sur « Toutes » pour consulter votre historique complet."
+              : "Vous serez notifié des mises à jour importantes concernant vos attestations, examens et stages."
+          }
+          primaryAction={
+            filter === "unread"
+              ? { label: "Voir toutes les notifications", onClick: () => setFilter("all") }
+              : undefined
+          }
+        />
       ) : (
         <div className="space-y-3">
           {notifications.map((notif: any) => (
@@ -222,10 +272,10 @@ export default function NotificationsPage() {
                     )}
                   </div>
                   <p className="text-sm text-slate-500 leading-relaxed">{notif.message}</p>
-                  <p className="text-xs text-slate-400 font-medium mt-2">{formatRelativeTime(notif.createdAt)}</p>
+                  <p className="text-xs text-slate-500 font-medium mt-2">{formatRelativeTime(notif.createdAt)}</p>
                 </div>
                 {notif.link && (
-                  <ExternalLink className="w-4 h-4 text-slate-300 flex-shrink-0 mt-1" />
+                  <ExternalLink className="w-4 h-4 text-slate-500 flex-shrink-0 mt-1" aria-hidden="true" />
                 )}
               </div>
             </Card>

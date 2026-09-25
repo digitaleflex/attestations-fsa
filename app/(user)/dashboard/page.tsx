@@ -9,7 +9,7 @@ import {
   FileText, Download, Clock, CheckCircle, GraduationCap,
   User as UserIcon, Calendar, Mail, TrendingUp,
   ArrowRight, ShieldCheck, ShieldAlert,
-  Megaphone, Loader2 as LoaderIcon, Play, X, Activity,
+  Megaphone, LoaderIcon, Play, X, Activity, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +18,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { User, Attestation, Notification } from "@/types";
+import {
+  CandidateErrorState,
+  CandidateLoading,
+} from "@/components/CandidateStates";
 
 type DashboardExamEntry = {
   id: string; examName: string; status: string; score: number;
@@ -29,13 +33,20 @@ export default function UserDashboardPage() {
   const router = useRouter();
   const [isSendingVerification, setIsSendingVerification] = useState(false);
 
-  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    isError: dashboardError,
+    isFetching: dashboardFetching,
+    refetch: refetchDashboard,
+  } = useQuery({
     queryKey: ["user-dashboard-data"],
     queryFn: async () => {
       const res = await fetch("/api/user/dashboard-data");
       if (!res.ok) { if (res.status === 401) router.push("/auth"); throw new Error("Non autorise"); }
       return res.json();
     }, staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   const user = dashboardData?.profile;
@@ -61,7 +72,37 @@ export default function UserDashboardPage() {
   };
 
   if (dashboardLoading)
-    return <div className="min-h-screen flex items-center justify-center"><LoaderIcon className="animate-spin text-brand w-8 h-8" /></div>;
+    return (
+      <div className="py-16 flex justify-center">
+        <CandidateLoading label="Chargement de votre tableau de bord…" />
+      </div>
+    );
+
+  // Panne de chargement ≠ tableau vide : message explicite + relance manuelle.
+  if (dashboardError)
+    return (
+      <div className="py-10 max-w-3xl mx-auto space-y-6">
+        <CandidateErrorState
+          onRetry={() => {
+            void refetchDashboard();
+          }}
+          isRetrying={dashboardFetching}
+          title="Impossible de charger votre tableau de bord"
+          description="Vos statistiques, documents et annonces n'ont pas pu être récupérés. Vérifiez votre connexion puis relancez le chargement."
+        />
+        <p className="text-center text-sm text-slate-600">
+          Vous pouvez aussi consulter directement vos{" "}
+          <Link href="/attestations" className="font-bold text-brand underline underline-offset-4">
+            attestations
+          </Link>{" "}
+          et vos{" "}
+          <Link href="/results" className="font-bold text-brand underline underline-offset-4">
+            résultats
+          </Link>
+          .
+        </p>
+      </div>
+    );
 
   const hasPendingCorrection = (user?.reclamations?.length || 0) > 0;
 
@@ -74,7 +115,7 @@ export default function UserDashboardPage() {
           <div className="space-y-2">
             <Badge className="bg-white/20 text-white border-none px-3 py-1 text-[10px] uppercase font-black tracking-widest mb-2">Espace Candidat</Badge>
             <h2 className="text-4xl font-black tracking-tighter">Bienvenue, {user?.name?.split(" ")[0] || "Candidat"}</h2>
-            <p className="text-white/70 font-medium">Votre parcours continue. Retrouvez vos succes et vos prochaines etapes ici.</p>
+            <p className="text-white/90 font-medium">Votre parcours continue. Retrouvez vos succes et vos prochaines etapes ici.</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
@@ -116,7 +157,7 @@ export default function UserDashboardPage() {
       <Card className={`p-8 border-none shadow-sm relative overflow-hidden transition-all duration-500 rounded-3xl ${hasPendingCorrection ? "bg-slate-100 grayscale-[0.3]" : "bg-white"}`}>
         <div className="absolute top-0 right-0 p-8 opacity-5"><UserIcon size={120} /></div>
         <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-          <div className={`flex-1 space-y-4 ${hasPendingCorrection ? "opacity-60" : ""}`}>
+          <div className={`flex-1 space-y-4 ${hasPendingCorrection ? "opacity-80" : ""}`}>
             <div className="flex items-center gap-2">
               <Badge className={`${hasPendingCorrection ? "bg-amber-100 text-amber-700" : "bg-brand/10 text-brand-dark"} border-none px-2 py-0.5 text-[9px] uppercase font-bold`}>
                 {hasPendingCorrection ? "Demande en cours" : "Etape Importante"}
@@ -208,7 +249,7 @@ export default function UserDashboardPage() {
             </div>
             <div className="space-y-4">
               {!attestationsData?.attestations?.length ? (
-                <div className="p-12 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200"><FileText className="w-12 h-12 text-slate-200 mx-auto mb-4" /><p className="text-brand-muted font-bold">Aucune attestation disponible pour le moment.</p></div>
+                <div className="p-12 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200"><FileText className="w-12 h-12 text-slate-500 mx-auto mb-4" aria-hidden="true" /><p className="text-brand-muted font-bold">Aucune attestation disponible pour le moment.</p></div>
               ) : (
                 attestationsData.attestations.map((att: Attestation) => (
                   <div key={att.id} className="p-5 bg-slate-50 rounded-2xl group hover:bg-brand/10 transition-all border border-transparent hover:border-brand/20">
@@ -219,7 +260,7 @@ export default function UserDashboardPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {att.status === "VALIDATED" && ((att.type === "FORMATION" ? (att.certificationScore || 0) > 0 : (att.certificationScore || 0) > 0 && (att.stageScore || 0) > 0)) ? (
-                          <Button variant="ghost" size="icon" disabled className="rounded-full bg-slate-50 text-slate-300 cursor-not-allowed"><Download className="w-5 h-5" /></Button>
+                          <Button variant="ghost" size="icon" disabled className="rounded-full bg-slate-50 text-slate-500 cursor-not-allowed"><Download className="w-5 h-5" /></Button>
                         ) : (
                           <div className="flex flex-col items-end gap-1">
                             <Badge variant="outline" className={`text-[9px] flex items-center gap-1 ${att.status === "REJECTED" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-amber-50 text-amber-700 border-amber-100"}`}><ShieldAlert className="w-2.5 h-2.5" />{att.status === "REJECTED" ? "ATTESTATION REVOQUEE" : "SCORES EN ATTENTE"}</Badge>
@@ -232,16 +273,16 @@ export default function UserDashboardPage() {
                       <div className="mt-4 pt-4 border-t border-slate-200/50 flex flex-col gap-3">
                         <div className="flex items-center justify-between text-[10px] font-black text-brand-muted uppercase tracking-widest">
                           <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Etat du Parcours FSA</span>
-                          <div className="flex items-center gap-2"><span className={(att.certificationScore || 0) >= 60 ? "text-brand" : "text-slate-300"}>Theorie {(att.certificationScore || 0) >= 60 ? "✓" : "○"}</span><span className="text-slate-200">|</span><span className={(att.stageScore || 0) >= 60 ? "text-brand" : "text-slate-300"}>Pratique {(att.stageScore || 0) >= 60 ? "✓" : "○"}</span></div>
+                          <div className="flex items-center gap-2"><span className={(att.certificationScore || 0) >= 60 ? "text-brand" : "text-slate-600"}>Theorie {(att.certificationScore || 0) >= 60 ? "✓" : "○"}</span><span className="text-slate-500" aria-hidden="true">|</span><span className={(att.stageScore || 0) >= 60 ? "text-brand" : "text-slate-600"}>Pratique {(att.stageScore || 0) >= 60 ? "✓" : "○"}</span></div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                          <div className={cn("p-2.5 rounded-xl border flex items-center justify-between transition-all", (att.certificationScore || 0) >= 60 ? "bg-brand/10 border-brand/20" : "bg-white border-slate-100 opacity-60")}><span className="text-[9px] font-bold text-brand-muted uppercase">Theorie</span><span className="text-sm font-black text-brand-dark">{((att.certificationScore || 0) / 5).toFixed(2)}/20</span></div>
+                          <div className={cn("p-2.5 rounded-xl border flex items-center justify-between transition-all", (att.certificationScore || 0) >= 60 ? "bg-brand/10 border-brand/20" : "bg-white border-slate-100 opacity-80")}><span className="text-[9px] font-bold text-brand-muted uppercase">Theorie</span><span className="text-sm font-black text-brand-dark">{((att.certificationScore || 0) / 5).toFixed(2)}/20</span></div>
                           {(att.certificationScore || 0) >= 60 ? ((att.stageScore || 0) > 0 ? (
                             <div className="bg-brand/10 p-2.5 rounded-xl border border-brand/20 flex items-center justify-between"><span className="text-[9px] font-bold text-brand uppercase">Stage</span><span className="text-sm font-black text-brand-dark">{((att.stageScore || 0) / 5).toFixed(2)}/20</span></div>
                           ) : (
                             <Link href="/internships" className="bg-brand to-brand-dark p-2.5 rounded-xl text-white flex items-center justify-center gap-2 hover:from-brand-dark hover:to-brand-dark transition-all shadow-lg active:scale-95 shadow-brand/20"><span className="text-[9px] font-black uppercase">Postuler au Stage</span><ArrowRight className="w-3 h-3" /></Link>
                           )) : (
-                            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-center opacity-40"><span className="text-[9px] font-bold text-brand-muted italic">Stage (Bloque)</span></div>
+                            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-center opacity-70"><span className="text-[9px] font-bold text-brand-muted italic">Stage (Bloque)</span></div>
                           )}
                         </div>
                       </div>
@@ -286,7 +327,7 @@ export default function UserDashboardPage() {
                   </div>
                 );
               }) : (
-                <div className="py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200"><Activity className="w-8 h-8 text-slate-200 mx-auto mb-2" /><p className="text-[10px] text-brand-muted font-bold uppercase tracking-widest italic">Aucun examen passe</p></div>
+                <div className="py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200"><Activity className="w-8 h-8 text-slate-500 mx-auto mb-2" aria-hidden="true" /><p className="text-[10px] text-brand-muted font-bold uppercase tracking-widest italic">Aucun examen passe</p></div>
               )}
             </div>
           </Card>

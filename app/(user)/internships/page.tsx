@@ -6,6 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, Clock, CheckCircle, XCircle, Filter } from "lucide-react";
+import {
+  CandidateEmptyState,
+  CandidateErrorState,
+  CandidateLoading,
+} from "@/components/CandidateStates";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -45,7 +50,7 @@ export default function UserInternshipsPage() {
     cvUrl: ""
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["user-internships"],
     queryFn: async () => {
       const res = await fetch("/api/user/internships");
@@ -110,38 +115,71 @@ export default function UserInternshipsPage() {
     }
   };
 
+  // Titre de page réutilisé dans les états de chargement et d'erreur : la
+  // candidate garde toujours son repère, même quand la liste ne s'affiche pas.
+  const pageTitle = (
+    <header>
+      <h1 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight">
+        Stages & Projets
+      </h1>
+      <p className="text-slate-600 text-sm font-medium mt-1">
+        Suivez vos candidatures de stage et l&apos;avancement de leur traitement.
+      </p>
+    </header>
+  );
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-brand border-t-transparent rounded-full mx-auto mb-3" />
-          <p className="text-slate-500">Chargement...</p>
-        </div>
+      <div className="space-y-8">
+        {pageTitle}
+        <CandidateLoading
+          label="Chargement de vos candidatures de stage…"
+          className="py-16 justify-center"
+        />
+      </div>
+    );
+  }
+
+  // Erreur réseau / serveur : ce n'est PAS « aucune candidature ». On l'annonce
+  // explicitement et on propose de relancer la requête.
+  if (isError) {
+    return (
+      <div className="space-y-8">
+        {pageTitle}
+        <CandidateErrorState
+          onRetry={() => {
+            void refetch();
+          }}
+          isRetrying={isFetching}
+          title="Impossible de charger vos candidatures"
+          description="Vérifiez votre connexion internet puis relancez le chargement. Si le problème persiste, contactez le bureau de la Ferme Saint André."
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
+        {pageTitle}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="p-4 bg-white shadow-sm">
-            <p className="text-sm text-slate-500">Total</p>
+            <p className="text-sm text-slate-600">Total</p>
             <p className="text-2xl font-bold text-slate-800">{data?.stats?.total || 0}</p>
           </Card>
           <Card className="p-4 bg-white shadow-sm border-l-4 border-l-amber-500">
-            <p className="text-sm text-slate-500">En attente</p>
+            <p className="text-sm text-slate-600">En attente</p>
             <p className="text-2xl font-bold text-amber-600">{data?.stats?.pending || 0}</p>
           </Card>
           <Card className="p-4 bg-white shadow-sm border-l-4 border-l-blue-500">
-            <p className="text-sm text-slate-500">En revue</p>
+            <p className="text-sm text-slate-600">En revue</p>
             <p className="text-2xl font-bold text-blue-600">{data?.stats?.inReview || 0}</p>
           </Card>
           <Card className="p-4 bg-white shadow-sm border-l-4 border-l-emerald-500">
-            <p className="text-sm text-slate-500">Acceptés</p>
+            <p className="text-sm text-slate-600">Acceptés</p>
             <p className="text-2xl font-bold text-emerald-600">{data?.stats?.accepted || 0}</p>
           </Card>
           <Card className="p-4 bg-white shadow-sm border-l-4 border-l-rose-500">
-            <p className="text-sm text-slate-500">Refusés</p>
+            <p className="text-sm text-slate-600">Refusés</p>
             <p className="text-2xl font-bold text-rose-600">{data?.stats?.rejected || 0}</p>
           </Card>
         </div>
@@ -243,15 +281,31 @@ export default function UserInternshipsPage() {
         </Card>
 
         {!filteredApplications || filteredApplications.length === 0 ? (
-          <Card className="p-12 bg-white shadow-sm">
-            <div className="text-center">
-              <Briefcase className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-lg font-medium text-slate-600">Aucune candidature</p>
-              <p className="text-sm text-slate-500 mt-1">
-                Vos candidatures de stage apparaîtront ici
-              </p>
-            </div>
-          </Card>
+          statusFilter === "all" ? (
+            <CandidateEmptyState
+              icon={
+                <Briefcase className="h-8 w-8 text-slate-500" aria-hidden="true" />
+              }
+              title="Aucune candidature envoyée"
+              description="Vos candidatures de stage apparaîtront ici avec leur statut : en attente, en revue, acceptée ou refusée."
+              primaryAction={{
+                label: "Postuler pour un stage",
+                onClick: () => setIsDialogOpen(true),
+              }}
+            />
+          ) : (
+            <CandidateEmptyState
+              icon={
+                <Filter className="h-8 w-8 text-slate-500" aria-hidden="true" />
+              }
+              title="Aucune candidature avec ce statut"
+              description={`Le filtre « ${getStatusLabel(statusFilter)} » ne correspond à aucune de vos candidatures.`}
+              primaryAction={{
+                label: "Réinitialiser le filtre",
+                onClick: () => setStatusFilter("all"),
+              }}
+            />
+          )
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredApplications.map((app: any) => (
