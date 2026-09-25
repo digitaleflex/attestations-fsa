@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   sessionFindUnique: vi.fn(),
@@ -28,13 +28,23 @@ function baseSession(overrides: Record<string, unknown> = {}) {
   return {
     id: "session-1",
     userId: "user-1",
+    status: "GRADED",
+    type: "OFFICIAL",
     finalScore: 88,
     internshipScore: 90,
     startedAt: new Date("2026-01-01T10:00:00Z"),
     submittedAt: new Date("2026-01-01T11:00:00Z"),
-    exam: { id: "exam-1", formationId: "formation-1", passingScore: 65 },
+    exam: {
+      id: "exam-1",
+      type: "OFFICIAL",
+      formationId: "formation-1",
+      formation: { name: "Formation FSA" },
+      passingScore: 65,
+    },
     candidate: {
       name: "Alice Candidat",
+      email: "alice@example.test",
+      gender: "F",
       birthDate: new Date("2000-05-05"),
       birthPlace: "Cotonou",
     },
@@ -42,11 +52,31 @@ function baseSession(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const issueOptions = {
+  now: new Date("2026-01-02T12:00:00Z"),
+  generator: {
+    generateCanonicalAttestationPdf: vi
+      .fn()
+      .mockResolvedValue(Buffer.from("%PDF-1.7\ntest")),
+  },
+  storage: {
+    put: vi.fn().mockResolvedValue(undefined),
+    getSignedUrl: vi.fn().mockResolvedValue(""),
+    delete: vi.fn().mockResolvedValue(undefined),
+    exists: vi.fn().mockResolvedValue(true),
+  },
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("CERT_SEAL_SECRET", "test-certificate-seal-secret-32-chars");
   mocks.attestationCount.mockResolvedValue(0 as never);
   mocks.attestationCreate.mockResolvedValue({} as never);
   mocks.attestationUpdate.mockResolvedValue({} as never);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("issueExamAttestation", () => {
@@ -62,15 +92,20 @@ describe("issueExamAttestation", () => {
     mocks.sessionFindUnique.mockResolvedValue(baseSession() as never);
     mocks.attestationFindFirst.mockResolvedValue({
       id: "existing",
+      code: "FSA-2026-M01-00001-existing",
       status: "VALIDATED",
+      certificationScore: 88,
+      stageScore: 90,
+      certificationMention: "TRES_BIEN",
     } as never);
 
-    const result = await issueExamAttestation("session-1");
+    const result = await issueExamAttestation("session-1", issueOptions);
 
     expect(result.created).toBe(false);
-    expect(result.updated).toBe(true);
+    expect(result.updated).toBeUndefined();
+    expect(result.code).toBe("FSA-2026-M01-00001-existing");
     expect(mocks.attestationCreate).not.toHaveBeenCalled();
-    expect(mocks.attestationUpdate).toHaveBeenCalledTimes(1);
+    expect(mocks.attestationUpdate).not.toHaveBeenCalled();
   });
 
   it("met à jour score/mention/status lors d'une re-correction à la hausse", async () => {
@@ -79,10 +114,16 @@ describe("issueExamAttestation", () => {
     );
     mocks.attestationFindFirst.mockResolvedValue({
       id: "existing",
+      code: "FSA-2026-M01-00001-existing",
       status: "VALIDATED",
+      certificationScore: 88,
+      stageScore: 90,
+      certificationMention: "TRES_BIEN",
+      issuedAt: new Date("2026-01-01T12:00:00Z"),
+      pdfVersion: 1,
     } as never);
 
-    const result = await issueExamAttestation("session-1");
+    const result = await issueExamAttestation("session-1", issueOptions);
 
     expect(result.updated).toBe(true);
     const arg = mocks.attestationUpdate.mock.calls[0][0] as {
@@ -103,10 +144,16 @@ describe("issueExamAttestation", () => {
     );
     mocks.attestationFindFirst.mockResolvedValue({
       id: "existing",
+      code: "FSA-2026-M01-00001-existing",
       status: "VALIDATED",
+      certificationScore: 88,
+      stageScore: 90,
+      certificationMention: "TRES_BIEN",
+      issuedAt: new Date("2026-01-01T12:00:00Z"),
+      pdfVersion: 1,
     } as never);
 
-    const result = await issueExamAttestation("session-1");
+    const result = await issueExamAttestation("session-1", issueOptions);
 
     expect(result.created).toBe(false);
     expect(result.revoked).toBe(true);
@@ -155,10 +202,10 @@ describe("issueExamAttestation", () => {
     mocks.attestationFindFirst.mockResolvedValue(null as never);
     mocks.attestationCount.mockResolvedValue(4 as never);
 
-    const result = await issueExamAttestation("session-1");
+    const result = await issueExamAttestation("session-1", issueOptions);
 
     expect(result.created).toBe(true);
-    expect(result.code).toMatch(/^FSA-\d{4}-M\d{2}-00005-[0-9a-f]{5}$/);
+    expect(result.code).toMatch(/^FSA-2026-M01-00005-[0-9a-f]{5}$/);
     expect(mocks.attestationCreate).toHaveBeenCalledTimes(1);
 
     const arg = mocks.attestationCreate.mock.calls[0][0] as {
