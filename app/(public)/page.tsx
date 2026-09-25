@@ -7,7 +7,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   GraduationCap,
-  LockKeyhole,
+  Lock,
   SearchCheck,
   ShieldCheck,
 } from "lucide-react";
@@ -56,7 +56,7 @@ const reassurance = [
       "Les dates, durées et statuts des sessions sont affichés publiquement.",
   },
   {
-    icon: LockKeyhole,
+    icon: Lock,
     title: "Un accès lié à votre compte",
     description:
       "Les sessions à venir restent informatives ; leur accès s’effectue depuis votre espace.",

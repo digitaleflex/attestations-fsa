@@ -163,6 +163,7 @@ export default function InternshipApplicationPage() {
       applicationForm.append("university", formData.university);
       applicationForm.append("level", formData.level);
       applicationForm.append("message", formData.message);
+      if (!formData.cvFile) return;
       applicationForm.append("file", formData.cvFile);
 
       const res = await fetch("/api/public/internships", {

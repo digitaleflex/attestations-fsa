@@ -9,7 +9,7 @@ import {
   Clock3,
   GraduationCap,
   Info,
-  LockKeyhole,
+  Lock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -202,7 +202,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
           {state === "OPEN" ? (
             <Button asChild className="h-14 min-h-14 w-full gap-2 rounded-2xl font-black">
               <Link href="/auth">
-                <LockKeyhole className="h-4 w-4" aria-hidden="true" />
+                <Lock className="h-4 w-4" aria-hidden="true" />
                 Se connecter pour passer l’examen
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>

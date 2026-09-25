@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LockKeyhole, ShieldAlert } from "lucide-react";
+import { Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default function UnauthorizedPage() {
 
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-rose-700">
-            <LockKeyhole aria-hidden="true" className="h-3.5 w-3.5" />
+            <Lock aria-hidden="true" className="h-3.5 w-3.5" />
             Accès protégé
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-5xl">Accès refusé</h1>
