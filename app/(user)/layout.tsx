@@ -135,7 +135,7 @@ export default function UserLayout({
                 <span className="font-bold text-slate-800 tracking-tight whitespace-nowrap text-xs">
                   Agro-piscicole
                 </span>
-                <span className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">
+                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
                   St Andre
                 </span>
               </div>
@@ -143,13 +143,33 @@ export default function UserLayout({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-hide">
+        <nav
+          // Libellé distinct de celui du menu mobile (« Navigation mobile
+          // candidat ») : deux points de navigation portant le même nom
+          // confondent les listes de liens d'un lecteur d'écran, qui ne peut
+          // alors plus dire lequel il parcourt. Les deux ne sont de toute façon
+          // jamais exposés ensemble (l'un est `hidden` sous `lg`, l'autre
+          // n'existe que panneau ouvert).
+          aria-label="Navigation latérale candidat"
+          className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-hide"
+        >
           {menuItems.map((item) => {
             const isActive =
               pathname === item.href ||
               (pathname && pathname.startsWith(`${item.href}/`));
             return (
-              <Link key={item.name} href={item.href}>
+              <Link
+                key={item.name}
+                href={item.href}
+                // `aria-current` : sans lui, la page courante n'est signalée ni
+                // aux lecteurs d'écran ni en couleur seule. Le menu mobile le
+                // portait déjà ; on aligne le menu latéral.
+                aria-current={isActive ? "page" : undefined}
+                // Menue réduit : le libellé n'est plus dans le DOM, seul
+                // l'icône reste. `aria-label` garde un nom accessible fiable
+                // là où `title` (non fiable, dépend du navigateur) suffisait.
+                aria-label={isSidebarOpen ? undefined : item.name}
+              >
                 <div
                   className={`flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-300 group ${
                     isActive
@@ -159,7 +179,8 @@ export default function UserLayout({
                   title={!isSidebarOpen ? item.name : undefined}
                 >
                   <item.icon
-                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-500 group-hover:text-brand"}`}
+                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-400 group-hover:text-brand"}`}
+                    aria-hidden="true"
                   />
                   {isSidebarOpen && (
                     <span className="font-medium whitespace-nowrap tracking-wide text-sm">
@@ -170,7 +191,7 @@ export default function UserLayout({
               </Link>
             );
           })}
-        </div>
+        </nav>
 
         <div className="p-4 border-t border-slate-100 bg-white">
           <button
@@ -178,7 +199,7 @@ export default function UserLayout({
             className="flex items-center gap-3 w-full px-3 py-3 text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95"
             title={!isSidebarOpen ? "Déconnexion" : undefined}
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <LogOut className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             {isSidebarOpen && (
               <span className="font-medium whitespace-nowrap text-sm">
                 Déconnexion
@@ -200,9 +221,9 @@ export default function UserLayout({
                   aria-label="Ouvrir le menu"
                   aria-expanded={isMobileMenuOpen}
                   aria-controls="candidate-mobile-menu"
-                  className="lg:hidden rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100"
+                  className="lg:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100"
                 >
-                  <Menu className="w-6 h-6" />
+                  <Menu className="w-6 h-6" aria-hidden="true" />
                 </button>
               </SheetTrigger>
               <SheetContent
@@ -226,7 +247,7 @@ export default function UserLayout({
                   </div>
                 </div>
                 <nav
-                  aria-label="Navigation candidat"
+                  aria-label="Navigation mobile candidat"
                   className="flex-1 space-y-2 overflow-y-auto px-4 py-6"
                 >
                   {menuItems.map((item) => {
@@ -242,7 +263,8 @@ export default function UserLayout({
                         className={`flex items-center gap-4 rounded-xl border px-4 py-3.5 font-medium transition-colors ${isActive ? "border-brand/20 bg-brand/10 text-brand-dark shadow-sm" : "border-transparent text-slate-600 hover:bg-slate-50"}`}
                       >
                         <item.icon
-                          className={`h-5 w-5 ${isActive ? "text-brand" : "text-slate-500"}`}
+                          className={`h-5 w-5 ${isActive ? "text-brand" : "text-slate-400"}`}
+                          aria-hidden="true"
                         />
                         {item.name}
                       </Link>
@@ -255,7 +277,7 @@ export default function UserLayout({
                     onClick={handleLogout}
                     className="flex w-full items-center justify-center gap-3 rounded-xl border border-rose-200 bg-white px-4 py-3.5 font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-50"
                   >
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-5 w-5" aria-hidden="true" />
                     Déconnexion
                   </button>
                 </div>
@@ -263,7 +285,7 @@ export default function UserLayout({
             </Sheet>
             <button
               type="button"
-              className="hidden lg:flex items-center justify-center w-10 h-10 text-slate-600 hover:text-brand hover:bg-brand/10 rounded-xl transition-colors"
+              className="hidden lg:flex h-11 w-11 items-center justify-center text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-colors"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               aria-label={
                 isSidebarOpen
@@ -273,7 +295,7 @@ export default function UserLayout({
               aria-expanded={isSidebarOpen}
               aria-controls="candidate-sidebar"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
             <h2 className="hidden sm:block text-xl font-bold text-slate-800 tracking-tight">
               {menuItems.find(

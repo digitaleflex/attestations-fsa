@@ -236,8 +236,8 @@ export default function UserDashboardPage() {
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between"><span className="text-xs font-bold text-brand-muted uppercase">Entrainements</span><span className="text-sm font-black text-brand-ink">{statsData?.overview?.totalMockExams || 0}</span></div>
-                <div className="flex items-center justify-between"><span className="text-xs font-bold text-brand-muted uppercase">Objectif atteint</span><span className="text-sm font-black text-brand-accent">{statsData?.overview?.mockExamsPassed || 0}</span></div>
-                <Link href="/exams" className="block pt-2"><Button variant="outline" className="w-full border-brand/20 text-brand-accent hover:bg-brand/10 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider gap-2"><Clock className="w-3 h-3" /> S'entrainer maintenant</Button></Link>
+                <div className="flex items-center justify-between"><span className="text-xs font-bold text-brand-muted uppercase">Objectif atteint</span><span className="text-sm font-black text-brand-accent-ink">{statsData?.overview?.mockExamsPassed || 0}</span></div>
+                <Link href="/exams" className="block pt-2"><Button variant="outline" className="w-full border-brand/20 text-brand-accent-ink hover:bg-brand/10 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider gap-2"><Clock className="w-3 h-3" /> S'entrainer maintenant</Button></Link>
               </div>
             </Card>
           </div>

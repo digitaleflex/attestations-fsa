@@ -15,7 +15,13 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       {/* Navigation Client */}
       <PublicHeader />
 
-      {/* Contenu Principal */}
+      {/* Contenu Principal
+          `tabIndex={-1}` JUSTIFIÉ : c'est la cible du lien d'évitement
+          « Aller au contenu principal » (WCAG 2.4.1). Un conteneur n'est pas
+          focusable par défaut, alors sans cet attribut le lien ne pourrait pas
+          y amendrer le focus et le clavier resterait piégé dans l'en-tête.
+          `focus:outline-none` évite l'anneau sur un focus bestowed
+          programmatiquement (il n'y a pas d'interaction en cours). */}
       <main id="contenu-principal" tabIndex={-1} className="relative isolate flex w-full flex-1 flex-col items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,rgba(230,0,35,0.045),transparent_32rem)] bg-[length:100%_100%] pt-4 focus:outline-none md:pt-8">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-grid-slate-100 bg-[size:40px_40px] opacity-60" />
         {children}

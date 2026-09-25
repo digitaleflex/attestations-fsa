@@ -283,7 +283,10 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-7 w-7", className)}
+      // `h-7 w-7` (28 px) était sous la cible tactile. On délègue la taille au
+      // variant `icon` (44 x 44) du `Button` ; un appelant peut encore
+      // surcharger via `className`.
+      className={className}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
@@ -291,7 +294,9 @@ const SidebarTrigger = React.forwardRef<
       {...props}
     >
       <PanelLeft />
-      <span className="sr-only">Toggle Sidebar</span>
+      {/* Nom accessible : l'icône seule n'est pas annoncée. Un appelant qui
+          veut un libellé différent passe `aria-label` (il écrase ce texte). */}
+      <span className="sr-only">Basculer la barre latérale</span>
     </Button>
   )
 })
@@ -307,10 +312,16 @@ const SidebarRail = React.forwardRef<
     <button
       ref={ref}
       data-sidebar="rail"
-      aria-label="Toggle Sidebar"
+      aria-label="Basculer la barre latérale"
+      // `tabIndex={-1}` JUSTIFIÉ : le rail est un PUR affordance de
+      // redimensionnement à la souris, doublon du `SidebarTrigger` (bouton
+      // focusable) et du raccourci Ctrl/Cmd+B, tous deux déjà au clavier.
+      // L'exposer au Tab ajouterait un second arrêt sur la même action, sans
+      // rien apporter — c'est le seul `tabIndex={-1}` justifié du design
+      // system. Le `aria-label` reste : le nom accessible ne dépend pas du Tab.
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      title="Basculer la barre latérale"
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
         "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
@@ -326,12 +337,21 @@ const SidebarRail = React.forwardRef<
 })
 SidebarRail.displayName = "SidebarRail"
 
+/**
+ * Conteneur de la zone de contenu.
+ *
+ * rend un `<div>`, pas un `<main>` : les mises en page qui l'utilisent
+ * imbriquent déjà leur propre `<main id="contenu-principal">` (cible du lien
+ * d'évitement). Un `<main>` ici produisait deux points d'anneau `main`
+ * imbriqués sur la même page — un seul doit exister dans le document, et
+ * c'est celui de la page qui porte le `id` du lien d'évitement.
+ */
 const SidebarInset = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"main">
+  React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
   return (
-    <main
+    <div
       ref={ref}
       className={cn(
         "relative flex w-full flex-1 flex-col bg-background",

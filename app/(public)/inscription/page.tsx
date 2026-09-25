@@ -743,18 +743,26 @@ export default function InscriptionPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-4 top-4 text-slate-300 transition-colors hover:text-brand"
+                          // Cible tactile : `absolute right-3 top-3` en 44x44
+                          // plutôt que `right-4 top-4` en ~28x28, pour ne pas
+                          // empiéter sur le champ ni sortir de la zone de
+                          // frappe confortable.
+                          className="absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand"
                           aria-label={
                             showPassword
                               ? "Masquer le mot de passe"
                               : "Afficher le mot de passe"
                           }
-                          tabIndex={-1}
+                          // `aria-pressed` : ce bouton est une bascule, pas une
+                          // action. Sans cet état, un lecteur d'écran annonce
+                          // « Afficher le mot de passe, bouton » et ne dit pas
+                          // si le mot de passe est visible.
+                          aria-pressed={showPassword}
                         >
                           {showPassword ? (
-                            <EyeOff className="h-5 w-5" />
+                            <EyeOff className="h-5 w-5" aria-hidden="true" />
                           ) : (
-                            <Eye className="h-5 w-5" />
+                            <Eye className="h-5 w-5" aria-hidden="true" />
                           )}
                         </button>
                       </div>
@@ -804,18 +812,18 @@ export default function InscriptionPage() {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword((v) => !v)}
-                          className="absolute right-4 top-4 text-slate-300 transition-colors hover:text-brand"
+                          className="absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand"
                           aria-label={
                             showConfirmPassword
                               ? "Masquer la confirmation du mot de passe"
                               : "Afficher la confirmation du mot de passe"
                           }
-                          tabIndex={-1}
+                          aria-pressed={showConfirmPassword}
                         >
                           {showConfirmPassword ? (
-                            <EyeOff className="h-5 w-5" />
+                            <EyeOff className="h-5 w-5" aria-hidden="true" />
                           ) : (
-                            <Eye className="h-5 w-5" />
+                            <Eye className="h-5 w-5" aria-hidden="true" />
                           )}
                         </button>
                       </div>

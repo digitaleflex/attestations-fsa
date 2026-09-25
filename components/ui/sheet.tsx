@@ -78,8 +78,11 @@ const SheetContent = React.forwardRef<
       {...props}
     >
       {hideCloseButton ? null : (
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-          <X className="h-4 w-4" />
+        // 44 x 44 px : un bouton de fermeture de 16 px est quasi impossible à
+        // toucher au doigt, et c'est souvent le seul moyen de sortir d'un
+        // panneau si le clic sur le voile est manqué.
+        <SheetPrimitive.Close className="absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-500 ring-offset-background transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+          <X className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">Fermer le menu</span>
         </SheetPrimitive.Close>
       )}

@@ -75,7 +75,11 @@ export function PublicHeader() {
         ))}
         <div className="mx-2 h-6 w-px bg-slate-200/50" />
         {session ? (
-          <button onClick={() => signOut()} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600">Sortie</button>
+          // `text-slate-400` d'origine plafonnait à 2.56:1 sur blanc : le mot
+          // « Sortie » était invisible en low-vision. Le token `slate-400`
+          // having été remonté (voir globals.css), on gagne le seuil AA sans
+          // toucher au className.
+          <button type="button" onClick={() => signOut()} className="inline-flex h-11 items-center gap-2 rounded-xl px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 transition-all hover:bg-rose-50 hover:text-rose-600">Sortie</button>
         ) : (
           <>
             <Link href="/auth" className="inline-flex items-center gap-2 rounded-xl bg-brand/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand transition-all hover:bg-brand/20"><LogIn className="h-3.5 w-3.5" />Espace Pro</Link>
@@ -86,7 +90,7 @@ export function PublicHeader() {
       </nav>
 
       <div className="flex items-center gap-3 lg:hidden">
-        <Link href="/verifier" className="rounded-xl bg-brand-ink p-2 text-white shadow-sm transition-colors hover:bg-brand" aria-label="Vérifier un certificat"><ShieldCheck className="h-5 w-5" /></Link>
+            <Link href="/verifier" className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-ink text-white shadow-sm transition-colors hover:bg-brand" aria-label="Vérifier un certificat"><ShieldCheck className="h-5 w-5" aria-hidden="true" /></Link>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <button
@@ -94,12 +98,12 @@ export function PublicHeader() {
               aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
               aria-expanded={open}
               aria-controls="public-mobile-menu"
-              className="rounded-xl border border-brand-line bg-white p-2.5 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-brand-ink"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-brand-line bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-brand-ink"
             >
               {open ? (
-                <X className="h-6 w-6" />
+                <X className="h-6 w-6" aria-hidden="true" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-6 w-6" aria-hidden="true" />
               )}
             </button>
           </SheetTrigger>

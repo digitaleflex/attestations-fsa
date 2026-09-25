@@ -33,14 +33,20 @@ const Alert = React.forwardRef<
 Alert.displayName = "Alert"
 
 const AlertTitle = React.forwardRef<
-  HTMLParagraphElement,
+  HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
+  // `children` est rendu explicitement (et non seulement via `{...props}`) : c'est ce
+  // qui satisfait `jsx-a11y/heading-has-content`, qui ne peut pas deviner le
+  // contenu à travers une propagation. Le `ref` est aussi corrigé en
+  // `HTMLHeadingElement` — il pointait sur `HTMLParagraphElement` pour un `<h5>`.
   <h5
     ref={ref}
     className={cn("mb-1 font-medium leading-none tracking-tight", className)}
     {...props}
-  />
+  >
+    {children}
+  </h5>
 ))
 AlertTitle.displayName = "AlertTitle"
 

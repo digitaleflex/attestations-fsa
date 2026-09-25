@@ -51,6 +51,12 @@
   --color-brand-muted: #666666;
   --color-brand-line: #e5e5e0;
   --color-brand-accent: #fa5f2e;
+  /* `brand-accent` (#fa5f2e) plafonne à 2.79:1 sur blanc : correct comme
+     aplat décoratif et comme icône (seuil non textuel 3:1… qu'il frôle), mais
+     inutilisable comme TEXTE. `brand-accent-ink` est le même orange
+     assombri (hsl 20 90% 40% = 5.00:1) à utiliser dès qu'un accent orange
+     porte du texte — chiffres de statistiques, liens, libellés. */
+  --color-brand-accent-ink: #c2470a;
   --color-brand-bg: #ffffff;
 
   /* Force HSL for all Tailwind color utilities to avoid oklch */
@@ -58,7 +64,13 @@
   --color-slate-100: hsl(214.3 31.8% 96%);
   --color-slate-200: hsl(213.3 27.8% 90%);
   --color-slate-300: hsl(212.7 26.8% 83.9%);
-  --color-slate-400: hsl(215 20.2% 65.1%);
+  /* slate-400 d'origine (#94a3b8) = 2.56:1 sur blanc : il échouait AA (4.5:1)
+     partout où il sert de TEXTE (légendes, helper text, libellés d'onglets).
+     Remontré à L=46% (#667485) = 4.77:1 sur blanc et 4.56:1 sur le fond
+     slate-50 — il passe donc AA sur les DEUX fonds réels de l'application, pas
+     seulement sur le blanc. Les usages décoratifs (icônes, bordures) n'en
+     pâtissent pas : ils gagnent seulement en lisibilité. */
+  --color-slate-400: hsl(212 13% 46%);
   --color-slate-500: hsl(215.4 16.3% 46.9%);
   --color-slate-600: hsl(215.3 19.3% 34.5%);
   --color-slate-700: hsl(215.3 25% 26.7%);
@@ -193,7 +205,11 @@
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96.1%;
-    --secondary-foreground: 353 100% 45%;
+    /* Le rouge de marque à 45% de L plafonnait à 4.38:1 sur le fond
+       `secondary` (#f1f5f9) — sous le seuil AA. 42% donne 4.95:1 sur ce fond
+       et 5.42:1 sur blanc : le texte des `Badge`/`Button secondary` est
+       lisible dans les deux contextes. */
+    --secondary-foreground: 353 100% 42%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 0 0% 40%;
@@ -203,7 +219,12 @@
     /* #fa5f2e */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* destructive : #ef4444 (60% de L) = 3.78:1 sur blanc ET 3.61:1 en texte
+       blanc dessus — les deux sens échouaient AA. Descendu à 48% (#e11414) :
+       4.87:1 sur blanc, 4.66:1 en blanc dessus. Le rouge d'alerte reste un
+       rouge d'alerte, mais il est enfin lisible dans les deux rôles
+       (texte de `Alert variant="destructive"`, fond de `Button destructive`). */
+    --destructive: 0 84% 48%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 60 4% 90%;
@@ -264,6 +285,19 @@
 
 .public-shell :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Anneau de focus global (WCAG 2.4.7).
+   La règle ci-dessus ne couvrait que `.public-shell` : les espaces candidat et
+   admin s'appuyaient sur des `ring-*` posés composant par composant, avec des
+   largeurs et des décalages différents — le focus « sautait » d'un écran à
+   l'autre. Cette règle donne à TOUT le site un anneau de base, que les
+   primitives (`Button`, `Input`, `Select`…) reprennent ensuite au `ring-2` +
+   `ring-offset-2` : même couleur, même décalage, partout.
+   `:where()` garde une spécificité nulle, donc n'écrase aucun style local. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
 
