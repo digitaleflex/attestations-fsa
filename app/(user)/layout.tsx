@@ -16,7 +16,6 @@ import {
   User,
   LogOut,
   Menu,
-  X,
   BarChart3,
   HelpCircle,
   LifeBuoy,
@@ -28,6 +27,13 @@ import {
 import { authClient, signOut } from "@/lib/auth-client";
 import NotificationBell from "@/components/NotificationBell";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 export default function UserLayout({
   children,
@@ -85,7 +91,17 @@ export default function UserLayout({
     : false;
 
   if (isExamPage) {
-    return <div className="min-h-screen bg-slate-50">{children}</div>;
+    // Mode focus : ni header ni menu, mais la cible du lien d'évitement
+    // doit exister sur toutes les pages. `tabIndex={-1}` la rend focusable.
+    return (
+      <div
+        id="contenu-principal"
+        tabIndex={-1}
+        className="min-h-screen bg-slate-50 focus:outline-none"
+      >
+        {children}
+      </div>
+    );
   }
 
   // Note: On retire le spinner bloquant pour éviter les "gels" d'interface en cas de latence réseau
@@ -101,6 +117,7 @@ export default function UserLayout({
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       {/* Sidebar Desktop */}
       <aside
+        id="candidate-sidebar"
         className={`hidden lg:flex flex-col bg-white border-r border-slate-200/60 shadow-[4px_0_24px_-10px_rgba(0,0,0,0.05)] transition-all duration-300 z-20 ${
           isSidebarOpen ? "w-64" : "w-20"
         }`}
@@ -176,15 +193,85 @@ export default function UserLayout({
         {/* Header (Top Navbar) */}
         <header className="h-20 bg-white border-b border-slate-200/60 shadow-sm flex items-center justify-between px-6 lg:px-10 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Ouvrir le menu"
+                  aria-expanded={isMobileMenuOpen}
+                  aria-controls="candidate-mobile-menu"
+                  className="lg:hidden rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                id="candidate-mobile-menu"
+                side="left"
+                className="flex w-80 max-w-[85vw] flex-col bg-white p-0 shadow-2xl sm:max-w-[85vw]"
+                overlayClassName="bg-slate-900/40 backdrop-blur-sm"
+              >
+                <SheetTitle className="sr-only">Menu candidat</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Accéder aux espaces du candidat.
+                </SheetDescription>
+                <div className="flex h-20 flex-shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-sm font-bold text-white shadow-md">
+                      FSA
+                    </div>
+                    <span className="font-bold tracking-tight text-slate-800">
+                      Portail Candidat
+                    </span>
+                  </div>
+                </div>
+                <nav
+                  aria-label="Navigation candidat"
+                  className="flex-1 space-y-2 overflow-y-auto px-4 py-6"
+                >
+                  {menuItems.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      (pathname && pathname.startsWith(`${item.href}/`));
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`flex items-center gap-4 rounded-xl border px-4 py-3.5 font-medium transition-colors ${isActive ? "border-brand/20 bg-brand/10 text-brand-dark shadow-sm" : "border-transparent text-slate-600 hover:bg-slate-50"}`}
+                      >
+                        <item.icon
+                          className={`h-5 w-5 ${isActive ? "text-brand" : "text-slate-400"}`}
+                        />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </nav>
+                <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 p-4">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-rose-200 bg-white px-4 py-3.5 font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-50"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Déconnexion
+                  </button>
+                </div>
+              </SheetContent>
+            </Sheet>
             <button
-              className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
-              onClick={() => setIsMobileMenuOpen(true)}
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <button
+              type="button"
               className="hidden lg:flex items-center justify-center w-10 h-10 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-colors"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              aria-label={
+                isSidebarOpen
+                  ? "Réduire le menu latéral"
+                  : "Déplier le menu latéral"
+              }
+              aria-expanded={isSidebarOpen}
+              aria-controls="candidate-sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -214,118 +301,20 @@ export default function UserLayout({
         <EmailVerificationBanner user={user} />
 
         {/* Page Content area */}
-        <main id="contenu-principal" className="flex-1 overflow-y-auto bg-slate-50/50 p-6 lg:p-10 relative scrollbar-hide pb-24 lg:pb-10">
+        <main
+          id="contenu-principal"
+          // `tabIndex={-1}` : rend la cible du lien d'évitement « Aller au
+          // contenu principal » réellement focusable (le conteneur est un
+          // Palier de défilement, pas un élément focusable par défaut).
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto bg-slate-50/50 p-6 lg:p-10 relative scrollbar-hide focus:outline-none"
+        >
           <div className="mx-auto max-w-6xl animate-in slide-in-from-bottom-4 fade-in duration-500 ease-out pb-20">
             {children}
           </div>
         </main>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsMobileMenuOpen(false)}
-          ></div>
-          <div className="relative w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300 ease-out">
-            <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white font-bold text-sm shadow-md">
-                  FSA
-                </div>
-                <span className="font-bold text-slate-800 tracking-tight">
-                  Portail Candidat
-                </span>
-              </div>
-              <button
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-white rounded-full transition-colors shadow-sm"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
-              {menuItems.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (pathname && pathname.startsWith(`${item.href}/`));
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <div
-                      className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors font-medium border border-transparent ${
-                        isActive
-                          ? "bg-brand/10 text-brand-dark border-brand/20 shadow-sm"
-                          : "text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <item.icon
-                        className={`w-5 h-5 ${isActive ? "text-brand" : "text-slate-400"}`}
-                      />
-                      {item.name}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-              <button
-                onClick={handleLogout}
-                className="flex items-center justify-center gap-3 w-full px-4 py-3.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors font-semibold shadow-sm"
-              >
-                <LogOut className="w-5 h-5" />
-                Déconnexion
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Mobile Bottom Bar - Premium Glassmorphism */}
-      <nav className="lg:hidden fixed bottom-6 left-6 right-6 z-40">
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] rounded-3xl px-4 py-2 flex items-center justify-between relative overflow-hidden">
-          {/* Subtle background glow */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-brand/5 to-brand-accent/5 -z-10" />
-
-          {[
-            { name: "Accueil", href: "/dashboard", icon: LayoutDashboard },
-            { name: "Examens", href: "/exams", icon: ClipboardList },
-            { name: "Résultats", href: "/results", icon: BarChart3 },
-            { name: "Certifs", href: "/attestations", icon: Award },
-            { name: "Espace", href: "/profile", icon: User },
-          ].map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (pathname && pathname.startsWith(`${item.href}/`));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all active:scale-90"
-              >
-                {isActive && (
-                  <div className="absolute inset-x-1 inset-y-1 bg-brand rounded-2xl -z-10 shadow-lg shadow-brand/20 animate-in fade-in zoom-in duration-300" />
-                )}
-                <item.icon
-                  className={`w-5 h-5 transition-colors duration-300 ${
-                    isActive ? "text-white" : "text-slate-400"
-                  }`}
-                />
-                <span
-                  className={`text-[9px] font-bold uppercase tracking-tighter transition-colors duration-300 ${
-                    isActive ? "text-white" : "text-slate-400"
-                  }`}
-                >
-                  {item.name}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
     </div>
   );
 }

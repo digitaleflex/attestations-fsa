@@ -16,7 +16,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <PublicHeader />
 
       {/* Contenu Principal */}
-      <main id="contenu-principal" className="relative isolate flex w-full flex-1 flex-col items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,rgba(230,0,35,0.045),transparent_32rem)] bg-[length:100%_100%] pt-4 md:pt-8">
+      <main id="contenu-principal" tabIndex={-1} className="relative isolate flex w-full flex-1 flex-col items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,rgba(230,0,35,0.045),transparent_32rem)] bg-[length:100%_100%] pt-4 focus:outline-none md:pt-8">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-grid-slate-100 bg-[size:40px_40px] opacity-60" />
         {children}
       </main>
