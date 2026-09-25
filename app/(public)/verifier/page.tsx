@@ -22,25 +22,43 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-type AttestationStatus = "PENDING" | "VALIDATED" | "REJECTED";
+type AttestationStatus = "VALIDATED" | "CLAIMED" | "REJECTED";
 type AttestationType = "FORMATION" | "STAGE" | "CERTIFICATION";
 
-interface Attestation {
+interface AttestationProof {
+  revoked: boolean;
+  reason?: string | null;
+}
+
+interface PublishedAttestation {
   id: string;
   code: string;
   fullName: string;
   type: AttestationType;
-  status: AttestationStatus;
+  status: Exclude<AttestationStatus, "REJECTED">;
   startDate: string;
   endDate: string;
   location: string;
   instructor: string;
   score: number;
   issuedAt: string;
+  proof: AttestationProof;
   formation?: {
     name?: string;
     category?: string;
   };
+}
+
+interface RevokedAttestation {
+  code: string;
+  status: "REJECTED";
+  proof: AttestationProof & { revoked: true };
+}
+
+type Attestation = PublishedAttestation | RevokedAttestation;
+
+function isRevokedAttestation(attestation: Attestation): attestation is RevokedAttestation {
+  return "proof" in attestation && attestation.proof.revoked;
 }
 
 function VerifierContent() {
@@ -192,24 +210,34 @@ function VerifierContent() {
                 </button>
               </div>
 
-              {/* Affichage du document officiel */}
-              <div className="bg-white rounded-3xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.03)] border border-slate-100">
-                <OfficialDocument 
-                  data={{
-                    id: result.id,
-                    code: result.code,
-                    fullName: result.fullName,
-                    formationName: result.formation?.name || "Formation",
-                    type: result.type,
-                    startDate: result.startDate,
-                    endDate: result.endDate,
-                    score: result.score,
-                    status: result.status,
-                    issuedAt: result.issuedAt
-                  }}
-                  hideStepper={true}
-                />
-              </div>
+              {isRevokedAttestation(result) ? (
+                <div className="bg-white rounded-3xl border border-rose-100 p-8 text-center space-y-3">
+                  <XCircle className="w-12 h-12 text-rose-500 mx-auto" />
+                  <h2 className="text-xl font-bold text-slate-900">Attestation révoquée</h2>
+                  <p className="text-sm text-slate-500">
+                    {result.proof.reason || "Cette attestation n'est plus valable."}
+                  </p>
+                  <p className="text-xs font-mono text-slate-400">{result.code}</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.03)] border border-slate-100">
+                  <OfficialDocument
+                    data={{
+                      id: result.id,
+                      code: result.code,
+                      fullName: result.fullName,
+                      formationName: result.formation?.name || "Formation",
+                      type: result.type,
+                      startDate: result.startDate,
+                      endDate: result.endDate,
+                      score: result.score,
+                      status: result.status,
+                      issuedAt: result.issuedAt
+                    }}
+                    hideStepper={true}
+                  />
+                </div>
+              )}
             </motion.div>
           )}
 

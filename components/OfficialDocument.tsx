@@ -5,19 +5,26 @@ import { Award, CheckCircle, XCircle, Clock, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AttestationWatermark } from "@/components/AttestationWatermark";
 
+interface PublishedDocumentData {
+  id: string;
+  code: string;
+  fullName: string;
+  formationName: string;
+  type: string;
+  startDate: string | Date;
+  endDate: string | Date;
+  score: number;
+  status: string;
+  issuedAt: string | Date;
+}
+
+interface RevokedDocumentData {
+  code: string;
+  status: "REJECTED";
+}
+
 interface OfficialDocumentProps {
-  data: {
-    id: string;
-    code: string;
-    fullName: string;
-    formationName: string;
-    type: string;
-    startDate: string | Date;
-    endDate: string | Date;
-    score: number;
-    status: string;
-    issuedAt: string | Date;
-  };
+  data: PublishedDocumentData | RevokedDocumentData;
   id?: string;
   hideStepper?: boolean;
   isPrinting?: boolean;
@@ -41,11 +48,31 @@ export default function OfficialDocument({ data, id = "official-document-content
 
   const statusConfig = {
     VALIDATED: { label: "ADMIS", color: "#059669", bg: "#ecfdf5", icon: CheckCircle },
+    CLAIMED: { label: "RÉCUPÉRÉE", color: "#2563eb", bg: "#eff6ff", icon: BadgeCheck },
     REJECTED: { label: "REFUSÉ", color: "#dc2626", bg: "#fef2f2", icon: XCircle },
     PENDING: { label: "EN ATTENTE", color: "#d97706", bg: "#fffbeb", icon: Clock },
   };
 
   const currentStatus = statusConfig[data.status as keyof typeof statusConfig] || statusConfig.PENDING;
+
+  // Une révocation est affichée sans reprendre les données du titulaire.
+  // Le retour public peut donc légitimement ne contenir que le statut et le code.
+  if (!("fullName" in data)) {
+    return (
+      <div
+        id={id}
+        className="w-full min-h-[420px] flex flex-col items-center justify-center p-8 text-center rounded-[12px] border-8 border-white bg-white"
+        style={{ boxShadow: "0 0 0 1px #e2e8f0, 0 0 0 4px #dc2626" }}
+      >
+        <XCircle className="w-16 h-16 mb-6" style={{ color: "#dc2626" }} />
+        <p className="text-3xl font-black tracking-[0.2em] uppercase" style={{ color: "#dc2626" }}>
+          Attestation révoquée
+        </p>
+        <p className="mt-4 text-slate-500 font-medium">Ce document n&apos;est plus valable.</p>
+        {data.code && <p className="mt-6 font-mono text-sm font-bold text-slate-700">CODE : {data.code}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col items-center">

@@ -442,7 +442,7 @@ export default function UserAttestationsPage() {
             <div className="text-center space-y-6 py-4">
               <div className="flex justify-center p-4 bg-slate-50 rounded-3xl inline-block mx-auto border border-slate-100">
                 <QRCodeSVG
-                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verifier/${selectedAttestation.code}`}
+                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verifier?code=${encodeURIComponent(selectedAttestation.code)}`}
                   size={200}
                   level="H"
                   className="rounded-xl"

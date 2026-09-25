@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ShieldCheck, Menu, X, LogIn, ArrowRight, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -12,7 +12,38 @@ import { motion, AnimatePresence } from "framer-motion";
 export function PublicHeader() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const menu = menuRef.current;
+    menu?.querySelector<HTMLElement>("a, button")?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [open]);
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true;
@@ -28,7 +59,10 @@ export function PublicHeader() {
   ];
 
   return (
-    <header className="w-full flex justify-between items-center px-4 md:px-12 py-3 md:py-4 sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-slate-100/50 shadow-sm transition-all duration-500">
+    <header
+      ref={headerRef}
+      className="w-full flex justify-between items-center px-4 md:px-12 py-3 md:py-4 sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-slate-100/50 shadow-sm transition-all duration-500"
+    >
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 md:gap-3 group">
             <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg md:rounded-xl shadow-brand/20 shadow-lg group-hover:scale-105 transition-transform duration-500">
@@ -92,6 +126,11 @@ export function PublicHeader() {
            <ShieldCheck className="w-5 h-5" />
         </Link>
         <button
+          ref={menuButtonRef}
+          type="button"
+          aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-expanded={open}
+          aria-controls="public-mobile-menu"
           className="p-2.5 rounded-xl bg-slate-50 text-slate-600 border border-slate-100 shadow-sm transition-all active:scale-90"
           onClick={() => setOpen(o => !o)}
         >
@@ -102,8 +141,10 @@ export function PublicHeader() {
       {/* Mobile menu modal style */}
       <AnimatePresence>
         {open && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
+           <motion.div
+             id="public-mobile-menu"
+             ref={menuRef}
+             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3, ease: "circOut" }}

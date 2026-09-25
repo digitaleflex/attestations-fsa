@@ -287,7 +287,7 @@ export default function AttestationPreviewPage() {
                 </Dialog>
                 
                 <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 h-10 sm:h-9 px-2 sm:px-3" onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.host}/verifier/${att.code}`);
+                    navigator.clipboard.writeText(`${window.location.origin}/verifier?code=${encodeURIComponent(att.code)}`);
                     toast.success("Lien de vérification copié !");
                 }}>
                     <Share2 className="w-4 h-4" />

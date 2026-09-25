@@ -113,10 +113,10 @@ export async function GET(request: Request) {
       })
     }
 
-    // Mapper certificationScore vers score pour la compatibilité frontend
+    // Le score publié dépend du type de document réellement disponible en base.
     const responseData = {
       ...attestation,
-      score: attestation.certificationScore || 0,
+      score: attestation.certificationScore ?? attestation.stageScore ?? 0,
       proof: {
         algorithm: seal.algorithm,
         sealed: seal.sealed,

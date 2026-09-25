@@ -120,34 +120,22 @@ export default function InternshipApplicationPage() {
     setLoading(true);
 
     try {
-      let cvUrl = "";
-
-      // Upload CV file
-      if (formData.cvFile) {
-        const uploadForm = new FormData();
-        uploadForm.append("file", formData.cvFile);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadForm,
-        });
-        if (!uploadRes.ok) throw new Error("Erreur upload CV");
-        const uploadData = await uploadRes.json();
-        cvUrl = uploadData.url;
-      }
+      // Le CV et les données sont envoyés dans la même requête publique.
+      // L'API les valide avant stockage : aucun endpoint d'upload privé n'est
+      // exposé au visiteur anonyme.
+      const applicationForm = new FormData();
+      applicationForm.append("fullName", formData.fullName);
+      applicationForm.append("email", formData.email);
+      applicationForm.append("phone", formData.phone);
+      applicationForm.append("position", formData.position);
+      applicationForm.append("university", formData.university);
+      applicationForm.append("level", formData.level);
+      applicationForm.append("message", formData.message);
+      applicationForm.append("file", formData.cvFile);
 
       const res = await fetch("/api/public/internships", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-          position: formData.position,
-          university: formData.university,
-          level: formData.level,
-          cvUrl,
-          message: formData.message,
-        })
+        method: "POST",
+        body: applicationForm,
       });
 
       if (!res.ok) throw new Error("Erreur");

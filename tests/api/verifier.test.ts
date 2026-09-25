@@ -159,6 +159,31 @@ describe("GET /api/verifier", () => {
     expect(body.attestation.code).toBe("FSA-2026-M01-00001-abcde");
   });
 
+  it("mappe stageScore -> score lorsque le certificat n'a pas de score de certification", async () => {
+    db.attestationFindFirst.mockResolvedValue({
+      id: "a3",
+      code: "FSA-2026-M01-00003-abcde",
+      fullName: "Chloé",
+      type: "STAGE",
+      status: "VALIDATED",
+      certificationScore: null,
+      stageScore: 91,
+      certificationMention: null,
+      sealHash: null,
+      sealedAt: null,
+      issuedAt: new Date("2026-02-01"),
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-02-01"),
+      location: "En ligne",
+      instructor: "FSA",
+      formation: { name: "Pisciculture", category: "AGRICULTURE" },
+    } as never);
+
+    const res = await GET(req("FSA-2026-M01-00003-abcde"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).attestation.score).toBe(91);
+  });
+
   it("expose une preuve de scellement valide (#155)", async () => {
     db.attestationFindFirst.mockResolvedValue(sealedAttestation() as never);
 
