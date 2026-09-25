@@ -272,6 +272,22 @@ export async function PATCH(
         },
       });
 
+      // L'affectation administrative est l'étape explicite qui crée l'inscription
+      // à l'examen. Aucun backfill massif n'est effectué lors de la migration.
+      if (resolvedExamId !== undefined) {
+        if (resolvedExamId) {
+          await tx.examEnrollment.upsert({
+            where: { userId_examId: { userId: id, examId: resolvedExamId } },
+            create: { userId: id, examId: resolvedExamId },
+            update: {},
+          });
+        } else {
+          await tx.examEnrollment.deleteMany({
+            where: { userId: id, examId: currentUser.examId ?? "" },
+          });
+        }
+      }
+
       // Mettre à jour le compte credential si le mot de passe ou l'email a changé
       if (hashedPassword || data.email) {
         await tx.account.updateMany({

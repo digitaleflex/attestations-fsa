@@ -106,9 +106,16 @@ export async function POST(request: Request) {
     }
     const {
       fullName, email, gender, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type,
-      stageHours, stageScore, stageObservations,
-      certificationMention, certificationScore, certificationHours, certificationObservations
+      stageHours, stageScore, stageObservations
     } = parse.data
+
+    // Les certifications officielles ne peuvent être arbitraires : elles sont
+    // exclusivement émises par le hub d'examen lié à une session GRADED.
+    if (type === 'CERTIFICATION') {
+      return NextResponse.json({
+        message: 'Une certification doit être émise depuis une session OFFICIAL soumise et GRADED.',
+      }, { status: 422 });
+    }
 
     // Chercher ou créer la formation par son nom
     let formationRecord = await prisma.formation.findFirst({ where: { name: formation } })
@@ -164,11 +171,6 @@ export async function POST(request: Request) {
       attestationData.stageHours = stageHours;
       attestationData.stageScore = stageScore;
       attestationData.stageObservations = stageObservations;
-    } else if (type === 'CERTIFICATION') {
-      attestationData.certificationMention = certificationMention;
-      attestationData.certificationScore = certificationScore;
-      attestationData.certificationHours = certificationHours;
-      attestationData.certificationObservations = certificationObservations;
     }
 
     // Scellement HMAC-SHA256 (#155) : empreinte des données gravées.
@@ -176,8 +178,8 @@ export async function POST(request: Request) {
       code,
       fullName,
       formationName: formationRecord.name,
-      certificationScore: type === 'CERTIFICATION' ? certificationScore ?? null : null,
-      certificationMention: type === 'CERTIFICATION' ? certificationMention ?? null : null,
+      certificationScore: null,
+      certificationMention: null,
       endDate: new Date(endDate),
     });
 
@@ -185,7 +187,7 @@ export async function POST(request: Request) {
     await prisma.attestation.create({
       data: {
         ...attestationData,
-        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
+        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt, sealVersion: seal.sealVersion } : {}),
       } as import('@prisma/client').Prisma.AttestationCreateInput
     })
     console.log('[POST /api/attestations] Success');

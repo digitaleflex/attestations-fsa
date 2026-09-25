@@ -75,17 +75,11 @@ describe("POST /api/attestations — scellement #155 (correctif B)", () => {
     expect(db.attestationCreate).not.toHaveBeenCalled();
   });
 
-  it("scelle une attestation CERTIFICATION (sealHash conforme) quand clé configurée", async () => {
+  it("refuse une CERTIFICATION sans session d'examen officielle", async () => {
     process.env.CERT_SEAL_SECRET = "attestations-test-secret-0123456789abcdef";
     const res = await callPost(CERT_BODY);
-    expect(res.status).toBe(201);
-
-    const createArgs = db.attestationCreate.mock.calls[0][0] as {
-      data: { sealHash?: string; sealedAt?: Date; type?: string };
-    };
-    expect(createArgs.data.type).toBe("CERTIFICATION");
-    expect(createArgs.data.sealHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
+    expect(res.status).toBe(422);
+    expect(db.attestationCreate).not.toHaveBeenCalled();
   });
 
   it("scelle une attestation STAGE (sealHash conforme) quand clé configurée", async () => {
@@ -110,7 +104,7 @@ describe("POST /api/attestations — scellement #155 (correctif B)", () => {
 
   it("crée l'attestation sans throw même sans clé (non bloquant)", async () => {
     delete process.env.CERT_SEAL_SECRET;
-    const res = await callPost(CERT_BODY);
+    const res = await callPost({ ...CERT_BODY, type: "STAGE" });
     expect(res.status).toBe(201);
 
     const createArgs = db.attestationCreate.mock.calls[0][0] as {

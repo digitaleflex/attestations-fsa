@@ -36,24 +36,33 @@
 - `Attestation.user` (optionnel, pas de `onDelete`) → **SetNull** : la suppression d'un utilisateur
   **conserve le certificat** (choix produit : valeur probante).
 
-## 3. Script de vérification — `scripts/check-data-integrity.ts`
+## 3. Inventaire FSA de référence — `scripts/check-data-integrity.ts`
 
-**Lecture seule**, jamais d'écriture. 5 familles de contrôles :
-
-| Contrôle | Sévérité | Détail |
-| :-- | :-- | :-- |
-| **FK orphelines** | CRITICAL | `ExamSession.examId/userId`, `Attestation.formationId` pointant vers des entités inexistantes |
-| **Doublons** | CRITICAL | `ExamSession(userId, examId)` dupliqués (contrat #121) |
-| **Scores** | CRITICAL/WARNING | `finalScore` hors 0..100, `totalScore` négatif ou > max, parts > barème, `totalScore ≠ somme des parts` |
-| **Attestations** | WARNING | Format du code (`FSA-YYYY-MXX-NNNNN-hash`), `REJECTED` avec score |
-| **Statuts de session** | CRITICAL/WARNING | `GRADED` avec `scorePart2` null (sentinelle #117 contournée), `IN_PROGRESS` avec score |
+**Lecture seule de la base** : aucune méthode Prisma d’écriture n’est utilisée et les codes FSA
+ne sont jamais régénérés. Le rapport JSON contient des empreintes SHA-256, jamais les identifiants
+internes, noms, emails, lieux de naissance ni URL de documents.
 
 ```bash
-# Sur le VPS (ou en local avec DATABASE_URL) :
-pnpm exec ts-node --compiler-options '{"module":"CommonJS","moduleResolution":"node"}' scripts/check-data-integrity.ts
+# Génération initiale sur une copie à jour de la base de référence :
+pnpm exec ts-node --compiler-options '{"module":"CommonJS","moduleResolution":"node"}' \
+  scripts/check-data-integrity.ts --dry-run --report reports/fsa-reference.json
+
+# Contrôle ultérieur : le rapport courant est comparé au fichier de référence versionné :
+pnpm exec ts-node --compiler-options '{"module":"CommonJS","moduleResolution":"node"}' \
+  scripts/check-data-integrity.ts --read-only \
+  --report reports/fsa-current.json --baseline reports/fsa-reference.json
 ```
 
-**Code de sortie** : `1` si au moins une anomalie **CRITICAL** → utilisable en CI / cron.
+Le mode lecture seule est le seul mode : aucune option de correction n’est acceptée. Les contrôles
+couvrent le format et l’unicité des codes FSA, les preuves et leur statut, `sessionId`, la cohérence
+`pdfUrl`/`pdfKey`, les dates, les liens utilisateurs/formations/sessions, les doublons de session et
+les certificats. Le changement ou la suppression d’un code par rapport à la référence est
+`CRITICAL`; un nouvel enregistrement est un avertissement afin de permettre les émissions
+légitimes ultérieures. Les autres changements métier restent inventoriés sans être figés.
+
+**Code de sortie** : `1` si au moins une anomalie `CRITICAL`, sinon `0`. Le schéma Prisma courant ne
+contient pas `pdfKey`; lorsqu’une base legacy possède cette colonne, elle est automatiquement
+inventoriée, et l’absence de colonne produit un avertissement de compatibilité.
 
 ## 4. Résultats de l'audit
 
@@ -72,3 +81,25 @@ pnpm exec ts-node --compiler-options '{"module":"CommonJS","moduleResolution":"n
    migration de données réversible + vérification d'intégrité référentielle **avant** drop
    (cf. `SecurityLog`, `Report`, `CompositionScan`).
 4. **Étendre le script** au besoin avec `Report`/`Contact` orphelins si ces modèles évoluent.
+
+## 6. Objet stocké et propriété (#260)
+
+Le registre `StoredObject` (clé, propriétaire, usage, entité liée, empreinte SHA-256, date de
+conservation) s’ajoute aux contrôles du script :
+
+| Contrôle | Sévérité | Signification |
+| --- | --- | --- |
+| `STORAGE.key.prefix` | CRITICAL | clé hors `cv/`, `stages/`, `attestations/`, `exports/`, `temporary/` |
+| `STORAGE.key.signed` | CRITICAL | une URL signée est stockée comme clé |
+| `STORAGE.key.duplicate` | CRITICAL | clé enregistrée deux fois |
+| `STORAGE.checksum.format` | CRITICAL | empreinte absente ou non SHA-256 |
+| `STORAGE.official.link` | CRITICAL | PDF officiel sans entité liée |
+| `STORAGE.internship.signed-persisted` | CRITICAL | `cvUrl` de candidature contenant une signature |
+| `STORAGE.owner.link` | WARNING | propriétaire absent de la base |
+| `STORAGE.internship.key.unregistered` | WARNING | `cvKey` absent du registre |
+| `STORAGE.purpose.prefix` | WARNING | préfixe incohérent avec l’usage déclaré |
+| `STORAGE.schema` | WARNING | table `StoredObject` absente du modèle courant |
+
+Ces contrôles sont en lecture seule : ni les URLs historiques, ni les 40 attestations, ni les
+candidatures existantes ne sont réécrites. Les objets uploadés avant #260 ne sont pas enregistrés
+au registre : ils restent non supprimables (404) plutôt que supprimables par clé devinée.

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getAdminUser, getCurrentUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { isExamAvailable } from "@/lib/exams/availability";
+import {
+  checkExamEligibility,
+  enrollmentForbiddenResponse,
+} from "@/lib/exams/eligibility";
 
 /**
  * POST /api/exams/[id]/start
@@ -17,6 +21,7 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
+    const adminUser = await getAdminUser(request);
 
     const { id: examId } = await params;
 
@@ -39,6 +44,16 @@ export async function POST(
       );
     }
 
+    const eligibility = await checkExamEligibility({
+      userId: user.id,
+      examId: exam.id,
+      examType: exam.type,
+      isAdmin: adminUser !== null,
+    });
+    if (!eligibility.eligible) {
+      return enrollmentForbiddenResponse(eligibility);
+    }
+
     // Ouvre l'examen paresseusement s'il est planifié et arrivé à échéance.
     if (exam.status === "SCHEDULED") {
       await prisma.exam.update({
@@ -53,7 +68,7 @@ export async function POST(
       select: { examId: true },
     });
 
-    if (userRecord?.examId && userRecord.examId !== examId) {
+    if (!adminUser && userRecord?.examId && userRecord.examId !== examId) {
       return NextResponse.json(
         {
           error:

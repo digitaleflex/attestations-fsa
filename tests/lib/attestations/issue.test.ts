@@ -9,6 +9,15 @@ const db = vi.hoisted(() => ({
   attestationCreate: vi.fn(),
 }));
 
+vi.mock("@/lib/attestations/pdf", () => ({
+  generateOfficialPdf: vi.fn(async () => ({
+    pdfKey: "attestations/FSA-2026-M09-00004-abcde/v1.pdf",
+    pdfHash: "a".repeat(64),
+    pdfVersion: 1,
+    pdfGeneratedAt: new Date("2026-09-25T12:00:00Z"),
+  })),
+}));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     examSession: { findUnique: db.sessionFindUnique },
@@ -28,6 +37,8 @@ function makeSession(overrides: Record<string, unknown> = {}) {
   return {
     id: "session-1",
     userId: "user-1",
+    status: "GRADED",
+    type: "OFFICIAL",
     finalScore: 80,
     internshipScore: 15,
     startedAt: new Date("2026-09-01T09:00:00Z"),
@@ -35,6 +46,8 @@ function makeSession(overrides: Record<string, unknown> = {}) {
     exam: {
       id: "exam-1",
       formationId: "formation-1",
+      formation: { name: "Pisciculture" },
+      type: "OFFICIAL",
       passingScore: 65,
     },
     candidate: {
@@ -71,10 +84,28 @@ describe("issueExamAttestation (#133)", () => {
     expect(db.attestationCreate).not.toHaveBeenCalled();
   });
 
+  it("refuse une session non soumise ou non GRADED", async () => {
+    db.sessionFindUnique.mockResolvedValue(makeSession({ status: "IN_PROGRESS", submittedAt: null }));
+    const res = await issueExamAttestation("session-1");
+    expect(res.created).toBe(false);
+    expect(res.error).toContain("GRADED");
+    expect(db.attestationCreate).not.toHaveBeenCalled();
+  });
+
+  it("refuse une session MOCK", async () => {
+    db.sessionFindUnique.mockResolvedValue(makeSession({
+      type: "MOCK",
+      exam: { id: "exam-1", formationId: "formation-1", formation: { name: "Pisciculture" }, type: "MOCK", passingScore: 65 },
+    }));
+    const res = await issueExamAttestation("session-1");
+    expect(res.error).toContain("MOCK");
+    expect(db.attestationCreate).not.toHaveBeenCalled();
+  });
+
   it("aucune formation → erreur", async () => {
     db.sessionFindUnique.mockResolvedValue(
       makeSession({
-        exam: { id: "exam-1", formationId: null, passingScore: 65 },
+        exam: { id: "exam-1", formationId: null, formation: null, type: "OFFICIAL", passingScore: 65 },
       }),
     );
     db.formationFindFirst.mockResolvedValue(null as never);
@@ -98,6 +129,11 @@ describe("issueExamAttestation (#133)", () => {
           certificationScore: 80,
           stageScore: 15,
           certificationMention: "TRES_BIEN",
+          pdfKey: expect.stringMatching(/^attestations\/FSA-.*\/v1\.pdf$/),
+          pdfHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+          pdfVersion: 1,
+          pdfGeneratedAt: expect.any(Date),
+          sealVersion: 2,
         }),
       }),
     );
@@ -115,16 +151,13 @@ describe("issueExamAttestation (#133)", () => {
     expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
   });
 
-  it("ne scelle pas si la clé est absente (dégradé, non bloquant) (#155)", async () => {
+  it("bloque l'émission si la clé est absente", async () => {
     delete process.env.CERT_SEAL_SECRET;
     db.sessionFindUnique.mockResolvedValue(makeSession());
     const res = await issueExamAttestation("session-1");
-    expect(res.created).toBe(true);
-
-    const createArgs = db.attestationCreate.mock.calls[0][0] as {
-      data: { sealHash?: string };
-    };
-    expect(createArgs.data.sealHash).toBeUndefined();
+    expect(res.created).toBe(false);
+    expect(res.error).toContain("clé de scellement");
+    expect(db.attestationCreate).not.toHaveBeenCalled();
   });
 
   it("échec + pas d'existante → rien à émettre", async () => {
@@ -154,6 +187,22 @@ describe("issueExamAttestation (#133)", () => {
       }),
     );
     expect(db.attestationCreate).not.toHaveBeenCalled();
+  });
+
+  it("est idempotent : session et snapshot inchangés ne créent ni PDF ni update", async () => {
+    db.sessionFindUnique.mockResolvedValue(makeSession());
+    db.attestationFindFirst.mockResolvedValue({
+      id: "att-1",
+      code: "FSA-2026-M09-00001-abcde",
+      status: "VALIDATED",
+      certificationScore: 80,
+      stageScore: 15,
+      certificationMention: "TRES_BIEN",
+    } as never);
+    const res = await issueExamAttestation("session-1");
+    expect(res).toEqual({ created: false, code: "FSA-2026-M09-00001-abcde" });
+    expect(db.attestationCreate).not.toHaveBeenCalled();
+    expect(db.attestationUpdate).not.toHaveBeenCalled();
   });
 
   it("re-scelle une attestation mise à jour (#155)", async () => {
@@ -196,7 +245,7 @@ describe("issueExamAttestation (#133)", () => {
     expect(res.error).toContain("DB down");
   });
 
-  it("prod sans clé : émet quand même mais log error explicite (#155)", async () => {
+  it("prod sans clé : bloque l'émission et journalise l'incident", async () => {
     vi.stubEnv("NODE_ENV", "production");
     delete process.env.CERT_SEAL_SECRET;
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -204,15 +253,9 @@ describe("issueExamAttestation (#133)", () => {
 
     const res = await issueExamAttestation("session-1");
 
-    // Le parcours cœur n'échoue pas...
-    expect(res.created).toBe(true);
-    expect(db.attestationCreate).toHaveBeenCalled();
-
-    // ...mais la dégradation n'est plus silencieuse.
-    const createArgs = db.attestationCreate.mock.calls[0][0] as {
-      data: { sealHash?: string };
-    };
-    expect(createArgs.data.sealHash).toBeUndefined();
+    expect(res.created).toBe(false);
+    expect(res.error).toContain("clé de scellement");
+    expect(db.attestationCreate).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("scellement désactivé"),
     );

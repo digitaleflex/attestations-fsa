@@ -6,6 +6,7 @@ const db = vi.hoisted(() => ({
   userFindUnique: vi.fn(),
   sessionFindFirst: vi.fn(),
   sessionUpsert: vi.fn(),
+  enrollmentFindUnique: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -15,6 +16,7 @@ vi.mock("@/lib/prisma", () => ({
       update: db.examUpdate,
     },
     user: { findUnique: db.userFindUnique },
+    examEnrollment: { findUnique: db.enrollmentFindUnique },
     examSession: {
       findFirst: db.sessionFindFirst,
       upsert: db.sessionUpsert,
@@ -24,10 +26,14 @@ vi.mock("@/lib/prisma", () => ({
 
 const deps = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
+  getAdminUser: vi.fn(),
   createAuditLog: vi.fn(),
 }));
 
-vi.mock("@/lib/auth", () => ({ getCurrentUser: deps.getCurrentUser }));
+vi.mock("@/lib/auth", () => ({
+  getCurrentUser: deps.getCurrentUser,
+  getAdminUser: deps.getAdminUser,
+}));
 vi.mock("@/lib/audit", () => ({ createAuditLog: deps.createAuditLog }));
 
 import { POST } from "../../app/api/exams/[id]/start/route";
@@ -45,6 +51,7 @@ function stubAuthorized() {
     name: "Alice",
   } as never);
   deps.createAuditLog.mockResolvedValue(undefined as never);
+  deps.getAdminUser.mockResolvedValue(null as never);
 }
 
 function stubExam() {
@@ -64,6 +71,7 @@ beforeEach(() => {
   stubAuthorized();
   stubExam();
   db.userFindUnique.mockResolvedValue({ id: "user-1", examId: null } as never);
+  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1" } as never);
 });
 
 describe("POST /api/exams/[id]/start", () => {
@@ -83,6 +91,43 @@ describe("POST /api/exams/[id]/start", () => {
     } as never);
     const res = await callStart();
     expect(res.status).toBe(404);
+  });
+
+  it("403 pour un OFFICIAL sans enrollment, même avec une session existante", async () => {
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
+    db.sessionFindFirst.mockResolvedValue({
+      id: "session-1",
+      status: "IN_PROGRESS",
+      startedAt: new Date(),
+    } as never);
+
+    const res = await callStart();
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("EXAM_NOT_ENROLLED");
+    expect(db.sessionFindFirst).not.toHaveBeenCalled();
+    expect(db.sessionUpsert).not.toHaveBeenCalled();
+  });
+
+  it("laisse un MOCK démarrer sans enrollment", async () => {
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      status: "PUBLISHED",
+      duration: 3600,
+      type: "MOCK",
+      scheduledAt: new Date(Date.now() - 60_000),
+    } as never);
+    db.sessionFindFirst.mockResolvedValue(null as never);
+    db.sessionUpsert.mockResolvedValue({
+      id: "session-mock",
+      status: "IN_PROGRESS",
+      startedAt: new Date(),
+    } as never);
+
+    const res = await callStart();
+
+    expect(res.status).toBe(201);
+    expect(db.enrollmentFindUnique).not.toHaveBeenCalled();
   });
 
   it("reprend une session IN_PROGRESS existante", async () => {

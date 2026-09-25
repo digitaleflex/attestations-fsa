@@ -6,7 +6,10 @@
  */
 import { test, expect } from "@playwright/test";
 import { loginAsCandidate } from "./support/auth";
-import { getLockedExam } from "./support/database";
+import {
+  getLockedExam,
+  getUnenrolledOfficialExam,
+} from "./support/database";
 
 test.describe("Vérification publique et verrouillage des examens", () => {
   test("un code inexistant affiche le message d'erreur attendu", async ({
@@ -32,6 +35,27 @@ test.describe("Vérification publique et verrouillage des examens", () => {
     await expect(
       page.getByText("Veuillez entrer au moins 3 caractères"),
     ).toBeVisible();
+  });
+
+  test("un OFFICIAL sans enrollment est interdit en lecture et au démarrage", async ({
+    page,
+  }) => {
+    const exam = await getUnenrolledOfficialExam();
+    await loginAsCandidate(page);
+
+    const detailResponse = await page.request.get(`/api/exams/${exam.id}`);
+    expect(detailResponse.status()).toBe(403);
+    expect(((await detailResponse.json()) as { code?: string }).code).toBe(
+      "EXAM_NOT_ENROLLED",
+    );
+
+    const startResponse = await page.request.post(
+      `/api/exams/${exam.id}/start`,
+    );
+    expect(startResponse.status()).toBe(403);
+    expect(((await startResponse.json()) as { code?: string }).code).toBe(
+      "EXAM_NOT_ENROLLED",
+    );
   });
 
   test("un examen programmé dans le futur reste verrouillé pour le candidat", async ({

@@ -1,13 +1,27 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+const db = vi.hoisted(() => ({
+  examFindUnique: vi.fn(),
+  enrollmentFindUnique: vi.fn(),
+}));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    exam: { findUnique: db.examFindUnique },
+    examEnrollment: { findUnique: db.enrollmentFindUnique },
+  },
+}));
+
 vi.mock("@/lib/auth", () => ({
   getCurrentUser: vi.fn(),
+  getAdminUser: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@/lib/exam-draft", () => ({
   saveDraft: vi.fn(),
   loadDraft: vi.fn(),
   deleteDraft: vi.fn(),
+  isValidExamDraft: vi.fn().mockReturnValue(true),
 }));
 
 import { POST, GET, DELETE } from "@/app/api/exams/[id]/draft/route";
@@ -34,6 +48,8 @@ describe("POST /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
+    db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "MOCK" } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
   it("rejette sans authentification", async () => {
@@ -63,6 +79,8 @@ describe("GET /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
+    db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "MOCK" } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
   it("retourne un brouillon existant", async () => {
@@ -85,6 +103,8 @@ describe("DELETE /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
+    db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "MOCK" } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
   it("supprime le brouillon", async () => {

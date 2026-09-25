@@ -50,6 +50,20 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    services:
+      postgres-e2e:
+        image: postgres:17-alpine
+        ports:
+          - "5434:5432"
+        env:
+          POSTGRES_USER: attestation_fsa_user
+          POSTGRES_PASSWORD: attestation_fsa_password
+          POSTGRES_DB: attestation_fsa_e2e
+        options: >-
+          --health-cmd "pg_isready -U attestation_fsa_user -d attestation_fsa_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode-go/deepseek-v4.1-flash' }}
       OPENCODE_AGENT: ${{ vars.OPENCODE_AGENT || 'ci' }}
@@ -57,6 +71,12 @@ jobs:
       # lib/auth.ts a un fallback dev ; lib/prisma.ts est lazy (pas de DB requise).
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       AUTH_SECRET: ci-only-dummy-secret-not-used-in-prod
+      E2E_DATABASE_URL: postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e
+      BETTER_AUTH_SECRET: e2e-local-only-not-a-real-secret
+      BETTER_AUTH_URL: http://localhost:3100
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+      UPSTASH_REDIS_REST_URL: ""
+      UPSTASH_REDIS_REST_TOKEN: ""
       NODE_ENV: test
       GH_TOKEN: ${{ github.token }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -153,6 +173,24 @@ jobs:
       - name: Gate de vérification (pnpm verify)
         if: steps.changes.outputs.no_changes == 'false'
         run: pnpm verify
+
+      - name: Valider le build
+        if: steps.changes.outputs.no_changes == 'false'
+        run: pnpm build
+
+      - name: Préparer la base E2E
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          pnpm e2e:db:migrate
+          pnpm e2e:seed
+
+      - name: Installer le navigateur Playwright
+        if: steps.changes.outputs.no_changes == 'false'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Gate E2E
+        if: steps.changes.outputs.no_changes == 'false'
+        run: pnpm test:e2e
 
       - name: Créer la branche, committer et ouvrir la PR
         if: steps.changes.outputs.no_changes == 'false'

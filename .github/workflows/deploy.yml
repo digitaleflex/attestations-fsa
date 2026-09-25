@@ -1,7 +1,13 @@
 name: Deploy to VPS (Docker)
 
 on:
-  push:
+  # Le déploiement suit le workflow CI « Tests » et ne démarre qu'après son succès.
+  # workflow_dispatch reste disponible pour une intervention manuelle.
+  workflow_run:
+    workflows:
+      - Tests
+    types:
+      - completed
     branches:
       - main
       - master
@@ -23,14 +29,22 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: production
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Deploy to VPS (Docker)
         uses: appleboy/ssh-action@v1
@@ -131,5 +145,12 @@ jobs:
 
             echo "==> Container status:"
             docker compose --env-file .env.production -f compose.prod.yml ps
+
+            echo "==> HTTP smoke test..."
+            # Test depuis le conteneur via son endpoint interne : aucun secret
+            # n'est exposé dans les logs et le routage Traefik n'est pas requis.
+            docker compose --env-file .env.production -f compose.prod.yml \
+              exec -T fsa-app wget --no-verbose --tries=1 --spider \
+              "http://127.0.0.1:3000/api/health" >/dev/null
 
             echo "==> ✅ Deployment complete!"

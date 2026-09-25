@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
       Statut: r.status,
       Message: r.message || "",
       "Date de demande": new Date(r.createdAt).toLocaleDateString("fr-FR"),
-      "Lien CV": r.cvUrl || "",
+      // Jamais d'URL signée dans un export : on expose la clé stable
+      // (`cvKey`) pour les objets #260, l'URL historique pour l'ancien.
+      "Lien CV": r.cvUrl || r.cvKey || "",
     }));
 
     // Create workbook

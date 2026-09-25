@@ -14,6 +14,7 @@ const db = vi.hoisted(() => ({
   examPartFindFirst: vi.fn(),
   examPartFindMany: vi.fn(),
   userFindUnique: vi.fn(),
+  enrollmentFindUnique: vi.fn(),
   formationFindFirst: vi.fn(),
   attestationFindFirst: vi.fn(),
   attestationCreate: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock("@/lib/prisma", () => ({
       findMany: db.examPartFindMany,
     },
     user: { findUnique: db.userFindUnique },
+    examEnrollment: { findUnique: db.enrollmentFindUnique },
     formation: { findFirst: db.formationFindFirst },
     attestation: {
       findFirst: db.attestationFindFirst,
@@ -171,6 +173,7 @@ beforeEach(() => {
   db.attestationCount.mockResolvedValue(0 as never);
   db.attestationFindMany.mockResolvedValue([] as never);
   db.userFindUnique.mockResolvedValue({ id: "user-1", examId: null } as never);
+  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1" } as never);
   db.formationFindFirst.mockResolvedValue({ id: "formation-1" } as never);
 });
 
@@ -179,8 +182,10 @@ describe("Parcours cœur : submit → correct → attestation (#136)", () => {
     // submit : session IN_PROGRESS, examen 100% QCM
     db.sessionFindFirst
       .mockResolvedValueOnce({
+        id: "sub-1",
         startedAt: new Date(Date.now() - 600_000),
         status: "IN_PROGRESS",
+        submittedAt: null,
       } as never)
       .mockResolvedValueOnce({
         id: "sub-1",

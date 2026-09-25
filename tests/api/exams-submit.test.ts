@@ -6,6 +6,7 @@ const db = vi.hoisted(() => ({
   examPartFindFirst: vi.fn(),
   examPartFindMany: vi.fn(),
   examFindUnique: vi.fn(),
+  enrollmentFindUnique: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -19,20 +20,26 @@ vi.mock("@/lib/prisma", () => ({
       findMany: db.examPartFindMany,
     },
     exam: { findUnique: db.examFindUnique },
+    examEnrollment: { findUnique: db.enrollmentFindUnique },
   },
 }));
 
 const deps = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
+  getAdminUser: vi.fn(),
   applyRateLimitByUser: vi.fn(),
   analyzeAnswerPattern: vi.fn(),
   logCheatingDetection: vi.fn(),
   createAuditLog: vi.fn(),
   pusherTrigger: vi.fn(),
   issueExamAttestation: vi.fn(),
+  deleteDraft: vi.fn(),
 }));
 
-vi.mock("@/lib/auth", () => ({ getCurrentUser: deps.getCurrentUser }));
+vi.mock("@/lib/auth", () => ({
+  getCurrentUser: deps.getCurrentUser,
+  getAdminUser: deps.getAdminUser,
+}));
 vi.mock("@/lib/rate-limit", () => ({
   applyRateLimitByUser: deps.applyRateLimitByUser,
 }));
@@ -46,6 +53,9 @@ vi.mock("@/lib/pusher", () => ({
 }));
 vi.mock("@/lib/attestations/issue", () => ({
   issueExamAttestation: deps.issueExamAttestation,
+}));
+vi.mock("@/lib/exam-draft", () => ({
+  deleteDraft: deps.deleteDraft,
 }));
 
 import { POST } from "../../app/api/exams/[id]/submit/route";
@@ -65,6 +75,8 @@ function stubAuthorized() {
     name: "Alice",
   } as never);
   deps.applyRateLimitByUser.mockResolvedValue({ allowed: true } as never);
+  deps.getAdminUser.mockResolvedValue(null as never);
+  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1" } as never);
 }
 
 beforeEach(() => {
@@ -89,11 +101,44 @@ describe("POST /api/exams/[id]/submit", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400 rejette une réponse dont l'ID ne correspond à aucune question", async () => {
+    stubAuthorized();
+    db.sessionFindFirst.mockResolvedValue({
+      id: "session-1",
+      startedAt: new Date(),
+      status: "IN_PROGRESS",
+      submittedAt: null,
+    } as never);
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [{
+        id: "q1",
+        type: "SINGLE_CHOICE",
+        options: [{ id: "o1", isCorrect: true }],
+      }],
+    } as never);
+    db.examPartFindMany.mockResolvedValue([{ order: 1, type: "QCM", points: 20 }] as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      totalPoints: 20,
+      type: "MOCK",
+      duration: 3600,
+    } as never);
+
+    const res = await callSubmit({ "question-inconnue": "o1" });
+
+    expect(res.status).toBe(400);
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
+  });
+
   it("409 si la session est déjà soumise", async () => {
     stubAuthorized();
     db.sessionFindFirst.mockResolvedValueOnce({
+      id: "session-1",
       startedAt: new Date(Date.now() - 600_000),
       status: "COMPLETED",
+      submittedAt: new Date(),
     } as never);
 
     const res = await callSubmit({ q1: "o1" });
@@ -101,21 +146,63 @@ describe("POST /api/exams/[id]/submit", () => {
     expect(db.sessionUpdateMany).not.toHaveBeenCalled();
   });
 
-  it("404 si l'examen n'existe pas", async () => {
+  it("409 si aucune session d'examen n'a été démarrée", async () => {
     stubAuthorized();
     db.sessionFindFirst.mockResolvedValueOnce(null as never);
-    db.examPartFindFirst.mockResolvedValue(null as never);
+
+    const res = await callSubmit({ q1: "o1" });
+    expect(res.status).toBe(409);
+    expect(db.examFindUnique).not.toHaveBeenCalled();
+  });
+
+  it("404 si l'examen n'existe pas", async () => {
+    stubAuthorized();
+    db.sessionFindFirst.mockResolvedValueOnce({
+      id: "session-1",
+      startedAt: new Date(),
+      status: "IN_PROGRESS",
+      submittedAt: null,
+    } as never);
     db.examFindUnique.mockResolvedValue(null as never);
+    db.examPartFindMany.mockResolvedValue([] as never);
 
     const res = await callSubmit({ q1: "o1" });
     expect(res.status).toBe(404);
+  });
+
+  it("403 pour soumettre un OFFICIAL sans enrollment", async () => {
+    stubAuthorized();
+    db.sessionFindFirst.mockResolvedValue({
+      startedAt: new Date(),
+      id: "session-1",
+      status: "IN_PROGRESS",
+      submittedAt: null,
+    } as never);
+    db.examPartFindFirst.mockResolvedValue(null as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "OFFICIAL",
+      duration: 3600,
+    } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
+
+    const res = await callSubmit({ q1: "o1" });
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("EXAM_NOT_ENROLLED");
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
   });
 
   it("201 — QCM corrigé, score + attestation (examen OFFICIEL réussi)", async () => {
     stubAuthorized();
     const startedAt = new Date(Date.now() - 600_000);
     db.sessionFindFirst
-      .mockResolvedValueOnce({ startedAt, status: "IN_PROGRESS" } as never)
+      .mockResolvedValueOnce({
+        id: "session-1",
+        startedAt,
+        status: "IN_PROGRESS",
+        submittedAt: null,
+      } as never)
       .mockResolvedValueOnce({
         id: "session-1",
         status: "COMPLETED",
@@ -179,7 +266,9 @@ describe("POST /api/exams/[id]/submit", () => {
     db.sessionFindFirst
       .mockResolvedValueOnce({
         startedAt: new Date(Date.now() - 600_000),
-        status: "IN_PROGRESS",
+        id: "session-1",
+      status: "IN_PROGRESS",
+      submittedAt: null,
       } as never)
       .mockResolvedValueOnce({
         id: "session-1",
@@ -227,7 +316,9 @@ describe("POST /api/exams/[id]/submit", () => {
     db.sessionFindFirst
       .mockResolvedValueOnce({
         startedAt: new Date(Date.now() - 600_000),
-        status: "IN_PROGRESS",
+        id: "session-1",
+      status: "IN_PROGRESS",
+      submittedAt: null,
       } as never)
       .mockResolvedValueOnce({
         id: "session-1",
@@ -278,7 +369,9 @@ describe("POST /api/exams/[id]/submit", () => {
     // Session démarrée il y a duration + tolérance + 1s → délai dépassé
     db.sessionFindFirst.mockResolvedValueOnce({
       startedAt: new Date(Date.now() - (3600 + 60 + 1) * 1000),
+      id: "session-1",
       status: "IN_PROGRESS",
+      submittedAt: null,
     } as never);
     db.examPartFindFirst.mockResolvedValue({
       points: 20,
@@ -314,7 +407,9 @@ describe("POST /api/exams/[id]/submit", () => {
     db.sessionFindFirst
       .mockResolvedValueOnce({
         startedAt: new Date(Date.now() - 600_000),
-        status: "IN_PROGRESS",
+        id: "session-1",
+      status: "IN_PROGRESS",
+      submittedAt: null,
       } as never)
       .mockResolvedValueOnce({
         id: "session-1",

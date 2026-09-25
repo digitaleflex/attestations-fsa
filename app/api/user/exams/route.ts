@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
-import {
-  autoOpenDueExams,
-  isExamAvailable,
-} from "@/lib/exams/availability";
+import { autoOpenDueExams, isExamAvailable } from "@/lib/exams/availability";
 import {
   round2,
   isCorrected,
@@ -15,7 +12,9 @@ import {
 } from "@/lib/exams/scoring";
 
 /** Mapping d'affichage canonique des statuts de session. */
-function displayStatus(status: string): "COMPLETED" | "SUBMITTED" | "IN_PROGRESS" {
+function displayStatus(
+  status: string,
+): "COMPLETED" | "SUBMITTED" | "IN_PROGRESS" {
   if (isCorrected(status)) return "COMPLETED";
   if (status === "PENDING_REVIEW") return "SUBMITTED";
   return "IN_PROGRESS";
@@ -57,71 +56,76 @@ export async function GET(request: Request) {
     await autoOpenDueExams();
 
     // Requêtes PARALLÈLES (Gain de temps massif)
-    const [user, availableExams, submissions] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { examId: true },
-      }),
-      prisma.exam.findMany({
-        where: {
-          status: { in: ["SCHEDULED", "PUBLISHED"] },
-          type: params.data.type || undefined,
-          // On pourrait ajouter des filtres ici basés sur params.data
-        },
-        select: {
-          id: true,
-          title: true,
-          name: true,
-          description: true,
-          totalPoints: true,
-          passingScore: true,
-          duration: true,
-          part1Questions: true,
-          part2Questions: true,
-          part3Enabled: true,
-          type: true,
-          status: true,
-          scheduledAt: true,
-        },
-        ...(params.data.limit ? { take: params.data.limit } : {}),
-      }),
-      prisma.examSession.findMany({
-        where: {
-          userId,
-          exam: {
+    const { user, availableExams, enrollments, submissions } =
+      await Promise.all({
+        user: prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true },
+        }),
+        availableExams: prisma.exam.findMany({
+          where: {
+            status: { in: ["SCHEDULED", "PUBLISHED"] },
             type: params.data.type || undefined,
+            // On pourrait ajouter des filtres ici basés sur params.data
           },
-        },
-        select: {
-          id: true,
-          examId: true,
-          totalScore: true,
-          finalScore: true,
-          submittedAt: true,
-          status: true,
-          answers: true,
-          exam: {
-            select: {
-              title: true,
-              name: true,
-              description: true,
-              totalPoints: true,
-              part1Points: true,
-              part2Points: true,
-              part3Points: true,
-              part1Enabled: true,
-              part2Enabled: true,
-              part3Enabled: true,
-              passingScore: true,
-              duration: true,
-              part1Questions: true,
-              part2Questions: true,
-              type: true,
+          select: {
+            id: true,
+            title: true,
+            name: true,
+            description: true,
+            totalPoints: true,
+            passingScore: true,
+            duration: true,
+            part1Questions: true,
+            part2Questions: true,
+            part3Enabled: true,
+            type: true,
+            status: true,
+            scheduledAt: true,
+          },
+          ...(params.data.limit ? { take: params.data.limit } : {}),
+        }),
+        enrollments: prisma.examEnrollment.findMany({
+          where: { userId },
+          select: { examId: true },
+        }),
+        submissions: prisma.examSession.findMany({
+          where: {
+            userId,
+            exam: {
+              type: params.data.type || undefined,
             },
           },
-        },
-      }),
-    ]);
+          select: {
+            id: true,
+            examId: true,
+            totalScore: true,
+            finalScore: true,
+            submittedAt: true,
+            status: true,
+            answers: true,
+            exam: {
+              select: {
+                title: true,
+                name: true,
+                description: true,
+                totalPoints: true,
+                part1Points: true,
+                part2Points: true,
+                part3Points: true,
+                part1Enabled: true,
+                part2Enabled: true,
+                part3Enabled: true,
+                passingScore: true,
+                duration: true,
+                part1Questions: true,
+                part2Questions: true,
+                type: true,
+              },
+            },
+          },
+        }),
+      });
 
     if (!user) {
       return NextResponse.json(
@@ -144,12 +148,14 @@ export async function GET(request: Request) {
       // Récupérer le barème personnalisé s'il existe
       const customBareme =
         sub.answers && typeof sub.answers === "object"
-          ? (sub.answers as { _customBareme?: { totalMax?: number } })._customBareme
+          ? (sub.answers as { _customBareme?: { totalMax?: number } })
+              ._customBareme
           : null;
 
       const maxScore = customBareme?.totalMax ?? resolveExamMax(exam);
       const isDone = isCorrected(sub.status);
-      const hasFinalScore = typeof sub.finalScore === "number" && sub.finalScore > 0;
+      const hasFinalScore =
+        typeof sub.finalScore === "number" && sub.finalScore > 0;
       const finalScore = isDone
         ? hasFinalScore
           ? round2(sub.finalScore)
@@ -167,7 +173,8 @@ export async function GET(request: Request) {
         maxScore: maxScore,
         finalScore,
         passingScore,
-        passed: isDone && finalScore !== null && isPassed(finalScore, passingScore),
+        passed:
+          isDone && finalScore !== null && isPassed(finalScore, passingScore),
         startedAt: sub.submittedAt,
         completedAt: sub.submittedAt,
         duration: `${Math.round(exam.duration / 60)} minutes`,
@@ -177,12 +184,15 @@ export async function GET(request: Request) {
       };
     });
 
+    const enrolledExamIds = new Set(
+      enrollments.map((enrollment: { examId: string }) => enrollment.examId),
+    );
+
     // 2. Ajouter les examens disponibles (non encore soumis)
     const availableResult = availableExams
       .filter((exam: { id: string }) => !submittedExamIds.has(exam.id))
       .filter(
-        (exam: any) =>
-          !user.examId || user.examId === exam.id || exam.type === "MOCK",
+        (exam: any) => exam.type === "MOCK" || enrolledExamIds.has(exam.id),
       )
       .map((exam: any) => ({
         id: exam.id,

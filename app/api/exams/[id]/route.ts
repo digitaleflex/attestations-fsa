@@ -2,6 +2,10 @@ import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
 import { isExamAvailable } from "@/lib/exams/availability";
+import {
+  checkExamEligibility,
+  enrollmentForbiddenResponse,
+} from "@/lib/exams/eligibility";
 
 export async function GET(
   request: NextRequest,
@@ -94,6 +98,18 @@ export async function GET(
         },
         { status: 423 },
       );
+    }
+
+    if (user) {
+      const eligibility = await checkExamEligibility({
+        userId: user.id,
+        examId: exam.id,
+        examType: exam.type,
+        isAdmin: adminUser !== null,
+      });
+      if (!eligibility.eligible) {
+        return enrollmentForbiddenResponse(eligibility);
+      }
     }
 
     return NextResponse.json(exam);

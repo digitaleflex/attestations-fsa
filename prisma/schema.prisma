@@ -88,11 +88,13 @@ model User {
   auditLogs             AuditLog[]
   correctionRequests    CorrectionRequest[]
   examSessions          ExamSession[]
+  examEnrollments       ExamEnrollment[]
   internships           InternshipRequest[]
   notifications         Notification[]
   reclamations          Reclamation[]
   sessions              Session[]
   twoFactor             TwoFactor[]
+  storedObjects         StoredObject[]
   exam                  Exam?               @relation(fields: [examId], references: [id])
   formation             Formation?          @relation(fields: [formationId], references: [id])
 
@@ -146,7 +148,13 @@ model Attestation {
   instructor                String
   issuingCompany            String
   status                    AttestationStatus     @default(PENDING)
+  // pdfUrl est conservé pour les anciens documents ; aucune nouvelle URL signée
+  // n'est persistée. Les PDF officiels servies à l'avance sont localisés par pdfKey.
   pdfUrl                    String?
+  pdfKey                    String?
+  pdfHash                   String?
+  pdfVersion                Int?
+  pdfGeneratedAt            DateTime?
   certificationHours        Int?
   certificationMention      CertificationMention?
   certificationObservations String?
@@ -160,13 +168,14 @@ model Attestation {
   // Scellement HMAC-SHA256 (#155) — valeur probante interne.
   sealHash                  String?
   sealedAt                  DateTime?
+  sealVersion               Int?
   formation                 Formation             @relation(fields: [formationId], references: [id])
   user                      User?                 @relation(fields: [userId], references: [id])
   correctionRequests        CorrectionRequest[]
   reclamations              Reclamation[]
 
   @@index([userId])
-  @@index([sessionId])
+  @@unique([sessionId])
   @@index([status])
   @@index([userId, status])
   @@index([formationId])
@@ -230,6 +239,7 @@ model Exam {
   parts              ExamPart[]
   sessions           ExamSession[]
   users              User[]
+  enrollments        ExamEnrollment[]
 }
 
 model ExamPart {
@@ -304,6 +314,22 @@ model ExamSession {
   @@index([gradedAt])
 }
 
+// Inscription explicite à un examen. L'absence de cette ligne ne vaut jamais
+// éligibilité pour un examen OFFICIAL ; les sessions existantes ne sont pas
+// supprimées lors de la transition.
+model ExamEnrollment {
+  id        String   @id @default(uuid())
+  userId    String
+  examId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, examId])
+  @@index([examId])
+  @@index([userId])
+}
+
 model InternshipRequest {
   id         String           @id @default(uuid())
   fullName   String
@@ -312,7 +338,11 @@ model InternshipRequest {
   university String?
   level      String?
   position   String
+  // cvUrl n'est renseigné que pour les demandes historiques (URL déjà
+  // persistée). Les nouveaux envois ne stockent que la clé stable `cvKey` :
+  // aucune URL signée expirante n'est persistée (#260).
   cvUrl      String?
+  cvKey      String?
   message    String?
   status     InternshipStatus @default(PENDING)
   createdAt  DateTime         @default(now())
@@ -423,6 +453,31 @@ model Reclamation {
   @@index([status, createdAt])
 }
 
+// #260 — Registre des objets stockés (R2/S3/local).
+// Le bucket est privé : la base ne conserve que la clé stable, jamais une URL
+// signée expirante. `ownerUserId` permet de vérifier la propriété avant toute
+// lecture ou suppression ; `purpose` interdit la suppression des PDF officiels.
+model StoredObject {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  ownerUserId String?
+  purpose    String
+  linkedEntityType String?
+  linkedEntityId   String?
+  checksum   String
+  sizeBytes  Int?
+  contentType String?
+  // Fin de conservation souhaitée (RGPD). NULL = conservation indéfinie.
+  retentionUntil DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  owner      User?    @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  @@index([ownerUserId])
+  @@index([purpose, createdAt])
+  @@index([linkedEntityType, linkedEntityId])
+  @@index([retentionUntil])
+}
 
 enum AttestationStatus {
   PENDING

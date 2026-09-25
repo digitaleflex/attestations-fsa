@@ -8,6 +8,7 @@ import { applyRateLimit } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/error-handler'
 import { sanitizeInput } from '@/lib/sanitization'
 import { verifyCertificateSeal } from '@/lib/crypto/seal'
+import { attestationSealPayload } from '@/lib/attestations/proof'
 
 export async function GET(request: Request) {
   try {
@@ -56,6 +57,23 @@ export async function GET(request: Request) {
         certificationMention: true,
         sealHash: true,
         sealedAt: true,
+        sealVersion: true,
+        sessionId: true,
+        userId: true,
+        formationId: true,
+        email: true,
+        gender: true,
+        birthDate: true,
+        birthPlace: true,
+        issuingCompany: true,
+        certificationHours: true,
+        certificationObservations: true,
+        stageHours: true,
+        stageObservations: true,
+        pdfKey: true,
+        pdfHash: true,
+        pdfVersion: true,
+        pdfGeneratedAt: true,
         issuedAt: true,
         startDate: true,
         endDate: true,
@@ -79,15 +97,7 @@ export async function GET(request: Request) {
 
     // Preuve de scellement (#155) : recalcul de l'empreinte depuis les données
     // en base et comparaison à l'empreinte stockée. Toute divergence = altération.
-    const seal = verifyCertificateSeal({
-      code: attestation.code,
-      fullName: attestation.fullName,
-      formationName: attestation.formation?.name ?? null,
-      certificationScore: attestation.certificationScore,
-      certificationMention: attestation.certificationMention,
-      endDate: attestation.endDate,
-      sealHash: attestation.sealHash,
-    });
+    const seal = verifyCertificateSeal(attestationSealPayload(attestation));
 
     // Révocation (#224) : le code existe mais l'attestation a été rejetée.
     // On le déclare explicitement — un vérificateur public doit pouvoir
@@ -107,6 +117,7 @@ export async function GET(request: Request) {
             revoked: true,
             status: attestation.status,
             sealedAt: attestation.sealedAt,
+            sealVersion: seal.sealVersion,
             checkedAt: new Date().toISOString(),
           },
         },
@@ -127,6 +138,14 @@ export async function GET(request: Request) {
         revoked: false,
         status: attestation.status,
         sealedAt: attestation.sealedAt,
+        sealVersion: seal.sealVersion,
+        pdf: {
+          available: Boolean(attestation.pdfKey),
+          version: attestation.pdfVersion,
+          hash: attestation.pdfHash,
+          generatedAt: attestation.pdfGeneratedAt,
+          downloadPath: attestation.pdfKey ? `/api/verifier/pdf?code=${encodeURIComponent(attestation.code)}` : null,
+        },
         checkedAt: new Date().toISOString(),
       },
     };

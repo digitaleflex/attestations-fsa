@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
+import { mutationSealData } from '@/lib/attestations/proof';
 
 export async function POST(
   request: Request,
@@ -38,9 +39,12 @@ export async function POST(
 
     if (action === 'REVOKE') {
       // 🚩 RÉVOQUER : Simplement passer en rejeté
+      const mutation = { status: 'REJECTED' };
       const updated = await prisma.attestation.update({
         where: { id },
-        data: { status: 'REJECTED' }
+        data: attestation.type === 'CERTIFICATION' && attestation.sessionId
+          ? { ...mutation, ...mutationSealData(attestation, mutation) }
+          : mutation
       });
 
       if (userId) {
@@ -81,15 +85,18 @@ export async function POST(
       }
 
       // 2. Remettre l'attestation en attente et réinitialiser les scores
+      const mutation = {
+        status: 'PENDING',
+        certificationScore: 0,
+        stageScore: 0,
+        certificationHours: 0,
+        stageHours: 0,
+      };
       await prisma.attestation.update({
         where: { id },
-        data: { 
-          status: 'PENDING',
-          certificationScore: 0,
-          stageScore: 0,
-          certificationHours: 0,
-          stageHours: 0
-        }
+        data: attestation.type === 'CERTIFICATION' && attestation.sessionId
+          ? { ...mutation, ...mutationSealData(attestation, mutation) }
+          : mutation
       });
 
       // 3. Logger et notifier

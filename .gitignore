@@ -79,3 +79,6 @@ package-lock.json
 
 # Fichiers temporaires / scripts one-shot
 /tmp/
+
+# Rapports d'intégrité et d'inventaire générés localement
+/reports/

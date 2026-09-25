@@ -3,11 +3,13 @@ import { NextRequest } from "next/server";
 
 const db = vi.hoisted(() => ({
   internshipCreate: vi.fn(),
+  storedObjectUpsert: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     internshipRequest: { create: db.internshipCreate },
+    storedObject: { upsert: db.storedObjectUpsert, findUnique: vi.fn(), deleteMany: vi.fn() },
   },
 }));
 
@@ -73,6 +75,9 @@ beforeEach(() => {
   deps.put.mockResolvedValue(undefined as never);
   deps.getSignedUrl.mockImplementation(async (key: string) => `/uploads/${key}`);
   db.internshipCreate.mockResolvedValue({ id: "intern-1" } as never);
+  db.storedObjectUpsert.mockImplementation(async ({ create }: { create: Record<string, unknown> }) =>
+    ({ id: "obj-1", ...create }) as never,
+  );
 });
 
 describe("POST /api/public/internships (#138)", () => {
@@ -143,11 +148,11 @@ describe("POST /api/public/internships (#138)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("201 — valide et stocke le CV, puis crée la demande en PENDING", async () => {
+  it("201 — stocke le CV sous stages/, persiste la clé et jamais l'URL signée", async () => {
     const res = await callPost(validBody, makePdf());
     expect(res.status).toBe(201);
     expect(deps.put).toHaveBeenCalledWith(
-      "cv/abcdefghijkl.pdf",
+      "stages/abcdefghijkl.pdf",
       expect.any(Buffer),
       "application/pdf"
     );
@@ -156,10 +161,31 @@ describe("POST /api/public/internships (#138)", () => {
         data: expect.objectContaining({
           fullName: "Alice Dupont",
           email: "alice@example.com",
-          cvUrl: "/uploads/cv/abcdefghijkl.pdf",
+          // #260 : URL signée courte renvoyée au client, jamais persistée.
+          cvUrl: null,
+          cvKey: "stages/abcdefghijkl.pdf",
           status: "PENDING",
         }),
       }),
     );
+    expect(db.storedObjectUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { key: "stages/abcdefghijkl.pdf" },
+      })
+    );
+    const payload = db.storedObjectUpsert.mock.calls[0][0];
+    expect(payload.create).toMatchObject({
+      key: "stages/abcdefghijkl.pdf",
+      purpose: "internship",
+      linkedEntityType: "InternshipRequest",
+      linkedEntityId: "intern-1",
+    });
+    expect(payload.create.checksum).toMatch(/^[0-9a-f]{64}$/);
+    // URL de lecture courte, bornée à 60 s.
+    expect(deps.getSignedUrl).toHaveBeenCalledWith("stages/abcdefghijkl.pdf", 60);
+
+    const body = await res.json();
+    expect(body.cvUrl).toBe("/uploads/stages/abcdefghijkl.pdf");
+    expect(body.cvUrlExpiresIn).toBe(60);
   });
 });

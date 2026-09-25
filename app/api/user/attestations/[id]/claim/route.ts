@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { mutationSealData } from "@/lib/attestations/proof";
 
 export async function POST(
   request: Request,
@@ -16,7 +17,7 @@ export async function POST(
 
     const attestation = await prisma.attestation.findUnique({
       where: { id },
-      select: { userId: true, status: true }
+      include: { formation: { select: { name: true } } }
     });
 
     if (!attestation) {
@@ -29,9 +30,12 @@ export async function POST(
 
     // On passe en statut CLAIMED seulement si elle était VALIDATED
     if (attestation.status === "VALIDATED") {
+      const mutation = { status: "CLAIMED" };
       await prisma.attestation.update({
         where: { id },
-        data: { status: "CLAIMED" }
+        data: attestation.type === "CERTIFICATION" && attestation.sessionId
+          ? { ...mutation, ...mutationSealData(attestation, mutation) }
+          : mutation
       });
     }
 

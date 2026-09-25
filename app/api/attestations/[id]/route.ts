@@ -4,6 +4,12 @@ import { getCurrentUser, getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 import { createNotification } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
+import {
+  CERTIFICATE_SEAL_VERSION,
+  sealCertificate,
+  type CertificateSealPayload,
+} from '@/lib/crypto/seal';
+import { generateOfficialPdf, OfficialPdfUnavailableError } from '@/lib/attestations/pdf';
 
 // Schéma de validation pour la mise à jour d'une attestation
 const AttestationUpdateSchema = z.object({
@@ -131,12 +137,14 @@ export async function PATCH(
 
     // Gestion formation
     let formationId = undefined;
+    let newFormationName: string | null = null;
     if (data.formation) {
       let formationRecord = await prisma.formation.findFirst({ where: { name: data.formation } });
       if (!formationRecord) {
         formationRecord = await prisma.formation.create({ data: { name: data.formation, category: '', skills: [] } });
       }
       formationId = formationRecord.id;
+      newFormationName = formationRecord.name;
     }
 
     const updateData: Record<string, unknown> = { ...data };
@@ -155,11 +163,72 @@ export async function PATCH(
     if (updateData.startDate) updateData.startDate = new Date(updateData.startDate as string);
     if (updateData.endDate) updateData.endDate = new Date(updateData.endDate as string);
 
-    const oldAttestation = await prisma.attestation.findUnique({ 
+    const oldAttestation = await prisma.attestation.findUnique({
       where: { id },
-      select: { status: true, userId: true, fullName: true, code: true }
+      include: { formation: { select: { name: true } } },
     });
-    
+    if (!oldAttestation) {
+      return NextResponse.json({ message: "Attestation non trouvée" }, { status: 404 });
+    }
+
+    // Une mutation autorisée d'une attestation officielle doit produire un
+    // nouveau PDF et un nouveau sceau. On échoue avant l'update si le serveur
+    // ne peut pas garantir ce nouveau document.
+    if (oldAttestation.type === 'CERTIFICATION' && oldAttestation.sessionId) {
+      const merged = { ...oldAttestation, ...updateData } as typeof oldAttestation & Record<string, unknown>;
+      const status = (updateData.status ?? oldAttestation.status) as string;
+      const base: CertificateSealPayload = {
+        sealVersion: CERTIFICATE_SEAL_VERSION,
+        code: oldAttestation.code,
+        type: oldAttestation.type,
+        status,
+        sessionId: oldAttestation.sessionId,
+        userId: oldAttestation.userId,
+        formationId: oldAttestation.formationId,
+        formationName: newFormationName ?? oldAttestation.formation.name,
+        fullName: (merged.fullName as string) ?? oldAttestation.fullName,
+        email: (merged.email as string | null) ?? oldAttestation.email,
+        gender: (merged.gender as string | null) ?? oldAttestation.gender,
+        birthDate: (merged.birthDate as Date) ?? oldAttestation.birthDate,
+        birthPlace: (merged.birthPlace as string) ?? oldAttestation.birthPlace,
+        startDate: (merged.startDate as Date) ?? oldAttestation.startDate,
+        endDate: (merged.endDate as Date) ?? oldAttestation.endDate,
+        issuedAt: oldAttestation.issuedAt,
+        location: (merged.location as string) ?? oldAttestation.location,
+        instructor: (merged.instructor as string) ?? oldAttestation.instructor,
+        issuingCompany: (merged.issuingCompany as string) ?? oldAttestation.issuingCompany,
+        certificationHours: (merged.certificationHours as number | null) ?? oldAttestation.certificationHours,
+        certificationMention: (merged.certificationMention as string | null) ?? oldAttestation.certificationMention,
+        certificationObservations: (merged.certificationObservations as string | null) ?? oldAttestation.certificationObservations,
+        certificationScore: (merged.certificationScore as number | null) ?? oldAttestation.certificationScore,
+        stageHours: (merged.stageHours as number | null) ?? oldAttestation.stageHours,
+        stageObservations: (merged.stageObservations as string | null) ?? oldAttestation.stageObservations,
+        stageScore: (merged.stageScore as number | null) ?? oldAttestation.stageScore,
+        pdfKey: oldAttestation.pdfKey,
+        pdfHash: oldAttestation.pdfHash,
+        pdfVersion: oldAttestation.pdfVersion,
+        pdfGeneratedAt: oldAttestation.pdfGeneratedAt,
+      };
+      const proof = status === 'REJECTED'
+        ? {
+            pdfKey: oldAttestation.pdfKey,
+            pdfHash: oldAttestation.pdfHash,
+            pdfVersion: oldAttestation.pdfVersion,
+            pdfGeneratedAt: oldAttestation.pdfGeneratedAt,
+          }
+        : await generateOfficialPdf(base, oldAttestation.pdfVersion);
+      const seal = sealCertificate({ ...base, ...proof });
+      if (!seal) {
+        return NextResponse.json({ message: "Mutation bloquée : clé de scellement indisponible" }, { status: 503 });
+      }
+      Object.assign(updateData, proof, {
+        pdfUrl: null,
+        sealHash: seal.sealHash,
+        sealedAt: seal.sealedAt,
+        sealVersion: seal.sealVersion,
+      });
+    }
+
     const attestation = await prisma.attestation.update({
       where: { id },
       data: updateData as any,
@@ -205,6 +274,9 @@ export async function PATCH(
 
     return NextResponse.json(attestation);
   } catch (error) {
+    if (error instanceof OfficialPdfUnavailableError) {
+      return NextResponse.json({ message: "Mutation bloquée : le PDF serveur probant est indisponible" }, { status: 503 });
+    }
     console.error("PATCH Attestation Error:", error);
     return NextResponse.json({ message: "Erreur lors de la mise à jour" }, { status: 500 });
   }

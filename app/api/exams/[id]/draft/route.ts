@@ -1,6 +1,40 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { saveDraft, loadDraft, deleteDraft } from '@/lib/exam-draft';
+import { getAdminUser, getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import {
+  checkExamEligibility,
+  enrollmentForbiddenResponse,
+} from '@/lib/exams/eligibility';
+import {
+  saveDraft,
+  loadDraft,
+  deleteDraft,
+  isValidExamDraft,
+} from '@/lib/exam-draft';
+
+async function ensureEligible(request: Request, examId: string, userId: string) {
+  const [adminUser, exam] = await Promise.all([
+    getAdminUser(request),
+    prisma.exam.findUnique({
+      where: { id: examId },
+      select: { id: true, type: true },
+    }),
+  ]);
+
+  if (!exam) {
+    return Response.json({ error: 'Examen non trouvé' }, { status: 404 });
+  }
+
+  const eligibility = await checkExamEligibility({
+    userId,
+    examId: exam.id,
+    examType: exam.type,
+    isAdmin: adminUser !== null,
+  });
+  return eligibility.eligible
+    ? null
+    : enrollmentForbiddenResponse(eligibility);
+}
 
 export async function POST(
   request: Request,
@@ -13,6 +47,9 @@ export async function POST(
     }
 
     const { id: examId } = await params;
+    const forbidden = await ensureEligible(request, examId, user.id);
+    if (forbidden) return forbidden;
+
     const body = await request.json();
     const { answers, timeRemaining, currentPart } = body;
 
@@ -20,12 +57,23 @@ export async function POST(
       return NextResponse.json({ error: 'Réponses manquantes ou invalides' }, { status: 400 });
     }
 
-    const saved = await saveDraft(examId, user.id, {
+    const draft = {
       answers,
       timeRemaining: timeRemaining ?? 0,
       currentPart: currentPart ?? 1,
       lastSync: new Date().toISOString(),
-    });
+    };
+    if (
+      (timeRemaining !== undefined && typeof timeRemaining !== 'number') ||
+      (currentPart !== undefined && typeof currentPart !== 'number') ||
+      !isValidExamDraft(draft)
+    ) {
+      return NextResponse.json(
+        { error: 'Brouillon invalide ou trop volumineux' },
+        { status: 400 },
+      );
+    }
+    const saved = await saveDraft(examId, user.id, draft);
 
     return NextResponse.json({ saved });
   } catch (error) {
@@ -45,6 +93,9 @@ export async function GET(
     }
 
     const { id: examId } = await params;
+    const forbidden = await ensureEligible(request, examId, user.id);
+    if (forbidden) return forbidden;
+
     const draft = await loadDraft(examId, user.id);
 
     if (!draft) {
@@ -69,6 +120,9 @@ export async function DELETE(
     }
 
     const { id: examId } = await params;
+    const forbidden = await ensureEligible(request, examId, user.id);
+    if (forbidden) return forbidden;
+
     const deleted = await deleteDraft(examId, user.id);
 
     return NextResponse.json({ deleted });

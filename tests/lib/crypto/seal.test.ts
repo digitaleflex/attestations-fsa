@@ -98,6 +98,30 @@ describe("lib/crypto/seal (#155)", () => {
     expect(a).toBe(b);
     expect(computeSealHash(a, SECRET)).toBe(computeSealHash(b, SECRET));
   });
+  it("v2 détecte la mutation de tout champ significatif couvert", () => {
+    const payload: CertificateSealPayload = {
+      ...basePayload,
+      sealVersion: 2,
+      type: "CERTIFICATION",
+      status: "VALIDATED",
+      sessionId: "session-1",
+      formationId: "formation-1",
+      location: "En ligne",
+      pdfKey: "attestations/FSA/v1.pdf",
+      pdfHash: "b".repeat(64),
+      pdfVersion: 1,
+    };
+    const seal = sealCertificate(payload, SECRET)!;
+    expect(seal.sealVersion).toBe(2);
+    for (const mutation of [
+      { sessionId: "session-2" },
+      { status: "REJECTED" },
+      { location: "Cotonou" },
+      { pdfHash: "c".repeat(64) },
+    ]) {
+      expect(verifyCertificateSeal({ ...payload, ...mutation, sealHash: seal.sealHash }, SECRET).valid).toBe(false);
+    }
+  });
 });
 
 describe("seal — dégradation bruyante en production (#155)", () => {

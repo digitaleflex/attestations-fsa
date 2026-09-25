@@ -1,17 +1,147 @@
 // app/api/exams/[id]/submit/route.ts
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { getAdminUser, getCurrentUser } from '@/lib/auth';
 import { applyRateLimitByUser } from '@/lib/rate-limit';
 import { createAuditLog } from '@/lib/audit';
 import {
-  computeFinalScore,
+  calculateCanonicalScore,
   computePart1Score,
+  createScoringSnapshot,
   isPassed,
-  resolveExamMaxFromParts,
+  isSubmittableStatus,
   round2,
+  withScoringSnapshot,
 } from '@/lib/exams/scoring';
 import { issueExamAttestation } from '@/lib/attestations/issue';
+import {
+  checkExamEligibility,
+  enrollmentForbiddenResponse,
+} from '@/lib/exams/eligibility';
+import { deleteDraft } from '@/lib/exam-draft';
+
+const MAX_ANSWERS_BYTES = 1_000_000;
+const MAX_ANSWER_ENTRIES = 1_000;
+const MAX_TEXT_LENGTH = 20_000;
+const MAX_SELECTED_OPTIONS = 100;
+
+type AnswerValue = string | string[];
+type AnswerMap = Record<string, AnswerValue>;
+
+type ScoredPart = {
+  id: string;
+  type: string;
+  points: number;
+  questions: Array<{
+    id: string;
+    type: string;
+    options: Array<{ id: string; isCorrect: boolean }>;
+  }>;
+};
+
+function validateAnswers(
+  value: unknown,
+  parts: ScoredPart[],
+): AnswerMap | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    return null;
+  }
+  if (
+    Buffer.byteLength(serialized, 'utf8') > MAX_ANSWERS_BYTES ||
+    Object.keys(value).length > MAX_ANSWER_ENTRIES
+  ) {
+    return null;
+  }
+
+  const questions = new Map(
+    parts.flatMap((part) =>
+      part.questions.map((question) => [question.id, { part, question }] as const),
+    ),
+  );
+  const hasOpenPart = parts.some((part) => part.type === 'OPEN');
+  const hasCaseStudy = parts.some((part) => part.type === 'CASE_STUDY');
+  const answers: AnswerMap = {};
+
+  for (const [key, answer] of Object.entries(value)) {
+    if (key === 'part2' && hasOpenPart) {
+      if (typeof answer !== 'string' || answer.length > MAX_TEXT_LENGTH) return null;
+      answers[key] = answer;
+      continue;
+    }
+    if (key === 'part3' && hasCaseStudy) {
+      if (typeof answer !== 'string' || answer.length > MAX_TEXT_LENGTH) return null;
+      answers[key] = answer;
+      continue;
+    }
+
+    const found = questions.get(key);
+    if (!found) return null;
+    const { part, question } = found;
+    if (part.type === 'OPEN') {
+      if (typeof answer !== 'string' || answer.length > MAX_TEXT_LENGTH) return null;
+      answers[key] = answer;
+      continue;
+    }
+    if (question.type === 'MULTIPLE_CHOICE') {
+      if (
+        !Array.isArray(answer) ||
+        answer.length > MAX_SELECTED_OPTIONS ||
+        answer.some((id) => typeof id !== 'string') ||
+        new Set(answer).size !== answer.length
+      ) {
+        return null;
+      }
+    } else if (typeof answer !== 'string') {
+      return null;
+    }
+    if (typeof answer === 'string' && answer.length > 200) return null;
+
+    const optionIds = new Set(question.options.map((option) => option.id));
+    const selected = Array.isArray(answer) ? answer : [answer];
+    if (selected.some((id) => !optionIds.has(id))) return null;
+    answers[key] = answer as AnswerValue;
+  }
+
+  return answers;
+}
+
+function autoGradeQcm(parts: ScoredPart[], answers: AnswerMap): number {
+  return round2(
+    parts
+      .filter((part) => part.type === 'QCM')
+      .reduce((partTotal, part) => {
+        let correct = 0;
+        for (const question of part.questions) {
+          const answer = answers[question.id];
+          const correctIds = new Set(
+            question.options
+              .filter((option) => option.isCorrect)
+              .map((option) => option.id),
+          );
+          if (Array.isArray(answer)) {
+            if (
+              correctIds.size > 0 &&
+              correctIds.size === answer.length &&
+              answer.every((id) => correctIds.has(id))
+            ) {
+              correct++;
+            }
+          } else if (answer && correctIds.size === 1 && correctIds.has(answer)) {
+            correct++;
+          }
+        }
+        return partTotal + computePart1Score(correct, part.questions.length, part.points);
+      }, 0),
+  );
+}
 
 export async function POST(
   request: Request,
@@ -23,80 +153,113 @@ export async function POST(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    // ✅ ANTI-CHEAT: Per-user rate limiting (Re-enabled)
     const rateLimit = await applyRateLimitByUser(request, user.id, 'submission');
-    if (!rateLimit.allowed) {
-      return rateLimit.response;
-    }
+    if (!rateLimit.allowed) return rateLimit.response;
 
     const { id: examId } = await params;
     const body = await request.json();
-    const { answers } = body;
-
-    if (!answers || typeof answers !== 'object') {
-      return NextResponse.json({ error: 'Réponses manquantes ou invalides' }, { status: 400 });
+    const rawAnswers = body?.answers;
+    if (
+      rawAnswers === null ||
+      typeof rawAnswers !== 'object' ||
+      Array.isArray(rawAnswers)
+    ) {
+      return NextResponse.json(
+        { error: 'Réponses manquantes ou invalides' },
+        { status: 400 },
+      );
     }
 
-    // Fetch session to get server-side startedAt (anti-cheat: never trust client clock)
     const existingSession = await prisma.examSession.findFirst({
       where: { examId, userId: user.id },
-      select: { startedAt: true, status: true },
+      select: { id: true, startedAt: true, status: true, submittedAt: true },
     });
-
-    // Early exit if already submitted (fast path before any heavy queries)
-    if (existingSession?.status && !['IN_PROGRESS', 'PENDING'].includes(existingSession.status)) {
+    if (!existingSession) {
+      return NextResponse.json(
+        { error: 'Session d’examen non démarrée' },
+        { status: 409 },
+      );
+    }
+    if (
+      !isSubmittableStatus(existingSession.status) ||
+      existingSession.submittedAt !== null
+    ) {
       return NextResponse.json({ error: 'Session déjà soumise' }, { status: 409 });
     }
 
-    // ✅ Only fetch QCM part questions needed for scoring (not full exam)
-    const qcmPart = await prisma.examPart.findFirst({
-      where: {
-        examId,
-        type: 'QCM',
-      },
-      orderBy: { order: 'asc' },
-      include: {
-        questions: {
-          orderBy: { order: 'asc' },
-          include: {
-            options: {
-              select: { id: true, isCorrect: true }, // Only needed fields
-            }
-          }
-        }
-      }
-    });
-
-    // Full exam config: source of truth for the scoring scale.
-    const exam = await prisma.exam.findUnique({
-      where: { id: examId },
-      select: {
-        id: true,
-        part1Points: true,
-        part2Points: true,
-        part3Points: true,
-        part1Enabled: true,
-        part2Enabled: true,
-        part3Enabled: true,
-        totalPoints: true,
-        type: true,
-        passingScore: true,
-        formationId: true,
-        duration: true,
-      },
-    });
+    const [exam, qcmPart, allExamParts] = await Promise.all([
+      prisma.exam.findUnique({
+        where: { id: examId },
+        select: {
+          id: true,
+          part1Points: true,
+          part2Points: true,
+          part3Points: true,
+          part1Enabled: true,
+          part2Enabled: true,
+          part3Enabled: true,
+          totalPoints: true,
+          type: true,
+          passingScore: true,
+          formationId: true,
+          duration: true,
+        },
+      }),
+      prisma.examPart.findFirst({
+        where: { examId, type: 'QCM' },
+        orderBy: { order: 'asc' },
+        include: {
+          questions: {
+            orderBy: { order: 'asc' },
+            include: { options: { select: { id: true, isCorrect: true } } },
+          },
+        },
+      }),
+      prisma.examPart.findMany({
+        where: { examId },
+        orderBy: { order: 'asc' },
+        include: {
+          questions: {
+            orderBy: { order: 'asc' },
+            include: { options: { select: { id: true, isCorrect: true } } },
+          },
+        },
+      }),
+    ]);
 
     if (!exam) {
       return NextResponse.json({ error: 'Examen non trouvé' }, { status: 404 });
     }
 
-    // #119 — Contrainte serveur de durée : rejeter si le délai est dépassé.
-    // Le chrono client n'a aucune autorité ; seule la date serveur compte.
-    if (existingSession?.startedAt && exam.duration > 0) {
-      const deadlineMs =
-        existingSession.startedAt.getTime() + exam.duration * 1000;
-      const toleranceMs = 60_000; // tolérance réseau / horloge raisonnable
-      if (Date.now() > deadlineMs + toleranceMs) {
+    const adminUser = await getAdminUser(request);
+    const eligibility = await checkExamEligibility({
+      userId: user.id,
+      examId: exam.id,
+      examType: exam.type,
+      isAdmin: adminUser !== null,
+    });
+    if (!eligibility.eligible) return enrollmentForbiddenResponse(eligibility);
+
+    const typedParts = (allExamParts as unknown as ScoredPart[]).map((part) => {
+      const questions = part.questions ?? [];
+      if (questions.length > 0 || !qcmPart) return { ...part, questions };
+      return {
+        ...part,
+        points: part.points ?? qcmPart.points ?? exam.part1Points ?? 0,
+        questions: qcmPart.questions ?? [],
+      };
+    });
+    const answers = validateAnswers(rawAnswers, typedParts);
+    if (!answers) {
+      return NextResponse.json(
+        { error: 'Réponses manquantes, invalides ou hors examen' },
+        { status: 400 },
+      );
+    }
+
+    if (exam.duration > 0) {
+      const deadlineMs = existingSession.startedAt.getTime() + exam.duration * 1000;
+      if (Date.now() > deadlineMs + 60_000) {
         return NextResponse.json(
           { error: 'Temps écoulé : la durée de l\'examen est dépassée' },
           { status: 400 },
@@ -104,116 +267,57 @@ export async function POST(
       }
     }
 
-    // Calculate Part 1 score BEFORE the update (we have all needed data)
-    let scorePart1 = 0;
-    if (qcmPart) {
-      let correctAnswersCount = 0;
-
-      interface ExamPartWithQuestions {
-        questions: {
-          id: string;
-          options: { id: string; isCorrect: boolean }[];
-        }[];
-      }
-
-      const qcm = qcmPart as unknown as ExamPartWithQuestions; // Cast to access included relations
-      const totalQuestions = qcm.questions.length;
-
-      for (const q of qcm.questions) {
-        const userAnswer: unknown = answers[q.id];
-        const correctIds = q.options
-          .filter((o) => o.isCorrect)
-          .map((o) => o.id);
-
-        if (Array.isArray(userAnswer)) {
-          // MULTIPLE_CHOICE: the selected set must exactly match the correct set.
-          const userSet = new Set(
-            userAnswer.map((answer: unknown) => String(answer)),
-          );
-          if (
-            correctIds.length > 0 &&
-            correctIds.length === userSet.size &&
-            correctIds.every((correctId) => userSet.has(correctId))
-          ) {
-            correctAnswersCount++;
-          }
-        } else {
-          const correctOption = q.options.find((o) => o.isCorrect);
-          if (correctOption && userAnswer === correctOption.id) {
-            correctAnswersCount++;
-          }
-        }
-      }
-
-      scorePart1 = computePart1Score(
-        correctAnswersCount,
-        totalQuestions,
-        qcmPart.points || 20,
-      );
-    }
-
-    // ✅ Detect if exam has manual grading parts (Part 2/3+, OPEN or CASE_STUDY)
-    const allExamParts = await prisma.examPart.findMany({
-      where: { examId },
-      select: { order: true, type: true, points: true }
-    });
-    const hasManualGrading = allExamParts.some(
-      (p: { order: number; type: string }) =>
-        p.order > 1 || p.type === 'OPEN' || p.type === 'CASE_STUDY',
-    );
+    const scorePart1 = autoGradeQcm(typedParts, answers);
+    const hasManualGrading = typedParts.some((part) => part.type !== 'QCM');
     const finalStatus = hasManualGrading ? 'PENDING_REVIEW' : 'COMPLETED';
+    const snapshot = createScoringSnapshot(typedParts, exam);
+    const score = calculateCanonicalScore(
+      snapshot,
+      { part1: scorePart1, part2: null, part3: null },
+      !hasManualGrading,
+    );
+    const persistedAnswers = withScoringSnapshot(answers, snapshot);
 
-    // Canonical scale: scorePartN = raw points, totalScore = raw sum,
-    // finalScore = percentage (only meaningful once fully corrected).
-    // Max dérivé des ExamPart réels (pas des champs legacy partNPoints).
-    const totalPoints = resolveExamMaxFromParts(allExamParts, exam);
-    const roundedPart1 = round2(scorePart1);
-    const finalScore =
-      finalStatus === 'COMPLETED'
-        ? computeFinalScore(roundedPart1, totalPoints)
-        : 0;
-
-    // ✅ Atomic update: only succeeds if session is still submittable
     const result = await prisma.examSession.updateMany({
       where: {
-        examId,
-        userId: user.id,
+        id: existingSession.id,
         status: { in: ['IN_PROGRESS', 'PENDING'] },
+        submittedAt: null,
       },
       data: {
         status: finalStatus,
         submittedAt: new Date(),
-        answers: answers,
-        scorePart1: roundedPart1,
-        score: roundedPart1, // legacy alias = Part 1 raw score
-        scorePart2: null, // sentinelle « non corrigé » — noté par l'admin
-        scorePart3: null, // sentinelle « non corrigé » — noté par l'admin
-        totalScore: roundedPart1,
-        finalScore,
+        answers: persistedAnswers as unknown as Prisma.InputJsonValue,
+        scorePart1: score.scorePart1,
+        score: score.scorePart1,
+        scorePart2: null,
+        scorePart3: null,
+        totalScore: score.totalScore,
+        finalScore: score.finalScore,
       },
     });
 
-    // If count is 0, another request already completed this submission
     if (result.count === 0) {
-      return NextResponse.json(
-        { error: 'Session déjà soumise' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'Session déjà soumise' }, { status: 409 });
     }
 
-    // Enregistrer le log d'audit
+    await deleteDraft(examId, user.id);
     await createAuditLog({
       userId: user.id,
       action: 'EXAM_SUBMITTED',
       resource: 'EXAM',
       resourceId: examId,
-      newValue: { status: finalStatus, scorePart1: roundedPart1, finalScore },
-      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+      newValue: {
+        status: finalStatus,
+        scorePart1: score.scorePart1,
+        finalScore: score.finalScore,
+        scoringVersion: snapshot.version,
+      },
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    // Fetch the updated session for the response
     const updatedSession = await prisma.examSession.findFirst({
-      where: { examId, userId: user.id },
+      where: { id: existingSession.id },
       select: {
         id: true,
         status: true,
@@ -223,11 +327,9 @@ export async function POST(
       },
     });
 
-    // Attestation automatique : examen officiel, entièrement corrigé et réussi.
-    // Non bloquant — issueExamAttestation ne throw jamais.
     if (
       finalStatus === 'COMPLETED' &&
-      isPassed(finalScore, exam.passingScore) &&
+      isPassed(score.finalScore, exam.passingScore) &&
       exam.type === 'OFFICIAL' &&
       exam.formationId &&
       updatedSession?.id
@@ -239,20 +341,20 @@ export async function POST(
       }
     }
 
-    const response = {
+    return NextResponse.json({
       message: 'Examen soumis avec succès',
       submissionId: updatedSession?.id,
       scorePart1: updatedSession?.scorePart1,
       totalScore: updatedSession?.totalScore,
-      finalScore: updatedSession?.finalScore ?? finalScore,
-      maxScore: totalPoints,
+      finalScore: updatedSession?.finalScore ?? score.finalScore,
+      maxScore: snapshot.totalMax,
       status: finalStatus,
-    };
-
-    return NextResponse.json(response, { status: 201 });
-
+    }, { status: 201 });
   } catch (error: unknown) {
     console.error('[EXAM_SUBMIT_ERROR]', error);
-    return NextResponse.json({ error: 'Erreur serveur', details: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Erreur serveur', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 },
+    );
   }
 }

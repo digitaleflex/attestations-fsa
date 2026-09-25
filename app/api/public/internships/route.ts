@@ -4,8 +4,9 @@ import { emailService } from '@/lib/email';
 import { applyRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/sanitization';
 import { notifyAllAdmins } from '@/lib/notifications';
-import { buildObjectKey, getStorage, validateUpload } from '@/lib/storage';
+import { DEFAULT_READ_URL_TTL_SECONDS, buildObjectKey, getStorage, validateUpload } from '@/lib/storage';
 import { StorageConfigError } from '@/lib/storage/types';
+import { computeChecksum, registerStoredObject } from '@/lib/storage/registry';
 import { z } from 'zod';
 
 const MAX_INTERNSHIP_CV_SIZE = 3 * 1024 * 1024;
@@ -93,9 +94,11 @@ export async function POST(request: NextRequest) {
     const sanitizedName = sanitizeInput(fullName);
 
     const storage = getStorage();
-    const key = buildObjectKey('application/pdf');
+    // #260 : préfixe dédié `stages/`, clé stable persistée, URL signée
+    // courte jamais enregistrée. Le CV est orphans si l'enregistrement échoue.
+    const key = buildObjectKey('application/pdf', 'internship');
+    const checksum = computeChecksum(bytes);
     await storage.put(key, bytes, validation.mime);
-    const cvUrl = await storage.getSignedUrl(key);
 
     const internshipRequest = await prisma.internshipRequest.create({
       data: {
@@ -105,11 +108,27 @@ export async function POST(request: NextRequest) {
         university,
         level,
         position,
-        cvUrl,
+        // Aucune URL signée persistée : seule la clé stable l'est.
+        cvUrl: null,
+        cvKey: key,
         message,
         status: "PENDING"
       }
     });
+
+    await registerStoredObject({
+      key,
+      ownerUserId: null,
+      purpose: 'internship',
+      linkedEntityType: 'InternshipRequest',
+      linkedEntityId: internshipRequest.id,
+      checksum,
+      sizeBytes: bytes.length,
+      contentType: validation.mime,
+    });
+
+    // URL de lecture courte, régénérée à la demande par l'admin.
+    const cvUrl = await storage.getSignedUrl(key, DEFAULT_READ_URL_TTL_SECONDS);
 
     await emailService.sendInternshipConfirmation(sanitizedEmail, sanitizedName);
 
@@ -122,7 +141,10 @@ export async function POST(request: NextRequest) {
       metadata: { internshipRequestId: internshipRequest.id, email: sanitizedEmail },
     });
 
-    return NextResponse.json(internshipRequest, { status: 201 });
+    return NextResponse.json(
+      { ...internshipRequest, cvUrl, cvUrlExpiresIn: DEFAULT_READ_URL_TTL_SECONDS },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof StorageConfigError) {
       console.error("[INTERNSHIP_STORAGE_CONFIG_ERROR]", error.message);

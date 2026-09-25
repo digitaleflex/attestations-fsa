@@ -8,10 +8,13 @@ import { emailService } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
 import {
-  computeFinalScore,
+  calculateCanonicalScore,
+  createScoringSnapshot,
+  isCorrectableStatus,
   isPassed,
-  resolveExamMax,
+  readSubmissionScoringSnapshot,
   round2,
+  withScoringSnapshot,
 } from '@/lib/exams/scoring';
 import { issueExamAttestation } from '@/lib/attestations/issue';
 
@@ -47,13 +50,12 @@ export async function POST(
     }
 
     const { part1Score, part2Score, part3Score, observations } = parsed.data;
-    const internshipScore = round2(parsed.data.internshipScore ?? 0);
 
     // Récupérer la soumission avec l'examen
     const submission = await prisma.examSession.findUnique({
       where: { id },
       include: {
-        exam: true,
+        exam: { include: { parts: { orderBy: { order: 'asc' } } } },
         candidate: true,
       },
     });
@@ -62,17 +64,31 @@ export async function POST(
       throw new ApiErrorImpl('NOT_FOUND', 'Soumission non trouvée');
     }
 
-    const { exam } = submission;
+    if (!submission.submittedAt) {
+      throw new ApiErrorImpl(
+        'CONFLICT',
+        'Correction refusée : la session n’est pas soumise',
+      );
+    }
+    if (!isCorrectableStatus(submission.status)) {
+      throw new ApiErrorImpl(
+        'CONFLICT',
+        `Correction refusée : transition ${submission.status} → GRADED interdite`,
+      );
+    }
 
-    // Barème serveur (jamais fourni par le client)
+    const { exam } = submission;
+    const scoringSnapshot =
+      readSubmissionScoringSnapshot(submission.answers) ??
+      createScoringSnapshot(exam.parts, exam);
     const part1Enabled = exam.part1Enabled !== false;
     const part2Enabled = exam.part2Enabled !== false;
     const part3Enabled = exam.part3Enabled !== false;
 
-    const mP1 = part1Enabled ? exam.part1Points ?? 0 : 0;
-    const mP2 = part2Enabled ? exam.part2Points ?? 0 : 0;
-    const mP3 = part3Enabled ? exam.part3Points ?? 0 : 0;
-    const totalPoints = resolveExamMax(exam);
+    const mP1 = part1Enabled ? scoringSnapshot.maxPart1 : 0;
+    const mP2 = part2Enabled ? scoringSnapshot.maxPart2 : 0;
+    const mP3 = part3Enabled ? scoringSnapshot.maxPart3 : 0;
+    const totalPoints = scoringSnapshot.totalMax;
 
     // Validation des scores fournis (bornés par le barème, parts activées uniquement)
     if (part1Score !== undefined && part1Enabled && (part1Score < 0 || part1Score > mP1)) {
@@ -115,20 +131,17 @@ export async function POST(
     );
 
     // Échelle canonique : totalScore = somme brute, finalScore = pourcentage.
-    // #124 — DÉCISION PRODUIT : internshipScore (note de stage) est un composant
-    // SÉPARÉ qui alimente stageScore de l'attestation ; il n'entre PAS dans
-    // finalScore (pourcentage de l'examen). Pas de moyenne pondérée composite.
-    const totalScore = round2(scorePart1 + scorePart2 + scorePart3);
-    const finalScore = Math.min(computeFinalScore(totalScore, totalPoints), 100);
+    // #124 — internshipScore reste un composant séparé de l'attestation.
+    const canonicalScore = calculateCanonicalScore(
+      scoringSnapshot,
+      { part1: scorePart1, part2: scorePart2, part3: scorePart3 },
+      true,
+    );
+    const { totalScore, finalScore } = canonicalScore;
+    const internshipScore = round2(
+      parsed.data.internshipScore ?? submission.internshipScore ?? 0,
+    );
     const passed = isPassed(finalScore, exam.passingScore);
-
-    // Snapshot serveur du barème (client ne peut pas l'imposer).
-    const bareme = {
-      maxPart1: mP1,
-      maxPart2: mP2,
-      maxPart3: mP3,
-      totalMax: totalPoints,
-    };
 
     const currentAnswers: Record<string, unknown> =
       submission.answers &&
@@ -136,13 +149,17 @@ export async function POST(
       !Array.isArray(submission.answers)
         ? { ...(submission.answers as Record<string, unknown>) }
         : {};
-    const updatedAnswers = { ...currentAnswers, _customBareme: bareme };
+    const updatedAnswers = withScoringSnapshot(currentAnswers, scoringSnapshot);
 
-    const updatedSubmission = await prisma.examSession.update({
-      where: { id },
+    const updateResult = await prisma.examSession.updateMany({
+      where: {
+        id,
+        status: submission.status,
+        submittedAt: { not: null },
+      },
       data: {
         status: 'GRADED',
-        score: scorePart1, // legacy alias = Part 1 raw score
+        score: scorePart1,
         scorePart1,
         scorePart2,
         scorePart3,
@@ -153,11 +170,21 @@ export async function POST(
         gradedBy: adminUser.id,
         answers: updatedAnswers as Prisma.InputJsonValue,
       },
-      include: {
-        candidate: true,
-        exam: true,
-      },
     });
+    if (updateResult.count === 0) {
+      throw new ApiErrorImpl(
+        'CONFLICT',
+        'Correction refusée : la session a été modifiée simultanément',
+      );
+    }
+    const updatedSubmission = {
+      ...submission,
+      status: 'GRADED' as const,
+      ...canonicalScore,
+      internshipScore,
+      gradedAt: new Date(),
+      gradedBy: adminUser.id,
+    };
 
     // Journal d'audit (avant / après)
     const isNewGrading = submission.status !== 'GRADED';

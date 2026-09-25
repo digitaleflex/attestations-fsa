@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
 import { sealCertificate } from "@/lib/crypto/seal";
+import { attestationSealPayload } from "@/lib/attestations/proof";
 
 const SEAL_SECRET = "verifier-test-secret-0123456789abcdef";
 
@@ -211,6 +212,35 @@ describe("GET /api/verifier", () => {
     const body = await res.json();
     expect(body.attestation.proof.sealed).toBe(true);
     expect(body.attestation.proof.valid).toBe(false);
+  });
+
+  it("expose pdfKey indirectement et les métadonnées du PDF canonique", async () => {
+    const row = {
+      ...sealedAttestation(),
+      sealVersion: 2,
+      pdfKey: "attestations/FSA-2026-M01-00001-abcde/v1.pdf",
+      pdfHash: "b".repeat(64),
+      pdfVersion: 1,
+      pdfGeneratedAt: new Date("2026-01-03T00:00:00Z"),
+    };
+    const payload = attestationSealPayload(row);
+    const seal = sealCertificate(payload, SEAL_SECRET)!;
+    db.attestationFindFirst.mockResolvedValue({
+      ...row,
+      ...seal,
+      issuedAt: new Date("2026-01-02T00:00:00Z"),
+    } as never);
+
+    const res = await GET(req(row.code));
+    const body = await res.json();
+    expect(body.attestation.proof.valid).toBe(true);
+    expect(body.attestation.proof.sealVersion).toBe(2);
+    expect(body.attestation.proof.pdf).toMatchObject({
+      available: true,
+      version: 1,
+      hash: "b".repeat(64),
+    });
+    expect(JSON.stringify(body)).not.toContain("X-Amz-Signature");
   });
 
   it("respecte le rate limiting (renvoie la réponse 429)", async () => {

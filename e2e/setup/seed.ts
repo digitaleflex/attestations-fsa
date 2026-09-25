@@ -19,6 +19,8 @@ export const E2E_UI_EXAM_NAME =
   "[E2E] Examen parcours navigateur — verrouillé par un bug UI (#139)";
 export const E2E_LOCKED_EXAM_NAME =
   "[E2E] Examen verrouillé — programmé dans le futur (#139)";
+export const E2E_UNENROLLED_EXAM_NAME =
+  "[E2E] Examen officiel sans enrollment (#256)";
 
 interface SeedQuestion {
   text: string;
@@ -138,7 +140,7 @@ export async function seedE2eData(prisma: PrismaClient): Promise<E2eSeedSummary>
   // Examen jumeau réservé au parcours navigateur : il doit rester SANS session
   // car le test UI qui le consomme reproduit un bug bloquant (voir
   // `e2e/ui-examen.e2e.ts`) et peut laisser une session inachevée.
-  await prisma.exam.create({
+  const uiExam = await prisma.exam.create({
     data: buildQcmExamData({
       name: E2E_UI_EXAM_NAME,
       description:
@@ -148,9 +150,19 @@ export async function seedE2eData(prisma: PrismaClient): Promise<E2eSeedSummary>
     select: { id: true },
   });
 
+  // OFFICIAL disponible mais volontairement sans ExamEnrollment (#256).
+  await prisma.exam.create({
+    data: buildQcmExamData({
+      name: E2E_UNENROLLED_EXAM_NAME,
+      description: "Examen E2E de non-éligibilité OFFICIAL.",
+      formationId: formation.id,
+    }),
+    select: { id: true },
+  });
+
   // Examen programmé DANS LE FUTUR : doit rester verrouillé
   // (commit ca09715 — `isExamAvailable` exige scheduledAt atteint).
-  await prisma.exam.create({
+  const lockedExam = await prisma.exam.create({
     data: {
       title: E2E_LOCKED_EXAM_NAME,
       name: E2E_LOCKED_EXAM_NAME,
@@ -173,6 +185,14 @@ export async function seedE2eData(prisma: PrismaClient): Promise<E2eSeedSummary>
       formationId: formation.id,
     },
     select: { id: true },
+  });
+
+  await prisma.examEnrollment.createMany({
+    data: [exam.id, uiExam.id, lockedExam.id].map((examId) => ({
+      userId: candidate.id,
+      examId,
+    })),
+    skipDuplicates: true,
   });
 
   return {
@@ -320,7 +340,16 @@ async function resetPreviousRun(
   formationId: string,
 ): Promise<void> {
   const previousExams = await prisma.exam.findMany({
-    where: { name: { in: [E2E_EXAM_NAME, E2E_UI_EXAM_NAME, E2E_LOCKED_EXAM_NAME] } },
+    where: {
+      name: {
+        in: [
+          E2E_EXAM_NAME,
+          E2E_UI_EXAM_NAME,
+          E2E_LOCKED_EXAM_NAME,
+          E2E_UNENROLLED_EXAM_NAME,
+        ],
+      },
+    },
     select: { id: true },
   });
   const previousExamIds = previousExams.map((exam) => exam.id);

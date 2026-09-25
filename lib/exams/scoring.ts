@@ -20,6 +20,33 @@ export function isCorrected(status: string | null | undefined): boolean {
   return status === "COMPLETED" || status === "GRADED";
 }
 
+/** Explicit candidate-session states that may transition to submitted. */
+export function isSubmittableStatus(
+  status: string | null | undefined,
+): boolean {
+  return status === "IN_PROGRESS" || status === "PENDING";
+}
+
+/** Explicit submitted-session states that an administrator may grade. */
+export function isCorrectableStatus(
+  status: string | null | undefined,
+): boolean {
+  return status === "PENDING_REVIEW" || status === "COMPLETED" || status === "GRADED";
+}
+
+/** Versioned scale frozen with a submission. */
+export interface ScoringSnapshot {
+  version: 1;
+  maxPart1: number;
+  maxPart2: number;
+  maxPart3: number;
+  totalMax: number;
+}
+
+export interface ScoringPartConfig extends ExamPartMaxConfig {
+  type?: string | null;
+}
+
 export interface ExamPointConfig {
   totalPoints?: number | null;
   part1Points?: number | null;
@@ -65,6 +92,126 @@ export function resolveExamMaxFromParts(
     if (sum > 0) return sum;
   }
   return exam ? resolveExamMax(exam) : 100;
+}
+
+function positiveMax(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : 0;
+}
+
+/**
+ * Build the immutable scale used by both automatic submission and manual
+ * correction. Real ExamPart rows win; legacy summary fields are the backwards
+ * compatible fallback for historical exams that have no parts.
+ */
+export function createScoringSnapshot(
+  parts: ScoringPartConfig[] | null | undefined,
+  exam?: ExamPointConfig,
+): ScoringSnapshot {
+  const partMax = (type: string, fallback: number | null | undefined) => {
+    if (parts && parts.length > 0) {
+      return round2(
+        parts
+          .filter((part) => part.type === type)
+          .reduce((sum, part) => sum + positiveMax(part.points), 0),
+      );
+    }
+    return positiveMax(fallback);
+  };
+
+  const maxPart1 = partMax("QCM", exam?.part1Points);
+  const maxPart2 = partMax("OPEN", exam?.part2Points);
+  const maxPart3 = partMax("CASE_STUDY", exam?.part3Points);
+  const derivedTotal = maxPart1 + maxPart2 + maxPart3;
+  const totalMax = derivedTotal > 0
+    ? round2(derivedTotal)
+    : exam
+      ? resolveExamMax(exam)
+      : 100;
+
+  return {
+    version: 1,
+    maxPart1,
+    maxPart2,
+    maxPart3,
+    totalMax: round2(totalMax),
+  };
+}
+
+/** Read only a complete, structurally valid version-1 snapshot. */
+export function readScoringSnapshot(value: unknown): ScoringSnapshot | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+  const maxima = [raw.maxPart1, raw.maxPart2, raw.maxPart3, raw.totalMax];
+  if (
+    raw.version !== 1 ||
+    maxima.some((max) => typeof max !== "number" || !Number.isFinite(max) || max < 0)
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    maxPart1: raw.maxPart1 as number,
+    maxPart2: raw.maxPart2 as number,
+    maxPart3: raw.maxPart3 as number,
+    totalMax: raw.totalMax as number,
+  };
+}
+
+export function readSubmissionScoringSnapshot(
+  answers: unknown,
+): ScoringSnapshot | null {
+  if (answers === null || typeof answers !== "object" || Array.isArray(answers)) {
+    return null;
+  }
+  return readScoringSnapshot(
+    (answers as Record<string, unknown>)._customBareme,
+  );
+}
+
+export function withScoringSnapshot(
+  answers: Record<string, unknown>,
+  snapshot: ScoringSnapshot,
+): Record<string, unknown> {
+  return { ...answers, _customBareme: snapshot };
+}
+
+export interface CanonicalScoreResult {
+  scorePart1: number;
+  scorePart2: number | null;
+  scorePart3: number | null;
+  totalScore: number;
+  finalScore: number;
+}
+
+/** Single calculation path for submission and correction. */
+export function calculateCanonicalScore(
+  snapshot: ScoringSnapshot,
+  scores: {
+    part1: number;
+    part2?: number | null;
+    part3?: number | null;
+  },
+  fullyCorrected: boolean,
+): CanonicalScoreResult {
+  const scorePart1 = round2(scores.part1);
+  const scorePart2 = scores.part2 == null ? null : round2(scores.part2);
+  const scorePart3 = scores.part3 == null ? null : round2(scores.part3);
+  const totalScore = round2(
+    scorePart1 + (scorePart2 ?? 0) + (scorePart3 ?? 0),
+  );
+  return {
+    scorePart1,
+    scorePart2,
+    scorePart3,
+    totalScore,
+    finalScore: fullyCorrected
+      ? Math.min(computeFinalScore(totalScore, snapshot.totalMax), 100)
+      : 0,
+  };
 }
 
 /** Raw points for an auto-graded QCM part. */

@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
+import { DEFAULT_READ_URL_TTL_SECONDS, getStorage } from '@/lib/storage';
 
 export async function GET(request: NextRequest) {
   const adminUser = await getAdminUser(request);
@@ -13,7 +14,19 @@ export async function GET(request: NextRequest) {
     const requests = await prisma.internshipRequest.findMany({
       orderBy: { createdAt: 'desc' }
     });
-    return NextResponse.json(requests);
+    // #260 : l'URL de lecture du CV est régénérée à la demande (courte durée)
+    // et n'est jamais persistée. Les demandes historiques sans `cvKey`
+    // conservent leur `cvUrl` inchangé.
+    const withCvUrl = await Promise.all(requests.map(async (request) => {
+      if (!request.cvKey) return request;
+      try {
+        const url = await getStorage().getSignedUrl(request.cvKey, DEFAULT_READ_URL_TTL_SECONDS);
+        return { ...request, cvUrl: url };
+      } catch {
+        return { ...request, cvUrl: null };
+      }
+    }));
+    return NextResponse.json(withCvUrl);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Erreur" }, { status: 500 });
