@@ -11,7 +11,6 @@ import {
   Calendar, 
   MessageSquare, 
   User, 
-  Building,
   CheckCircle2,
   Sparkles
 } from "lucide-react";
@@ -157,7 +156,7 @@ function ContactContent() {
                         </div>
                         <div>
                             <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Téléphone</p>
-                            <p className="text-base md:text-lg font-bold text-slate-800 tracking-tight">+229 01 91 07 60 93</p>
+                            <a href="tel:+2290191076093" className="text-base md:text-lg font-bold text-slate-800 tracking-tight hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 rounded-sm">+229 01 91 07 60 93</a>
                         </div>
                     </div>
 
@@ -166,8 +165,8 @@ function ContactContent() {
                              <Mail className="w-4 h-4 md:w-5 md:h-5" />
                         </div>
                         <div className="min-w-0">
-                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Email Officiel</p>
-                            <p className="text-base md:text-lg font-bold text-slate-800 tracking-tight truncate">contact@fermestandre.com</p>
+                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Email officiel</p>
+                            <a href="mailto:contact@fermestandre.com" className="block truncate text-base md:text-lg font-bold text-slate-800 tracking-tight hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-4 rounded-sm">contact@fermestandre.com</a>
                         </div>
                     </div>
 
@@ -177,7 +176,7 @@ function ContactContent() {
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Localisation</p>
-                            <p className="text-lg font-bold text-slate-800 tracking-tight">Abomey-Calavi, Bénin</p>
+                            <a href="https://www.google.com/maps/search/?api=1&query=Abomey-Calavi%2C%20B%C3%A9nin" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-lg font-bold text-slate-800 tracking-tight hover:text-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-4 rounded-sm">Abomey-Calavi, Bénin <span aria-hidden="true" className="text-xs">↗</span></a>
                         </div>
                     </div>
                 </div>
@@ -187,13 +186,13 @@ function ContactContent() {
                  <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
                     <Calendar className="w-20 h-20 md:w-24 md:h-24" />
                  </div>
-                 <h4 className="text-xl md:text-2xl font-black mb-1 md:mb-2">Visite Gratuite</h4>
-                 <p className="text-slate-400 text-xs md:text-sm font-medium mb-6 max-w-[200px] md:max-w-none">Découvrez nos installations avec nos ingénieurs.</p>
-                 <Link href="/">
+                 <h4 className="text-xl md:text-2xl font-black mb-1 md:mb-2">Besoin d’un rendez-vous ?</h4>
+                 <p className="text-slate-400 text-xs md:text-sm font-medium mb-6 max-w-[240px] md:max-w-none">Décrivez votre besoin dans le formulaire. Notre équipe vous répondra sous 24 heures.</p>
+                 <a href="#contact-form">
                     <Button variant="outline" className="h-10 md:h-12 rounded-xl border-white/20 hover:bg-white hover:text-slate-900 transition-all font-bold text-xs">
-                        En savoir plus
+                        Écrire ma demande
                     </Button>
-                 </Link>
+                 </a>
             </div>
           </motion.div>
 
@@ -229,10 +228,11 @@ function ContactContent() {
                      </Button>
                    </motion.div>
                 ) : (
-                  <form
-                    onSubmit={handleSubmit}
+                   <form
+                     id="contact-form"
+                     onSubmit={handleSubmit}
                     aria-busy={loading}
-                    className="space-y-6 md:space-y-8"
+                     className="space-y-6 md:space-y-8 scroll-mt-28"
                   >
                     {submitError && (
                       <div

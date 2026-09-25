@@ -3,13 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { 
-  Sprout, 
   Search, 
   ArrowRight, 
   CheckCircle, 
   Sparkles,
   Target,
-  X,
   Activity
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -30,24 +28,7 @@ interface FormationsClientProps {
   initialFormations: Formation[];
 }
 
-// Helper pour associer le format de formation de manière réaliste
-const getFormationFormat = (name: string) => {
-  const nameLower = name.toLowerCase();
-  
-  let format = "90% Pratique";
-  
-  if (nameLower.includes("court") || nameLower.includes("accélér") || nameLower.includes("intens")) {
-    format = "Pratique Intensive";
-  } else if (nameLower.includes("week-end") || nameLower.includes("samedi")) {
-    format = "Week-ends uniquement";
-  } else if (nameLower.includes("spécial") || nameLower.includes("expert")) {
-    format = "Immersion Professionnelle";
-  }
-  
-  return format;
-};
-
-// Helper pour générer des thèmes de couleurs selon la spécialité (neuromarketing visuel)
+// Adapter l'accent visuel à la spécialité sans modifier les informations du catalogue.
 const getCategoryStyle = (category: string) => {
   const cat = category.toLowerCase();
   if (cat.includes("pisciculture") || cat.includes("aqua")) {
@@ -134,16 +115,16 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                <span className="text-[10px] font-black uppercase tracking-[0.25em]">Excellence FSA</span>
             </div>
             
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 leading-[0.95] tracking-tight max-w-4xl">
-              Devenez un expert de <br />
+            <h1 className="max-w-4xl text-4xl font-black leading-[0.98] tracking-tight text-slate-900 sm:text-5xl md:text-6xl lg:text-7xl">
+              Choisissez une formation pour <br className="hidden sm:block" />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand via-brand-dark to-brand-dark">
-                l'Or Vert & Bleu.
+                développer vos compétences.
               </span>
             </h1>
 
-            <p className="text-slate-600 text-sm md:text-base max-w-xl font-medium leading-relaxed px-4">
-              Explorez nos programmes d'élite conçus pour transformer votre vision 
-              en entreprise agro-piscicole prospère et durable.
+            <p className="max-w-2xl px-4 text-sm font-medium leading-relaxed text-slate-600 md:text-base">
+              Comparez les domaines et les compétences annoncés, puis envoyez une
+              demande de préinscription à l’équipe FSA.
             </p>
 
             {/* Recherche et filtres */}
@@ -204,8 +185,16 @@ export default function FormationsClient({ initialFormations }: FormationsClient
       </section>
 
       {/* --- FORMATIONS GRID --- */}
-      <section id="formations-results" className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 mt-8 pb-20" aria-labelledby="formations-results-title">
-        <h2 id="formations-results-title" className="sr-only">Formations disponibles</h2>
+      <section id="formations-results" className="relative z-10 max-w-7xl mx-auto px-4 mt-8 pb-20 md:px-6" aria-labelledby="formations-results-title">
+        <div className="mx-auto mb-8 max-w-2xl rounded-2xl border border-brand/15 bg-brand/5 px-5 py-4 text-center">
+          <h2 id="formations-results-title" className="text-base font-black text-brand-ink">
+            La préinscription exprime votre intérêt
+          </h2>
+          <p className="mt-1.5 text-xs font-medium leading-relaxed text-slate-600 sm:text-sm">
+            L’envoi du formulaire transmet votre demande. Il ne confirme pas à lui
+            seul l’inscription ni les modalités de la formation.
+          </p>
+        </div>
         <p id="formation-search-results" role="status" aria-live="polite" className="mb-6 text-center text-sm font-semibold text-slate-700">
           {filteredFormations.length} {filteredFormations.length > 1 ? "formations trouvées" : "formation trouvée"}
           {activeCategory !== "Toutes" ? ` dans la catégorie ${activeCategory}` : ""}
@@ -218,7 +207,6 @@ export default function FormationsClient({ initialFormations }: FormationsClient
           >
             {filteredFormations.map((f, idx) => {
               const style = getCategoryStyle(f.category);
-              const format = getFormationFormat(f.name);
               
               return (
                 <motion.div
@@ -251,10 +239,11 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                       {f.description}
                     </p>
 
-                    {/* Badge Format d'apprentissage */}
-                    <div className="flex items-center gap-2 mb-8 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50 w-fit relative z-10">
-                      <Activity className="w-4 h-4 text-brand animate-pulse" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{format}</span>
+                    <div className="relative z-10 mb-6 flex w-fit items-center gap-2 rounded-xl border border-slate-100/50 bg-slate-50/50 p-3">
+                      <Activity className="h-4 w-4 text-brand" aria-hidden="true" />
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Compétences annoncées
+                      </span>
                     </div>
 
                     {/* Compétences clés */}
@@ -271,10 +260,10 @@ export default function FormationsClient({ initialFormations }: FormationsClient
 
                     {/* Bouton d'action */}
                     <div className="mt-auto relative z-10">
-                      <Button asChild className={`w-full h-14 rounded-2xl bg-slate-900 text-white font-black hover:text-white transition-all duration-500 group/btn active:scale-[0.98] text-xs uppercase tracking-widest shadow-lg shadow-slate-100 focus-visible:ring-offset-2 ${style.btnHover}`}>
+                      <Button asChild className={`min-h-14 w-full gap-2 rounded-2xl bg-slate-900 py-3 font-black text-white shadow-lg shadow-slate-100 transition-all duration-500 hover:text-white group/btn active:scale-[0.98] focus-visible:ring-offset-2 ${style.btnHover}`}>
                         <Link href={`/formations/inscription?formationId=${f.id}`}>
-                          S'inscrire à {f.name}
-                          <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1.5" aria-hidden="true" />
+                          <span className="text-left leading-snug">Préinscription — {f.name}</span>
+                          <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover/btn:translate-x-1.5" aria-hidden="true" />
                         </Link>
                       </Button>
                     </div>
