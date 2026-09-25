@@ -55,19 +55,36 @@ test("parcours interface : démarrer l'examen, répondre au QCM, soumettre", asy
   await expect(
     page.getByRole("heading", { name: "Partie 1 - QCM" }),
   ).toBeVisible();
+  await expect(page.getByRole("timer")).toHaveAttribute(
+    "aria-label",
+    /^Temps restant : \d+ minute/,
+  );
 
   for (let index = 0; index < exam.questions.length; index += 1) {
     const question = exam.questions[index];
     await expect(page.getByText(question.text)).toBeVisible();
-    await page.locator(`[id="${question.correctOptionId}"]`).click();
+    await page
+      .locator(`[id="question-${question.id}-option-${question.correctOptionId}"]`)
+      .click();
 
     if (index < exam.questions.length - 1) {
       await page.getByRole("button", { name: "Suivant" }).click();
     }
   }
 
-  // 3) La soumission doit aboutir et mener aux résultats.
+  // 3) La soumission exige une confirmation explicite après l'affichage
+  // du résumé des réponses.
   await page.getByRole("button", { name: "Soumettre" }).click();
+  const submitDialog = page.getByRole("alertdialog");
+  await expect(
+    submitDialog.getByRole("heading", { name: "Résumé de votre examen" }),
+  ).toBeVisible();
+  await expect(submitDialog).toContainText(`${exam.questions.length} / ${exam.questions.length}`);
+  await submitDialog
+    .getByRole("button", { name: "Confirmer la soumission" })
+    .click();
+
+  // 4) La soumission confirmée doit mener aux résultats.
   await page.waitForURL(/\/results$/, { timeout: 30_000 });
 
   // La page /results liste TOUS les résultats du candidat : l'examen UI mais

@@ -43,10 +43,10 @@ export function ExamPart1({ questions, answers, totalPoints, onAnswerChange, onN
             </Badge>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-lg">
-            <p className="text-base font-medium text-slate-800 mb-4">
+          <fieldset className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <legend className="text-base font-medium text-slate-800 mb-4">
               {questions[currentQuestion]?.text}
-            </p>
+            </legend>
 
             <RadioGroup
               value={answers[questions[currentQuestion]?.id] || ""}
@@ -59,15 +59,21 @@ export function ExamPart1({ questions, answers, totalPoints, onAnswerChange, onN
                   className="flex items-center space-x-3 p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
                   onClick={() => onAnswerChange(questions[currentQuestion]?.id, option.id)}
                 >
-                  <RadioGroupItem value={option.id} id={option.id} />
-                  <Label htmlFor={option.id} className="flex-1 cursor-pointer text-sm text-slate-700">
+                  <RadioGroupItem
+                    value={option.id}
+                    id={`question-${questions[currentQuestion]?.id}-option-${option.id}`}
+                  />
+                  <Label
+                    htmlFor={`question-${questions[currentQuestion]?.id}-option-${option.id}`}
+                    className="flex-1 cursor-pointer text-sm text-slate-700"
+                  >
                     <span className="font-semibold mr-2">{String.fromCharCode(65 + idx)}.</span>
                     {option.text}
                   </Label>
                 </div>
               ))}
             </RadioGroup>
-          </div>
+          </fieldset>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t">
             <Button
