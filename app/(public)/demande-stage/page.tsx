@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,15 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
+type FieldErrors = Partial<Record<"fullName" | "email" | "phone" | "position" | "cvFile" | "message" | "form", string>>;
+
 export default function InternshipApplicationPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [step, setStep] = useState(1);
   const [dragActive, setDragActive] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -40,25 +44,46 @@ export default function InternshipApplicationPage() {
     message: ""
   });
 
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      errorSummaryRef.current?.focus();
+    }
+  }, [errors]);
+
+  const clearError = (field: keyof FieldErrors) => {
+    setErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const describedBy = (field: keyof FieldErrors, hint?: string) =>
+    [hint, errors[field] ? `${field}-error` : undefined].filter(Boolean).join(" ") || undefined;
+
   const validateStep1 = () => {
-    if (!formData.fullName.trim()) {
-      toast.error("Veuillez entrer votre nom complet");
-      return false;
-    }
+    const nextErrors: FieldErrors = {};
+    if (!formData.fullName.trim()) nextErrors.fullName = "Veuillez entrer votre nom complet.";
     if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
-      toast.error("Veuillez entrer une adresse e-mail valide");
-      return false;
+      nextErrors.email = "Veuillez entrer une adresse e-mail valide.";
     }
-    if (!formData.phone.trim()) {
-      toast.error("Veuillez entrer votre numéro de téléphone");
+    if (!formData.phone.trim()) nextErrors.phone = "Veuillez entrer votre numéro de téléphone.";
+    setErrors(nextErrors);
+    const firstError = Object.values(nextErrors)[0];
+    if (firstError) {
+      toast.error(firstError);
       return false;
     }
     return true;
   };
 
   const validateStep2 = () => {
-    if (!formData.position) {
-      toast.error("Veuillez sélectionner le poste souhaité");
+    const nextErrors: FieldErrors = {};
+    if (!formData.position) nextErrors.position = "Veuillez sélectionner le poste souhaité.";
+    setErrors(nextErrors);
+    if (nextErrors.position) {
+      toast.error(nextErrors.position);
       return false;
     }
     return true;
@@ -74,6 +99,7 @@ export default function InternshipApplicationPage() {
 
   const handleBack = () => {
     if (step > 1) {
+      setErrors({});
       setStep(step - 1);
     }
   };
@@ -96,58 +122,53 @@ export default function InternshipApplicationPage() {
       const file = e.dataTransfer.files[0];
       if (file.type === "application/pdf") {
         if (file.size > 3 * 1024 * 1024) {
-          toast.error("Le fichier est trop lourd (max 3 Mo)");
+          const message = "Le fichier est trop lourd (max 3 Mo).";
+          setErrors({ cvFile: message });
+          toast.error(message);
           return;
         }
         setFormData({ ...formData, cvFile: file });
+        clearError("cvFile");
         toast.success(`CV importé : ${file.name}`);
       } else {
-        toast.error("Seuls les fichiers PDF sont acceptés");
+        const message = "Seuls les fichiers PDF sont acceptés.";
+        setErrors({ cvFile: message });
+        toast.error(message);
       }
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.cvFile) {
-      toast.error("Veuillez déposer votre CV");
+    const nextErrors: FieldErrors = {};
+    if (!formData.cvFile) nextErrors.cvFile = "Veuillez déposer votre CV.";
+    if (!formData.message.trim()) nextErrors.message = "Veuillez écrire vos motivations.";
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      toast.error(Object.values(nextErrors)[0]);
       return;
     }
-    if (!formData.message.trim()) {
-      toast.error("Veuillez écrire vos motivations");
-      return;
-    }
+    setErrors({});
     setLoading(true);
 
     try {
-      let cvUrl = "";
-
-      // Upload CV file
-      if (formData.cvFile) {
-        const uploadForm = new FormData();
-        uploadForm.append("file", formData.cvFile);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadForm,
-        });
-        if (!uploadRes.ok) throw new Error("Erreur upload CV");
-        const uploadData = await uploadRes.json();
-        cvUrl = uploadData.url;
-      }
+      // Le CV et les données sont envoyés dans la même requête publique.
+      // L'API les valide avant stockage : aucun endpoint d'upload privé n'est
+      // exposé au visiteur anonyme.
+      const applicationForm = new FormData();
+      applicationForm.append("fullName", formData.fullName);
+      applicationForm.append("email", formData.email);
+      applicationForm.append("phone", formData.phone);
+      applicationForm.append("position", formData.position);
+      applicationForm.append("university", formData.university);
+      applicationForm.append("level", formData.level);
+      applicationForm.append("message", formData.message);
+      if (!formData.cvFile) return;
+      applicationForm.append("file", formData.cvFile);
 
       const res = await fetch("/api/public/internships", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-          position: formData.position,
-          university: formData.university,
-          level: formData.level,
-          cvUrl,
-          message: formData.message,
-        })
+        method: "POST",
+        body: applicationForm,
       });
 
       if (!res.ok) throw new Error("Erreur");
@@ -155,7 +176,9 @@ export default function InternshipApplicationPage() {
       toast.success("Votre demande a été envoyée !");
       setSubmitted(true);
     } catch {
-      toast.error("Échec lors de l'envoi. Veuillez réessayer.");
+      const message = "Échec lors de l’envoi. Veuillez réessayer.";
+      setErrors({ form: message });
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -231,7 +254,26 @@ export default function InternshipApplicationPage() {
              <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= 3 ? 'w-8 bg-brand' : 'w-4 bg-slate-100'}`} />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8 mt-6">
+          <form onSubmit={handleSubmit} className="space-y-8 mt-6" aria-busy={loading} noValidate>
+            {Object.keys(errors).length > 0 && (
+              <div
+                ref={errorSummaryRef}
+                tabIndex={-1}
+                role="alert"
+                aria-labelledby="application-error-summary"
+                className="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-rose-900 focus-visible:outline-none focus-visible:ring-2 focus:ring-rose-600 focus-visible:ring-offset-2"
+              >
+                <h2 id="application-error-summary" className="font-bold">
+                  Veuillez corriger {Object.keys(errors).length > 1 ? "les erreurs suivantes" : "l’erreur suivante"} :
+                </h2>
+                <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
+                  {Object.entries(errors).map(([field, message]) => (
+                    <li key={field}>{message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <AnimatePresence mode="wait">
               
               {/* ÉTAPE 1 : IDENTITÉ & CONTACT */}
@@ -251,51 +293,60 @@ export default function InternshipApplicationPage() {
 
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <Label htmlFor="fullName" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Nom complet</Label>
+                      <Label htmlFor="fullName" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Nom complet</Label>
                       <div className="relative">
                         <Input
                           id="fullName"
                           placeholder="Sènou Dossou"
                           value={formData.fullName}
-                          onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                          onChange={(e) => { setFormData({...formData, fullName: e.target.value}); clearError("fullName"); }}
                           required
-                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
+                          aria-invalid={Boolean(errors.fullName)}
+                          aria-describedby={describedBy("fullName")}
+                          className={`h-14 px-6 bg-slate-50 rounded-2xl text-base font-medium shadow-inner focus:bg-white focus-visible:outline-none focus-visible:ring-2 focus:ring-brand focus-visible:ring-offset-2 ${errors.fullName ? "border-2 border-rose-500" : "border-2 border-transparent"}`}
                         />
-                        <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><FileText className="w-5 h-5" /></div>
-                      </div>
-                    </div>
+                         <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-500"><FileText className="w-5 h-5" /></div>
+                       </div>
+                       {errors.fullName && <p id="fullName-error" role="alert" className="text-sm font-semibold text-rose-700">{errors.fullName}</p>}
+                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-3">
-                        <Label htmlFor="email" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Email</Label>
+                        <Label htmlFor="email" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Email</Label>
                         <div className="relative">
                           <Input
                             id="email"
                             type="email"
                             placeholder="senou.dossou@gmail.com"
                             value={formData.email}
-                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            onChange={(e) => { setFormData({...formData, email: e.target.value}); clearError("email"); }}
                             required
-                            className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
+                            aria-invalid={Boolean(errors.email)}
+                            aria-describedby={describedBy("email")}
+                            className={`h-14 px-6 bg-slate-50 rounded-2xl text-base font-medium shadow-inner focus:bg-white focus-visible:outline-none focus-visible:ring-2 focus:ring-brand focus-visible:ring-offset-2 ${errors.email ? "border-2 border-rose-500" : "border-2 border-transparent"}`}
                           />
-                          <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><Mail className="w-5 h-5" /></div>
-                        </div>
-                      </div>
+                           <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-500"><Mail className="w-5 h-5" /></div>
+                         </div>
+                         {errors.email && <p id="email-error" role="alert" className="text-sm font-semibold text-rose-700">{errors.email}</p>}
+                       </div>
 
                       <div className="space-y-3">
-                        <Label htmlFor="phone" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Téléphone</Label>
+                        <Label htmlFor="phone" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Téléphone</Label>
                         <div className="relative">
                           <Input
                             id="phone"
                             placeholder="+229 ..."
                             value={formData.phone}
-                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                            onChange={(e) => { setFormData({...formData, phone: e.target.value}); clearError("phone"); }}
                             required
-                            className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
+                            aria-invalid={Boolean(errors.phone)}
+                            aria-describedby={describedBy("phone")}
+                            className={`h-14 px-6 bg-slate-50 rounded-2xl text-base font-medium shadow-inner focus:bg-white focus-visible:outline-none focus-visible:ring-2 focus:ring-brand focus-visible:ring-offset-2 ${errors.phone ? "border-2 border-rose-500" : "border-2 border-transparent"}`}
                           />
-                          <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-300"><Phone className="w-5 h-5" /></div>
-                        </div>
-                      </div>
+                           <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-500"><Phone className="w-5 h-5" /></div>
+                         </div>
+                         {errors.phone && <p id="phone-error" role="alert" className="text-sm font-semibold text-rose-700">{errors.phone}</p>}
+                       </div>
                     </div>
                   </div>
 
@@ -329,14 +380,16 @@ export default function InternshipApplicationPage() {
 
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <Label htmlFor="position" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Poste souhaité</Label>
+                      <Label htmlFor="position" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Poste souhaité</Label>
                       <div className="relative">
                         <select
                           id="position"
                           value={formData.position}
-                          onChange={(e) => setFormData({...formData, position: e.target.value})}
+                          onChange={(e) => { setFormData({...formData, position: e.target.value}); clearError("position"); }}
                           required
-                          className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner outline-none appearance-none"
+                          aria-invalid={Boolean(errors.position)}
+                          aria-describedby={describedBy("position")}
+                          className={`w-full h-14 px-6 bg-slate-50 rounded-2xl text-base font-medium shadow-inner focus:bg-white focus-visible:outline-none focus-visible:ring-2 focus:ring-brand focus-visible:ring-offset-2 appearance-none ${errors.position ? "border-2 border-rose-500" : "border-2 border-transparent"}`}
                         >
                           <option value="">Sélectionnez le domaine...</option>
                           <option value="Pisciculture">Pisciculture / Aquaculture</option>
@@ -344,29 +397,30 @@ export default function InternshipApplicationPage() {
                           <option value="Elevage">Élevage / Aviculture</option>
                           <option value="Autre">Autre (Admin, Gestion, Tech)</option>
                         </select>
-                        <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-400 pointer-events-none"><Briefcase className="w-5 h-5" /></div>
-                      </div>
-                    </div>
+                         <div className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-500 pointer-events-none"><Briefcase className="w-5 h-5" /></div>
+                       </div>
+                       {errors.position && <p id="position-error" role="alert" className="text-sm font-semibold text-rose-700">{errors.position}</p>}
+                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-3">
-                        <Label htmlFor="university" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Université / Établissement</Label>
+                        <Label htmlFor="university" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Université / Établissement</Label>
                         <Input
                           id="university"
                           placeholder="Ex: UAC"
                           value={formData.university}
                           onChange={(e) => setFormData({...formData, university: e.target.value})}
-                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
+                          className="h-14 px-6 bg-slate-50 border-2 border-transparent rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus:ring-brand focus-visible:ring-offset-2 text-base font-medium shadow-inner"
                         />
                       </div>
                       <div className="space-y-3">
-                        <Label htmlFor="level" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Niveau d'études</Label>
+                        <Label htmlFor="level" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Niveau d'études</Label>
                         <Input
                           id="level"
                           placeholder="Ex: Licence 3"
                           value={formData.level}
                           onChange={(e) => setFormData({...formData, level: e.target.value})}
-                          className="h-14 px-6 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner"
+                          className="h-14 px-6 bg-slate-50 border-2 border-transparent rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus:ring-brand focus-visible:ring-offset-2 text-base font-medium shadow-inner"
                         />
                       </div>
                     </div>
@@ -411,15 +465,15 @@ export default function InternshipApplicationPage() {
                   <div className="space-y-6">
                     {/* Zone de Drag & Drop pour le CV */}
                     <div className="space-y-3">
-                      <Label className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Curriculum Vitae (PDF)</Label>
+                      <Label htmlFor="cvFile" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Curriculum Vitae (PDF)</Label>
                       
                       <div 
                         onDragEnter={handleDrag}
                         onDragOver={handleDrag}
                         onDragLeave={handleDrag}
                         onDrop={handleDrop}
-                        className={`w-full border-2 border-dashed rounded-[2rem] p-8 text-center flex flex-col items-center justify-center gap-4 transition-all relative ${
-                          dragActive ? "border-brand bg-brand/10" : "border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300"
+                        className={`w-full border-2 border-dashed rounded-[2rem] p-8 text-center flex flex-col items-center justify-center gap-4 transition-all relative focus-within:outline-none focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 ${
+                          errors.cvFile ? "border-rose-500 " : dragActive ? "border-brand bg-brand/10" : "border-slate-300 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-400"
                         }`}
                       >
                         {formData.cvFile ? (
@@ -429,24 +483,24 @@ export default function InternshipApplicationPage() {
                             </div>
                             <div>
                               <p className="font-extrabold text-slate-800 text-sm max-w-xs truncate mx-auto">{formData.cvFile.name}</p>
-                              <p className="text-xs text-slate-400 mt-1">{(formData.cvFile.size / 1024 / 1024).toFixed(2)} Mo</p>
+                               <p className="text-xs text-slate-600 mt-1">{(formData.cvFile.size / 1024 / 1024).toFixed(2)} Mo</p>
                             </div>
                             <button 
                               type="button"
-                              onClick={() => setFormData({ ...formData, cvFile: null })}
-                              className="text-xs font-bold text-rose-500 hover:text-rose-600 underline"
+                              onClick={() => { setFormData({ ...formData, cvFile: null }); clearError("cvFile"); }}
+                              className="text-xs font-bold text-rose-700 hover:text-rose-800 underline focus-visible:outline-none focus-visible:ring-2 focus:ring-rose-600 focus-visible:ring-offset-2 rounded-sm"
                             >
                               Supprimer le fichier
                             </button>
                           </div>
                         ) : (
                           <>
-                            <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                            <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
                               <UploadCloud className="w-7 h-7" />
                             </div>
                             <div className="space-y-1">
                               <p className="font-extrabold text-slate-700 text-sm">Glissez-déposez votre CV ici</p>
-                              <p className="text-xs text-slate-400">ou cliquez pour parcourir vos dossiers (PDF, Max 3 Mo)</p>
+                               <p id="cvFile-hint" className="text-xs text-slate-600">ou cliquez pour parcourir vos dossiers (PDF, Max 3 Mo)</p>
                             </div>
                             <input 
                               type="file"
@@ -456,34 +510,53 @@ export default function InternshipApplicationPage() {
                                 const file = e.target.files?.[0] || null;
                                 if (file) {
                                   if (file.type === "application/pdf") {
-                                    if (file.size > 3 * 1024 * 1024) {
-                                      toast.error("Le fichier est trop lourd (max 3 Mo)");
-                                      return;
-                                    }
-                                    setFormData({ ...formData, cvFile: file });
-                                    toast.success(`CV importé : ${file.name}`);
-                                  } else {
-                                    toast.error("Seuls les fichiers PDF sont acceptés");
+                                     if (file.size > 3 * 1024 * 1024) {
+                                       const message = "Le fichier est trop lourd (max 3 Mo).";
+                                       setErrors({ cvFile: message });
+                                       toast.error(message);
+                                       return;
+                                     }
+                                     setFormData({ ...formData, cvFile: file });
+                                     clearError("cvFile");
+                                     toast.success(`CV importé : ${file.name}`);
+                                   } else {
+                                     const message = "Seuls les fichiers PDF sont acceptés.";
+                                     setErrors({ cvFile: message });
+                                     toast.error(message);
                                   }
                                 }
                               }}
-                              className="absolute inset-0 opacity-0 cursor-pointer"
+                               aria-invalid={Boolean(errors.cvFile)}
+                               aria-describedby={describedBy("cvFile", "cvFile-hint")}
+                               className="absolute inset-0 opacity-0 cursor-pointer"
                             />
                           </>
                         )}
                       </div>
+                      {errors.cvFile && (
+                        <p id="cvFile-error" role="alert" className="text-sm font-semibold text-rose-700">
+                          {errors.cvFile}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-3">
-                      <Label htmlFor="message" className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Quelques lignes sur votre motivation</Label>
+                      <Label htmlFor="message" className="text-xs font-black uppercase text-slate-600 tracking-widest pl-1">Quelques lignes sur votre motivation</Label>
                       <Textarea
                         id="message"
                         placeholder="Décrivez brièvement votre projet professionnel et ce que vous souhaitez accomplir à la ferme..."
                         value={formData.message}
-                        onChange={(e) => setFormData({...formData, message: e.target.value})}
+                        onChange={(e) => { setFormData({...formData, message: e.target.value}); clearError("message"); }}
                         required
-                        className="min-h-[120px] p-6 bg-slate-50 border-none rounded-3xl focus:ring-2 focus:ring-brand/20 text-base font-medium shadow-inner outline-none resize-none"
+                        aria-invalid={Boolean(errors.message)}
+                        aria-describedby={describedBy("message")}
+                        className={`min-h-[120px] p-6 bg-slate-50 rounded-3xl text-base font-medium shadow-inner focus-visible:outline-none focus-visible:ring-2 focus:ring-brand focus-visible:ring-offset-2 resize-none ${errors.message ? "border-2 border-rose-500" : "border-2 border-transparent"}`}
                       />
+                      {errors.message && (
+                        <p id="message-error" role="alert" className="text-sm font-semibold text-rose-700">
+                          {errors.message}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -499,11 +572,17 @@ export default function InternshipApplicationPage() {
                     <Button
                       type="submit"
                       disabled={loading}
+                      aria-live="polite"
                       className="h-14 px-8 bg-brand hover:bg-brand-dark text-white rounded-2xl font-black text-sm gap-2 shadow-lg shadow-brand/20 transition-all hover:scale-105 active:scale-95 group flex items-center"
                     >
-                      {loading ? <Loader2 className="animate-spin w-5 h-5" /> : (
+                      {loading ? (
                         <>
-                          <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          <Loader2 aria-hidden="true" className="animate-spin w-5 h-5" />
+                          Envoi en cours…
+                        </>
+                      ) : (
+                        <>
+                          <Send aria-hidden="true" className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           Soumettre ma candidature
                         </>
                       )}

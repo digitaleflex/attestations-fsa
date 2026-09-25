@@ -92,14 +92,30 @@ function humanizeAuthError(raw: string): string {
   return URL_ERROR_MESSAGES[raw] ?? translateAuthError(raw);
 }
 
+function getSafeCallbackUrl(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  try {
+    const baseUrl = new URL("https://internal.invalid");
+    const callbackUrl = new URL(value, baseUrl);
+    if (callbackUrl.origin !== baseUrl.origin) return "/dashboard";
+
+    return `${callbackUrl.pathname}${callbackUrl.search}${callbackUrl.hash}`;
+  } catch {
+    return "/dashboard";
+  }
+}
+
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const callbackUrl =
+  const callbackUrl = getSafeCallbackUrl(
     searchParams?.get("callbackUrl") ||
-    searchParams?.get("callbackURL") ||
-    "/dashboard";
+      searchParams?.get("callbackURL"),
+  );
 
   // États de l'interface
   const [step, setStep] = useState<1 | 2>(1);
@@ -682,13 +698,14 @@ function AuthContent() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-4 top-4 text-slate-300 hover:text-brand transition-colors"
+                          className="absolute right-4 top-4 rounded-md text-slate-300 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={
                             showPassword
                               ? "Masquer le mot de passe"
                               : "Afficher le mot de passe"
                           }
-                          tabIndex={-1}
+                          aria-pressed={showPassword}
+                          disabled={loading}
                         >
                           {showPassword ? (
                             <EyeOff className="w-5 h-5" />

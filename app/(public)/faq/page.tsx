@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import React from "react";
 import { HelpCircle, Sparkles, ArrowRight, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Questions fréquentes",
+  description: "Réponses sur les examens, les attestations et leur vérification en ligne.",
+};
 
 const faqs = [
   {

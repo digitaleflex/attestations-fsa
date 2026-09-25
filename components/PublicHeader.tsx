@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ShieldCheck, Menu, X, LogIn, ArrowRight, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -12,7 +12,38 @@ import { motion, AnimatePresence } from "framer-motion";
 export function PublicHeader() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const menu = menuRef.current;
+    menu?.querySelector<HTMLElement>("a, button")?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [open]);
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true;
@@ -28,33 +59,37 @@ export function PublicHeader() {
   ];
 
   return (
-    <header className="w-full flex justify-between items-center px-4 md:px-12 py-3 md:py-4 sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-slate-100/50 shadow-sm transition-all duration-500">
+    <header
+      ref={headerRef}
+      className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-brand-line/80 bg-white/95 px-4 py-3 shadow-sm shadow-slate-900/5 backdrop-blur-xl md:px-10 md:py-4 lg:px-12"
+    >
       <div className="flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-2 md:gap-3 group">
-            <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg md:rounded-xl shadow-brand/20 shadow-lg group-hover:scale-105 transition-transform duration-500">
-              <Image src="/logo-fsa.png" alt="Logo FSA" fill sizes="40px" className="object-cover" priority />
+        <Link href="/" className="group flex items-center gap-2.5 rounded-xl md:gap-3" aria-label="Ferme Agro-piscicole Saint André — Accueil">
+            <div className="relative h-9 w-9 overflow-hidden rounded-xl shadow-sm shadow-brand/20 transition-transform duration-300 group-hover:-rotate-2 group-hover:scale-105 md:h-10 md:w-10">
+              <Image src="/logo-fsa.png" alt="" fill sizes="40px" className="object-cover" priority />
             </div>
             <div className="flex flex-col">
-                <span className="text-[10px] md:text-xs font-black text-slate-900 leading-none uppercase tracking-tighter italic">Ferme Agro-piscicole</span>
-                <span className="text-[8px] md:text-[10px] font-medium text-slate-400 uppercase tracking-[0.1em]">St Andre</span>
+                <span className="text-[10px] font-extrabold uppercase leading-none tracking-[-0.02em] text-brand-ink md:text-xs">Ferme Agro-piscicole</span>
+                <span className="mt-1 text-[8px] font-bold uppercase leading-none tracking-[0.16em] text-brand md:text-[9px]">Saint André</span>
             </div>
         </Link>
       </div>
 
       {/* Desktop nav */}
-      <nav className="hidden lg:flex gap-1 items-center bg-slate-50/80 p-1 rounded-2xl border border-slate-100/50 backdrop-blur-md">
+      <nav className="hidden items-center gap-1 rounded-2xl border border-brand-line/70 bg-slate-50/90 p-1 lg:flex" aria-label="Navigation principale">
         {navLinks.map((link) => (
-            <Link 
+            <Link
               key={link.href}
-              href={link.href} 
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest text-center ${
-                isActive(link.href) 
-                  ? "bg-white shadow-sm text-brand scale-105" 
-                  : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
+              href={link.href}
+              aria-current={isActive(link.href) ? "page" : undefined}
+              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-center text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                isActive(link.href)
+                  ? "bg-white text-brand shadow-sm"
+                  : "text-slate-500 hover:bg-white/70 hover:text-brand-ink"
               }`}
             >
               {link.label}
-              {isActive(link.href) && <div className="w-1 h-1 rounded-full bg-brand/100 ml-0.5" />}
+              {isActive(link.href) && <span className="ml-0.5 h-1 w-1 rounded-full bg-brand" aria-hidden="true" />}
             </Link>
         ))}
 
@@ -80,7 +115,7 @@ export function PublicHeader() {
           </>
         )}
 
-        <Link href="/verifier" className="ml-1 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.15em] hover:bg-brand hover:shadow-xl hover:shadow-brand/30 hover:-translate-y-0.5 transition-all active:scale-95 shadow-lg">
+        <Link href="/verifier" className="ml-1 inline-flex items-center gap-2 rounded-xl bg-brand-ink px-5 py-2 text-[10px] font-extrabold uppercase tracking-[0.15em] text-white shadow-md shadow-brand/15 transition-all hover:-translate-y-0.5 hover:bg-brand hover:shadow-lg hover:shadow-brand/25 active:translate-y-0">
           <ShieldCheck className="w-3.5 h-3.5" />
           Vérifier
         </Link>
@@ -88,11 +123,16 @@ export function PublicHeader() {
 
       {/* Mobile hamburger */}
       <div className="flex items-center gap-3 lg:hidden">
-        <Link href="/verifier" className="p-2 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-200">
+        <Link href="/verifier" className="rounded-xl bg-brand-ink p-2 text-white shadow-sm transition-colors hover:bg-brand" aria-label="Vérifier un certificat">
            <ShieldCheck className="w-5 h-5" />
         </Link>
         <button
-          className="p-2.5 rounded-xl bg-slate-50 text-slate-600 border border-slate-100 shadow-sm transition-all active:scale-90"
+          ref={menuButtonRef}
+          type="button"
+          aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-expanded={open}
+          aria-controls="public-mobile-menu"
+          className="rounded-xl border border-brand-line bg-white p-2.5 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-brand-ink"
           onClick={() => setOpen(o => !o)}
         >
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -102,24 +142,27 @@ export function PublicHeader() {
       {/* Mobile menu modal style */}
       <AnimatePresence>
         {open && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
+           <motion.div
+             id="public-mobile-menu"
+             ref={menuRef}
+             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3, ease: "circOut" }}
-            className="lg:hidden absolute top-full left-0 right-0 p-4 bg-white/95 backdrop-blur-3xl border-b border-slate-100 shadow-2xl z-[100]"
+             className="absolute left-0 right-0 top-full z-[100] border-b border-brand-line bg-white/98 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl lg:hidden"
           >
              <div className="grid grid-cols-1 gap-1.5">
                   {navLinks.map((link) => (
                       <Link 
                           key={link.href}
-                          href={link.href} 
-                          onClick={() => setOpen(false)} 
-                          className={`p-4 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-between transition-all ${
-                              isActive(link.href)
-                                  ? "bg-brand/10 text-brand-dark shadow-sm"
-                                  : "bg-transparent text-slate-500 hover:bg-slate-50"
-                          }`}
+                           href={link.href}
+                           aria-current={isActive(link.href) ? "page" : undefined}
+                           onClick={() => setOpen(false)}
+                           className={`flex items-center justify-between rounded-xl px-4 py-3 text-xs font-bold tracking-wide transition-colors ${
+                               isActive(link.href)
+                                   ? "bg-brand/8 text-brand"
+                                   : "bg-transparent text-slate-600 hover:bg-slate-50 hover:text-brand-ink"
+                           }`}
                       >
                           {link.label}
                           {isActive(link.href) && <ArrowRight className="w-4 h-4 text-brand" />}

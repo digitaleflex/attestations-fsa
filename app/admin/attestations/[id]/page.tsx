@@ -459,7 +459,7 @@ export default function AttestationDetailsPage() {
               </div>
               <div className="flex justify-center">
                 <QRCodeSVG 
-                  value={`${window.location.origin}/verifier/${data.code}`}
+                  value={`${window.location.origin}/verifier?code=${encodeURIComponent(data.code)}`}
                   size={180}
                   level="H"
                 />

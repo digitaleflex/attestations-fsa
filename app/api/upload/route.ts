@@ -3,7 +3,7 @@ import { getAdminUser, getCurrentUser } from "@/lib/auth";
 import { buildObjectKey, getStorage, validateUpload } from "@/lib/storage";
 import { StorageConfigError } from "@/lib/storage/types";
 
-// Route d'upload générique (CV de demande de stage, images).
+// Route d'upload privé pour les usages authentifiés.
 // Le stockage est délégué à `lib/storage` : objet S3/R2/MinIO en production,
 // fichiers locaux en développement. Aucune écriture dans `public/uploads`
 // en production (garde appliquée par la factory).
