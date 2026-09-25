@@ -269,7 +269,12 @@ export async function POST(
 
     const scorePart1 = autoGradeQcm(typedParts, answers);
     const hasManualGrading = typedParts.some((part) => part.type !== 'QCM');
-    const finalStatus = hasManualGrading ? 'PENDING_REVIEW' : 'COMPLETED';
+    // Une session QCM-only est corrigée immédiatement. `GRADED` est l'état
+    // canonique exigé par le hub d'attestation ; `COMPLETED` autorise encore
+    // une nouvelle soumission et ne doit donc pas être assimilé à une
+    // correction validée. Les sessions avec correction manuelle restent en
+    // PENDING_REVIEW jusqu'au passage par l'endpoint admin.
+    const finalStatus = hasManualGrading ? 'PENDING_REVIEW' : 'GRADED';
     const snapshot = createScoringSnapshot(typedParts, exam);
     const score = calculateCanonicalScore(
       snapshot,
@@ -287,6 +292,7 @@ export async function POST(
       data: {
         status: finalStatus,
         submittedAt: new Date(),
+        gradedAt: hasManualGrading ? null : new Date(),
         answers: persistedAnswers as unknown as Prisma.InputJsonValue,
         scorePart1: score.scorePart1,
         score: score.scorePart1,
@@ -328,7 +334,7 @@ export async function POST(
     });
 
     if (
-      finalStatus === 'COMPLETED' &&
+      finalStatus === 'GRADED' &&
       isPassed(score.finalScore, exam.passingScore) &&
       exam.type === 'OFFICIAL' &&
       exam.formationId &&

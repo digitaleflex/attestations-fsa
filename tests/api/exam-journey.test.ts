@@ -178,7 +178,7 @@ beforeEach(() => {
 });
 
 describe("Parcours cœur : submit → correct → attestation (#136)", () => {
-  it("soumission QCM → COMPLETED → attestation émise", async () => {
+  it("soumission QCM → GRADED → attestation émise", async () => {
     // submit : session IN_PROGRESS, examen 100% QCM
     db.sessionFindFirst
       .mockResolvedValueOnce({
@@ -189,7 +189,7 @@ describe("Parcours cœur : submit → correct → attestation (#136)", () => {
       } as never)
       .mockResolvedValueOnce({
         id: "sub-1",
-        status: "COMPLETED",
+        status: "GRADED",
         scorePart1: 20,
         totalScore: 20,
         finalScore: 100,
@@ -220,7 +220,7 @@ describe("Parcours cœur : submit → correct → attestation (#136)", () => {
     });
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.status).toBe("COMPLETED");
+    expect(body.status).toBe("GRADED");
     expect(body.finalScore).toBe(100);
     // Attestation émise pour l'examen officiel réussi
     expect(deps.issueExamAttestation).toHaveBeenCalledWith("sub-1");

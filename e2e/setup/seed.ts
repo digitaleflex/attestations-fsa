@@ -210,8 +210,8 @@ export async function seedE2eData(prisma: PrismaClient): Promise<E2eSeedSummary>
 /**
  * Définition d'un examen OFFICIEL « QCM seul », programmé dans le passé :
  * `autoOpenDueExams()` doit l'ouvrir paresseusement, puis la correction est
- * entièrement automatique (`finalStatus = COMPLETED`) — condition nécessaire
- * pour que `issueExamAttestation` émette une certification.
+ * entièrement automatique (`finalStatus = GRADED`) — état canonique exigé par
+ * `issueExamAttestation` pour émettre une certification.
  */
 function buildQcmExamData(params: {
   name: string;

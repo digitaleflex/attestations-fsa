@@ -81,7 +81,12 @@ test.describe("Vérification publique et verrouillage des examens", () => {
     await expect(
       page.getByRole("heading", { name: "Examens Programmés" }),
     ).toBeVisible();
-    await expect(page.getByText(lockedExam.name)).toBeVisible();
+    // Le même nom peut apparaître dans la section « Programmés » et dans la
+    // liste générale pendant le chargement. Le test porte sur la carte
+    // programmée : on sélectionne explicitement sa première occurrence.
+    await expect(
+      page.getByText(lockedExam.name, { exact: true }).first(),
+    ).toBeVisible();
     await expect(
       page.locator(`a[href="/exams/${lockedExam.id}"]`),
     ).toHaveCount(0);

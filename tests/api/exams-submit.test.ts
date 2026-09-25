@@ -205,7 +205,7 @@ describe("POST /api/exams/[id]/submit", () => {
       } as never)
       .mockResolvedValueOnce({
         id: "session-1",
-        status: "COMPLETED",
+        status: "GRADED",
         scorePart1: 20,
         totalScore: 20,
         finalScore: 100,
@@ -251,12 +251,20 @@ describe("POST /api/exams/[id]/submit", () => {
     expect(res.status).toBe(201);
 
     const body = await res.json();
-    expect(body.status).toBe("COMPLETED");
+    expect(body.status).toBe("GRADED");
     expect(body.finalScore).toBe(100);
     expect(body.scorePart1).toBe(20);
     expect(body.maxScore).toBe(20);
 
     expect(db.sessionUpdateMany).toHaveBeenCalledTimes(1);
+    expect(db.sessionUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "GRADED",
+          gradedAt: expect.any(Date),
+        }),
+      }),
+    );
     expect(deps.createAuditLog).toHaveBeenCalledTimes(1);
     expect(deps.issueExamAttestation).toHaveBeenCalledWith("session-1");
   });
