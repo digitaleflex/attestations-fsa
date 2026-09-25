@@ -70,8 +70,8 @@ export function AttestationWatermark({
           }}
         />
 
-        {/* Verification code (visible but subtle) */}
-        <div className="absolute bottom-4 right-4 text-[8px] text-slate-400 opacity-60">
+        {/* Verification code (visible mais discret) */}
+        <div className="absolute bottom-4 right-4 text-[9px] text-slate-500 opacity-80">
           Réf: {code} | FP: {fingerprint}
         </div>
 

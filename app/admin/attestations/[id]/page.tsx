@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
   Loader2, 
+  RotateCcw,
   Download, 
   Edit, 
   ArrowLeft, 
@@ -91,6 +92,8 @@ export default function AttestationDetailsPage() {
   const [data, setData] = useState<AttestationData | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -108,13 +111,19 @@ export default function AttestationDetailsPage() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(null);
     apiFetch(`/api/attestations/${id}`, {}, false)
       .then(async (attData: any) => {
         setData(attData);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [id]);
+      .catch((e: any) => {
+        // Un échec réseau ne doit pas ressembler à un document absent : on
+        // conserve le message pour proposer une relance.
+        setLoadError(e?.message || "Impossible de charger cette attestation");
+        setLoading(false);
+      });
+  }, [id, reloadKey]);
 
   const [actionReason, setActionReason] = useState("");
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -300,8 +309,14 @@ export default function AttestationDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin w-8 h-8 text-slate-400" />
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-3"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <Loader2 aria-hidden="true" className="animate-spin w-8 h-8 text-slate-500" />
+        <p className="text-sm font-medium text-slate-600">Chargement de l'attestation…</p>
       </div>
     );
   }
@@ -310,13 +325,25 @@ export default function AttestationDetailsPage() {
     return (
       <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="max-w-4xl mx-auto">
-          <Alert variant="destructive">
-            <AlertTitle>Attestation non trouvée</AlertTitle>
-            <AlertDescription>Cette attestation n'existe pas ou a été supprimée.</AlertDescription>
+          <Alert variant={loadError ? "default" : "destructive"}>
+            <AlertTitle>{loadError ? "Chargement impossible" : "Attestation non trouvée"}</AlertTitle>
+            <AlertDescription>
+              {loadError
+                ? `${loadError} Vérifiez votre connexion puis réessayez.`
+                : "Cette attestation n'existe pas ou a été supprimée."}
+            </AlertDescription>
           </Alert>
-          <Link href="/admin/attestations">
-            <Button className="mt-4">← Retour à la liste</Button>
-          </Link>
+          <div className="flex flex-wrap gap-3 mt-4">
+            {loadError && (
+              <Button onClick={() => setReloadKey((k) => k + 1)} className="gap-2">
+                <RotateCcw aria-hidden="true" className="w-4 h-4" />
+                Réessayer
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link href="/admin/attestations">← Retour à la liste</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );

@@ -98,7 +98,7 @@ const CertificateTemplate = ({
       >
         {/* 🛡️ SECURITY OVERLAY: REJECTED WATERMARK */}
         {data.status === "REJECTED" && (
-            <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden">
+            <div aria-hidden="true" className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden">
                 <div className="rotate-[-25deg] border-[12px] border-rose-600/30 px-12 py-6 rounded-3xl flex flex-col items-center gap-2 backdrop-blur-[2px] scale-150">
                     <span className="text-6xl md:text-8xl font-black text-rose-600/30 uppercase tracking-[0.2em]">RÉVOQUÉ</span>
                     <span className="text-xl md:text-2xl font-bold text-rose-600/30 uppercase tracking-[0.5em]">CERTIFICAT ANNULÉ - FSA</span>
@@ -107,7 +107,7 @@ const CertificateTemplate = ({
         )}
 
         {/* Bordures Florales Rouges (Coins) */}
-        <div className="absolute top-4 left-4 w-40 h-40 opacity-90">
+        <div aria-hidden="true" className="absolute top-4 left-4 w-40 h-40 opacity-90">
           <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
             <path
               d="M10,10 Q30,10 40,40 Q10,30 10,10 Z M20,20 Q60,20 70,70 Q20,60 20,20 Z"
@@ -121,17 +121,17 @@ const CertificateTemplate = ({
             />
           </svg>
         </div>
-        <div className="absolute top-4 right-4 w-40 h-40 opacity-90 rotate-90">
+        <div aria-hidden="true" className="absolute top-4 right-4 w-40 h-40 opacity-90 rotate-90">
           <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
             <path d="M10,10 Q30,10 40,40 Q10,30 10,10 Z" opacity="0.3" />
           </svg>
         </div>
-        <div className="absolute bottom-4 left-4 w-40 h-40 opacity-90 -rotate-90">
+        <div aria-hidden="true" className="absolute bottom-4 left-4 w-40 h-40 opacity-90 -rotate-90">
           <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
             <path d="M10,10 Q30,10 40,40 Q10,30 10,10 Z" opacity="0.3" />
           </svg>
         </div>
-        <div className="absolute bottom-4 right-4 w-40 h-40 opacity-90 rotate-180">
+        <div aria-hidden="true" className="absolute bottom-4 right-4 w-40 h-40 opacity-90 rotate-180">
           <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
             <path d="M10,10 Q30,10 40,40 Q10,30 10,10 Z" opacity="0.3" />
           </svg>
@@ -139,10 +139,12 @@ const CertificateTemplate = ({
 
         {/* Cadre Ligne Double Fine */}
         <div
+          aria-hidden="true"
           className="absolute inset-8 border-[1px] pointer-events-none"
           style={{ borderColor: "#991b1b" }}
         ></div>
         <div
+          aria-hidden="true"
           className="absolute inset-10 border-[0.5px] pointer-events-none"
           style={{ borderColor: "#f87171" }}
         ></div>
@@ -156,7 +158,7 @@ const CertificateTemplate = ({
             {settings?.institutionLogo ? (
               <img
                 src={settings.institutionLogo}
-                alt="Logo"
+                alt="" aria-hidden="true"
                 className="w-full h-full object-contain"
               />
             ) : (
@@ -223,7 +225,7 @@ const CertificateTemplate = ({
             {settings?.institutionLogo ? (
               <img
                 src={settings.institutionLogo}
-                alt="Logo"
+                alt="" aria-hidden="true"
                 className="w-full h-full object-contain"
               />
             ) : (
