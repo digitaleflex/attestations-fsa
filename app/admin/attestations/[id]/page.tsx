@@ -46,6 +46,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import OfficialDocumentComponent from "@/components/OfficialDocument";
+import {
+  attestationVerificationPath,
+  isOfficialPdfDownloadable,
+  startOfficialPdfDownload,
+} from "@/lib/attestations/client-download";
 
 /**
  * Page de détails de l'attestation - FSA Admin
@@ -73,6 +78,7 @@ type AttestationData = {
   status: string;
   issuedAt: string;
   userId: string;
+  pdfVersion?: number | null;
 };
 
 function DateLocale({ date, options }: { date: string | Date; options?: Intl.DateTimeFormatOptions }) {
@@ -90,7 +96,6 @@ export default function AttestationDetailsPage() {
   const id = params?.id as string;
   const router = useRouter();
   const [data, setData] = useState<AttestationData | null>(null);
-  const [isPrinting, setIsPrinting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -207,67 +212,29 @@ export default function AttestationDetailsPage() {
     }
   };
 
+  // #258 : le PDF est généré et scellé par le serveur. L'administration
+  // télécharge le document probant existant, elle ne le régénère pas.
   const handleDownloadAttestation = async () => {
     if (!data) return;
-    const fileName = `${data.code.slice(-5)}_${data.fullName.replace(/\s+/g, "_")}.pdf`;
-
-    toast.promise(
-      (async () => {
-        try {
-          setIsPrinting(true);
-          await new Promise((resolve) => setTimeout(resolve, 600));
-
-          const html2pdf = (await import("html2pdf.js")).default;
-          const element = document.getElementById("minimalist-preview-card");
-
-          if (!element) {
-            throw new Error("Aperçu du diplôme non trouvé");
-          }
-
-          const opt = {
-            margin: 0,
-            filename: fileName,
-            image: { type: "jpeg", quality: 0.98 },
-            html2canvas: {
-              scale: 2,
-              useCORS: true,
-              letterRendering: true,
-              width: 1120,
-              windowWidth: 1120,
-            },
-            jsPDF: {
-              unit: "mm",
-              format: "a4",
-              orientation: "landscape",
-            },
-          };
-
-          await html2pdf().set(opt).from(element).save();
-
-          await fetch("/api/admin/audit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "ATTESTATION_EXPORTED",
-              resource: "ATTESTATION",
-              resourceId: id,
-              userId: data.userId,
-              details: { fileName, docType: "ATTESTATION" },
-            }),
-          });
-        } catch (error: any) {
-          console.error("PDF Generation Error (Admin):", error);
-          throw error;
-        } finally {
-          setIsPrinting(false);
-        }
-      })(),
-      {
-        loading: "Génération du diplôme officiel...",
-        success: "Téléchargement réussi !",
-        error: (err) => `Erreur : ${err.message || "Problème technique"}`,
-      }
-    );
+    if (!startOfficialPdfDownload(data.code)) {
+      toast.error("Le téléchargement a été bloqué par le navigateur : autorisez les pop-ups pour ce site.");
+      return;
+    }
+    try {
+      await fetch("/api/admin/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ATTESTATION_EXPORTED",
+          resource: "ATTESTATION",
+          resourceId: id,
+          userId: data.userId,
+          details: { docType: "ATTESTATION", source: "SERVER_PDF", pdfVersion: data.pdfVersion ?? null },
+        }),
+      });
+    } catch (error) {
+      console.error("Audit download (Admin):", error);
+    }
   };
 
   const handleTransmitTranscript = async () => {
@@ -401,7 +368,13 @@ export default function AttestationDetailsPage() {
                   Modifier
                 </Button>
               </Link>
-              <Button onClick={() => handleDownloadAttestation()} variant="outline" className="gap-2 bg-brand/10 text-brand-dark border-brand/30 w-full sm:w-auto">
+              <Button
+                onClick={() => handleDownloadAttestation()}
+                disabled={!isOfficialPdfDownloadable(data.status)}
+                variant="outline"
+                className="gap-2 bg-brand/10 text-brand-dark border-brand/30 w-full sm:w-auto"
+                title={isOfficialPdfDownloadable(data.status) ? "Télécharger le PDF serveur scellé" : "Aucun PDF serveur disponible pour ce statut"}
+              >
                 <Download className="w-4 h-4" />
                 Télécharger PDF
               </Button>
@@ -457,9 +430,8 @@ export default function AttestationDetailsPage() {
 
             {/* Corps minimaliste */}
             <div className="p-8 md:p-12 bg-white flex justify-center items-center min-h-[500px]">
-                <OfficialDocumentComponent 
-                    id="minimalist-preview-card"
-                    isPrinting={isPrinting}
+                <OfficialDocumentComponent
+                    id="official-preview-card"
                     data={{
                         id: data.id,
                         code: data.code,
@@ -485,8 +457,8 @@ export default function AttestationDetailsPage() {
                 <h3 className="font-semibold text-slate-800">QR Code de vérification</h3>
               </div>
               <div className="flex justify-center">
-                <QRCodeSVG 
-                  value={`${window.location.origin}/verifier?code=${encodeURIComponent(data.code)}`}
+                <QRCodeSVG
+                  value={`${window.location.origin}${attestationVerificationPath(data.code)}`}
                   size={180}
                   level="H"
                 />

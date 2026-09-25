@@ -153,11 +153,30 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
     // mentions « Réf: <code>… » / « CODE: <code> » du document officiel.
     await expect(page.getByText(code, { exact: true })).toBeVisible();
 
-    // Téléchargement PDF généré côté client (html2pdf).
-    const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
-    await page.getByRole("button", { name: /Télécharger \(PDF\)/ }).click();
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toContain(code.slice(-5));
+    // Téléchargement du document officiel (#258) : le PDF n'est plus fabriqué
+    // dans le navigateur. Le bouton déclenche la redirection serveur vers
+    // l'URL signée de courte durée — on vérifie donc le point de téléchargement
+    // contrôlé plutôt que le nom de fichier proposé par le navigateur.
+    const downloadButton = page.getByRole("button", { name: /Télécharger \(PDF\)/ });
+    await expect(downloadButton).toBeEnabled();
+
+    const verifier = await page.request.get(`/api/verifier?code=${encodeURIComponent(code)}`);
+    expect(verifier.status()).toBe(200);
+    const proof = (await verifier.json()) as {
+      attestation?: { proof?: { valid?: boolean; pdf?: { available?: boolean; version?: number; downloadPath?: string } } };
+    };
+    expect(proof.attestation?.proof?.valid).toBe(true);
+    expect(proof.attestation?.proof?.pdf?.available).toBe(true);
+    expect(proof.attestation?.proof?.pdf?.version).toBe(1);
+
+    // Redirection 307 vers l'URL signée : jamais d'URL signée persistée,
+    // jamais de PDF régénéré à la volée.
+    const pdf = await page.request.get(
+      `/api/verifier/pdf?code=${encodeURIComponent(code)}`,
+      { maxRedirects: 0 },
+    );
+    expect(pdf.status()).toBe(307);
+    expect(pdf.headers()["cache-control"]).toBe("private, no-store, max-age=0");
 
     // Boucle complète : le code émis par le flux applicatif est authentifié
     // par la page publique de vérification.

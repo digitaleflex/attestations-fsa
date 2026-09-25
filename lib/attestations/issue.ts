@@ -20,6 +20,8 @@ export interface IssueAttestationOptions {
   generator?: CanonicalPdfGenerator;
   storage?: StorageDriver;
   now?: Date;
+  /** Origine publique gravée dans le QR du PDF (défaut : NEXT_PUBLIC_APP_URL). */
+  appUrl?: string;
 }
 
 type SessionForIssue = {
@@ -108,6 +110,13 @@ export async function issueExamAttestation(
   error?: string;
 }> {
   try {
+    // #258 : une CERTIFICATION est toujours liée à la session qui l'a émise.
+    // La contrainte SQL (`Attestation_certification_session_required`, NOT VALID
+    // pour les ~40 lignes historiques) reste la défense finale ; ce garde-fou
+    // évite d'atteindre la base avec une session vide.
+    if (!sessionId?.trim()) {
+      return { created: false, error: "Émission bloquée : session d'examen obligatoire." };
+    }
     const session = (await prisma.examSession.findUnique({
       where: { id: sessionId },
       include: {

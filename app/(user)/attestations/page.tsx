@@ -18,16 +18,16 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import dynImport from "next/dynamic";
-import CertificateTemplate from "@/components/CertificateTemplate";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
 import {
   CandidateEmptyState,
   CandidateErrorState,
 } from "@/components/CandidateStates";
-
-// Import dynamique de html2pdf pour éviter les erreurs SSR
-const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
+import {
+  attestationVerificationPath,
+  isOfficialPdfDownloadable,
+  startOfficialPdfDownload,
+} from "@/lib/attestations/client-download";
 import {
   Select,
   SelectContent,
@@ -69,39 +69,25 @@ export default function UserAttestationsPage() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // #258 : le PDF est généré, scellé et stocké par le serveur. Le navigateur
+  // ne fait que déclencher le téléchargement du document probant.
   const handleDownload = async (att: any) => {
+    if (!isOfficialPdfDownloadable(att.status)) {
+      toast.error("Ce document n'est pas encore disponible au téléchargement.");
+      return;
+    }
     setDownloading(att.code);
-    toast.info(`Préparation de l'attestation ${att.code}...`);
-
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
-      const element = document.getElementById(`cert-template-${att.id}`);
-
-      if (!element) {
-        toast.error("Erreur technique : Template introuvable");
+      if (!startOfficialPdfDownload(att.code)) {
+        toast.error("Le téléchargement a été bloqué par le navigateur : autorisez les pop-ups pour ce site.");
         return;
       }
-
-      const opt = {
-        margin: 0,
-        filename: `Attestation_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
-
-      await html2pdf().set(opt).from(element).save();
-      toast.success("✅ Attestation téléchargée !");
-
-      try {
-        await fetch(`/api/user/attestations/${att.id}/claim`, { method: "POST" });
-        queryClient.invalidateQueries({ queryKey: ["user-attestations"] });
-      } catch (e) {
-        console.error("Error claiming:", e);
-      }
+      toast.success("Attestation officielle téléchargée.");
+      await fetch(`/api/user/attestations/${att.id}/claim`, { method: "POST" });
+      queryClient.invalidateQueries({ queryKey: ["user-attestations"] });
     } catch (error) {
-      console.error("PDF Error:", error);
-      toast.error("Erreur lors de la génération du PDF");
+      console.error("Download Error:", error);
+      toast.error("Erreur lors du téléchargement du document officiel");
     } finally {
       setDownloading(null);
     }
@@ -527,7 +513,7 @@ export default function UserAttestationsPage() {
             <div className="text-center space-y-6 py-4">
               <div className="flex justify-center p-4 bg-slate-50 rounded-3xl inline-block mx-auto border border-slate-100">
                 <QRCodeSVG
-                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verifier?code=${encodeURIComponent(selectedAttestation.code)}`}
+                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}${attestationVerificationPath(selectedAttestation.code)}`}
                   size={200}
                   level="H"
                   className="rounded-xl"
@@ -614,30 +600,6 @@ export default function UserAttestationsPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Templates cachés pour la génération PDF (Capture technique) */}
-      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
-        {data?.attestations?.filter((a: any) => (a.status === "VALIDATED" || a.status === "CLAIMED") && !a.isLocked).map((att: any) => (
-          <div key={`capture-${att.id}`}>
-             <CertificateTemplate
-                id={`cert-template-${att.id}`}
-                data={{
-                  fullName: att.fullName,
-                  formationName: att.formation?.name || "Formation Saint André",
-                  code: att.code,
-                  issuedAt: att.issuedAt,
-                  startDate: att.startDate,
-                  endDate: att.endDate,
-                  score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
-                  hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
-                  type: att.type,
-                  gender: att.gender,
-                  status: att.status
-                }}
-              />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

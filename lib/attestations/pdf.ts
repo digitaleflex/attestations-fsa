@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import type { CertificateSealPayload } from "@/lib/crypto/seal";
 import { getStorage, type StorageDriver } from "@/lib/storage";
 import { assertSafeKey } from "@/lib/storage/types";
+import { attestationVerificationUrl, isAttestationCode } from "@/lib/attestations/verification-url";
 
 /**
  * Contrat du générateur PDF serveur.
@@ -41,7 +42,7 @@ export class OfficialPdfUnavailableError extends Error {
 }
 
 export function attestationPdfKey(code: string, version: number): string {
-  if (!/^FSA-[A-Za-z0-9-]+$/.test(code)) throw new Error("Code d'attestation invalide pour le stockage PDF.");
+  if (!isAttestationCode(code)) throw new Error("Code d'attestation invalide pour le stockage PDF.");
   return `attestations/${code}/v${version}.pdf`;
 }
 
@@ -91,7 +92,7 @@ export async function generateOfficialPdf(
     ...snapshot,
     sealVersion: 2,
     pdfVersion: version,
-    verificationUrl: `${appUrl}/verifier?code=${encodeURIComponent(snapshot.code)}`,
+    verificationUrl: attestationVerificationUrl(appUrl, snapshot.code),
   };
   const bytes = Buffer.from(await generator.generateCanonicalAttestationPdf(input));
   if (bytes.length < 5 || bytes.subarray(0, 5).toString("ascii") !== "%PDF-") {

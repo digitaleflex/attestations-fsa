@@ -9,6 +9,7 @@ import { handleApiError } from '@/lib/error-handler'
 import { sanitizeInput } from '@/lib/sanitization'
 import { verifyCertificateSeal } from '@/lib/crypto/seal'
 import { attestationSealPayload } from '@/lib/attestations/proof'
+import { officialPdfDownloadPath } from '@/lib/attestations/verification-url'
 
 export async function GET(request: Request) {
   try {
@@ -144,7 +145,7 @@ export async function GET(request: Request) {
           version: attestation.pdfVersion,
           hash: attestation.pdfHash,
           generatedAt: attestation.pdfGeneratedAt,
-          downloadPath: attestation.pdfKey ? `/api/verifier/pdf?code=${encodeURIComponent(attestation.code)}` : null,
+          downloadPath: attestation.pdfKey ? officialPdfDownloadPath(attestation.code) : null,
         },
         checkedAt: new Date().toISOString(),
       },

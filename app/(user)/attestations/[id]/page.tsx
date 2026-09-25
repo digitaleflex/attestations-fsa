@@ -5,10 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Download, QrCode, Share2, ShieldCheck, Printer, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, QrCode, Share2, ShieldCheck, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import OfficialDocument from "@/components/OfficialDocument";
 import { toast } from "sonner";
+import {
+  attestationVerificationPath,
+  isOfficialPdfDownloadable,
+  startOfficialPdfDownload,
+} from "@/lib/attestations/client-download";
 import {
   Dialog,
   DialogContent,
@@ -70,7 +75,7 @@ export default function AttestationPreviewPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
   
@@ -92,58 +97,23 @@ export default function AttestationPreviewPage() {
     retry: 1,
   });
 
-  const handleDownload = async () => {
-    if (!att) return;
-    
-    const fileName = `${att.code.slice(-5)}_${att.fullName.replace(/\s+/g, '_')}.pdf`;
-
-    toast.promise(
-      (async () => {
-        try {
-          // 1. Activer le mode impression pour la largeur fixe
-          setIsPrinting(true);
-          
-          // 2. Laisser un temps pour le re-render
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          // 3. Importer la librairie côté client
-          const html2pdf = (await import("html2pdf.js")).default;
-          const element = document.getElementById(`cert-template-${att.id}`);
-          
-          if (!element) {
-              throw new Error("Aperçu du certificat non trouvé dans le DOM");
-          }
-
-          const opt = {
-            margin: 0,
-            filename: fileName,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-              scale: 2, 
-              useCORS: true, 
-              letterRendering: true,
-              width: 1120,
-              windowWidth: 1120
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-          };
-
-          // 4. Générer et sauvegarder le PDF
-          await html2pdf().set(opt).from(element).save();
-        } catch (error: any) {
-          console.error("PDF Generation Error:", error);
-          throw error;
-        } finally {
-          // 5. Toujours désactiver le mode impression, même en cas d'erreur
-          setIsPrinting(false);
-        }
-      })(),
-      {
-        loading: 'Génération de votre document officiel...',
-        success: 'Téléchargement réussi !',
-        error: 'Erreur lors du téléchargement. Veuillez réessayer.',
+  // #258 : aucun PDF n'est fabriqué ici. Le document affiché est un simple
+  // aperçu ; le fichier téléchargé est la version serveur, scellée et stockée.
+  const handleDownload = () => {
+    if (!att || !isOfficialPdfDownloadable(att.status)) {
+      toast.error("Ce document n'est pas encore disponible au téléchargement.");
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      if (!startOfficialPdfDownload(att.code)) {
+        toast.error("Le téléchargement a été bloqué par le navigateur : autorisez les pop-ups pour ce site.");
+        return;
       }
-    );
+      toast.success("Téléchargement du document officiel lancé.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleCorrectionSubmit = async (e: React.FormEvent) => {
@@ -269,13 +239,14 @@ export default function AttestationPreviewPage() {
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={handleDownload} className="flex-1 md:flex-none bg-brand hover:bg-brand-dark gap-2">
-            <Download className="w-4 h-4" />
+          <Button
+            onClick={handleDownload}
+            disabled={isDownloading || !isOfficialPdfDownloadable(att.status)}
+            aria-busy={isDownloading}
+            className="flex-1 md:flex-none bg-brand hover:bg-brand-dark gap-2"
+          >
+            <Download className="w-4 h-4" aria-hidden="true" />
             Télécharger (PDF)
-          </Button>
-          <Button variant="outline" onClick={() => window.print()} className="hidden md:flex gap-2">
-            <Printer className="w-4 h-4" />
-            Imprimer
           </Button>
         </div>
       </div>
@@ -284,11 +255,10 @@ export default function AttestationPreviewPage() {
       <Card className="overflow-hidden bg-slate-50 border-none shadow-2xl transition-all duration-500 hover:shadow-brand/10">
         <div className="p-4 md:p-8 flex justify-center">
              <div className="w-full max-w-[1000px] shadow-2xl origin-top transition-transform">
-                <OfficialDocument 
-                    id={`cert-template-${att.id}`}
-                    isPrinting={isPrinting}
-                    hideStepper={isPrinting}
-                    data={{
+                 <OfficialDocument
+                     id={`attestation-preview-${att.id}`}
+                     hideStepper
+                     data={{
                         id: att.id,
                         code: att.code,
                         fullName: att.fullName,
@@ -390,7 +360,7 @@ export default function AttestationPreviewPage() {
                 </Dialog>
                 
                 <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 h-10 sm:h-9 px-2 sm:px-3" aria-label={`Copier le lien de vérification de l'attestation ${att.code}`} onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/verifier?code=${encodeURIComponent(att.code)}`);
+                    navigator.clipboard.writeText(`${window.location.origin}${attestationVerificationPath(att.code)}`);
                     toast.success("Lien de vérification copié !");
                 }}>
                     <Share2 className="w-4 h-4" />
