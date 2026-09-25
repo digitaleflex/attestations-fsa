@@ -25,6 +25,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [stepError, setStepError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [formData, setFormData] = useState<ExamFormData>({
     title: initialData?.title || "",
@@ -89,11 +90,69 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   const scheduleErrorMessage =
     "La date et l'heure de programmation sont requises pour un examen programmé.";
 
-  const handleNext = () => {
-    if (step === 0 && scheduleInvalid) {
-      toast.error(scheduleErrorMessage);
+  const validateStep = (stepToValidate: number): string | null => {
+    if (stepToValidate === 0) {
+      if (!formData.title.trim()) return "Le titre de l'examen est requis.";
+      if (!formData.formationId) return "Sélectionnez une formation.";
+      if (!formData.duration || formData.duration <= 0) return "La durée totale doit être supérieure à zéro.";
+      if (scheduleInvalid) return scheduleErrorMessage;
+    }
+
+    if (stepToValidate >= 1 && stepToValidate <= 3) {
+      const part = formData.parts[stepToValidate - 1];
+      if (!part) return "Cette partie est introuvable.";
+      if (part.duration <= 0) return `La durée de « ${part.title} » doit être supérieure à zéro.`;
+      if (part.questions.length === 0) return `Ajoutez au moins une question à « ${part.title} ».`;
+      if (part.questions.some((question) => !question.text.trim() || question.points <= 0)) {
+        return `Renseignez le texte et les points de chaque question de « ${part.title} ».`;
+      }
+      if (part.questions.some((question) => question.type !== "OPEN" && (
+        !question.options?.length || question.options.some((option) => !option.text.trim()) ||
+        !question.options.some((option) => option.isCorrect)
+      ))) {
+        return `Renseignez les options et la bonne réponse de « ${part.title} ».`;
+      }
+      if (part.type === "CASE_STUDY" && !part.scenario?.trim()) {
+        return `Renseignez le scénario de « ${part.title} ».`;
+      }
+    }
+    return null;
+  };
+
+  const canNavigateTo = (target: number) => {
+    if (target < 0 || target >= steps.length || target > step + 1) return false;
+    if (target <= step) return true;
+    for (let index = 0; index < step; index++) {
+      if (validateStep(index)) return false;
+    }
+    return !validateStep(step);
+  };
+
+  const navigateToStep = (target: number) => {
+    if (target === step) {
+      setStepError(null);
       return;
     }
+    const error = target > step ? validateStep(step) : null;
+    if (error) {
+      setStepError(error);
+      toast.error(error);
+      return;
+    }
+    if (canNavigateTo(target)) {
+      setStepError(null);
+      setStep(target);
+    }
+  };
+
+  const handleNext = () => {
+    const error = validateStep(step);
+    if (error) {
+      setStepError(error);
+      toast.error(error);
+      return;
+    }
+    setStepError(null);
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
   const handlePrev = () => setStep((s) => Math.max(s - 1, 0));
@@ -109,10 +168,14 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   };
 
   const handleSubmit = async () => {
-    if (scheduleInvalid) {
-      toast.error(scheduleErrorMessage);
-      setStep(0);
-      return;
+    for (let index = 0; index < 4; index++) {
+      const error = validateStep(index);
+      if (error) {
+        setStepError(error);
+        toast.error(error);
+        setStep(index);
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -188,16 +251,22 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       {/* Stepper */}
-      <div className="flex items-center justify-between px-4 overflow-x-auto">
+      <nav aria-label="Étapes de construction de l'examen" className="overflow-x-auto">
+        <ol className="flex min-w-max items-center justify-between px-4">
         {steps.map((s, i) => {
           const Icon = s.icon;
           const isActive = step === i;
           const isDone = step > i;
           return (
             <React.Fragment key={s.label}>
-              <div
-                className="flex flex-col items-center gap-2 group cursor-pointer"
-                onClick={() => setStep(i)}
+              <button
+                type="button"
+                className="flex flex-col items-center gap-2 group cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                onClick={() => navigateToStep(i)}
+                disabled={i > step && !canNavigateTo(i)}
+                aria-current={isActive ? "step" : undefined}
+                aria-describedby={stepError && isActive ? "exam-step-error" : undefined}
+                aria-label={`Étape ${i + 1} sur ${steps.length} : ${s.label}`}
               >
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
@@ -225,7 +294,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
                 >
                   {s.label}
                 </span>
-              </div>
+              </button>
               {i < steps.length - 1 && (
                 <div
                   className={`flex-1 h-[2px] mx-1 sm:mx-4 transition-colors duration-300 ${step > i ? "bg-emerald-500" : "bg-slate-200"}`}
@@ -234,7 +303,14 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
             </React.Fragment>
           );
         })}
-      </div>
+        </ol>
+      </nav>
+
+      {stepError && (
+        <p id="exam-step-error" role="alert" className="text-sm font-semibold text-rose-600">
+          {stepError}
+        </p>
+      )}
 
       {/* 🛡️ AUTO-SAVE INDICATOR */}
       {!initialData && (

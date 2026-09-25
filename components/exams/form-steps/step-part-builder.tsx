@@ -89,12 +89,14 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
         </div>
         <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
           <Clock className="w-4 h-4 text-slate-400" />
-          <Label className="text-xs font-bold text-slate-500">DURÉE (MIN)</Label>
+          <Label htmlFor={`part-duration-${part.id || part.order}`} className="text-xs font-bold text-slate-500">DURÉE (MIN)</Label>
           <Input
+            id={`part-duration-${part.id || part.order}`}
             type="number"
             value={part.duration}
             onChange={(e) => onUpdatePart({ duration: parseInt(e.target.value) || 0 })}
             className="w-20 h-8 text-center font-bold"
+            aria-label={`Durée de ${part.title} en minutes`}
           />
         </div>
       </div>
@@ -108,13 +110,15 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
             </Label>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <Card
-                className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group ${
+              <button
+                type="button"
+                className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group text-left rounded-[1.25rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   part.mode === "digital"
                     ? "border-2 border-brand bg-brand/10 shadow-md"
                     : "border-2 border-slate-200 hover:border-brand/30 bg-white"
                 }`}
                 onClick={() => onUpdatePart({ mode: "digital" })}
+                aria-pressed={part.mode === "digital"}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${part.mode === "digital" ? "bg-brand text-white" : "bg-slate-100 text-slate-400 group-hover:bg-brand/10 group-hover:text-brand"}`}>
@@ -126,15 +130,17 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                   </div>
                   {part.mode === "digital" && <CheckCircle2 className="w-5 h-5 text-brand ml-auto" />}
                 </div>
-              </Card>
+              </button>
 
-              <Card
-                className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group ${
+              <button
+                type="button"
+                className={`p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group text-left rounded-[1.25rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   part.mode === "physical"
                     ? "border-2 border-amber-500 bg-amber-50/50 shadow-md"
                     : "border-2 border-slate-200 hover:border-amber-200 bg-white"
                 }`}
                 onClick={() => onUpdatePart({ mode: "physical" })}
+                aria-pressed={part.mode === "physical"}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${part.mode === "physical" ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-amber-100 group-hover:text-amber-500"}`}>
@@ -146,7 +152,7 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                   </div>
                   {part.mode === "physical" && <CheckCircle2 className="w-5 h-5 text-amber-500 ml-auto" />}
                 </div>
-              </Card>
+              </button>
             </div>
 
             <div className="space-y-2">
@@ -219,8 +225,9 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => removeQuestion(qIdx)}
-                    className="text-slate-300 hover:text-rose-600 transition-colors shrink-0"
+                     onClick={() => removeQuestion(qIdx)}
+                     aria-label={`Supprimer la question ${qIdx + 1}`}
+                     className="text-slate-300 hover:text-rose-600 transition-colors shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -244,8 +251,9 @@ export function StepPartBuilder({ part, onUpdatePart }: Props) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeOption(qIdx, oIdx)}
-                          className="text-slate-300 hover:text-rose-600"
+                           onClick={() => removeOption(qIdx, oIdx)}
+                           aria-label={`Supprimer l'option ${oIdx + 1} de la question ${qIdx + 1}`}
+                           className="text-slate-300 hover:text-rose-600"
                         >
                           <XCircle className="w-3 h-3" />
                         </Button>

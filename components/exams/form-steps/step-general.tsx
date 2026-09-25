@@ -125,10 +125,11 @@ export function StepGeneral({ formData, updateFormData }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">
+              <Label htmlFor="exam-date" className="text-sm font-semibold text-slate-700">
                 Date de l&apos;Examen (JJ/MM/AAAA)
               </Label>
               <DateInput
+                id="exam-date"
                 value={formData.scheduledAt?.split("T")[0] || ""}
                 onChange={(e) => {
                   const date = e.target.value;
@@ -136,14 +137,16 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   updateFormData({ scheduledAt: `${date}T${time}` });
                 }}
                 className="h-12 focus:ring-2 focus:ring-brand/20 font-bold"
+                aria-label="Date de l'examen (jour, mois, année)"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">
+              <Label htmlFor="exam-time" className="text-sm font-semibold text-slate-700">
                 Heure (Format 24h)
               </Label>
               <Input
+                id="exam-time"
                 type="time"
                 value={formData.scheduledAt?.split("T")[1] || "08:00"}
                 onChange={(e) => {
@@ -152,6 +155,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   updateFormData({ scheduledAt: `${date}T${time}` });
                 }}
                 className="h-12 focus:ring-2 focus:ring-brand/20 font-bold"
+                aria-label="Heure de l'examen (format 24 heures)"
               />
             </div>
 
@@ -194,11 +198,12 @@ export function StepGeneral({ formData, updateFormData }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">
+              <Label htmlFor="exam-session-month" className="text-sm font-semibold text-slate-700">
                 Session de l&apos;Examen
               </Label>
               <div className="flex gap-2">
                 <select
+                  id="exam-session-month"
                   className="flex-1 h-12 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-slate-400/20 outline-none bg-white font-bold"
                   value={formData.session?.split(" ")[0] || ""}
                   onChange={(e) => {
@@ -213,6 +218,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   ))}
                 </select>
                 <Input
+                  id="exam-session-year"
                   type="number"
                   placeholder="Année"
                   className="w-24 h-12 font-bold"
@@ -226,12 +232,14 @@ export function StepGeneral({ formData, updateFormData }: Props) {
               </div>
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label className="text-sm font-semibold text-slate-700">Durée Totale (HH:MM:SS)</Label>
+            <fieldset className="space-y-2 md:col-span-2">
+              <legend className="text-sm font-semibold text-slate-700">Durée Totale (HH:MM:SS)</legend>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Input
+                    id="exam-duration-hours"
                     type="number"
+                     aria-label="Heures de la durée totale"
                     placeholder="HH"
                     min="0"
                     value={Math.floor((formData.duration || 0) / 3600)}
@@ -249,7 +257,9 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                 <span className="text-xl font-bold text-slate-300 mb-4">:</span>
                 <div className="flex-1">
                   <Input
+                    id="exam-duration-minutes"
                     type="number"
+                     aria-label="Minutes de la durée totale"
                     placeholder="MM"
                     min="0"
                     max="59"
@@ -268,7 +278,9 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                 <span className="text-xl font-bold text-slate-300 mb-4">:</span>
                 <div className="flex-1">
                   <Input
+                    id="exam-duration-seconds"
                     type="number"
+                     aria-label="Secondes de la durée totale"
                     placeholder="SS"
                     min="0"
                     max="59"
@@ -285,7 +297,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   <p className="text-[9px] text-center text-slate-400 mt-1 font-bold">SECONDES</p>
                 </div>
               </div>
-            </div>
+            </fieldset>
           </div>
         </div>
 
