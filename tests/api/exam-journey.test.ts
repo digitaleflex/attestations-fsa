@@ -173,7 +173,7 @@ beforeEach(() => {
   db.attestationCount.mockResolvedValue(0 as never);
   db.attestationFindMany.mockResolvedValue([] as never);
   db.userFindUnique.mockResolvedValue({ id: "user-1", examId: null } as never);
-  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1" } as never);
+  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1", status: "ACTIVE" } as never);
   db.formationFindFirst.mockResolvedValue({ id: "formation-1" } as never);
 });
 

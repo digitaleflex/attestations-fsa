@@ -6,6 +6,7 @@ import {
   checkExamEligibility,
   enrollmentForbiddenResponse,
 } from "@/lib/exams/eligibility";
+import { applyRateLimit, applyRateLimitByUser } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
@@ -16,6 +17,14 @@ export async function GET(
   if (!user && !adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+
+  // #256 — point d'entrée candidat non couvert avant ce lot : la lecture d'un
+  // examen livre les questions et le barème. Limité par utilisateur quand il
+  // y en a un, par IP sinon (navigation admin).
+  const rateLimit = user
+    ? await applyRateLimitByUser(request, user.id, "examRead")
+    : await applyRateLimit(request, "examRead");
+  if (!rateLimit.allowed) return rateLimit.response;
 
   const { id } = await params;
 

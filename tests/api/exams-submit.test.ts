@@ -76,11 +76,15 @@ function stubAuthorized() {
   } as never);
   deps.applyRateLimitByUser.mockResolvedValue({ allowed: true } as never);
   deps.getAdminUser.mockResolvedValue(null as never);
-  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1" } as never);
+  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1", status: "ACTIVE" } as never);
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  // `vi.clearAllMocks()` n'efface PAS les files `mockResolvedValueOnce` non
+  // consommées (une route sortie plus tôt en laisse une) : elles fuient alors
+  // sur le test suivant. `mockReset` remet chaque mock à zéro, et les
+  // implémentations sont re-posées ci-dessous / par `stubAuthorized()`.
+  vi.resetAllMocks();
   deps.analyzeAnswerPattern.mockResolvedValue({ isSuspicious: false } as never);
   deps.logCheatingDetection.mockResolvedValue(undefined as never);
   deps.createAuditLog.mockResolvedValue(undefined as never);
@@ -134,6 +138,13 @@ describe("POST /api/exams/[id]/submit", () => {
 
   it("409 si la session est déjà soumise", async () => {
     stubAuthorized();
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      totalPoints: 20,
+      type: "MOCK",
+      duration: 3600,
+    } as never);
     db.sessionFindFirst.mockResolvedValueOnce({
       id: "session-1",
       startedAt: new Date(Date.now() - 600_000),
@@ -148,26 +159,58 @@ describe("POST /api/exams/[id]/submit", () => {
 
   it("409 si aucune session d'examen n'a été démarrée", async () => {
     stubAuthorized();
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      part2Points: 0,
+      part3Points: 0,
+      part1Enabled: true,
+      part2Enabled: false,
+      part3Enabled: false,
+      totalPoints: 20,
+      type: "OFFICIAL",
+      duration: 3600,
+    } as never);
     db.sessionFindFirst.mockResolvedValueOnce(null as never);
 
     const res = await callSubmit({ q1: "o1" });
     expect(res.status).toBe(409);
-    expect(db.examFindUnique).not.toHaveBeenCalled();
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
+  });
+
+  // #256 — l'éligibilité passe AVANT la lecture de session : un candidat non
+  // inscrit reçoit 403 sans que la route ne révèle l'existence d'une session.
+  it("403 avant toute lecture de session quand l'éligibilité échoue", async () => {
+    stubAuthorized();
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      totalPoints: 20,
+      type: "OFFICIAL",
+      duration: 3600,
+    } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
+
+    const res = await callSubmit({ q1: "o1" });
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("EXAM_NOT_ENROLLED");
+    expect(db.sessionFindFirst).not.toHaveBeenCalled();
   });
 
   it("404 si l'examen n'existe pas", async () => {
     stubAuthorized();
-    db.sessionFindFirst.mockResolvedValueOnce({
-      id: "session-1",
-      startedAt: new Date(),
-      status: "IN_PROGRESS",
-      submittedAt: null,
-    } as never);
+    // Aucune valeur de session n'est préparée : la route doit s'arrêter sur le
+    // 404 sans jamais lire la session (`vi.clearAllMocks` ne vide pas les
+    // files `mockResolvedValueOnce` non consommées — les préparer ici les
+    // ferait fuir sur le test suivant).
     db.examFindUnique.mockResolvedValue(null as never);
     db.examPartFindMany.mockResolvedValue([] as never);
 
     const res = await callSubmit({ q1: "o1" });
     expect(res.status).toBe(404);
+    // L'examen est résolu avant la session : aucune session n'est lue.
+    expect(db.sessionFindFirst).not.toHaveBeenCalled();
   });
 
   it("403 pour soumettre un OFFICIAL sans enrollment", async () => {
@@ -458,5 +501,168 @@ describe("POST /api/exams/[id]/submit", () => {
     // La composition est bien persistée sous answers.part3
     const updateCall = db.sessionUpdateMany.mock.calls[0][0];
     expect(updateCall.data.answers.part3).toBe(composition);
+  });
+  // #257 — transitions concurrentes : le garde-fou est le `updateMany`
+  // conditionné (statut + submittedAt IS NULL), pas une lecture applicative.
+  // Deux soumissions simultanées ne peuvent donc pas toutes deux écrire.
+  it("refuse une soumission concurrente perdue (updateMany count 0)", async () => {
+    stubAuthorized();
+    db.sessionFindFirst
+      .mockResolvedValueOnce({
+        id: "session-1",
+        startedAt: new Date(Date.now() - 600_000),
+        status: "IN_PROGRESS",
+        submittedAt: null,
+      } as never)
+      .mockResolvedValueOnce({
+        id: "session-1",
+        status: "GRADED",
+        scorePart1: 20,
+        totalScore: 20,
+        finalScore: 100,
+      } as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      part2Points: 0,
+      part3Points: 0,
+      part1Enabled: true,
+      part2Enabled: false,
+      part3Enabled: false,
+      totalPoints: 20,
+      type: "OFFICIAL",
+      passingScore: 65,
+      formationId: "formation-1",
+    } as never);
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [
+        {
+          id: "q1",
+          type: "SINGLE_CHOICE",
+          options: [
+            { id: "o1", isCorrect: true },
+            { id: "o2", isCorrect: false },
+          ],
+        },
+      ],
+    } as never);
+    db.examPartFindMany.mockResolvedValue([
+      { order: 1, type: "QCM", points: 20 },
+    ] as never);
+    // La session a été soumise entre-temps par la requête concurrente.
+    db.sessionUpdateMany.mockResolvedValue({ count: 0 } as never);
+
+    const res = await callSubmit({ q1: "o1" });
+
+    expect(res.status).toBe(409);
+    expect(deps.issueExamAttestation).not.toHaveBeenCalled();
+    expect(deps.createAuditLog).not.toHaveBeenCalled();
+    expect(deps.deleteDraft).not.toHaveBeenCalled();
+  });
+
+  it("deux soumissions simultanées : une seule écriture, une seule attestation", async () => {
+    stubAuthorized();
+    db.sessionFindFirst.mockResolvedValue({
+      id: "session-1",
+      startedAt: new Date(Date.now() - 600_000),
+      status: "IN_PROGRESS",
+      submittedAt: null,
+    } as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      part2Points: 0,
+      part3Points: 0,
+      part1Enabled: true,
+      part2Enabled: false,
+      part3Enabled: false,
+      totalPoints: 20,
+      type: "OFFICIAL",
+      passingScore: 65,
+      formationId: "formation-1",
+    } as never);
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [
+        {
+          id: "q1",
+          type: "SINGLE_CHOICE",
+          options: [
+            { id: "o1", isCorrect: true },
+            { id: "o2", isCorrect: false },
+          ],
+        },
+      ],
+    } as never);
+    db.examPartFindMany.mockResolvedValue([
+      { order: 1, type: "QCM", points: 20 },
+    ] as never);
+    // La première écriture gagne, la seconde est rejetée par le garde-fou.
+    db.sessionUpdateMany
+      .mockResolvedValueOnce({ count: 1 } as never)
+      .mockResolvedValueOnce({ count: 0 } as never);
+
+    const [first, second] = await Promise.all([
+      callSubmit({ q1: "o1" }),
+      callSubmit({ q1: "o1" }),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([201, 409]);
+    expect(deps.issueExamAttestation).toHaveBeenCalledTimes(1);
+    expect(deps.createAuditLog).toHaveBeenCalledTimes(1);
+  });
+
+  it("écrit le snapshot de barème sous une garde conditionnelle (statut + submittedAt)", async () => {
+    stubAuthorized();
+    db.sessionFindFirst.mockResolvedValue({
+      id: "session-1",
+      startedAt: new Date(Date.now() - 600_000),
+      status: "IN_PROGRESS",
+      submittedAt: null,
+    } as never);
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      part1Points: 20,
+      totalPoints: 20,
+      type: "MOCK",
+      duration: 3600,
+    } as never);
+    db.examPartFindFirst.mockResolvedValue({
+      points: 20,
+      questions: [
+        {
+          id: "q1",
+          type: "SINGLE_CHOICE",
+          options: [
+            { id: "o1", isCorrect: true },
+            { id: "o2", isCorrect: false },
+          ],
+        },
+      ],
+    } as never);
+    db.examPartFindMany.mockResolvedValue([
+      { order: 1, type: "QCM", points: 20 },
+    ] as never);
+    db.sessionUpdateMany.mockResolvedValue({ count: 1 } as never);
+
+    const res = await callSubmit({ q1: "o1" });
+
+    expect(res.status).toBe(201);
+    const write = db.sessionUpdateMany.mock.calls[0][0];
+    // La garde est dans la requête : une session déjà soumise ne peut pas être
+    // réécrite, même si la lecture applicative l'avait encore vue IN_PROGRESS.
+    expect(write.where).toMatchObject({
+      id: "session-1",
+      status: { in: ["IN_PROGRESS", "PENDING"] },
+      submittedAt: null,
+    });
+    // Snapshot versionné persisté de façon additive, à l'intérieur de `answers`
+    // (aucune colonne ajoutée, aucun barème historique réécrit).
+    expect(write.data.answers._customBareme).toMatchObject({
+      version: 1,
+      totalMax: 20,
+    });
   });
 });

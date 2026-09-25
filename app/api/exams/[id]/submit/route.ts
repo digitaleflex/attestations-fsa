@@ -170,6 +170,42 @@ export async function POST(
       );
     }
 
+    // #256 — l'éligibilité est vérifiée AVANT tout état de session : un
+    // candidat non inscrit (ou révoqué) reçoit 403, pas 409 « session non
+    // démarrée », et la route ne révèle ni l'existence d'une session ni son
+    // statut. Aucune session n'est lue avant le contrôle d'accès. L'examen
+    // n'est lu qu'une fois : le contrôle d'accès et la correction partagent le
+    // même objet, donc aucun second aller-retour ni état divergent.
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      select: {
+        id: true,
+        part1Points: true,
+        part2Points: true,
+        part3Points: true,
+        part1Enabled: true,
+        part2Enabled: true,
+        part3Enabled: true,
+        totalPoints: true,
+        type: true,
+        passingScore: true,
+        formationId: true,
+        duration: true,
+      },
+    });
+    if (!exam) {
+      return NextResponse.json({ error: 'Examen non trouvé' }, { status: 404 });
+    }
+
+    const adminUser = await getAdminUser(request);
+    const eligibility = await checkExamEligibility({
+      userId: user.id,
+      examId: exam.id,
+      examType: exam.type,
+      isAdmin: adminUser !== null,
+    });
+    if (!eligibility.eligible) return enrollmentForbiddenResponse(eligibility);
+
     const existingSession = await prisma.examSession.findFirst({
       where: { examId, userId: user.id },
       select: { id: true, startedAt: true, status: true, submittedAt: true },
@@ -187,24 +223,7 @@ export async function POST(
       return NextResponse.json({ error: 'Session déjà soumise' }, { status: 409 });
     }
 
-    const [exam, qcmPart, allExamParts] = await Promise.all([
-      prisma.exam.findUnique({
-        where: { id: examId },
-        select: {
-          id: true,
-          part1Points: true,
-          part2Points: true,
-          part3Points: true,
-          part1Enabled: true,
-          part2Enabled: true,
-          part3Enabled: true,
-          totalPoints: true,
-          type: true,
-          passingScore: true,
-          formationId: true,
-          duration: true,
-        },
-      }),
+    const [qcmPart, allExamParts] = await Promise.all([
       prisma.examPart.findFirst({
         where: { examId, type: 'QCM' },
         orderBy: { order: 'asc' },
@@ -226,19 +245,6 @@ export async function POST(
         },
       }),
     ]);
-
-    if (!exam) {
-      return NextResponse.json({ error: 'Examen non trouvé' }, { status: 404 });
-    }
-
-    const adminUser = await getAdminUser(request);
-    const eligibility = await checkExamEligibility({
-      userId: user.id,
-      examId: exam.id,
-      examType: exam.type,
-      isAdmin: adminUser !== null,
-    });
-    if (!eligibility.eligible) return enrollmentForbiddenResponse(eligibility);
 
     const typedParts = (allExamParts as unknown as ScoredPart[]).map((part) => {
       const questions = part.questions ?? [];

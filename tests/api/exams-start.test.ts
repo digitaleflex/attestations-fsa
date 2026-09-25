@@ -28,6 +28,7 @@ const deps = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   getAdminUser: vi.fn(),
   createAuditLog: vi.fn(),
+  applyRateLimitByUser: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -35,6 +36,10 @@ vi.mock("@/lib/auth", () => ({
   getAdminUser: deps.getAdminUser,
 }));
 vi.mock("@/lib/audit", () => ({ createAuditLog: deps.createAuditLog }));
+// #256 — le démarrage est borné par IP et par utilisateur.
+vi.mock("@/lib/rate-limit", () => ({
+  applyRateLimitByUser: deps.applyRateLimitByUser,
+}));
 
 import { POST } from "../../app/api/exams/[id]/start/route";
 
@@ -51,6 +56,7 @@ function stubAuthorized() {
     name: "Alice",
   } as never);
   deps.createAuditLog.mockResolvedValue(undefined as never);
+  deps.applyRateLimitByUser.mockResolvedValue({ allowed: true } as never);
   deps.getAdminUser.mockResolvedValue(null as never);
 }
 
@@ -71,7 +77,7 @@ beforeEach(() => {
   stubAuthorized();
   stubExam();
   db.userFindUnique.mockResolvedValue({ id: "user-1", examId: null } as never);
-  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1" } as never);
+  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1", status: "ACTIVE" } as never);
 });
 
 describe("POST /api/exams/[id]/start", () => {

@@ -317,17 +317,39 @@ model ExamSession {
 // Inscription explicite à un examen. L'absence de cette ligne ne vaut jamais
 // éligibilité pour un examen OFFICIAL ; les sessions existantes ne sont pas
 // supprimées lors de la transition.
+//
+// #256 — champs de suivi AJOUTÉS de façon additive (TEXT, jamais d'enum, pour
+// rester compatible avec les clés `TEXT` historiques et avec Prisma sans
+// migration destructive). Toutes les colonnes sont nullable ou portent une
+// valeur par défaut : une ligne créée avant ce lot reste lisible et vaut
+// `status = "ACTIVE"` (pas de backfill nécessaire, pas de perte d'information).
+//   status     : ACTIVE | REVOKED (toute autre valeur est traitée comme
+//                invalide et refusée par lib/exams/enrollment.ts)
+//   source     : origine de l'inscription (ADMIN_ASSIGNMENT, IMPORT, API, ...)
+//   grantedById: compte ayant accordé l'inscription (traçabilité admin)
+//   revokedAt / revokedById / revokeReason : révocation logique, jamais de
+//                DELETE physique (les sessions et le journal restent lisibles)
 model ExamEnrollment {
-  id        String   @id @default(uuid())
-  userId    String
-  examId    String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  id           String    @id @default(uuid())
+  userId       String
+  examId       String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+  status       String    @default("ACTIVE")
+  source       String    @default("ADMIN_ASSIGNMENT")
+  grantedById  String?
+  note         String?
+  revokedAt    DateTime?
+  revokedById  String?
+  revokeReason String?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam         Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
 
   @@unique([userId, examId])
   @@index([examId])
   @@index([userId])
+  @@index([status])
+  @@index([status, examId])
 }
 
 model InternshipRequest {

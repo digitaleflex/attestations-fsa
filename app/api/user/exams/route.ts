@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import { applyRateLimitByUser } from "@/lib/rate-limit";
 import { autoOpenDueExams, isExamAvailable } from "@/lib/exams/availability";
 import {
   round2,
@@ -36,6 +37,12 @@ export async function GET(request: Request) {
     }
 
     const userId = userAuth.id;
+
+    // #256 — la liste des examens du candidat n'était pas limitée : elle
+    // énumère les examens OFFICIAL visibles et leur barème. Même budget que la
+    // lecture d'un examen.
+    const rateLimit = await applyRateLimitByUser(request, userId, "examRead");
+    if (!rateLimit.allowed) return rateLimit.response;
 
     const { searchParams } = new URL(request.url);
     const params = ExamsQuerySchema.safeParse({
@@ -86,7 +93,10 @@ export async function GET(request: Request) {
           ...(params.data.limit ? { take: params.data.limit } : {}),
         }),
         prisma.examEnrollment.findMany({
-          where: { userId },
+          // #256 : seules les inscriptions ACTIVES ouvrent un OFFICIAL ; une
+          // inscription révoquée est conservée en base (traçabilité) mais ne
+          // doit plus rendre l'examen lisible dans la liste du candidat.
+          where: { userId, status: "ACTIVE" },
           select: { examId: true },
         }),
         prisma.examSession.findMany({

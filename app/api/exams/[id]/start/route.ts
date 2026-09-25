@@ -7,6 +7,7 @@ import {
   checkExamEligibility,
   enrollmentForbiddenResponse,
 } from "@/lib/exams/eligibility";
+import { applyRateLimitByUser } from "@/lib/rate-limit";
 
 /**
  * POST /api/exams/[id]/start
@@ -21,6 +22,17 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
+
+    // #256 — le démarrage était le seul point d'entrée du flux examen sans
+    // limite : une boucle de reconquête ne créait qu'une session (upsert) mais
+    // saturait l'API et l'audit. Borné par IP ET par utilisateur.
+    const rateLimit = await applyRateLimitByUser(
+      request,
+      user.id,
+      "examStart",
+    );
+    if (!rateLimit.allowed) return rateLimit.response;
+
     const adminUser = await getAdminUser(request);
 
     const { id: examId } = await params;

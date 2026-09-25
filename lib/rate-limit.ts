@@ -67,6 +67,40 @@ export const rateLimits = {
       })
     : null,
 
+  // #256 — Lecture du contenu d'un examen (GET /api/exams/[id], liste candidat).
+  // Le barème et les identifiants de questions ne doivent pas être
+  // harvestés par un script de tries.
+  examRead: redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(60, "1 m"), // 60 lectures / minute
+        analytics: true,
+        prefix: "ratelimit:exam-read",
+      })
+    : null,
+
+  // #256 — Démarrage/reprise d'une session d'examen.
+  examStart: redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(20, "1 h"), // 20 démarrages / heure
+        analytics: true,
+        prefix: "ratelimit:exam-start",
+      })
+    : null,
+
+  // #256 — Synchronisation du brouillon. Le client persiste toutes les 15 s,
+  // soit ~240 appels pour un examen d'une heure : la limite est calibrée au
+  // dessus de ce rythme nominal, avec une garde pour la boucle runaway.
+  examDraft: redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(400, "1 h"), // 400 brouillons / heure
+        analytics: true,
+        prefix: "ratelimit:exam-draft",
+      })
+    : null,
+
   // Password reset request
   passwordReset: redis
     ? new Ratelimit({
@@ -192,6 +226,9 @@ export const memoryFallbackLimits: Record<
   verify: { max: 10, windowMs: 60 * MINUTE },
   api: { max: 100, windowMs: 1 * MINUTE },
   submission: { max: 5, windowMs: 60 * MINUTE },
+  examRead: { max: 60, windowMs: 1 * MINUTE },
+  examStart: { max: 20, windowMs: 60 * MINUTE },
+  examDraft: { max: 400, windowMs: 60 * MINUTE },
   passwordReset: { max: 3, windowMs: 60 * MINUTE },
   emailVerification: { max: 5, windowMs: 60 * MINUTE },
   internship: { max: 3, windowMs: 60 * MINUTE },

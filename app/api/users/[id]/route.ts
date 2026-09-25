@@ -7,6 +7,10 @@ import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
 import { VISIBLE_EXAM_STATUSES } from "@/lib/exams/availability";
+import {
+  grantExamEnrollment,
+  revokeExamEnrollment,
+} from "@/lib/exams/enrollment";
 
 const UpdateUserSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères").optional(),
@@ -274,16 +278,25 @@ export async function PATCH(
 
       // L'affectation administrative est l'étape explicite qui crée l'inscription
       // à l'examen. Aucun backfill massif n'est effectué lors de la migration.
+      // #256 : opérations IDEMPOTENTES (upsert sur (userId, examId) + révocation
+      // logique) — un rejeu de la même affectation ne duplique rien et ne
+      // supprime jamais l'historique de l'inscription.
       if (resolvedExamId !== undefined) {
         if (resolvedExamId) {
-          await tx.examEnrollment.upsert({
-            where: { userId_examId: { userId: id, examId: resolvedExamId } },
-            create: { userId: id, examId: resolvedExamId },
-            update: {},
+          await grantExamEnrollment({
+            userId: id,
+            examId: resolvedExamId,
+            grantedById: adminUser.id,
+            source: "ADMIN_ASSIGNMENT",
+            client: tx,
           });
-        } else {
-          await tx.examEnrollment.deleteMany({
-            where: { userId: id, examId: currentUser.examId ?? "" },
+        } else if (currentUser.examId) {
+          await revokeExamEnrollment({
+            userId: id,
+            examId: currentUser.examId,
+            revokedById: adminUser.id,
+            revokeReason: "Affectation retirée par un administrateur",
+            client: tx,
           });
         }
       }

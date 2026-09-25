@@ -23,6 +23,10 @@ vi.mock("@/lib/auth", () => ({
   getCurrentUser: deps.getCurrentUser,
   getAdminUser: deps.getAdminUser,
 }));
+// #256 — la synchronisation du brouillon est bornée par IP et par utilisateur.
+vi.mock("@/lib/rate-limit", () => ({
+  applyRateLimitByUser: vi.fn().mockResolvedValue({ allowed: true }),
+}));
 vi.mock("@/lib/exam-draft", () => ({
   saveDraft: deps.saveDraft,
   loadDraft: deps.loadDraft,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminUser, getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { applyRateLimitByUser } from '@/lib/rate-limit';
 import {
   checkExamEligibility,
   enrollmentForbiddenResponse,
@@ -11,6 +12,19 @@ import {
   deleteDraft,
   isValidExamDraft,
 } from '@/lib/exam-draft';
+
+/**
+ * #256 — la synchronisation du brouillon était le point d'entrée le plus
+ * sollicité du flux examen (toutes les 15 s côté client) et le seul sans
+ * limite. La limite `examDraft` est calée au-dessus du rythme nominal afin de
+ * ne jamais pénaliser un examen légitime, tout en bloquant une boucle.
+ * Appliquée APRÈS l'authentification (clé par utilisateur) et AVANT tout
+ * accès à l'examen : un candidat non inscrit ne consomme aucun quota.
+ */
+async function ensureDraftRateLimit(request: Request, userId: string) {
+  const rateLimit = await applyRateLimitByUser(request, userId, 'examDraft');
+  return rateLimit.allowed ? null : rateLimit.response;
+}
 
 async function ensureEligible(request: Request, examId: string, userId: string) {
   const [adminUser, exam] = await Promise.all([
@@ -45,6 +59,9 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const limited = await ensureDraftRateLimit(request, user.id);
+    if (limited) return limited;
 
     const { id: examId } = await params;
     const forbidden = await ensureEligible(request, examId, user.id);
@@ -92,6 +109,9 @@ export async function GET(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
+    const limited = await ensureDraftRateLimit(request, user.id);
+    if (limited) return limited;
+
     const { id: examId } = await params;
     const forbidden = await ensureEligible(request, examId, user.id);
     if (forbidden) return forbidden;
@@ -118,6 +138,9 @@ export async function DELETE(
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const limited = await ensureDraftRateLimit(request, user.id);
+    if (limited) return limited;
 
     const { id: examId } = await params;
     const forbidden = await ensureEligible(request, examId, user.id);
