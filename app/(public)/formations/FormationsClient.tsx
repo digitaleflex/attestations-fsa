@@ -141,21 +141,33 @@ export default function FormationsClient({ initialFormations }: FormationsClient
               </span>
             </h1>
 
-            <p className="text-slate-500 text-sm md:text-base max-w-xl font-medium leading-relaxed px-4">
+            <p className="text-slate-600 text-sm md:text-base max-w-xl font-medium leading-relaxed px-4">
               Explorez nos programmes d'élite conçus pour transformer votre vision 
               en entreprise agro-piscicole prospère et durable.
             </p>
 
-            {/* Barre de recherche minimaliste */}
+            {/* Recherche et filtres */}
             <div className="w-full max-w-xl mx-auto pt-6 px-2 md:px-0">
-              <div className="bg-white rounded-2xl border border-slate-200/60 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/5 transition-all duration-300">
+              <div
+                role="search"
+                aria-labelledby="formation-search-label"
+                className="bg-white rounded-2xl border border-slate-300 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10 transition-all duration-300"
+              >
+                <label id="formation-search-label" htmlFor="formation-search" className="sr-only">
+                  Rechercher une formation ou une compétence
+                </label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1 flex items-center">
-                    <Search className="w-5 h-5 text-slate-400 absolute left-4" />
-                    <Input 
+                    <Search className="w-5 h-5 text-slate-600 absolute left-4" aria-hidden="true" />
+                    <Input
                       ref={searchInputRef}
+                      id="formation-search"
+                      type="search"
                       placeholder="Rechercher une formation ou une compétence..."
-                      className="w-full h-12 pl-12 pr-4 bg-transparent border-none focus:ring-0 text-base font-bold tracking-wide text-slate-800 placeholder:text-slate-300 placeholder:font-normal"
+                      aria-describedby="formation-search-results"
+                      aria-controls="formations-results"
+                      aria-keyshortcuts="Control+K Meta+K"
+                      className="w-full h-12 pl-12 pr-4 bg-transparent border-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset text-base font-bold tracking-wide text-slate-900 placeholder:text-slate-500 placeholder:font-normal"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -163,32 +175,42 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                 </div>
               </div>
 
-              {/* Puces de catégories défilantes horizontales (Scrollable Pills) */}
-              <div className="mt-6 flex items-center justify-start md:justify-center gap-2 overflow-x-auto pb-3 pt-1 px-1 scrollbar-none w-full">
-                {categories.map((cat) => {
-                  const isActive = activeCategory === cat;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setActiveCategory(cat)}
-                      className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap border transition-all duration-300 shrink-0 ${
-                        isActive
-                          ? "bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/10 scale-105"
-                          : "bg-white text-slate-500 border-slate-200/80 hover:text-slate-800 hover:border-slate-300 shadow-sm"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
+              <fieldset className="mt-6">
+                <legend className="sr-only">Filtrer les formations par spécialité</legend>
+                <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto pb-3 pt-1 px-1 scrollbar-none w-full">
+                  {categories.map((cat) => {
+                    const isActive = activeCategory === cat;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => setActiveCategory(cat)}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap border transition-all duration-300 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
+                          isActive
+                            ? "bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/10 scale-105"
+                            : "bg-white text-slate-700 border-slate-300 hover:text-slate-950 hover:border-slate-400 shadow-sm"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* --- FORMATIONS GRID --- */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 mt-8 pb-20">
+      <section id="formations-results" className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 mt-8 pb-20" aria-labelledby="formations-results-title">
+        <h2 id="formations-results-title" className="sr-only">Formations disponibles</h2>
+        <p id="formation-search-results" role="status" aria-live="polite" className="mb-6 text-center text-sm font-semibold text-slate-700">
+          {filteredFormations.length} {filteredFormations.length > 1 ? "formations trouvées" : "formation trouvée"}
+          {activeCategory !== "Toutes" ? ` dans la catégorie ${activeCategory}` : ""}
+          {searchTerm ? ` pour « ${searchTerm} »` : ""}.
+        </p>
         <AnimatePresence mode="popLayout">
           <motion.div 
             layout
@@ -225,7 +247,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                       {f.name}
                     </h3>
                     
-                    <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6 line-clamp-3 relative z-10">
+                    <p className="text-slate-600 text-sm font-medium leading-relaxed mb-6 line-clamp-3 relative z-10">
                       {f.description}
                     </p>
 
@@ -240,7 +262,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                       {f.skills.slice(0, 3).map((skill, sIdx) => (
                         <div key={sIdx} className="flex items-center gap-3.5 group/skill">
                           <div className={`w-5.5 h-5.5 rounded-lg flex items-center justify-center bg-slate-50/50 border border-slate-100 group-hover/skill:${style.bg} transition-colors duration-300`}>
-                            <CheckCircle className="w-3.5 h-3.5 text-slate-200 group-hover/skill:text-inherit transition-colors duration-300" />
+                             <CheckCircle className="w-3.5 h-3.5 text-slate-500 group-hover/skill:text-slate-700 transition-colors duration-300" />
                           </div>
                           <span className="text-xs font-semibold text-slate-600 group-hover/skill:text-slate-900 transition-colors duration-300">{skill}</span>
                         </div>
@@ -249,14 +271,12 @@ export default function FormationsClient({ initialFormations }: FormationsClient
 
                     {/* Bouton d'action */}
                     <div className="mt-auto relative z-10">
-                      <Link href={`/formations/inscription?formationId=${f.id}`} className="block">
-                        <Button className={`w-full h-14 rounded-2xl bg-slate-900 text-white font-black hover:text-white transition-all duration-500 group/btn active:scale-[0.98] text-xs uppercase tracking-widest shadow-lg shadow-slate-100 ${style.btnHover}`}>
-                          <span className="flex items-center justify-center gap-2">
-                            S'inscrire
-                            <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1.5" />
-                          </span>
-                        </Button>
-                      </Link>
+                      <Button asChild className={`w-full h-14 rounded-2xl bg-slate-900 text-white font-black hover:text-white transition-all duration-500 group/btn active:scale-[0.98] text-xs uppercase tracking-widest shadow-lg shadow-slate-100 focus-visible:ring-offset-2 ${style.btnHover}`}>
+                        <Link href={`/formations/inscription?formationId=${f.id}`}>
+                          S'inscrire à {f.name}
+                          <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1.5" aria-hidden="true" />
+                        </Link>
+                      </Button>
                     </div>
                   </Card>
                 </motion.div>
@@ -273,10 +293,10 @@ export default function FormationsClient({ initialFormations }: FormationsClient
             className="text-center py-20 rounded-[3rem] bg-white border border-dashed border-slate-200 shadow-sm"
           >
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Target className="w-8 h-8 text-slate-300" />
+                <Target className="w-8 h-8 text-slate-500" />
             </div>
             <h3 className="text-xl font-black text-slate-800 mb-2 tracking-tight">Aucune spécialité trouvée</h3>
-            <p className="text-slate-400 max-w-sm mx-auto font-medium text-sm">Recherchez avec d'autres termes ou parcourez une autre catégorie.</p>
+            <p className="text-slate-600 max-w-sm mx-auto font-medium text-sm">Recherchez avec d'autres termes ou parcourez une autre catégorie.</p>
             <Button 
                 variant="link" 
                 className="mt-6 text-brand font-bold hover:text-brand-dark transition-all text-sm"

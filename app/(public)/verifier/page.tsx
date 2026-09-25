@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { z } from "zod";
@@ -65,6 +65,8 @@ function VerifierContent() {
   const [result, setResult] = useState<Attestation | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const validationSummaryRef = useRef<HTMLDivElement>(null);
+  const networkErrorRef = useRef<HTMLDivElement>(null);
 
   const searchParams = useSearchParams();
   const codeParam = searchParams ? searchParams.get("code") : null;
@@ -100,6 +102,14 @@ function VerifierContent() {
     }
   }, [codeParam, setValue]);
 
+  useEffect(() => {
+    if (errors.code) validationSummaryRef.current?.focus();
+  }, [errors.code]);
+
+  useEffect(() => {
+    if (error) networkErrorRef.current?.focus();
+  }, [error]);
+
   const handleReset = () => {
     setResult(null);
     setError("");
@@ -131,24 +141,28 @@ function VerifierContent() {
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                   Authentifier un document
                 </h1>
-                <p className="text-slate-400 text-sm md:text-base max-w-md mx-auto">
+                <p className="text-slate-600 text-sm md:text-base max-w-md mx-auto">
                   Entrez le code officiel de l'attestation ou son identifiant unique pour vérifier son authenticité.
                 </p>
               </div>
 
               {/* Formulaire de recherche minimaliste */}
               <div className="relative w-full max-w-xl mx-auto">
-                <div className="bg-white rounded-2xl border border-slate-200/60 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/5 transition-all duration-300">
-                  <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-2">
+                <div className={`bg-white rounded-2xl border p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus-within:ring-4 transition-all duration-300 ${errors.code ? "border-rose-500 focus-within:ring-rose-100" : "border-slate-300 focus-within:border-brand focus-within:ring-brand/10"}`}>
+                  <label htmlFor="verification-code" className="sr-only">Code de l’attestation</label>
+                  <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-2" aria-busy={loading}>
                     <div className="relative flex-1 flex items-center">
-                      <Search className="w-5 h-5 text-slate-400 absolute left-4" />
+                      <Search aria-hidden="true" className="w-5 h-5 text-slate-500 absolute left-4" />
                       <input
                         {...register("code")}
+                        id="verification-code"
                         type="text"
                         placeholder="Ex: FSA-2026-04-00001-A3F7C..."
-                        className="w-full h-12 pl-12 pr-4 bg-transparent border-none focus:ring-0 text-base font-bold tracking-wide text-slate-800 placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal"
+                        className="w-full h-12 pl-12 pr-4 bg-transparent border-none rounded-lg text-base font-bold tracking-wide text-slate-900 placeholder:text-slate-500 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                         autoComplete="off"
                         disabled={loading}
+                        aria-invalid={Boolean(errors.code)}
+                        aria-describedby={errors.code ? "verification-code-error" : undefined}
                       />
                     </div>
                     <Button 
@@ -162,13 +176,21 @@ function VerifierContent() {
                 </div>
 
                 {errors.code && (
-                  <p className="text-rose-500 text-xs font-semibold text-left mt-2 pl-4">
-                    {errors.code.message}
-                  </p>
+                  <div className="text-left mt-3 space-y-2">
+                    <div
+                      ref={validationSummaryRef}
+                      role="alert"
+                      tabIndex={-1}
+                      className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-600 focus:ring-offset-2"
+                    >
+                      Le code saisi contient une erreur : {errors.code.message}
+                    </div>
+                    <p id="verification-code-error" className="sr-only">{errors.code.message}</p>
+                  </div>
                 )}
 
                 {/* Exemples de format discrets */}
-                <div className="mt-4 flex flex-col items-center gap-1.5 text-[11px] text-slate-400 font-medium tracking-wide">
+                <div className="mt-4 flex flex-col items-center gap-1.5 text-[11px] text-slate-600 font-medium tracking-wide">
                   <span className="flex items-center gap-1">
                     <Info className="w-3.5 h-3.5 text-brand" />
                     Format standard : FSA-2026-04-00001-A3F7C ou le hash final (ex : A3F7C)
@@ -185,9 +207,12 @@ function VerifierContent() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-20 space-y-4"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
             >
-              <Loader2 className="w-8 h-8 animate-spin text-brand" />
-              <p className="text-sm font-semibold text-slate-400 tracking-wide uppercase">Vérification en cours...</p>
+              <Loader2 aria-hidden="true" className="w-8 h-8 animate-spin text-brand" />
+              <p className="text-sm font-semibold text-slate-700 tracking-wide uppercase">Vérification en cours...</p>
             </motion.div>
           )}
 
@@ -204,7 +229,7 @@ function VerifierContent() {
               <div className="flex justify-start">
                 <button
                   onClick={handleReset}
-                  className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all active:scale-95"
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-95"
                 >
                   ← Vérifier un autre code
                 </button>
@@ -247,7 +272,10 @@ function VerifierContent() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full max-w-md mx-auto bg-white border border-slate-200/80 rounded-2xl p-8 text-center space-y-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)]"
+              ref={networkErrorRef}
+              role="alert"
+              tabIndex={-1}
+              className="w-full max-w-md mx-auto bg-white border border-rose-300 rounded-2xl p-8 text-center space-y-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)] focus:outline-none focus:ring-2 focus:ring-rose-600 focus:ring-offset-2"
             >
               <div className="w-14 h-14 rounded-full bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center mx-auto">
                 <XCircle className="w-7 h-7" />
@@ -255,20 +283,20 @@ function VerifierContent() {
               
               <div className="space-y-2">
                 <h3 className="text-lg font-bold text-slate-800">Aucun certificat trouvé</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  Le code saisi ne correspond à aucune attestation enregistrée. Veuillez vérifier l'exactitude des caractères saisis.
+                <p className="text-slate-700 text-sm leading-relaxed">
+                  {error || "Le code saisi ne correspond à aucune attestation enregistrée. Veuillez vérifier l’exactitude des caractères saisis."}
                 </p>
               </div>
 
               <div className="flex gap-3 justify-center pt-2">
                 <button
                   onClick={handleReset}
-                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs tracking-wider uppercase transition-all active:scale-95"
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs tracking-wider uppercase transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-95"
                 >
                   Réessayer
                 </button>
                 <Link href="/contact">
-                  <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl font-semibold text-xs tracking-wider uppercase transition-all">
+                  <button className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:text-slate-900 rounded-xl font-semibold text-xs tracking-wider uppercase transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
                     Support
                   </button>
                 </Link>
@@ -291,7 +319,7 @@ function VerifierContent() {
 
 export default function VerifierPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-brand" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex flex-col items-center justify-center gap-3" role="status" aria-live="polite" aria-busy="true"><Loader2 aria-hidden="true" className="w-12 h-12 animate-spin text-brand" /><p className="text-sm font-semibold text-slate-700">Chargement du vérificateur…</p></div>}>
       <VerifierContent />
     </Suspense>
   );
