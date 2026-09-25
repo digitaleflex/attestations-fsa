@@ -18,6 +18,10 @@ jq empty "$R2_SOURCE_DIR/manifest.json"
 
 aws_args=(--profile "$R2_PROFILE" --endpoint-url "$R2_ENDPOINT" --no-cli-pager)
 destination="s3://${R2_BUCKET}/${R2_PREFIX#/}"
+# Les métadonnées d'export ne sont pas des objets applicatifs : ni le manifeste
+# courant ni les marqueurs horodatés `r2-export-*.manifest.json` ne doivent
+#atterrir dans le bucket.
+exclude_args=(--exclude "manifest.json" --exclude "r2-export-*.manifest.json")
 
 # Le manifeste est contrôlé avant toute écriture. La taille de chaque objet est
 # comparée au fichier local ; cela détecte une export incomplet sans exposer
@@ -37,10 +41,10 @@ done < <(jq -r --arg prefix "$prefix_filter" 'if ($prefix | length) == 0 then .[
 
 if [ "$APPLY" != "true" ]; then
   echo "==> DRY-RUN : $count objet(s) valide(s). Relancer avec APPLY=true pour écrire."
-  aws s3 sync "${aws_args[@]}" "$R2_SOURCE_DIR" "$destination" --exclude manifest.json --dryrun --only-show-errors
+  aws s3 sync "${aws_args[@]}" "$R2_SOURCE_DIR" "$destination" "${exclude_args[@]}" --dryrun --only-show-errors
   exit 0
 fi
 
 echo "==> Restauration R2 : $count objet(s) vers $destination"
-aws s3 sync "${aws_args[@]}" "$R2_SOURCE_DIR" "$destination" --exclude manifest.json --only-show-errors
+aws s3 sync "${aws_args[@]}" "$R2_SOURCE_DIR" "$destination" "${exclude_args[@]}" --only-show-errors
 echo "==> Restauration terminée. Vérifier l'application et les URL signées avant de déclarer l'incident clos."

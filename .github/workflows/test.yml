@@ -40,6 +40,13 @@ jobs:
       - name: Lint
         run: npx eslint .
 
+      # #260 — Les scripts bash d'exploitation R2 (sauvegarde/restauration/
+      # fraîcheur/versioning/alerte) ne sont pas couverts par vitest. Ce banc
+      # local les exécute avec un `aws` factice : ni credential, ni réseau,
+      # ni donnée réelle. Un shell cassé ne doit pas passer en CI.
+      - name: R2 operations scripts (local, no credentials)
+        run: bash scripts/tests/test-r2-scripts.sh
+
   # ── GATE SÉCURITÉ DES DÉPENDANCES + COUVERTURE (inchangé) ─────────────
   test:
     runs-on: ubuntu-latest

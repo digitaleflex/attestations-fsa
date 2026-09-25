@@ -106,8 +106,9 @@ mettre à jour côté application.
 ## 6. Développement local
 
 Pour les procédures de sauvegarde, restauration, versioning et alerting R2,
-voir [`r2-operations.md`](r2-operations.md). Ces scripts sont volontairement
-hors des routes applicatives et ne contiennent aucune donnée de production.
+voir [`r2-operations.md`](r2-operations.md) (scripts + tests locaux + codes de
+sortie). Ces scripts sont volontairement hors des routes applicatives et ne
+contiennent aucune donnée de production.
 
 Sans `S3_BUCKET`, le driver local écrit dans `public/uploads` et renvoie
 `/uploads/<clé>` (comportement identique à avant). Avec MinIO :
@@ -133,7 +134,43 @@ S3_ACCESS_KEY_ID=minioadmin
 S3_SECRET_ACCESS_KEY=minioadmin
 ```
 
-## 7. Périmètre / suites
+## 7. Taxonomie des clés et registre `StoredObject` (#260)
+
+`lib/storage/keys.ts` est la source unique de vérité de la nomenclature des
+objets, avec un préfixe **disjoint par usage** (aucun préfixe partagé) :
+
+| Usage (`StoragePurpose`) | Préfixe physique | Nature |
+| --- | --- | --- |
+| `cv` | `cv/` | pièce personnelle, supprimable |
+| `internship` | `stages/` | pièce annexe, supprimable |
+| `attestation` | `attestations/` | **pièce probante immuable** |
+| `export` | `exports/` | rendu massif, supprimable |
+| `temporary` | `temporary/` | jetable |
+
+Invariants :
+
+- une clé est **stable** et persistée en base — jamais une URL signée
+  (`looksLikeSignedUrl` rejette tout ce qui porte `X-Amz-`, `Signature=`,
+  `token=` ou `Expires=`) ;
+- l'extension vient du type MIME détecté, jamais du nom fourni par le client ;
+- une clé d'attestation n'est jamais supprimable (`isOfficialObjectKey`).
+
+`lib/storage/registry.ts` enregistre chaque objet dans la table
+`StoredObject` (propriété, usage, entité liée, empreinte SHA-256, taille,
+type MIME, fin de rétention) et applique les règles d'accès :
+
+- lecture/suppression : propriétaire `ownerUserId` **ou** rôle administrateur
+  (`assertOwnership`) ; un objet sans compte est réservé aux administrateurs ;
+- objet officiel (`purpose = attestation` ou préfixe `attestations/`) :
+  suppression interdite (`StoredObjectProtectedError`, HTTP 409) ;
+- écriture idempotente sur `key` ; une clé hors préfixes autorisés est
+  refusée (`StorageValidationError`, HTTP 400).
+
+Durée de vie des URL signées : 60 s par défaut, 300 s maximum
+(`normalizeReadUrlTtl`). Voir `lib/storage/keys.test.ts` et
+`lib/storage/registry.test.ts` pour la preuve exécutable de ces invariants.
+
+## 8. Périmètre / suites
 
 - Les scans de composition (`app/api/admin/submissions/[id]/scans/route.ts`)
   écrivent dans `private/uploads` (hors webroot) et **ne sont pas couverts**

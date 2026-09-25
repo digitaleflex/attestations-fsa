@@ -26,6 +26,7 @@
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate",
     "test:coverage": "vitest run --coverage",
+    "test:r2-scripts": "bash scripts/tests/test-r2-scripts.sh",
     "verify": "tsc --noEmit && eslint . && vitest run",
     "e2e:db:up": "docker compose -f compose.local.yml up -d postgres-e2e",
     "e2e:db:down": "docker compose -f compose.local.yml stop postgres-e2e",
