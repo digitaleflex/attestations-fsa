@@ -12,7 +12,8 @@ import {
   Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
+import { AnimatePresence } from "@/lib/framer-motion-client";
 import OfficialDocument from "@/components/OfficialDocument";
 import Link from "next/link";
 
@@ -128,7 +129,7 @@ function VerifierContent() {
       <div className="w-full max-w-4xl mx-auto z-10 space-y-8 relative">
         <AnimatePresence mode="wait">
           {!result && !error && !loading && (
-            <motion.div
+            <MotionDiv
               key="search-view"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -197,11 +198,11 @@ function VerifierContent() {
                   </span>
                 </div>
               </div>
-            </motion.div>
+            </MotionDiv>
           )}
 
           {loading && (
-            <motion.div
+            <MotionDiv
               key="loading-view"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -213,11 +214,11 @@ function VerifierContent() {
             >
               <Loader2 aria-hidden="true" className="w-8 h-8 animate-spin text-brand" />
               <p className="text-sm font-semibold text-slate-700 tracking-wide uppercase">Vérification en cours...</p>
-            </motion.div>
+            </MotionDiv>
           )}
 
           {result && !loading && (
-            <motion.div
+            <MotionDiv
               key="result-view"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -263,11 +264,11 @@ function VerifierContent() {
                   />
                 </div>
               )}
-            </motion.div>
+            </MotionDiv>
           )}
 
           {error && !loading && (
-            <motion.div
+            <MotionDiv
               key="error-view"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -301,7 +302,7 @@ function VerifierContent() {
                   </button>
                 </Link>
               </div>
-            </motion.div>
+            </MotionDiv>
           )}
         </AnimatePresence>
 

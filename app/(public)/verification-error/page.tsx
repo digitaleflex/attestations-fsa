@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { motion } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
 import { AlertCircle, Mail, ArrowLeft, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -39,7 +39,7 @@ export default async function VerificationErrorPage({
         <div className="absolute -bottom-28 -left-20 h-[28rem] w-[28rem] rounded-full bg-amber-100/50 blur-[100px]" />
       </div>
 
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.97, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
@@ -85,7 +85,7 @@ export default async function VerificationErrorPage({
             Ferme Agro-Piscicole Cité St André
           </p>
         </section>
-      </motion.div>
+      </MotionDiv>
     </main>
   );
 }

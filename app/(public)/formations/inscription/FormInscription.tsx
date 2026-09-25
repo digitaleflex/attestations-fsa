@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
 import { toast } from "sonner";
 import {
   ArrowRight, CheckCircle, GraduationCap,
@@ -102,7 +102,7 @@ export default function FormInscription({ formations }: { formations: Formation[
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-lg w-full text-center space-y-6 p-12 rounded-[3rem] bg-white border border-slate-100 shadow-sm"
@@ -119,7 +119,7 @@ export default function FormInscription({ formations }: { formations: Formation[
               Retour aux formations <ArrowRight className="w-4 h-4 ml-2" />
             </Link>
           </Button>
-        </motion.div>
+        </MotionDiv>
       </div>
     );
   }
@@ -132,7 +132,7 @@ export default function FormInscription({ formations }: { formations: Formation[
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-28 pb-24">
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-8"
@@ -154,7 +154,7 @@ export default function FormInscription({ formations }: { formations: Formation[
           </div>
 
           {selectedFormation && (
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="p-4 rounded-2xl bg-brand/10 border border-brand/20 flex items-center gap-3"
@@ -164,7 +164,7 @@ export default function FormInscription({ formations }: { formations: Formation[
                 <span className="text-xs font-black text-brand-dark uppercase tracking-widest">Formation sélectionnée</span>
                 <p className="text-sm font-bold text-brand-dark">{selectedFormation.name}</p>
               </div>
-            </motion.div>
+            </MotionDiv>
           )}
 
           {submitError && (
@@ -305,7 +305,7 @@ export default function FormInscription({ formations }: { formations: Formation[
               )}
             </Button>
           </form>
-        </motion.div>
+        </MotionDiv>
       </div>
     </div>
   );

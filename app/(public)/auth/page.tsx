@@ -24,7 +24,12 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  div as MotionDiv,
+  form as MotionForm,
+  span as MotionSpan,
+} from "framer-motion/client";
+import { AnimatePresence } from "@/lib/framer-motion-client";
 import { authClient } from "@/lib/auth-client";
 import { translateAuthError } from "@/lib/error-translator";
 
@@ -571,7 +576,7 @@ function AuthContent() {
           <AnimatePresence initial={false} custom={direction} mode="wait">
             {step === 1 ? (
               /* ================= ÉTAPE 1 : CONNEXION ================= */
-              <motion.form
+              <MotionForm
                 key="step1"
                 custom={direction}
                 variants={slideVariants}
@@ -604,7 +609,7 @@ function AuthContent() {
                       }`}
                     >
                       {tab === id && (
-                        <motion.span
+                        <MotionSpan
                           layoutId="auth-tab-pill"
                           className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-brand to-brand-dark shadow-lg shadow-brand/20"
                           transition={{
@@ -809,10 +814,10 @@ function AuthContent() {
                     </Button>
                   </>
                 )}
-              </motion.form>
+              </MotionForm>
             ) : verificationMode === "email" ? (
               /* ================= ÉTAPE 2 : VÉRIFICATION E-MAIL ================= */
-              <motion.div
+              <MotionDiv
                 key="email-verify"
                 custom={direction}
                 variants={slideVariants}
@@ -905,10 +910,10 @@ function AuthContent() {
                     </button>
                   </div>
                 </form>
-              </motion.div>
+              </MotionDiv>
             ) : (
               /* ================= ÉTAPE 2 : OTP FSA ================= */
-              <motion.div
+              <MotionDiv
                 key="step2"
                 custom={direction}
                 variants={slideVariants}
@@ -1001,7 +1006,7 @@ function AuthContent() {
                     </button>
                   </div>
                 </form>
-              </motion.div>
+              </MotionDiv>
             )}
           </AnimatePresence>
         </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
 import { 
   Mail, 
   Phone, 
@@ -125,7 +125,7 @@ function ContactContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:items-start">
           
           {/* Left Column: Info & Content */}
-          <motion.div 
+          <MotionDiv
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
@@ -194,10 +194,10 @@ function ContactContent() {
                     </Button>
                  </a>
             </div>
-          </motion.div>
+          </MotionDiv>
 
           {/* Right Column: The Form */}
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -207,7 +207,7 @@ function ContactContent() {
              
              <div className="relative bg-white/70 backdrop-blur-3xl border border-white p-6 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-[0_40px_80px_rgba(0,0,0,0.05)]">
                 {submitted ? (
-                   <motion.div 
+                   <MotionDiv
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="py-16 md:py-20 text-center space-y-6"
@@ -226,7 +226,7 @@ function ContactContent() {
                      >
                         Envoyer un autre message
                      </Button>
-                   </motion.div>
+                   </MotionDiv>
                 ) : (
                    <form
                      id="contact-form"
@@ -364,7 +364,7 @@ function ContactContent() {
                   </form>
                 )}
              </div>
-          </motion.div>
+          </MotionDiv>
 
         </div>
       </div>

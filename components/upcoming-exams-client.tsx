@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { article as MotionArticle } from "framer-motion/client";
 import {
   ArrowRight,
   CalendarDays,
@@ -151,7 +151,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
       : `${Math.round(exam.duration / 60)} min`;
 
   return (
-    <motion.article
+    <MotionArticle
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
@@ -214,7 +214,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
           )}
         </div>
       </div>
-    </motion.article>
+    </MotionArticle>
   );
 }
 

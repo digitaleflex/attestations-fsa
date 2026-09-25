@@ -7,7 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
+import { AnimatePresence } from "@/lib/framer-motion-client";
 
 export function PublicHeader() {
   const { data: session } = useSession();
@@ -142,7 +143,7 @@ export function PublicHeader() {
       {/* Mobile menu modal style */}
       <AnimatePresence>
         {open && (
-           <motion.div
+           <MotionDiv
              id="public-mobile-menu"
              ref={menuRef}
              initial={{ opacity: 0, y: -20 }}
@@ -195,7 +196,7 @@ export function PublicHeader() {
                       <ShieldCheck className="w-4 h-4" /> Vérifier
                   </Link>
              </div>
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
     </header>

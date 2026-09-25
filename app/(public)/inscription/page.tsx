@@ -4,7 +4,12 @@ import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { z } from "zod";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  div as MotionDiv,
+  form as MotionForm,
+  span as MotionSpan,
+} from "framer-motion/client";
+import { AnimatePresence } from "@/lib/framer-motion-client";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -163,7 +168,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
       </div>
 
       <div className="relative h-px flex-1 overflow-hidden bg-slate-100">
-        <motion.span
+        <MotionSpan
           className="absolute inset-y-0 left-0 bg-gradient-to-r from-brand to-brand-dark"
           initial={false}
           animate={{ width: step >= 2 ? "100%" : "0%" }}
@@ -620,7 +625,7 @@ export default function InscriptionPage() {
               <AnimatePresence initial={false} custom={direction} mode="wait">
                 {step === 1 ? (
                   /* ================= ÉTAPE 1 : CRÉATION DU COMPTE ================= */
-                  <motion.form
+                  <MotionForm
                     key="step1"
                     custom={direction}
                     variants={slideVariants}
@@ -856,10 +861,10 @@ export default function InscriptionPage() {
                       </Link>
                       .
                     </p>
-                  </motion.form>
+                  </MotionForm>
                 ) : (
                   /* ================= ÉTAPE 2 : VÉRIFICATION E-MAIL ================= */
-                  <motion.form
+                  <MotionForm
                     key="step2"
                     custom={direction}
                     variants={slideVariants}
@@ -962,7 +967,7 @@ export default function InscriptionPage() {
                             : "Renvoyer le code"}
                       </button>
                     </div>
-                  </motion.form>
+                  </MotionForm>
                 )}
               </AnimatePresence>
             </div>
@@ -990,7 +995,7 @@ export default function InscriptionPage() {
       {/* Overlay de redirection */}
       <AnimatePresence>
         {isRedirecting && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -999,7 +1004,7 @@ export default function InscriptionPage() {
             className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/85 backdrop-blur-2xl"
           >
             <div className="relative flex h-28 w-28 items-center justify-center">
-              <motion.span
+              <MotionSpan
                 className="absolute inset-0 rounded-full border-2 border-transparent border-b-brand border-t-brand"
                 animate={{ rotate: 360 }}
                 transition={{
@@ -1008,7 +1013,7 @@ export default function InscriptionPage() {
                   ease: "linear",
                 }}
               />
-              <motion.span
+              <MotionSpan
                 className="absolute inset-3 rounded-full border-2 border-transparent border-l-brand-dark border-r-brand-dark"
                 animate={{ rotate: -360 }}
                 transition={{
@@ -1024,7 +1029,7 @@ export default function InscriptionPage() {
             <p className="mt-8 animate-pulse text-sm font-black uppercase tracking-[0.2em] text-brand-dark">
               Ouverture de votre espace...
             </p>
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
     </div>

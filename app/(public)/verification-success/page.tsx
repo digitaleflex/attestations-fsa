@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { motion } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
 import { CheckCircle2, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -17,7 +17,7 @@ export default function VerificationSuccessPage() {
         <div className="absolute -bottom-28 -left-20 h-[28rem] w-[28rem] rounded-full bg-brand/10 blur-[100px]" />
       </div>
 
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -29,13 +29,13 @@ export default function VerificationSuccessPage() {
             <div className="w-24 h-24 md:w-32 md:h-32 bg-brand/10 rounded-[2.5rem] md:rounded-[3rem] flex items-center justify-center mx-auto text-brand mb-6">
               <CheckCircle2 className="w-12 h-12 md:w-16 md:h-16" />
             </div>
-            <motion.div
+            <MotionDiv
               animate={{ rotate: 360 }}
               transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
               className="absolute top-0 right-1/4"
             >
               <Sparkles className="w-6 h-6 text-brand/60 opacity-50" />
-            </motion.div>
+            </MotionDiv>
           </div>
 
           <div className="space-y-4 pt-3">
@@ -69,7 +69,7 @@ export default function VerificationSuccessPage() {
             Ferme Agro-Piscicole Cité St André
           </p>
         </div>
-      </motion.div>
+      </MotionDiv>
     </main>
   );
 }

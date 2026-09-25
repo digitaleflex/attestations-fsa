@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
+import { AnimatePresence } from "@/lib/framer-motion-client";
 
 type FieldErrors = Partial<Record<"fullName" | "email" | "phone" | "position" | "cvFile" | "message" | "form", string>>;
 
@@ -278,7 +279,7 @@ export default function InternshipApplicationPage() {
               
               {/* ÉTAPE 1 : IDENTITÉ & CONTACT */}
               {step === 1 && (
-                <motion.div
+                <MotionDiv
                   key="step1"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -360,12 +361,12 @@ export default function InternshipApplicationPage() {
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
-                </motion.div>
+                </MotionDiv>
               )}
 
               {/* ÉTAPE 2 : PROFIL & ÉTUDES */}
               {step === 2 && (
-                <motion.div
+                <MotionDiv
                   key="step2"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -444,12 +445,12 @@ export default function InternshipApplicationPage() {
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
-                </motion.div>
+                </MotionDiv>
               )}
 
               {/* ÉTAPE 3 : DOCUMENTS & MOTIVATIONS */}
               {step === 3 && (
-                <motion.div
+                <MotionDiv
                   key="step3"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -588,7 +589,7 @@ export default function InternshipApplicationPage() {
                       )}
                     </Button>
                   </div>
-                </motion.div>
+                </MotionDiv>
               )}
 
             </AnimatePresence>

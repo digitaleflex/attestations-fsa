@@ -14,7 +14,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { div as MotionDiv } from "framer-motion/client";
+import { AnimatePresence } from "@/lib/framer-motion-client";
 
 interface Formation {
   id: string;
@@ -104,7 +105,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
       {/* --- HERO SECTION --- */}
       <section className="relative pt-24 md:pt-32 pb-8 px-4 md:px-6 z-10">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <MotionDiv
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -180,7 +181,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                 </div>
               </fieldset>
             </div>
-          </motion.div>
+          </MotionDiv>
         </div>
       </section>
 
@@ -201,7 +202,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
           {searchTerm ? ` pour « ${searchTerm} »` : ""}.
         </p>
         <AnimatePresence mode="popLayout">
-          <motion.div 
+          <MotionDiv
             layout
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
           >
@@ -209,7 +210,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
               const style = getCategoryStyle(f.category);
               
               return (
-                <motion.div
+                <MotionDiv
                   key={f.id}
                   layout
                   initial={{ opacity: 0, scale: 0.96 }}
@@ -268,15 +269,15 @@ export default function FormationsClient({ initialFormations }: FormationsClient
                       </Button>
                     </div>
                   </Card>
-                </motion.div>
+                </MotionDiv>
               );
             })}
-          </motion.div>
+          </MotionDiv>
         </AnimatePresence>
 
         {/* Empty State */}
         {filteredFormations.length === 0 && (
-          <motion.div 
+          <MotionDiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-20 rounded-[3rem] bg-white border border-dashed border-slate-200 shadow-sm"
@@ -293,7 +294,7 @@ export default function FormationsClient({ initialFormations }: FormationsClient
             >
               Réinitialiser la recherche
             </Button>
-          </motion.div>
+          </MotionDiv>
         )}
       </section>
 
