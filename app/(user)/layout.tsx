@@ -135,7 +135,7 @@ export default function UserLayout({
                 <span className="font-bold text-slate-800 tracking-tight whitespace-nowrap text-xs">
                   Agro-piscicole
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                <span className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">
                   St Andre
                 </span>
               </div>
@@ -179,7 +179,7 @@ export default function UserLayout({
                   title={!isSidebarOpen ? item.name : undefined}
                 >
                   <item.icon
-                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-400 group-hover:text-brand"}`}
+                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? "text-white" : "text-slate-500 group-hover:text-brand"}`}
                     aria-hidden="true"
                   />
                   {isSidebarOpen && (
@@ -263,7 +263,7 @@ export default function UserLayout({
                         className={`flex items-center gap-4 rounded-xl border px-4 py-3.5 font-medium transition-colors ${isActive ? "border-brand/20 bg-brand/10 text-brand-dark shadow-sm" : "border-transparent text-slate-600 hover:bg-slate-50"}`}
                       >
                         <item.icon
-                          className={`h-5 w-5 ${isActive ? "text-brand" : "text-slate-400"}`}
+                          className={`h-5 w-5 ${isActive ? "text-brand" : "text-slate-500"}`}
                           aria-hidden="true"
                         />
                         {item.name}
@@ -285,7 +285,7 @@ export default function UserLayout({
             </Sheet>
             <button
               type="button"
-              className="hidden lg:flex h-11 w-11 items-center justify-center text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-colors"
+              className="hidden lg:flex h-11 w-11 items-center justify-center text-slate-500 hover:text-brand hover:bg-brand/10 rounded-xl transition-colors"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               aria-label={
                 isSidebarOpen

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Download, QrCode, Share2, ShieldCheck, Printer } from "lucide-react";
+import { ArrowLeft, Download, QrCode, Share2, ShieldCheck, Printer, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import OfficialDocument from "@/components/OfficialDocument";
 import { toast } from "sonner";
@@ -47,7 +47,14 @@ class AttestationNotFoundError extends Error {
 function BackLink() {
   return (
     <Link href="/attestations">
-      <Button variant="outline" size="sm" className="rounded-full gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="rounded-full gap-2"
+        // `aria-label` explicite : le libellé visible ne doit pas être la seule
+        // source du nom accessible (traductions, modes reduits, lecteurs).
+        aria-label="Retour à mes attestations"
+      >
         <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         Retour à mes attestations
       </Button>
@@ -72,13 +79,7 @@ export default function AttestationPreviewPage() {
   const [newValue, setNewValue] = useState("");
   const [reason, setReason] = useState("");
 
-  const {
-    data: att,
-    isLoading,
-    error: attError,
-    isFetching,
-    refetch,
-  } = useQuery({
+  const { data: att, isLoading, isError, error: attError, isFetching, refetch } = useQuery({
     queryKey: ["user-attestation", id],
     queryFn: async () => {
       const res = await fetch(`/api/attestations/${id}`);
@@ -89,15 +90,6 @@ export default function AttestationPreviewPage() {
       return res.json();
     },
     retry: 1,
-  });
-
-  const { data: settings } = useQuery({
-    queryKey: ["public-settings"],
-    queryFn: async () => {
-      const res = await fetch("/api/public/settings");
-      if (!res.ok) return null;
-      return res.json();
-    }
   });
 
   const handleDownload = async () => {
@@ -182,17 +174,24 @@ export default function AttestationPreviewPage() {
     }
   };
 
-  if (isLoading)
+  if (isLoading) {
     return (
-      <CandidateLoading
-        label="Chargement du document officiel…"
-        className="py-24 justify-center"
-      />
+      // Zone de chargement annoncée : `role="status"` + `aria-live="polite"`
+      // (lu sans interrompre la navigation) et `aria-busy="true"` tant que le
+      // document n'est pas là. `CandidateLoading` porte le rendu visuel et son
+      // propre libellé ; ce wrapper est la région annoncée au niveau de la page.
+      <div role="status" aria-live="polite" aria-busy="true">
+        <CandidateLoading
+          label="Chargement du document officiel…"
+          className="py-24 justify-center"
+        />
+      </div>
     );
+  }
 
   // Erreur de chargement : l'utilisateur doit pouvoir relancer, et savoir
   // qu'il ne s'agit pas d'un document « vide ».
-  if (attError || !att) {
+  if (isError || !att) {
     // 404 : ce n'est pas une panne, proposer un retry serait trompeur.
     if (attError instanceof AttestationNotFoundError) {
       return (
@@ -220,13 +219,28 @@ export default function AttestationPreviewPage() {
       <div className="space-y-6 max-w-3xl mx-auto">
         <BackLink />
         <CandidateErrorState
-          onRetry={() => {
-            void refetch();
-          }}
-          isRetrying={isFetching}
-          title="Impossible de charger ce document"
+          title="Impossible d'ouvrir ce document"
           description="Le document n'a pas pu être récupéré : connexion instable, session expirée ou document inaccessible. Réessayez, ou revenez à la liste de vos attestations."
         />
+        {/* Relance portée par la page : le libellé d'attente dépend de
+            `isFetching` et le bouton reste atteignable au clavier sous le
+            message d'erreur. */}
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-busy={isFetching}
+            className="min-h-[44px] gap-2 rounded-xl border-rose-200 font-bold text-rose-700 hover:bg-rose-50"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            {isFetching ? "Nouvelle tentative…" : "Réessayer"}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -237,8 +251,15 @@ export default function AttestationPreviewPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
         <div className="flex items-center gap-4">
           <Link href="/attestations">
-            <Button variant="ghost" size="sm" className="rounded-full">
-              <ArrowLeft className="w-5 h-5" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full"
+              // Bouton icône seule : sans `aria-label`, il n'a pas de nom
+              // accessible du tout.
+              aria-label="Retour à mes attestations"
+            >
+              <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </Button>
           </Link>
           <div>
@@ -308,7 +329,7 @@ export default function AttestationPreviewPage() {
             <div className="flex items-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:justify-end">
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="flex-1 sm:flex-none gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2 sm:px-3 h-10 sm:h-9">
+                        <Button variant="ghost" size="sm" className="flex-1 sm:flex-none gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2 sm:px-3 h-10 sm:h-9" aria-label={`Signaler une erreur sur l'attestation ${att.code}`}>
                             <AlertTriangle className="w-4 h-4" />
                             <span className="sm:hidden lg:inline text-xs sm:text-sm">Signaler</span>
                             <span className="hidden sm:inline lg:hidden">Signaler</span>
@@ -368,7 +389,7 @@ export default function AttestationPreviewPage() {
                     </DialogContent>
                 </Dialog>
                 
-                <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 h-10 sm:h-9 px-2 sm:px-3" onClick={() => {
+                <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 h-10 sm:h-9 px-2 sm:px-3" aria-label={`Copier le lien de vérification de l'attestation ${att.code}`} onClick={() => {
                     navigator.clipboard.writeText(`${window.location.origin}/verifier?code=${encodeURIComponent(att.code)}`);
                     toast.success("Lien de vérification copié !");
                 }}>

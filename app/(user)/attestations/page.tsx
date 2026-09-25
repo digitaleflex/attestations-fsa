@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FileText, Download, Search, Filter, X, QrCode, Eye, 
   Share2, ChevronRight, Clock, Lock, AlertCircle, Send, 
-  CheckCircle, ClipboardList, Loader2, Award, FileSpreadsheet, BarChart3
+  CheckCircle, ClipboardList, Loader2, Award, FileSpreadsheet, BarChart3, RefreshCw
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -113,7 +113,7 @@ export default function UserAttestationsPage() {
   const filteredAttestations = data?.attestations?.filter((att: any) => {
     const matchSearch = att.fullName.toLowerCase().includes(search.toLowerCase()) ||
       att.code.toLowerCase().includes(search.toLowerCase()) ||
-      att.formation?.name.toLowerCase().includes(search.toLowerCase());
+      (att.formation?.name || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || att.status === statusFilter;
     const matchType = typeFilter === "all" || att.type === typeFilter;
     return matchSearch && matchStatus && matchType;
@@ -139,12 +139,20 @@ export default function UserAttestationsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div
+        className="space-y-8"
+        // Zone en cours de mise à jour : annoncée poliment, jamais en
+        // interruption, et marquée occupée le temps du chargement.
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span className="sr-only">Chargement de vos attestations…</span>
         <div className="space-y-4">
            <SkeletonStats />
         </div>
         <Card className="p-4 bg-white shadow-sm h-16 animate-pulse" aria-hidden="true" />
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4" aria-hidden="true">
           {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </div>
       </div>
@@ -164,13 +172,28 @@ export default function UserAttestationsPage() {
           </p>
         </header>
         <CandidateErrorState
-          onRetry={() => {
-            void refetch();
-          }}
-          isRetrying={isFetching}
           title="Impossible de charger vos attestations"
           description="Vos documents n'ont pas pu être récupérés. Vérifiez votre connexion internet puis relancez le chargement."
         />
+        {/* La relance est portée par la page : le libellé d'attente (« Nouvelle
+            tentative… ») dépend de `isFetching`, et le bouton doit rester
+            atteignable au clavier juste sous le message d'erreur. */}
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-busy={isFetching}
+            className="min-h-[44px] gap-2 rounded-xl border-rose-200 font-bold text-rose-700 hover:bg-rose-50"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            {isFetching ? "Nouvelle tentative…" : "Réessayer"}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -277,8 +300,8 @@ export default function UserAttestationsPage() {
                   icon={
                     <Search className="h-8 w-8 text-slate-500" aria-hidden="true" />
                   }
-                  title="Aucune attestation ne correspond à vos filtres"
-                  description="Aucune attestation ne correspond à la recherche, au statut ou au type sélectionné. Ajustez ou réinitialisez vos filtres pour revoir vos documents."
+                  title="Aucune attestation ne correspond à ces filtres"
+                  description="Aucune attestation ne correspond à vos filtres actuels. Ajustez la recherche, le statut ou le type sélectionné, ou réinitialisez les filtres pour revoir tous vos documents."
                   primaryAction={{
                     label: "Réinitialiser les filtres",
                     onClick: () => {
@@ -405,6 +428,14 @@ export default function UserAttestationsPage() {
                               setQrDialogOpen(true);
                             }}
                             title={att.isLocked ? "Verrouillé" : "Partager le QR Code"}
+                            // `title` seul ne donne pas de nom accessible fiable
+                            // (ni au clavier, ni pour beaucoup de lecteurs d'écran) :
+                            // ce bouton ne contient qu'une icône.
+                            aria-label={
+                              att.isLocked
+                                ? `QR code indisponible tant que ${att.code} est verrouillé`
+                                : `Afficher le QR code de vérification de l'attestation ${att.code}`
+                            }
                             disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED")}
                           >
                             <QrCode className="w-4 h-4" />
@@ -426,6 +457,15 @@ export default function UserAttestationsPage() {
                             }}
                             disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || downloading === att.code || att.isLocked}
                             title={att.isLocked ? "Verrouillé" : (att.status === "CLAIMED" ? "Télécharger à nouveau" : "Télécharger en PDF")}
+                            // Idem bouton QR : nom accessible explicite, et
+                            // `aria-busy` pendant la génération du PDF pour
+                            // qu'un lecteur d'écran annonce l'attente.
+                            aria-label={
+                              att.isLocked
+                                ? `Téléchargement indisponible tant que ${att.code} est verrouillé`
+                                : `Télécharger l'attestation ${att.code} au format PDF`
+                            }
+                            aria-busy={downloading === att.code}
                           >
                             {downloading === att.code ? (
                               <div className="animate-spin w-4 h-4 border-2 border-brand border-t-transparent rounded-full" />
