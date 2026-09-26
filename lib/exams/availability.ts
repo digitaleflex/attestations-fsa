@@ -77,9 +77,14 @@ export function isExamAvailable(
 }
 
 /**
- * Ouvre automatiquement les examens SCHEDULED dont l'heure est atteinte.
- * Basculage paresseux (lazy) déclenché lors des lectures / démarrages.
- * Aucun cron requis.
+ * Bascule des examens `SCHEDULED` échus vers `PUBLISHED`.
+ *
+ * #256 m9 — RÉSERVÉ AU CRON INTERNE (`POST /api/internal/exams/open`, qui
+ * journalise et invalide le cache via `lib/exams/cron-open.ts`). Aucune route
+ * publique ne doit appeler cette fonction : une lecture ou un démarrage ne
+ * déclenche plus de mutation. La disponibilité, elle, ne dépend pas du statut
+ * courant (`hasOpened` accepte `SCHEDULED` échu), donc l'absence de cron ne
+ * verrouille jamais un candidat.
  */
 export async function autoOpenDueExams(now: Date = new Date()) {
   return prisma.exam.updateMany({

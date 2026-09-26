@@ -194,6 +194,7 @@ export async function POST(
         duration: true,
         status: true,
         scheduledAt: true,
+        opensOn: true,
       },
     });
     if (!exam) {

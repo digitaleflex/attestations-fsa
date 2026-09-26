@@ -182,3 +182,99 @@ export function isSameLocalDay(
 ): boolean {
   return localDayKey(a, timeZone) === localDayKey(b, timeZone);
 }
+
+// ---------------------------------------------------------------------------
+// Règle unique d'ouverture — une seule implémentation, partagée par TOUTES les
+// surfaces (routes publiques, routes candidat, disponibilité, 423).
+//
+// Un examen est ouvert (donc lisible et démarrable) si et seulement si :
+//   1. son statut est publiable (`SCHEDULED` ou `PUBLISHED`) ;
+//   2. le jour J est atteint — minuit `APP_TIMEZONE` de `opensOn` (ou, pour les
+//      examens historiques sans `opensOn`, de `scheduledAt`) ;
+//   3. `scheduledAt` est défini ET atteint.
+//
+// Le point 3 est ce qui distingue l'ANNONCE (visible dès le jour J) du
+// DÉMARRAGE (autorisé à l'heure prévue) : le compte à rebours de l'interface
+// continue de tourner entre les deux.
+// ---------------------------------------------------------------------------
+
+/** Statuts pour lesquels un examen peut être ouvert. */
+export const OPENABLE_EXAM_STATUSES = ["SCHEDULED", "PUBLISHED"] as const;
+
+export type OpenableExamStatus = (typeof OPENABLE_EXAM_STATUSES)[number];
+
+function isOpenableStatus(status: unknown): status is OpenableExamStatus {
+  return (
+    typeof status === "string" &&
+    (OPENABLE_EXAM_STATUSES as readonly string[]).includes(status)
+  );
+}
+
+/** Champs d'examen nécessaires à la règle d'ouverture. */
+export interface ExamScheduleSource extends OpensOnSource {
+  status?: string | null;
+  /** Champs d'annonce, jamais de contenu : uniquement pour `lockedPayload`. */
+  id?: string | null;
+  title?: string | null;
+  name?: string | null;
+}
+
+/**
+ * Instant d'OUVERTURE effectif d'un examen (minuit du jour J en
+ * `APP_TIMEZONE`). Rôle unique : alimenter les annonces (`opensAt`) et le
+ * compte à rebours. `null` = aucune date exploitable, donc jamais visible.
+ */
+export function opensOn(
+  exam: OpensOnSource,
+  timeZone: string = getAppTimeZone(),
+): Date | null {
+  return resolveOpensOn(exam, timeZone);
+}
+
+/**
+ * Règle « jour J ET heure prévue » : l'examen est-il réellement accessible ?
+ *
+ * `false` couvre les trois refus applicatifs : statut non publiable (DRAFT,
+ * ARCHIVED), jour J non atteint, heure prévue non atteinte ou absente.
+ */
+export function hasOpened(
+  exam: ExamScheduleSource,
+  now: DateLike = new Date(),
+  timeZone: string = getAppTimeZone(),
+): boolean {
+  if (!isOpenableStatus(exam.status)) return false;
+  if (!isUsable(exam.scheduledAt)) return false;
+  const opensAt = opensOn(exam, timeZone);
+  if (opensAt == null) return false;
+  return (
+    opensAt.getTime() <= toDate(now).getTime() &&
+    toDate(exam.scheduledAt).getTime() <= toDate(now).getTime()
+  );
+}
+
+/**
+ * Corps de la réponse `423 EXAM_LOCKED`.
+ *
+ * Champs de planning et d'annonce UNIQUEMENT (jamais de description, de barème,
+ * de durée, de volume de questions ni de contenu) : le refus ne doit rien
+ * apprendre de plus que la date d'ouverture.
+ */
+export function lockedPayload(
+  exam: ExamScheduleSource,
+  now: DateLike = new Date(),
+  timeZone: string = getAppTimeZone(),
+) {
+  const opensAt = opensOn(exam, timeZone);
+  return {
+    code: "EXAM_LOCKED",
+    message: "Cet examen n'est pas encore ouvert.",
+    id: exam.id ?? null,
+    title: exam.title ?? exam.name ?? null,
+    status: exam.status ?? null,
+    scheduledAt: isUsable(exam.scheduledAt)
+      ? toDate(exam.scheduledAt).toISOString()
+      : null,
+    opensAt: opensAt ? opensAt.toISOString() : null,
+    locked: true,
+  };
+}

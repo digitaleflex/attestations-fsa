@@ -177,8 +177,12 @@ describe("#256 m9 — /api/exams/scheduled (annonces publiques)", () => {
     expect(exam.title).toBe("Examen officiel");
     expect(exam.scheduledAt).toBeTruthy();
     expect(exam.locked).toBe(true);
-    expect(exam.description).toBeNull();
-    expect(exam.duration).toBeNull();
+    // #256 m9 — la forme réduite OMET les clés de contenu (elles ne sont pas
+    // « nulles », elles n'existent pas) : on accepte donc l'absence comme le
+    // null, l'invariant réel étant « aucune valeur d'examen avant l'ouverture »
+    // — vérifié plus bas par l'absence de « SECRET » dans le corps sérialisé.
+    expect(exam.description ?? null).toBeNull();
+    expect(exam.duration ?? null).toBeNull();
     expect(JSON.stringify(body)).not.toContain("SECRET");
   });
 });

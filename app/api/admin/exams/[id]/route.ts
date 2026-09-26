@@ -100,6 +100,7 @@ export async function PATCH(
       description,
       status,
       scheduledAt,
+      opensOn: opensOnInput,
       parts,
       formationId,
       session,
@@ -110,15 +111,77 @@ export async function PATCH(
       type,
     } = body;
 
+    // #256 m9 — un PATCH sans aucun champ exploitable n'est pas un no-op : il
+    // n'a rien à écrire. On le refuse en 400 plutôt que d'ignorer silencieusement
+    // la requête. En revanche, un `status` ABSENT du body laisse le statut
+    // inchangé (no-op sur la transition) : seul un `status` présent mais vide ou
+    // invalide est un 400.
+    const PATCHABLE_FIELDS = [
+      "status",
+      "name",
+      "title",
+      "description",
+      "scheduledAt",
+      "opensOn",
+      "parts",
+      "formationId",
+      "session",
+      "duration",
+      "passingScore",
+      "randomizeQuestions",
+      "showResults",
+      "type",
+    ] as const;
+    if (
+      !body ||
+      typeof body !== "object" ||
+      !PATCHABLE_FIELDS.some((field) => field in body)
+    ) {
+      return NextResponse.json(
+        {
+          message: "Corps de requête vide : rien à mettre à jour.",
+          code: "EMPTY_EXAM_PATCH",
+        },
+        { status: 400 },
+      );
+    }
+
     // 1. Calculate summary data and prepare atomic update
     const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : null;
     const isValidDate = scheduledAtDate === null || !isNaN(scheduledAtDate.getTime());
+    if (!isValidDate) {
+      return NextResponse.json(
+        {
+          message: `Date de démarrage illisible : ${String(scheduledAt)}`,
+          code: "INVALID_SCHEDULED_AT",
+        },
+        { status: 400 },
+      );
+    }
 
-    // #256 m9 — matrice des transitions de statut : une transition invalide est
-    // refusée en 400 AVANT toute écriture. `status` absent du body = inchangé.
+    // #256 m9 — `opensOn` (journée d'ouverture) est stocké TEL QUE FOURNI ; sa
+    // normalisation au minuit de `APP_TIMEZONE` est faite à la lecture, par
+    // `lib/exams/time.ts` (règle unique). Une date illisible est un 400.
+    const hasOpensOnInput = "opensOn" in body;
+    const opensOnDate =
+      opensOnInput && opensOnInput !== null && opensOnInput !== undefined
+        ? new Date(opensOnInput)
+        : null;
+    if (opensOnDate && isNaN(opensOnDate.getTime())) {
+      return NextResponse.json(
+        {
+          message: `Journée d'ouverture illisible : ${String(opensOnInput)}`,
+          code: "INVALID_OPENS_ON",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Matrice des transitions de statut : une transition invalide est refusée en
+    // 400 AVANT toute écriture. `status` absent du body = inchangé.
     const current = await prisma.exam.findUnique({
       where: { id },
-      select: { id: true, status: true, scheduledAt: true },
+      select: { id: true, status: true, scheduledAt: true, opensOn: true },
     });
     if (!current) {
       return NextResponse.json(
@@ -126,15 +189,20 @@ export async function PATCH(
         { status: 404 },
       );
     }
-    const effectiveScheduledAt = isValidDate
+    const effectiveScheduledAt = scheduledAt
       ? scheduledAtDate
-      : scheduledAt === undefined || scheduledAt === null
-        ? current.scheduledAt
-        : null;
+      : scheduledAt === null
+        ? null
+        : current.scheduledAt;
+    // `undefined` = la base ne connaît pas cette information (champ non lu) :
+    // l'exigence d'`opensOn` est alors ignorée plutôt que refusée à tort.
+    // `null`, en revanche, est une information connue : aucun jour d'ouverture.
+    const effectiveOpensOn = hasOpensOnInput ? opensOnDate : current.opensOn;
     const transition = validateExamStatusTransition({
       from: current.status,
       to: status ?? null,
       scheduledAt: effectiveScheduledAt,
+      opensOn: effectiveOpensOn,
     });
     if (!transition.ok) {
       return NextResponse.json(
@@ -154,8 +222,13 @@ export async function PATCH(
         name: name || title,
         title: title,
         description,
+        // `status` absent du body = inchangé (no-op sur la transition) : ni
+        // écriture ni régression de statut.
         status,
-        scheduledAt: isValidDate ? scheduledAtDate : null,
+        // `scheduledAt` / `opensOn` : PATCH partiel — un champ absent du body
+        // ne doit jamais être remis à `null`.
+        scheduledAt: "scheduledAt" in body ? scheduledAtDate : undefined,
+        opensOn: hasOpensOnInput ? opensOnDate : undefined,
         formation: formationId ? { connect: { id: formationId } } : undefined,
         session,
         duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,

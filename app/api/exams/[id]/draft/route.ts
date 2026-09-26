@@ -39,7 +39,13 @@ async function ensureEligible(request: Request, examId: string, userId: string) 
     getAdminUser(request),
     prisma.exam.findUnique({
       where: { id: examId },
-      select: { id: true, type: true, status: true, scheduledAt: true },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        scheduledAt: true,
+        opensOn: true,
+      },
     }),
   ]);
 

@@ -12,6 +12,8 @@
  * programmé, publié ou archivé sans étape intermédiaire.
  */
 
+import { hasOpened } from "@/lib/exams/time";
+
 export const EXAM_STATUSES = [
   "DRAFT",
   "PUBLISHED",
@@ -32,8 +34,10 @@ export const EXAM_STATUS_TRANSITIONS: Readonly<
   // Un examen en ligne ne se « dé-publie » pas en DRAFT : il s'archive, ou il
   // est reprogrammé (reverrouillage temporaire).
   PUBLISHED: ["SCHEDULED", "ARCHIVED"],
-  // Un examen archivé ne redevient visible qu'après un retour en brouillon.
-  ARCHIVED: ["DRAFT"],
+  // #256 m9 — un examen ARCHIVED est TERMINAL : « ARCHIVED n'est pas réactivé
+  // automatiquement ». Toute sortie d'ARCHIVED est donc refusée en 400, y compris
+  // vers DRAFT (la réédition passe par un nouvel examen).
+  ARCHIVED: [],
 };
 
 export function isExamStatus(value: unknown): value is ExamStatusValue {
@@ -61,16 +65,32 @@ export type ExamStatusTransitionResult =
  * Valide une transition de statut.
  *
  * @param from           statut courant en base (null si inconnu : ignoré)
- * @param to             statut demandé (undefined/null/absent : ignoré)
- * @param scheduledAt    date d'ouverture APRÈS application du patch
- *                       (null si inchangée ET absente de la base)
+ * @param to             statut demandé (undefined/null/absent : ignoré, la
+ *                       transition devient un no-op sur le statut)
+ * @param scheduledAt    date de démarrage APRÈS application du patch
+ *                       (null si elle doit rester absente)
+ * @param opensOn        journée d'ouverture APRÈS application du patch.
+ *                       `undefined` = information INDISPONIBLE (champ non lu) :
+ *                       l'exigence est alors ignorée, faute de mieux ;
+ *                       `null` = la base sait qu'aucun jour d'ouverture n'est
+ *                       posé, ce qui est refusé pour un examen programmé.
+ * @param now            référence temporelle du contrôle « immédiatement
+ *                       ouvert » (DRAFT -> PUBLISHED).
  */
 export function validateExamStatusTransition(input: {
   from?: string | null;
   to?: string | null;
   scheduledAt?: Date | null;
+  opensOn?: Date | null;
+  now?: Date;
 }): ExamStatusTransitionResult {
-  const { from = null, to = null, scheduledAt = null } = input;
+  const {
+    from = null,
+    to = null,
+    scheduledAt = null,
+    opensOn: opensOnValue,
+    now = new Date(),
+  } = input;
 
   if (to == null) {
     return { ok: true, from: isExamStatus(from) ? from : null, to: null };
@@ -113,6 +133,39 @@ export function validateExamStatusTransition(input: {
       message:
         "Un examen programmé (SCHEDULED) doit porter une date d'ouverture (scheduledAt).",
     };
+  }
+  // `DRAFT -> SCHEDULED` : la journée d'ouverture ET l'heure de démarrage sont
+  // obligatoires, sinon l'examen reste verrouillé à jamais.
+  if (
+    to === "SCHEDULED" &&
+    opensOnValue !== undefined &&
+    opensOnValue === null
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      code: "MISSING_OPENS_ON",
+      message:
+        "Un examen programmé (SCHEDULED) doit porter une journée d'ouverture (opensOn).",
+    };
+  }
+  // `DRAFT -> PUBLISHED` : publication immédiate seulement. La transition
+  // `SCHEDULED -> PUBLISHED`, elle, reste une action admin/cron explicite et
+  // peut donc précéder l'heure prévue.
+  if (from === "DRAFT" && to === "PUBLISHED") {
+    const immediatelyOpen = hasOpened(
+      { status: "PUBLISHED", scheduledAt, opensOn: opensOnValue ?? null },
+      now,
+    );
+    if (!immediatelyOpen) {
+      return {
+        ok: false,
+        status: 400,
+        code: "EXAM_NOT_OPEN",
+        message:
+          "Un examen ne peut être publié depuis un brouillon que s'il est immédiatement ouvert (opensOn et scheduledAt atteints).",
+      };
+    }
   }
   return { ok: true, from, to };
 }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
-import { isExamAvailable } from "@/lib/exams/availability";
 import { hasOpened, lockedPayload } from "@/lib/exams/time";
 import {
   checkExamEligibility,
@@ -47,6 +46,7 @@ export async function POST(
         duration: true,
         type: true,
         scheduledAt: true,
+        opensOn: true,
       },
     });
 
@@ -75,13 +75,9 @@ export async function POST(
       return enrollmentForbiddenResponse(eligibility);
     }
 
-    // Ouvre l'examen paresseusement s'il est planifié et arrivé à échéance.
-    if (exam.status === "SCHEDULED" && isExamAvailable(exam, now)) {
-      await prisma.exam.update({
-        where: { id: examId },
-        data: { status: "PUBLISHED" },
-      });
-    }
+    // #256 m9 — plus de lazy-open ici : `start` ne bascule PLUS le statut d'un
+    // examen. L'ouverture appartient au cron interne ; la disponibilité, elle,
+    // n'exige pas le statut PUBLISHED (un SCHEDULED échu reste lançable).
 
     // 1.5 Vérifier si l'utilisateur est restreint à un examen spécifique
     const userRecord = await prisma.user.findUnique({

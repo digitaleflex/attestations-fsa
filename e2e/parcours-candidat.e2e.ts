@@ -54,8 +54,9 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
 
     await loginAsCandidate(page);
 
-    // L'examen semé est SCHEDULED avec scheduledAt dans le passé :
-    // `autoOpenDueExams()` doit l'avoir ouvert et il doit être proposé.
+    // L'examen semé est SCHEDULED avec `scheduledAt` dans le passé : il est
+    // ouvert et démarrable (`hasOpened`), sans dépendre d'un basculement de
+    // statut par une route publique.
     await page.goto("/exams");
     await expect(page.getByRole("heading", { name: exam.name })).toBeVisible();
     await expect(

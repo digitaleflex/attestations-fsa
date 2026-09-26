@@ -42,6 +42,8 @@ vi.mock("@/lib/auth", () => ({ getAdminUser: deps.getAdminUser }));
 vi.mock("@/lib/audit", () => ({ createAuditLog: deps.createAuditLog }));
 vi.mock("next/cache", () => ({ revalidateTag: deps.revalidateTag }));
 
+import { NextRequest } from "next/server";
+
 import { PATCH } from "../../app/api/admin/exams/[id]/route";
 
 const OPENS_ON = new Date("2099-01-01T07:00:00Z");
@@ -49,7 +51,7 @@ const SCHEDULED_AT = new Date("2099-01-01T08:00:00Z");
 
 function callPatch(body: Record<string, unknown>) {
   return PATCH(
-    new Request("http://localhost/api/admin/exams/exam-1", {
+    new NextRequest("http://localhost/api/admin/exams/exam-1", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),

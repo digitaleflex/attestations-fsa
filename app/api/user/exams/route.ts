@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { applyRateLimitByUser } from "@/lib/rate-limit";
-import { autoOpenDueExams, isExamAvailable } from "@/lib/exams/availability";
+import { isExamAvailable } from "@/lib/exams/availability";
 import { hasOpened, opensOn } from "@/lib/exams/time";
 import {
   round2,
@@ -64,8 +64,8 @@ export async function GET(request: Request) {
     // visibilité de cette réponse.
     const now = new Date();
 
-    // Ouvre paresseusement les examens SCHEDULED arrivés à échéance.
-    await autoOpenDueExams(now);
+    // #256 m9 — la route publique ne déclenche AUCUNE mutation (lazy-open
+    // retiré) : la bascule SCHEDULED -> PUBLISHED appartient au cron interne.
 
     // Requêtes PARALLÈLES (Gain de temps massif)
     const [user, availableExams, enrollments, submissions] =
@@ -94,6 +94,7 @@ export async function GET(request: Request) {
             type: true,
             status: true,
             scheduledAt: true,
+            opensOn: true,
           },
           ...(params.data.limit ? { take: params.data.limit } : {}),
         }),
@@ -138,6 +139,7 @@ export async function GET(request: Request) {
                 type: true,
                 status: true,
                 scheduledAt: true,
+                opensOn: true,
               },
             },
           },

@@ -56,6 +56,8 @@ vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
 }));
 
+import { NextRequest } from "next/server";
+
 import { GET as getExam } from "../../app/api/exams/[id]/route";
 import { GET as getScheduled } from "../../app/api/exams/scheduled/route";
 import { getPublicUpcomingExams } from "../../lib/data-public";
@@ -130,7 +132,7 @@ const params = { params: Promise.resolve({ id: "exam-future" }) };
 
 function callGetExam() {
   return getExam(
-    new Request("http://localhost/api/exams/exam-future"),
+    new NextRequest("http://localhost/api/exams/exam-future"),
     params,
   );
 }

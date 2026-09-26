@@ -43,6 +43,7 @@ export async function GET(
         formationId: true,
         type: true,
         scheduledAt: true,
+        opensOn: true,
         passingScore: true,
         randomizeQuestions: true,
         showResults: true,
@@ -146,6 +147,7 @@ export async function PATCH(
       description,
       status,
       scheduledAt,
+      opensOn: opensOnInput,
       parts,
       formationId,
       duration,
@@ -158,12 +160,39 @@ export async function PATCH(
     // 1. Calculate summary data and prepare atomic update
     const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : null;
     const isValidDate = scheduledAtDate === null || !isNaN(scheduledAtDate.getTime());
+    if (!isValidDate) {
+      return NextResponse.json(
+        {
+          message: `Date de démarrage illisible : ${String(scheduledAt)}`,
+          code: "INVALID_SCHEDULED_AT",
+        },
+        { status: 400 },
+      );
+    }
+
+    // #256 m9 — `opensOn` est stocké tel que fourni, puis normalisé au minuit de
+    // `APP_TIMEZONE` à la lecture (`lib/exams/time.ts`). Une date illisible est
+    // un 400, jamais une 500.
+    const hasOpensOnInput = "opensOn" in body;
+    const opensOnDate =
+      opensOnInput && opensOnInput !== null && opensOnInput !== undefined
+        ? new Date(opensOnInput)
+        : null;
+    if (opensOnDate && isNaN(opensOnDate.getTime())) {
+      return NextResponse.json(
+        {
+          message: `Journée d'ouverture illisible : ${String(opensOnInput)}`,
+          code: "INVALID_OPENS_ON",
+        },
+        { status: 400 },
+      );
+    }
 
     // #256 m9 — matrice des transitions de statut : une transition invalide
     // est refusée en 400 AVANT toute écriture.
     const current = await prisma.exam.findUnique({
       where: { id },
-      select: { id: true, status: true, scheduledAt: true },
+      select: { id: true, status: true, scheduledAt: true, opensOn: true },
     });
     if (!current) {
       return NextResponse.json(
@@ -171,15 +200,20 @@ export async function PATCH(
         { status: 404 },
       );
     }
-    const effectiveScheduledAt = isValidDate
+    const effectiveScheduledAt = scheduledAt
       ? scheduledAtDate
-      : scheduledAt === undefined || scheduledAt === null
-        ? current.scheduledAt
-        : null;
+      : scheduledAt === null
+        ? null
+        : current.scheduledAt;
+    // `undefined` = la base ne connaît pas cette information (champ non lu) :
+    // l'exigence d'`opensOn` est alors ignorée plutôt que refusée à tort.
+    // `null`, en revanche, est une information connue : aucun jour d'ouverture.
+    const effectiveOpensOn = hasOpensOnInput ? opensOnDate : current.opensOn;
     const transition = validateExamStatusTransition({
       from: current.status,
       to: status ?? null,
       scheduledAt: effectiveScheduledAt,
+      opensOn: effectiveOpensOn,
     });
     if (!transition.ok) {
       return NextResponse.json(
@@ -200,7 +234,10 @@ export async function PATCH(
         name: title, // #130 m8 — title et name restent synchronisés
         description,
         status,
-        scheduledAt: isValidDate ? scheduledAtDate : null,
+        // PATCH partiel : un champ de planning absent du body n'est jamais
+        // remis à `null`.
+        scheduledAt: "scheduledAt" in body ? scheduledAtDate : undefined,
+        opensOn: hasOpensOnInput ? opensOnDate : undefined,
         formation: formationId ? { connect: { id: formationId } } : undefined,
         duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,
         passingScore: (passingScore !== undefined && passingScore !== null) ? parseInt(passingScore.toString()) : undefined,

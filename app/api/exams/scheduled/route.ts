@@ -3,8 +3,8 @@
 // Returns only public exam info (no questions/answers)
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { autoOpenDueExams } from "@/lib/exams/availability";
 import { hasOpened, opensOn } from "@/lib/exams/time";
+import { VISIBLE_EXAM_STATUSES } from "@/lib/exams/availability";
 
 export async function GET(request: Request) {
   try {
@@ -12,16 +12,16 @@ export async function GET(request: Request) {
     // redaction du contenu futur utilisent le meme « maintenant ».
     const now = new Date();
 
-    // Ouvre paresseusement les examens SCHEDULED dont l'heure est atteinte.
-    await autoOpenDueExams(now);
-
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
 
     // Examens encore programmés : annonce publique uniquement.
+    // #256 m9 — la route publique ne déclenche AUCUNE mutation (lazy-open
+    // retiré) : la bascule SCHEDULED -> PUBLISHED appartient au cron interne.
+    // Un examen reste donc listable tant qu'il est SCHEDULED comme PUBLISHED.
     const exams = await prisma.exam.findMany({
       where: {
-        status: "SCHEDULED",
+        status: { in: [...VISIBLE_EXAM_STATUSES] },
         scheduledAt: { not: null },
         type: (type as any) || undefined,
       },
@@ -31,6 +31,7 @@ export async function GET(request: Request) {
         name: true,
         description: true,
         scheduledAt: true,
+        opensOn: true,
         duration: true,
         type: true,
         status: true,
@@ -41,22 +42,26 @@ export async function GET(request: Request) {
     });
 
     // #256 m9 — cette route est PUBLIQUE (annonces à venir, compte à rebours).
-    // Tant que le jour J n'est pas atteint, aucun contenu d'examen ne sort :
-    // ni description, ni durée, ni barème. Seuls l'identité de la session et
-    // sa date d'ouverture sont annoncés.
+    // Tant que l'examen n'est pas ouvert, la forme est RÉDUITE : les clés de
+    // contenu (description, durée) sont ABSENTES, pas nulles — rien ne peut
+    // fuiter par une clé oubliée. Seuls l'identité de la session, son type, son
+    // statut et ses deux dates de planning sont annoncés.
     const sanitized = exams.map((exam: any) => {
       const opened = hasOpened(exam, now);
+      const opensAt = opensOn(exam);
       return {
         id: exam.id,
         title: exam.title,
         name: exam.name,
-        description: opened ? exam.description : null,
-        duration: opened ? exam.duration : null,
         scheduledAt: exam.scheduledAt,
-        opensAt: (opensOn(exam) ?? null)?.toISOString() ?? null,
+        opensOn: opensAt ? opensAt.toISOString() : null,
+        opensAt: opensAt ? opensAt.toISOString() : null,
         type: exam.type,
         status: exam.status,
         locked: !opened,
+        ...(opened
+          ? { description: exam.description, duration: exam.duration }
+          : {}),
       };
     });
 

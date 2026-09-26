@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import { VISIBLE_EXAM_STATUSES } from "@/lib/exams/availability";
+import { hasOpened, opensOn } from "@/lib/exams/time";
 
 /**
  * High-performance cached data fetching for the public pages of the FSA Platform.
@@ -29,10 +30,66 @@ export const getPublicFormations = unstable_cache(
   { revalidate: 3600, tags: ["formations"] } // 1 hour
 );
 
+export type PublicUpcomingExam = {
+  id: string;
+  name: string | null;
+  title: string | null;
+  status: string;
+  scheduledAt: Date | null;
+  /** Journée d'ouverture (minuit `APP_TIMEZONE`), en ISO. */
+  opensOn: string | null;
+  /** Alias d'annonces : même instant que `opensOn`. */
+  opensAt: string | null;
+  /** Présents UNIQUEMENT pour un examen déjà ouvert. */
+  description?: string | null;
+  duration?: number | null;
+};
+
+/** #256 m9 — forme réduite : aucun contenu d'examen avant l'ouverture. */
+function toPublicUpcomingExam(
+  row: {
+    id: string;
+    name: string | null;
+    title: string | null;
+    description: string | null;
+    scheduledAt: Date | null;
+    opensOn: Date | null;
+    duration: number | null;
+    status: string;
+  },
+  now: Date,
+): PublicUpcomingExam {
+  const opensAt = opensOn(row);
+  const opensAtIso = opensAt ? opensAt.toISOString() : null;
+  if (hasOpened(row, now)) {
+    return {
+      id: row.id,
+      name: row.name,
+      title: row.title,
+      status: row.status,
+      scheduledAt: row.scheduledAt,
+      opensOn: opensAtIso,
+      opensAt: opensAtIso,
+      description: row.description,
+      duration: row.duration,
+    };
+  }
+  return {
+    id: row.id,
+    name: row.name,
+    title: row.title,
+    status: row.status,
+    scheduledAt: row.scheduledAt,
+    opensOn: opensAtIso,
+    opensAt: opensAtIso,
+  };
+}
+
 export const getPublicUpcomingExams = unstable_cache(
-  async (limit = 3) => {
+  async (limit = 3): Promise<PublicUpcomingExam[]> => {
     try {
-      return await prisma.exam.findMany({
+      const now = new Date();
+      const rows = await prisma.exam.findMany({
         where: {
           status: { in: [...VISIBLE_EXAM_STATUSES] },
         },
@@ -44,10 +101,15 @@ export const getPublicUpcomingExams = unstable_cache(
             title: true,
             description: true,
             scheduledAt: true,
+            opensOn: true,
             duration: true,
             status: true,
         }
       });
+      // #256 m9 — forme réduite pour un examen NON ouvert : les clés de
+      // contenu (description, durée) sont ABSENTES, pas nulles. Le compte à
+      // rebours se cale sur `opensOn` / `scheduledAt`, rien d'autre ne sort.
+      return rows.map((row) => toPublicUpcomingExam(row, now));
     } catch (error) {
       console.error("⚠️ [UPCOMING_EXAMS_CACHE_ERROR]", error);
       return [];
