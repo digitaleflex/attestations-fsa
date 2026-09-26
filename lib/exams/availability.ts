@@ -1,10 +1,63 @@
 import { prisma } from "@/lib/prisma";
+import { getAppTimeZone, resolveOpensOn } from "@/lib/exams/time";
 
 /**
  * Sémantique unique de visibilité des examens.
  * DRAFT / ARCHIVED ne sont jamais exposés publiquement.
  */
 export const VISIBLE_EXAM_STATUSES = ["SCHEDULED", "PUBLISHED"] as const;
+
+export type VisibleExamStatus = (typeof VISIBLE_EXAM_STATUSES)[number];
+
+function isVisibleStatus(status: string): status is VisibleExamStatus {
+  return (VISIBLE_EXAM_STATUSES as readonly string[]).includes(status);
+}
+
+/** Champs minimaux nécessaires à la règle de visibilité « jour J ». */
+export interface ExamVisibilityInput {
+  status: string;
+  /** Ouverture planifiée (nouveau champ `Exam.opensOn`). */
+  opensOn?: Date | string | null;
+  /** Heure de démarrage (existante) ; sert aussi de repli historique. */
+  scheduledAt?: Date | string | null;
+}
+
+/**
+ * Ouverture EFFECTIVE d'un examen : minuit du jour d'ouverture dans
+ * `APP_TIMEZONE`.
+ *
+ * Repli des examens existants (`opensOn` nul) : le jour local de `scheduledAt`.
+ * Sans date du tout, l'examen n'a pas d'ouverture (jamais visible).
+ */
+export function getExamOpensOn(
+  exam: ExamVisibilityInput,
+  timeZone: string = getAppTimeZone(),
+): Date | null {
+  return resolveOpensOn(exam, timeZone);
+}
+
+/**
+ * Règle de visibilité « jour J ».
+ *
+ * Un examen est VISIBLE ( identifiable : titre, date d'ouverture, heure prévue )
+ * dès `00:00:00 Africa/Porto-Novo` le jour de son ouverture, et uniquement à
+ * partir de ce moment-là. Avant J : rien n'est exposé. La visibilité est
+ * purement temporelle : elle ne préjuge pas du verrouillage du bouton
+ * « Commencer », qui dépend de `isExamAvailable` / `scheduledAt`.
+ *
+ * Comparaisons en UTC via `APP_TIMEZONE` — jamais le fuseau de la machine.
+ */
+export function isExamVisible(
+  exam: ExamVisibilityInput,
+  now: Date = new Date(),
+  timeZone: string = getAppTimeZone(),
+): boolean {
+  if (!isVisibleStatus(exam.status)) return false;
+  const opensOn = getExamOpensOn(exam, timeZone);
+  if (opensOn == null) return false;
+  return opensOn.getTime() <= now.getTime();
+}
+
 
 /**
  * Un examen est ACCESSIBLE (démarrable) uniquement si :
@@ -14,7 +67,7 @@ export const VISIBLE_EXAM_STATUSES = ["SCHEDULED", "PUBLISHED"] as const;
  * DRAFT / ARCHIVED ne sont jamais accessibles.
  */
 export function isExamAvailable(
-  exam: { status: string; scheduledAt: Date | null },
+  exam: { status: string; scheduledAt: Date | null; opensOn?: Date | string | null },
   now: Date = new Date(),
 ): boolean {
   if (exam.status !== "PUBLISHED" && exam.status !== "SCHEDULED") return false;

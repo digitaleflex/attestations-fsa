@@ -232,6 +232,9 @@ model Exam {
   passingScore       Int           @default(65)
   randomizeQuestions Boolean       @default(false)
   showResults        Boolean       @default(false)
+  // M9 — jour d'ouverture, minuit en APP_TIMEZONE, stocké en UTC (instant).
+  // NULL = repli historique sur le jour local de `scheduledAt` (cf. lib/exams/time.ts).
+  opensOn            DateTime?
   scheduledAt        DateTime?
   session            String?
   formation          Formation?    @relation(fields: [formationId], references: [id])

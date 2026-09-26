@@ -62,6 +62,8 @@ services:
       CERT_SEAL_SECRET: ${CERT_SEAL_SECRET}
       # Plugin admin Better Auth : IDs des utilisateurs promus admin
       ADMIN_USER_IDS: ${ADMIN_USER_IDS}
+      # M9 — fuseau de référence du planning des examens (jour J = 00:00 ici).
+      APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Porto-Novo}
       # #151 — Observabilité Sentry, OPTIONNELLE. Sans SENTRY_DSN : no-op total,
       # l'application démarre normalement. Le healthcheck /api/health est inchangé.
       SENTRY_DSN: ${SENTRY_DSN:-}
