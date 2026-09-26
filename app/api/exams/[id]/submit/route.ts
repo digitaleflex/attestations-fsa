@@ -20,6 +20,7 @@ import {
   enrollmentForbiddenResponse,
 } from '@/lib/exams/eligibility';
 import { deleteDraft } from '@/lib/exam-draft';
+import { hasOpened, lockedPayload } from '@/lib/exams/time';
 
 const MAX_ANSWERS_BYTES = 1_000_000;
 const MAX_ANSWER_ENTRIES = 1_000;
@@ -191,10 +192,21 @@ export async function POST(
         passingScore: true,
         formationId: true,
         duration: true,
+        status: true,
+        scheduledAt: true,
       },
     });
     if (!exam) {
       return NextResponse.json({ error: 'Examen non trouvé' }, { status: 404 });
+    }
+
+    // #256 m9 — un examen REVERROUILLÉ (archivé, repassé SCHEDULED avec une
+    // échéance future, ou date d'ouverture retirée) refuse toute soumission :
+    // 423 avant même le contrôle d'éligibilité, donc avant de révéler
+    // l'existence d'une session. Seules métadonnées d'annonce en réponse.
+    const now = new Date();
+    if (!hasOpened(exam, now)) {
+      return NextResponse.json(lockedPayload(exam, now), { status: 423 });
     }
 
     const adminUser = await getAdminUser(request);

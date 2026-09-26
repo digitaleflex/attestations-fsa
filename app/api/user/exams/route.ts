@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { applyRateLimitByUser } from "@/lib/rate-limit";
 import { autoOpenDueExams, isExamAvailable } from "@/lib/exams/availability";
+import { hasOpened, opensOn } from "@/lib/exams/time";
 import {
   round2,
   isCorrected,
@@ -59,8 +60,12 @@ export async function GET(request: Request) {
       );
     }
 
+    // #256 m9 — une seule référence temporelle pour toutes les décisions de
+    // visibilité de cette réponse.
+    const now = new Date();
+
     // Ouvre paresseusement les examens SCHEDULED arrivés à échéance.
-    await autoOpenDueExams();
+    await autoOpenDueExams(now);
 
     // Requêtes PARALLÈLES (Gain de temps massif)
     const [user, availableExams, enrollments, submissions] =
@@ -131,6 +136,8 @@ export async function GET(request: Request) {
                 part1Questions: true,
                 part2Questions: true,
                 type: true,
+                status: true,
+                scheduledAt: true,
               },
             },
           },
@@ -152,6 +159,10 @@ export async function GET(request: Request) {
     // 1. Ajouter les examens complétés
     const completedExams = submissions.map((sub) => {
       const exam = sub.exam;
+      // #256 m9 — avant le jour J, aucun contenu d'examen (description,
+      // barème, durée, volume de questions) ne sort de cette route, même si
+      // une session existe. Seuls le nom et la date d'ouverture sont annoncés.
+      const opened = hasOpened(exam, now);
       const qCount =
         exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0);
 
@@ -177,20 +188,22 @@ export async function GET(request: Request) {
         id: sub.examId,
         submissionId: sub.id,
         examName: exam.title || exam.name,
-        examDescription: exam.description,
+        examDescription: opened ? exam.description : null,
         status: displayStatus(sub.status),
         score: sub.totalScore,
-        maxScore: maxScore,
+        maxScore: opened ? maxScore : null,
         finalScore,
-        passingScore,
+        passingScore: opened ? (exam.passingScore ?? 65) : null,
         passed:
           isDone && finalScore !== null && isPassed(finalScore, passingScore),
         startedAt: sub.submittedAt,
         completedAt: sub.submittedAt,
-        duration: `${Math.round(exam.duration / 60)} minutes`,
-        questionCount: qCount,
+        duration: opened ? `${Math.round(exam.duration / 60)} minutes` : null,
+        questionCount: opened ? qCount : null,
         type: exam.type,
         isAvailable: false,
+        locked: !opened,
+        opensAt: (opensOn(exam) ?? null)?.toISOString() ?? null,
       };
     });
 
@@ -204,27 +217,36 @@ export async function GET(request: Request) {
       .filter(
         (exam: any) => exam.type === "MOCK" || enrolledExamIds.has(exam.id),
       )
-      .map((exam: any) => ({
-        id: exam.id,
-        examName: exam.title || exam.name,
-        examDescription: exam.description,
-        status: "AVAILABLE",
-        score: 0,
-        maxScore: exam.totalPoints || 100,
-        finalScore: null,
-        passingScore: exam.passingScore ?? 65,
-        passed: false,
-        startedAt: null,
-        completedAt: null,
-        scheduledAt: exam.scheduledAt,
-        isAvailable: isExamAvailable(exam),
-        duration: `${Math.round(exam.duration / 60)} minutes`,
-        questionCount:
-          exam.part1Questions +
-          exam.part2Questions +
-          (exam.part3Enabled ? 1 : 0),
-        type: exam.type,
-      }));
+      .map((exam: any) => {
+        // #256 m9 — annonce seule tant que le jour J n'est pas atteint : ni
+        // description, ni barème, ni durée, ni volume de questions. Le front
+        // affiche déjà « Bientôt disponible » via `isAvailable: false`.
+        const opened = hasOpened(exam, now);
+        return {
+          id: exam.id,
+          examName: exam.title || exam.name,
+          examDescription: opened ? exam.description : null,
+          status: "AVAILABLE",
+          score: 0,
+          maxScore: opened ? exam.totalPoints || 100 : null,
+          finalScore: null,
+          passingScore: opened ? (exam.passingScore ?? 65) : null,
+          passed: false,
+          startedAt: null,
+          completedAt: null,
+          scheduledAt: exam.scheduledAt,
+          opensAt: (opensOn(exam) ?? null)?.toISOString() ?? null,
+          isAvailable: isExamAvailable(exam, now),
+          locked: !opened,
+          duration: opened ? `${Math.round(exam.duration / 60)} minutes` : null,
+          questionCount: opened
+            ? exam.part1Questions +
+              exam.part2Questions +
+              (exam.part3Enabled ? 1 : 0)
+            : null,
+          type: exam.type,
+        };
+      });
 
     const examsResult = [...completedExams, ...availableResult];
 

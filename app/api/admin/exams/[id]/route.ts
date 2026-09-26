@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
+import { validateExamStatusTransition } from "@/lib/exams/transitions";
 
 interface OptionPayload {
   text: string;
@@ -112,6 +113,35 @@ export async function PATCH(
     // 1. Calculate summary data and prepare atomic update
     const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : null;
     const isValidDate = scheduledAtDate === null || !isNaN(scheduledAtDate.getTime());
+
+    // #256 m9 — matrice des transitions de statut : une transition invalide est
+    // refusée en 400 AVANT toute écriture. `status` absent du body = inchangé.
+    const current = await prisma.exam.findUnique({
+      where: { id },
+      select: { id: true, status: true, scheduledAt: true },
+    });
+    if (!current) {
+      return NextResponse.json(
+        { message: "Examen non trouvé" },
+        { status: 404 },
+      );
+    }
+    const effectiveScheduledAt = isValidDate
+      ? scheduledAtDate
+      : scheduledAt === undefined || scheduledAt === null
+        ? current.scheduledAt
+        : null;
+    const transition = validateExamStatusTransition({
+      from: current.status,
+      to: status ?? null,
+      scheduledAt: effectiveScheduledAt,
+    });
+    if (!transition.ok) {
+      return NextResponse.json(
+        { message: transition.message, code: transition.code },
+        { status: transition.status },
+      );
+    }
     
     // Calculate totals for summary fields
     const enabledParts = (parts && Array.isArray(parts)) ? parts.filter((p: ExamPartPayload) => p.enabled) : [];

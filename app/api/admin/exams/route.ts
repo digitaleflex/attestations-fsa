@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
 import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
+import { isExamStatus } from "@/lib/exams/transitions";
 
 interface OptionPayload {
   text: string;
@@ -124,6 +125,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // #256 m9 — le statut de création est validé contre la liste canonique
+    // (DRAFT | PUBLISHED | SCHEDULED | ARCHIVED) : pas de valeur arbitraire
+    // en base, et un SCHEDULED doit porter sa date d'ouverture.
+    const requestedStatus = status === "" ? "DRAFT" : status;
+    if (!isExamStatus(requestedStatus)) {
+      return NextResponse.json(
+        {
+          message: `Statut d'examen invalide : ${String(status)}`,
+          code: "INVALID_EXAM_STATUS",
+        },
+        { status: 400 },
+      );
+    }
+    const parsedScheduledAt =
+      scheduledAt && !isNaN(new Date(scheduledAt).getTime())
+        ? new Date(scheduledAt)
+        : null;
+    if (requestedStatus === "SCHEDULED" && parsedScheduledAt === null) {
+      return NextResponse.json(
+        {
+          message:
+            "Un examen programmé (SCHEDULED) doit porter une date d'ouverture (scheduledAt).",
+          code: "MISSING_SCHEDULED_AT",
+        },
+        { status: 400 },
+      );
+    }
+
     const enabledParts = parts.filter((p) => p.enabled);
     const totalPoints = enabledParts.reduce(
       (sum, p) => sum + p.points,
@@ -152,9 +181,9 @@ export async function POST(request: Request) {
         totalPoints: Math.round(totalPoints),
         randomizeQuestions,
         showResults,
-        status: status as ExamStatus,
+        status: requestedStatus as ExamStatus,
         type: (body.type as ExamType) || "OFFICIAL",
-        scheduledAt: (scheduledAt && !isNaN(new Date(scheduledAt).getTime())) ? new Date(scheduledAt) : null,
+        scheduledAt: parsedScheduledAt,
         
         // Legacy summary fields — partNPoints = somme de TOUTES les parties
         // du type (cohérent avec totalPoints, même à parties multiples).

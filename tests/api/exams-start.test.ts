@@ -87,7 +87,33 @@ describe("POST /api/exams/[id]/start", () => {
     expect(res.status).toBe(401);
   });
 
-  it("404 si examen non disponible", async () => {
+  it("404 si l'examen n'existe pas", async () => {
+    db.examFindUnique.mockResolvedValue(null as never);
+    const res = await callStart();
+    expect(res.status).toBe(404);
+  });
+
+  it("423 (EXAM_LOCKED) si l'examen n'est pas encore ouvert", async () => {
+    // #256 m9 — avant le jour J : 423 et non 404, la date d'ouverture est
+    // annoncée mais aucun contenu d'examen ne l'est.
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      status: "SCHEDULED",
+      duration: 3600,
+      type: "OFFICIAL",
+      scheduledAt: new Date("2099-01-01T08:00:00Z"),
+    } as never);
+    const res = await callStart();
+    expect(res.status).toBe(423);
+    const body = await res.json();
+    expect(body.code).toBe("EXAM_LOCKED");
+    expect(body.description).toBeUndefined();
+    expect(body.duration).toBeUndefined();
+    expect(db.sessionFindFirst).not.toHaveBeenCalled();
+    expect(db.sessionUpsert).not.toHaveBeenCalled();
+  });
+
+  it("423 si l'examen est verrouillé par son statut (DRAFT / ARCHIVED)", async () => {
     db.examFindUnique.mockResolvedValue({
       id: "exam-1",
       status: "DRAFT",
@@ -96,7 +122,8 @@ describe("POST /api/exams/[id]/start", () => {
       scheduledAt: null,
     } as never);
     const res = await callStart();
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(423);
+    expect((await res.json()).code).toBe("EXAM_LOCKED");
   });
 
   it("403 pour un OFFICIAL sans enrollment, même avec une session existante", async () => {

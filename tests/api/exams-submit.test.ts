@@ -123,6 +123,10 @@ describe("POST /api/exams/[id]/submit", () => {
     } as never);
     db.examPartFindMany.mockResolvedValue([{ order: 1, type: "QCM", points: 20 }] as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       totalPoints: 20,
@@ -139,6 +143,10 @@ describe("POST /api/exams/[id]/submit", () => {
   it("409 si la session est déjà soumise", async () => {
     stubAuthorized();
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       totalPoints: 20,
@@ -160,6 +168,10 @@ describe("POST /api/exams/[id]/submit", () => {
   it("409 si aucune session d'examen n'a été démarrée", async () => {
     stubAuthorized();
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       part2Points: 0,
@@ -183,6 +195,10 @@ describe("POST /api/exams/[id]/submit", () => {
   it("403 avant toute lecture de session quand l'éligibilité échoue", async () => {
     stubAuthorized();
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       totalPoints: 20,
@@ -223,6 +239,10 @@ describe("POST /api/exams/[id]/submit", () => {
     } as never);
     db.examPartFindFirst.mockResolvedValue(null as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       type: "OFFICIAL",
       duration: 3600,
@@ -274,6 +294,10 @@ describe("POST /api/exams/[id]/submit", () => {
     } as never);
 
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       part2Points: 0,
@@ -333,6 +357,10 @@ describe("POST /api/exams/[id]/submit", () => {
       questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
     } as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       part2Points: 0,
@@ -385,6 +413,10 @@ describe("POST /api/exams/[id]/submit", () => {
       questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
     } as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20, // legacy : première QCM seulement
       part2Points: 50, // legacy : première OPEN seulement
@@ -429,6 +461,10 @@ describe("POST /api/exams/[id]/submit", () => {
       questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
     } as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       part2Points: 0,
@@ -474,6 +510,10 @@ describe("POST /api/exams/[id]/submit", () => {
       questions: [{ id: "q1", options: [{ id: "o1", isCorrect: true }] }],
     } as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       part2Points: 0,
@@ -522,6 +562,10 @@ describe("POST /api/exams/[id]/submit", () => {
         finalScore: 100,
       } as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       part2Points: 0,
@@ -570,6 +614,10 @@ describe("POST /api/exams/[id]/submit", () => {
       submittedAt: null,
     } as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       part2Points: 0,
@@ -623,6 +671,10 @@ describe("POST /api/exams/[id]/submit", () => {
       submittedAt: null,
     } as never);
     db.examFindUnique.mockResolvedValue({
+      // #256 m9 — jour J atteint : la soumission n'est acceptée que si
+      // l'examen est ouvert.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
       id: "exam-1",
       part1Points: 20,
       totalPoints: 20,

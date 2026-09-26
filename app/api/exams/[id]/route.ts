@@ -1,12 +1,13 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
-import { isExamAvailable } from "@/lib/exams/availability";
+import { hasOpened, lockedPayload } from "@/lib/exams/time";
 import {
   checkExamEligibility,
   enrollmentForbiddenResponse,
 } from "@/lib/exams/eligibility";
 import { applyRateLimit, applyRateLimitByUser } from "@/lib/rate-limit";
+import { validateExamStatusTransition } from "@/lib/exams/transitions";
 
 export async function GET(
   request: NextRequest,
@@ -97,16 +98,12 @@ export async function GET(
     }
 
     // Verrou candidat : un examen non encore ouvert n'est lisible que par un admin.
-    if (!adminUser && !isExamAvailable(exam)) {
-      return NextResponse.json(
-        {
-          error: "Examen verrouillé",
-          code: "EXAM_LOCKED",
-          message:
-            "Cet examen sera disponible à sa prochaine programmation.",
-        },
-        { status: 423 },
-      );
+    // 423 (Locked) — la date d'ouverture est annoncée, jamais le contenu
+    // (description, barème, durée, questions) : la réponse ne contient que
+    // les métadonnées d'annonce construites par `lockedPayload`.
+    const now = new Date();
+    if (!adminUser && !hasOpened(exam, now)) {
+      return NextResponse.json(lockedPayload(exam, now), { status: 423 });
     }
 
     if (user) {
@@ -144,11 +141,11 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { 
-      title, 
-      description, 
-      status, 
-      scheduledAt, 
+    const {
+      title,
+      description,
+      status,
+      scheduledAt,
       parts,
       formationId,
       duration,
@@ -161,7 +158,36 @@ export async function PATCH(
     // 1. Calculate summary data and prepare atomic update
     const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : null;
     const isValidDate = scheduledAtDate === null || !isNaN(scheduledAtDate.getTime());
-    
+
+    // #256 m9 — matrice des transitions de statut : une transition invalide
+    // est refusée en 400 AVANT toute écriture.
+    const current = await prisma.exam.findUnique({
+      where: { id },
+      select: { id: true, status: true, scheduledAt: true },
+    });
+    if (!current) {
+      return NextResponse.json(
+        { message: "Examen non trouvé" },
+        { status: 404 },
+      );
+    }
+    const effectiveScheduledAt = isValidDate
+      ? scheduledAtDate
+      : scheduledAt === undefined || scheduledAt === null
+        ? current.scheduledAt
+        : null;
+    const transition = validateExamStatusTransition({
+      from: current.status,
+      to: status ?? null,
+      scheduledAt: effectiveScheduledAt,
+    });
+    if (!transition.ok) {
+      return NextResponse.json(
+        { message: transition.message, code: transition.code },
+        { status: transition.status },
+      );
+    }
+
     // Calculate totals for summary fields
     const enabledParts = (parts && Array.isArray(parts)) ? parts.filter(p => p.enabled) : [];
     const totalPoints = enabledParts.reduce((sum: number, p: any) => sum + (parseFloat(p.points?.toString() || "0")), 0);
@@ -190,7 +216,7 @@ export async function PATCH(
         part1Points: Math.round(parseFloat(enabledParts.find(p => p.type === "QCM")?.points?.toString() || "0")),
         part2Points: Math.round(parseFloat(enabledParts.find(p => p.type === "OPEN")?.points?.toString() || "0")),
         part3Points: Math.round(parseFloat(enabledParts.find(p => p.type === "CASE_STUDY")?.points?.toString() || "0")),
-        
+
         // 🔄 Replace parts and questions in one go if provided
         ...(parts && Array.isArray(parts) ? {
           parts: {

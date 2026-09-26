@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { isExamAvailable } from "@/lib/exams/availability";
+import { hasOpened, lockedPayload } from "@/lib/exams/time";
 import {
   checkExamEligibility,
   enrollmentForbiddenResponse,
@@ -49,11 +50,19 @@ export async function POST(
       },
     });
 
-    if (!exam || !isExamAvailable(exam)) {
+    // #256 m9 — distinction explicite : 404 si l'examen n'existe pas, 423 s'il
+    // existe mais n'est pas encore ouvert (jour J non atteint ou statut non
+    // publiable). Avant ce lot, les deux cas répondaient 404.
+    const now = new Date();
+    if (!exam) {
       return NextResponse.json(
-        { error: "Examen non disponible" },
+        { error: "Examen non trouvé" },
         { status: 404 },
       );
+    }
+
+    if (!hasOpened(exam, now)) {
+      return NextResponse.json(lockedPayload(exam, now), { status: 423 });
     }
 
     const eligibility = await checkExamEligibility({
@@ -67,7 +76,7 @@ export async function POST(
     }
 
     // Ouvre l'examen paresseusement s'il est planifié et arrivé à échéance.
-    if (exam.status === "SCHEDULED") {
+    if (exam.status === "SCHEDULED" && isExamAvailable(exam, now)) {
       await prisma.exam.update({
         where: { id: examId },
         data: { status: "PUBLISHED" },

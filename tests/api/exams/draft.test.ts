@@ -53,7 +53,13 @@ describe("POST /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
-    db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "MOCK" } as never);
+    // #256 m9 — jour J atteint : le verrou 423 ne doit pas masquer le flux.
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "MOCK",
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
+    } as never);
     db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
@@ -84,7 +90,13 @@ describe("GET /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
-    db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "MOCK" } as never);
+    // #256 m9 — jour J atteint : le verrou 423 ne doit pas masquer le flux.
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "MOCK",
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
+    } as never);
     db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
@@ -108,7 +120,13 @@ describe("DELETE /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
-    db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "MOCK" } as never);
+    // #256 m9 — jour J atteint : le verrou 423 ne doit pas masquer le flux.
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "MOCK",
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
+    } as never);
     db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 

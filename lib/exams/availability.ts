@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAppTimeZone, resolveOpensOn } from "@/lib/exams/time";
+import { getAppTimeZone, hasOpened, resolveOpensOn } from "@/lib/exams/time";
 
 /**
  * Sémantique unique de visibilité des examens.
@@ -65,14 +65,15 @@ export function isExamVisible(
  * - `scheduledAt` est défini et déjà atteint.
  * Un examen PUBLISHED sans date, ou avec une date future, reste verrouillé.
  * DRAFT / ARCHIVED ne sont jamais accessibles.
+ *
+ * #256 m9 — délégué à `lib/exams/time.ts` (`hasOpened`) : une seule définition
+ * du jour J pour la disponibilité, la visibilité du contenu et les 423.
  */
 export function isExamAvailable(
   exam: { status: string; scheduledAt: Date | null; opensOn?: Date | string | null },
   now: Date = new Date(),
 ): boolean {
-  if (exam.status !== "PUBLISHED" && exam.status !== "SCHEDULED") return false;
-  if (exam.scheduledAt == null) return false;
-  return new Date(exam.scheduledAt).getTime() <= now.getTime();
+  return hasOpened(exam, now);
 }
 
 /**

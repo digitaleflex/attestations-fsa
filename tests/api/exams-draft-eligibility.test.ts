@@ -55,7 +55,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   deps.getCurrentUser.mockResolvedValue({ id: "user-1" });
   deps.getAdminUser.mockResolvedValue(null);
-  db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "OFFICIAL" });
+  // #256 m9 — jour J atteint (examen ouvert) : le verrou 423 ne doit pas
+  // masquer le contrôle d'inscription (403).
+  db.examFindUnique.mockResolvedValue({
+    id: "exam-1",
+    type: "OFFICIAL",
+    status: "PUBLISHED",
+    scheduledAt: new Date(Date.now() - 60_000),
+  });
   db.enrollmentFindUnique.mockResolvedValue(null);
   deps.saveDraft.mockResolvedValue(true);
   deps.loadDraft.mockResolvedValue({ answers: {} });
@@ -74,7 +81,12 @@ describe("draft exam eligibility", () => {
   );
 
   it("POST accepte un MOCK sans enrollment", async () => {
-    db.examFindUnique.mockResolvedValue({ id: "exam-1", type: "MOCK" });
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "MOCK",
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
+    });
     const res = await call("POST");
     expect(res.status).toBe(200);
     expect(deps.saveDraft).toHaveBeenCalledWith("exam-1", "user-1", {

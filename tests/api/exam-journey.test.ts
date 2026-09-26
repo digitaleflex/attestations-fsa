@@ -210,6 +210,10 @@ describe("Parcours cœur : submit → correct → attestation (#136)", () => {
       type: "OFFICIAL",
       passingScore: 65,
       formationId: "formation-1",
+      // #256 m9 — jour J atteint : sinon la soumission est refusée en 423
+      // (examen reverrouillé) avant même la lecture de la session.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
     } as never);
     db.examPartFindMany.mockResolvedValue([
       { order: 1, type: "QCM", points: 20 },
