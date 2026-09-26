@@ -17,6 +17,11 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ExamFormData, DEFAULT_PARTS, Part } from "./types";
+import {
+  APP_TIMEZONE_SHORT,
+  formatAppDateTime,
+  fromAppWallClock,
+} from "@/lib/exams/schedule-ui";
 import { StepGeneral } from "./form-steps/step-general";
 import { StepPartBuilder } from "./form-steps/step-part-builder";
 import { StepSummary } from "./form-steps/step-summary";
@@ -32,6 +37,13 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
     description: initialData?.description || "",
     status: initialData?.status || "DRAFT",
     scheduledAt: initialData?.scheduledAt || "",
+    // Repli : le jour d'ouverture suit la date d'épreuve tant que l'admin ne
+    // l'a pas choisi. Le serveur fait de même pour les examens existants dont
+    // `opensOn` est nul.
+    opensOn:
+      initialData?.opensOn ||
+      initialData?.scheduledAt?.split("T")[0] ||
+      "",
     session: initialData?.session || "",
     duration: initialData?.duration ?? 3600,
     passingScore: initialData?.passingScore ?? 65,
@@ -85,10 +97,32 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
     }
   }, [formData, initialData]);
 
-  // A SCHEDULED exam must carry a scheduled date/time
-  const scheduleInvalid = formData.status === "SCHEDULED" && !formData.scheduledAt;
-  const scheduleErrorMessage =
-    "La date et l'heure de programmation sont requises pour un examen programmé.";
+  // Un examen programmé porte deux dates : son ouverture (jour J) et son heure
+  // de démarrage. Les deux sont obligatoires, et le démarrage ne peut pas
+  // précéder l'ouverture — sinon le candidat verrait une épreuve qu'il ne peut
+  // pas ouvrir, sans explication.
+  const scheduleError = (() => {
+    if (formData.status !== "SCHEDULED") return null;
+    if (!formData.scheduledAt) {
+      return "La date et l'heure de programmation sont requises pour un examen programmé.";
+    }
+    if (!formData.opensOn) {
+      return "Le jour d'ouverture est requis pour un examen programmé.";
+    }
+    const startInstant = fromAppWallClock(formData.scheduledAt);
+    const openInstant = fromAppWallClock(`${formData.opensOn}T00:00`);
+    if (!startInstant || !openInstant) {
+      return "La date d'ouverture ou l'heure de programmation est illisible.";
+    }
+    if (startInstant.getTime() < openInstant.getTime()) {
+      return `L'heure de démarrage doit être postérieure à l'ouverture (${formatAppDateTime(
+        openInstant,
+      )}, ${APP_TIMEZONE_SHORT}).`;
+    }
+    return null;
+  })();
+  const scheduleInvalid = scheduleError !== null;
+  const scheduleErrorMessage = scheduleError ?? "";
 
   const validateStep = (stepToValidate: number): string | null => {
     if (stepToValidate === 0) {
@@ -221,8 +255,15 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
           type: formData.type || "OFFICIAL",
           // #126 — convertir en ISO UTC côté navigateur : le serveur stocke
           // l'instant exact, plus d'interprétation dans le fuseau du serveur.
+          // Heures saisies en Africa/Porto-Novo, envoyées en UTC : c'est le
+          // navigateur qui décide du décalage, jamais la machine du serveur.
           scheduledAt: formData.scheduledAt
-            ? new Date(formData.scheduledAt).toISOString()
+            ? fromAppWallClock(formData.scheduledAt)?.toISOString()
+            : undefined,
+          // Minuit du jour d'ouverture, interprété dans le fuseau de
+          // l'application — pas le minuit UTC, qui serait la veille.
+          opensOn: formData.opensOn
+            ? fromAppWallClock(`${formData.opensOn}T00:00`)?.toISOString()
             : undefined,
           formationId: formData.formationId,
           session: formData.session,

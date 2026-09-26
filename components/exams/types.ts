@@ -43,6 +43,13 @@ export interface ExamFormData {
   totalPoints?: number;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SCHEDULED";
   scheduledAt: string;
+  /**
+   * Jour d'ouverture, saisi et affiché en heure Africa/Porto-Novo et stocké
+   * sous forme de clé de journée locale « 2026-09-26 ». L'instant UTC
+   * correspondant (minuit à Porto-Novo = 23:00 UTC la veille) est calculé à
+   * l'envoi, jamais à la saisie.
+   */
+  opensOn?: string;
   type?: "OFFICIAL" | "MOCK";
   part1Enabled?: boolean;
   part2Enabled?: boolean;

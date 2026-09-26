@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
@@ -18,6 +18,9 @@ import {
   X,
   ChevronRight,
   Calendar,
+  EyeOff,
+  Lock,
+  Sunrise,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -32,6 +35,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api-client";
+import {
+  APP_TIMEZONE_LABEL,
+  formatAppDateTime,
+  formatAppLongDate,
+  getScheduleView,
+  type ScheduleView,
+} from "@/lib/exams/schedule-ui";
 
 export default function UserExamsPage() {
   const router = useRouter();
@@ -59,6 +69,8 @@ export default function UserExamsPage() {
           type: string;
           isAvailable: boolean;
           scheduledAt: string | null;
+          /** Jour d'ouverture, stocké en UTC. Repli : déduit de `scheduledAt`. */
+          opensOn?: string | null;
         }>;
         stats: {
           total: number;
@@ -79,13 +91,18 @@ export default function UserExamsPage() {
       return apiFetch<{
         exams: Array<{
           id: string;
-          name: string;
-          description: string;
+          name?: string | null;
+          title?: string | null;
+          /**
+           * Contenu de l'épreuve. Absent avant l'ouverture : c'est le serveur
+           * qui filtre, l'interface se contente de ne rien afficher de vide.
+           */
+          description?: string | null;
           scheduledAt: string;
+          opensOn?: string | null;
+          isAvailable?: boolean | null;
           status: string;
-          duration: number;
-          totalPoints: number;
-          passingScore: number;
+          duration?: number | null;
         }>;
       }>("/api/exams/scheduled?type=OFFICIAL");
     },
@@ -105,6 +122,20 @@ export default function UserExamsPage() {
     if (tab === "OFFICIAL" && scheduledIds.has(exam.id)) return false;
     return true;
   });
+
+  /**
+   * Une carte « disponible » dont l'heure de démarrage n'est pas atteinte est
+   * une carte VERRROUILLÉE : pas de description, pas de durée, pas de nombre de
+   * questions, pas de lien. Les cartes terminées ou en cours de correction ne
+   * sont jamais concernées — leur contenu est déjà connu du candidat.
+   */
+  const isLockedCard = (exam: any): boolean => {
+    if (exam.status !== "AVAILABLE") return false;
+    return !getScheduleView(exam, new Date()).canStart;
+  };
+
+  const getSchedule = (exam: any): ScheduleView =>
+    getScheduleView(exam, new Date());
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -167,8 +198,14 @@ export default function UserExamsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Onglets Officiel / Blanc */}
-      <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm w-fit">
+      {/* Onglets Officiel / Blanc — `tablist` réel : deux boutons qui
+          co-varient le contenu ne sont pas deux boutons, c'est un seul
+          contrôle à deux états. */}
+      <div
+        role="tablist"
+        aria-label="Type d'examen"
+        className="flex w-fit items-center gap-1.5 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-sm"
+      >
         {[
           { key: "OFFICIAL", label: "Examens officiels" },
           { key: "MOCK", label: "Examens blancs" },
@@ -176,11 +213,13 @@ export default function UserExamsPage() {
           <button
             key={t.key}
             type="button"
+            role="tab"
+            aria-selected={tab === t.key}
             onClick={() => {
               setTab(t.key as "OFFICIAL" | "MOCK");
               setStatusFilter("all");
             }}
-            className={`px-5 h-10 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            className={`h-10 rounded-xl px-5 text-xs font-black uppercase tracking-wider transition-all ${
               tab === t.key
                 ? "bg-brand text-white shadow-md shadow-brand/25"
                 : "text-slate-500 hover:bg-slate-50"
@@ -192,7 +231,7 @@ export default function UserExamsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="p-4 bg-white shadow-sm">
           <p className="text-sm text-slate-500">Total</p>
           <p className="text-2xl font-bold text-slate-800">
@@ -223,17 +262,28 @@ export default function UserExamsPage() {
             {data?.stats?.passed || 0}
           </p>
         </Card>
-        {!scheduledLoading && scheduledData?.exams && (
-          <Card className="p-4 bg-white shadow-sm border-l-4 border-l-blue-500">
+        {/* Toujours rendu, même à zéro : une carte qui apparaît et disparaît
+            selon le chargement décale toute la ligne sous elle. */}
+        {tab === "OFFICIAL" && (
+          <Card className="border-l-4 border-l-brand bg-white p-4 shadow-sm">
             <p className="text-sm text-slate-500">Programmés</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {scheduledData.exams.length}
+            <p className="text-2xl font-bold text-brand">
+              {scheduledData?.exams?.length ?? 0}
             </p>
           </Card>
         )}
       </div>
 
       {/* ✅ SCHEDULED EXAMS: Countdown Section */}
+      {tab === "OFFICIAL" && scheduledLoading && (
+        // Réservoir de la même hauteur que la section réelle : pas de saut de
+        // mise en page quand les cartes arrivent.
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2" aria-hidden="true">
+          {[1, 2].map((i) => (
+            <Card key={i} className="h-72 animate-pulse bg-white shadow-sm" />
+          ))}
+        </div>
+      )}
       {tab === "OFFICIAL" &&
         !scheduledLoading &&
         scheduledData?.exams &&
@@ -252,16 +302,22 @@ export default function UserExamsPage() {
                 </p>
               </div>
             </div>
+            <p className="text-xs text-slate-500">
+              Les horaires sont donnés en {APP_TIMEZONE_LABEL}, heure de référence
+              de la plateforme.
+            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {scheduledData.exams.map((exam: any) => (
+              {scheduledData.exams.map((exam) => (
                 <CountdownTimer
                   key={exam.id}
                   scheduledAt={exam.scheduledAt}
+                  opensOn={exam.opensOn ?? null}
+                  isAvailable={exam.isAvailable ?? null}
                   examId={exam.id}
-                  examName={exam.name || exam.title}
-                  examDescription={exam.description}
-                  duration={exam.duration}
+                  examName={exam.name || exam.title || "Examen programmé"}
+                  examDescription={exam.description ?? null}
+                  duration={exam.duration ?? null}
                 />
               ))}
             </div>
@@ -269,16 +325,18 @@ export default function UserExamsPage() {
         )}
 
       {/* Filter */}
-      <Card className="p-4 bg-white shadow-sm">
+      <Card className="bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <span className="text-sm font-semibold text-slate-700">
-              Filtrer par statut
-            </span>
-          </div>
+          {/* `Filter` est décoratif : le libellé est porté par le `<span>`. */}
+          <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <Filter className="h-4 w-4 text-slate-500" aria-hidden="true" />
+            Filtrer par statut
+          </span>
+          {/* Le `<Select>` de Radix n'est pas un `<select>` natif : sans
+              `aria-label`, le lecteur d'écran annonce « combo box » sans
+              dire sur quoi elle porte. */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 h-10">
+            <SelectTrigger className="h-10 w-44" aria-label="Filtrer les examens par statut">
               <SelectValue placeholder="Tous" />
             </SelectTrigger>
             <SelectContent>
@@ -323,8 +381,9 @@ export default function UserExamsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredExams.map((exam: any) => {
-            const notYetAvailable =
-              exam.status === "AVAILABLE" && exam.isAvailable === false;
+            // Une seule source de vérité pour le verrouillage de la carte.
+            const schedule = getSchedule(exam);
+            const locked = isLockedCard(exam);
             return (
             <Card
               key={exam.id}
@@ -341,19 +400,27 @@ export default function UserExamsPage() {
                       <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-brand transition-colors">
                         {exam.examName}
                       </h3>
-                      <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
-                        {exam.examDescription ||
-                          "Aucune description disponible pour cet examen."}
-                      </p>
+                      {locked ? (
+                        // Avant l'ouverture : ni description, ni barème, ni
+                        // durée, ni nombre de questions. On dit seulement
+                        // QUAND le contenu sera accessible.
+                        <p className="flex items-center gap-1.5 text-sm font-medium text-slate-500 mt-1.5">
+                          <EyeOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          Détails disponibles dès l&apos;ouverture
+                        </p>
+                      ) : (
+                        <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
+                          {exam.examDescription ||
+                            "Aucune description disponible pour cet examen."}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex-shrink-0 sm:mt-1 flex flex-col gap-2 items-end">
                     <Badge
-                      className={`${notYetAvailable ? "bg-blue-100 text-blue-700 border-blue-200" : getStatusBadgeColor(exam.status)} px-3 py-1 shadow-sm font-medium`}
+                      className={`${locked ? "bg-blue-100 text-blue-700 border-blue-200" : getStatusBadgeColor(exam.status)} px-3 py-1 shadow-sm font-medium`}
                     >
-                      {notYetAvailable
-                        ? "Bientôt disponible"
-                        : getStatusLabel(exam.status)}
+                      {locked ? "Bientôt disponible" : getStatusLabel(exam.status)}
                     </Badge>
                     <Badge
                       variant="outline"
@@ -364,30 +431,37 @@ export default function UserExamsPage() {
                   </div>
                 </div>
 
-                {/* Info */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span>{exam.duration || "Illimité"}</span>
+                {/* Info — durée et nombre de questions restent masqués avant
+                    l'ouverture, même si l'API les glisse dans la réponse. */}
+                {locked ? (
+                  <p className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-500">
+                    <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                    Épreuve non ouverte : durée et barème communiqué à l&apos;ouverture
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Clock className="w-4 h-4 text-slate-400" aria-hidden="true" />
+                      <span>{exam.duration || "Illimité"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <BarChart3 className="w-4 h-4 text-slate-400" aria-hidden="true" />
+                      <span>{exam.questionCount || 0} questions</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <BarChart3 className="w-4 h-4 text-slate-400" />
-                    <span>{exam.questionCount || 0} questions</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Date/heure planifiée (annonce à venir) */}
                 {exam.scheduledAt && (
                   <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
-                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <Calendar className="w-4 h-4 text-slate-400" aria-hidden="true" />
                     <span>
-                      {new Date(exam.scheduledAt).toLocaleString("fr-FR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {/* Heure Africa/Porto-Novo : la machine de l'admin et celle
+                          du candidat n'ont pas le même fuseau. */}
+                      {formatAppDateTime(exam.scheduledAt)}
+                      <span className="ml-1.5 text-xs text-slate-400">
+                        (Porto-Novo)
+                      </span>
                     </span>
                   </div>
                 )}
@@ -426,15 +500,38 @@ export default function UserExamsPage() {
                   </div>
                 )}
 
+                {/* Ouverture : la seule information utile avant le jour J. */}
+                {locked && schedule.opensAt && (
+                  <p
+                    id={`opens-${exam.id}`}
+                    className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-sm text-blue-900"
+                  >
+                    <Sunrise className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>
+                      Ouverture le{" "}
+                      <strong className="font-bold">
+                        {formatAppLongDate(schedule.opensAt)}
+                      </strong>{" "}
+                      à minuit ({APP_TIMEZONE_LABEL}).
+                    </span>
+                  </p>
+                )}
+
                 {/* Actions */}
+                {/* Lien seul, sans bouton imbriqué : deux éléments
+                    interactifs l'un dans l'autre sont un nœud que le clavier
+                    ne sait pas focuser. Le style vient de `buttonVariants`. */}
                 <div className="flex gap-2 pt-3 border-t">
-                  {notYetAvailable ? (
+                  {locked ? (
                     <Button
                       disabled
-                      className="w-full gap-2 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold"
+                      aria-describedby={
+                        schedule.opensAt ? `opens-${exam.id}` : undefined
+                      }
+                      className="w-full cursor-not-allowed gap-2 bg-slate-200 font-semibold text-slate-400"
                     >
-                      <Clock className="w-4 h-4" />
-                      Bientôt disponible
+                      <Lock className="h-4 w-4" aria-hidden="true" />
+                      Accès verrouillé
                     </Button>
                   ) : (
                   <Link
@@ -443,14 +540,11 @@ export default function UserExamsPage() {
                         ? `/results/${exam.submissionId}`
                         : `/exams/${exam.id}`
                     }
-                    className="flex-1"
-                  >
-                    <Button
-                      className="w-full gap-2 group transition-all"
-                      variant={
-                        exam.status === "AVAILABLE" ? "default" : "outline"
-                      }
-                      onMouseEnter={() => {
+                    className={buttonVariants({
+                      variant: exam.status === "AVAILABLE" ? "default" : "outline",
+                      className: "group w-full gap-2",
+                    })}
+                    onMouseEnter={() => {
                         if (
                           exam.status !== "COMPLETED" &&
                           exam.status !== "SUBMITTED"
@@ -475,26 +569,29 @@ export default function UserExamsPage() {
                             staleTime: 5 * 60 * 1000,
                           });
                         }
-                      }}
-                    >
-                      {exam.status === "AVAILABLE" ? (
-                        <>
-                          <Play className="w-4 h-4" />
-                          Commencer
-                        </>
-                      ) : exam.status === "IN_PROGRESS" ? (
-                        <>
-                          <Play className="w-4 h-4" />
-                          Reprendre
-                        </>
-                      ) : (
-                        <>
-                          <BarChart3 className="w-4 h-4" />
-                          Voir mes notes
-                        </>
-                      )}
-                      <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                    </Button>
+                    }}
+                  >
+
+                    {exam.status === "AVAILABLE" ? (
+                      <>
+                        <Play className="w-4 h-4" aria-hidden="true" />
+                        Commencer
+                      </>
+                    ) : exam.status === "IN_PROGRESS" ? (
+                      <>
+                        <Play className="w-4 h-4" aria-hidden="true" />
+                        Reprendre
+                      </>
+                    ) : (
+                      <>
+                        <BarChart3 className="w-4 h-4" aria-hidden="true" />
+                        Voir mes notes
+                      </>
+                    )}
+                    <ChevronRight
+                      className="ml-auto h-4 w-4 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100"
+                      aria-hidden="true"
+                    />
                   </Link>
                   )}
                 </div>
