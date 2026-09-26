@@ -110,3 +110,68 @@ Toute nouvelle story doit avoir :
 - une issue de suivi si elle n’est pas implémentée.
 
 Les stories non livrées ne doivent pas être présentées comme complètes dans la documentation produit.
+
+# Cartographie des threats et exigences système
+
+## Evil stories — abus et menaces
+
+Une evil story représente une menace distincte et l’exigence de maîtrise correspondante. Les contrôles techniques ne sont pas comptés comme des stories supplémentaires.
+
+| Catégorie | Implémentées | Partielles | À créer | Total |
+|---|---:|---:|---:|---:|
+| Injection et exécution de code | 3 | 1 | 2 | 6 |
+| Contrôle d’accès et élévation | 4 | 0 | 2 | 6 |
+| Authentification, session, 2FA | 4 | 3 | 2 | 9 |
+| Données et secrets | 3 | 3 | 1 | 6 |
+| Fichiers et uploads | 3 | 0 | 1 | 4 |
+| Intégrité documents et examens | 6 | 3 | 0 | 9 |
+| Surface web etheaders | 3 | 2 | 0 | 5 |
+| **Total** | **26** | **12** | **8** | **46** |
+
+### Écarts prioritaires
+
+- **EVIL-DAT-01** : l’API publique de vérification sélectionne et retourne des PII internes (`email`, `birthDate`, `birthPlace`, `gender`, `userId`, `sessionId`).
+- **EVIL-AUT-03** : existence d’un secret de session fallback en développement et risque de l’utiliser en production.
+- **EVIL-AUT-04** : `trustedOrigins` contient des jokers trop larges (`*.vercel.app`, tunnels et réseau local).
+- **EVIL-INJ-06** : `next/image` autorise des hôtes `**` et `http`, ouvrant un risque SSRF.
+- **EVIL-AUT-05** : le CSRF repose principalement sur `SameSite`, alors que la page publique promet un jeton CSRF.
+- **EVIL-ACC-06** : absence de RBAC et de super admin ; tous les admins ont les mêmes pouvoirs.
+- **EVIL-FIL-03** : `/api/upload` n’a pas de rate limit.
+- **EVIL-AUT-02** : certains flux auth limitent uniquement par IP, et l’en-tête `x-forwarded-for` doit être fiable.
+- **EVIL-DOC-02** : l’émission peut continuer sans `CERT_SEAL_SECRET` au lieu d’être bloquée.
+- **EVIL-INJ-02** : `sanitizeHTML` existe mais n’est pas branché sur les champs concernés.
+
+## System stories — exigences techniques
+
+Une system story représente une propriété technique distincte du système.
+
+| Domaine | Implémentées | Partielles | À créer | Total |
+|---|---:|---:|---:|---:|
+| CI/CD et livraison | 9 | 1 | 0 | 10 |
+| Base de données, migrations et concurrence | 8 | 0 | 0 | 8 |
+| Disponibilité et résilience | 5 | 1 | 1 | 7 |
+| Sauvegarde, R2 et stockage | 8 | 0 | 0 | 8 |
+| Observabilité, audit et traçabilité | 7 | 2 | 2 | 11 |
+| Qualité, tests et E2E | 6 | 1 | 0 | 7 |
+| Sécurité et secrets | 4 | 0 | 1 | 5 |
+| Performance et capacité | 2 | 0 | 0 | 2 |
+| Accessibilité technique et documentation | 2 | 1 | 0 | 3 |
+| **Total** | **51** | **6** | **4** | **61** |
+
+### Écarts prioritaires
+
+- **SYS-REL-02** : créer `/api/ready` avec vérification DB/cache, distincte de `/api/health`.
+- **SYS-OBS-04** : créer la page admin `/admin/logs` et la rétention des audit logs.
+- **SYS-CICD-10** : rollback applicatif par tag/image SHA.
+- **SYS-CICD-11** : alertes planifiées sur fraîcheur R2, versioning et readiness.
+
+## Total consolidé
+
+| Ensemble | Implémentées | Partielles | À créer | Total |
+|---|---:|---:|---:|---:|
+| User stories | 118 | 11 | 6 | 135 |
+| Evil stories | 26 | 12 | 8 | 46 |
+| System stories | 51 | 6 | 4 | 61 |
+| **Total** | **195** | **29** | **18** | **242** |
+
+**Couverture globale claire : 80,6 % implémentée, 12 % partielle, 7,4 % à créer.**
