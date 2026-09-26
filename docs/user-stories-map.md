@@ -176,6 +176,78 @@ Une system story représente une propriété technique distincte du système.
 
 **Couverture globale claire : 80,6 % implémentée, 12 % partielle, 7,4 % à créer.**
 
+## Plan de remédiation et index des issues
+
+Épique maître : [#323 — Plan maître de fermeture des risques FSA](https://github.com/digitaleflex/attestations-fsa/issues/323).
+
+### Vague 0 — preuve, identité et sécurité critique
+
+À traiter avant toute nouvelle feature.
+
+| Issues | Périmètre | Sortie commune |
+|---|---|---|
+| #264 | CV utilisateur et URLs arbitraires | Aucun CV non contrôlé |
+| #265 | Attestations de stage non acceptées/doublons | Une attestation, statut ACCEPTED requis |
+| #281 | Whitelist de l’API publique | Aucune PII publique |
+| #282 | Secret d’authentification obligatoire | Aucun fallback en production |
+| #283 | `trustedOrigins` strictes | Aucune origine tierce de confiance |
+| #284 | SSRF `next/image` | Aucune image réseau interne |
+| #299 | Suppression des attestations | Soft-delete et révocation |
+| #300 | Sceau v2 global | Preuve cohérente avec le PDF |
+| #301 | Révocation non destructive | Audit et preuves préservées |
+| #302 | PII fictives | Aucun document officiel fictif |
+| #303 | Claim-code | Pas de prise de contrôle d’attestation |
+| #304 | Statut de compte | Blocage et révocation réels |
+| #305 | Domaine/opérateur unique | Continuité institutionnelle |
+| #306 | Sauvegarde hors site | RPO/RTO définis et testé |
+| #307 | Générateur PDF versionné | Gabarit auditable |
+
+### Vague 1 — parcours, conformité et exploitation
+
+| Issues | Périmètre | Sortie commune |
+|---|---|---|
+| #255–#260 | Certification, intégrité, PDF, R2 et migration | Cohérence des preuves et des données |
+| #266–#272 | Stages, notifications, UI/API, quotas, E2E | Parcours stage fiable et testé |
+| #285 | CSRF/documentazione | Contrat sécurité cohérent |
+| #286–#290 | RBAC, rate limit, sceau, sanitation, CSP | Sécurité applicative renforcée |
+| #291 | RGPD/effacement | Droits utilisateurs exécutables |
+| #292–#295 | Readiness, logs, rollback, alertes | Plateforme exploitable |
+| #308–#317 | Clé, statuts, rôles, email, légal, analytics, données | Structure durable et mesurable |
+
+### Vague 2 — robustesse et finition
+
+| Issues | Périmètre | Sortie commune |
+|---|---|---|
+| #273–#280 | Support, audit, transcripts, monitoring, anti-triche, détails, actions groupées, Ed25519 | Fonctionnalités annoncées reality |
+| #297–#298 | Documentation et rituel | Documentation alignée sur le code |
+| #318–#322 | Sessions, catalogue, quotas, logs, invariants | Robustesse opérationnelle et data quality |
+
+### Règles de dépendance
+
+- #264 dépend de la décision de sécurité upload/CV.
+- #265 et #266 dépendent de la matrice de statuts de stage.
+- #281 est prerequisite de toute exposition publique de données.
+- #288 est prerequisite de la clôture de #258.
+- #292 est prerequisite du déploiement piloté.
+- #295 dépend des scripts R2 et de la supervision.
+- #299–#302 doivent être revues ensemble comme un lot juridique.
+- #305–#307 nécessitent une décision de direction/infra avant merge.
+- Les issues de génération de code (#316, #318, #319) ne doivent pas être mélangées avec les changements UI.
+
+## Preuve de résolution
+
+Chaque issue close doitPosséder :
+
+1. un commit ou une PR traçable ;
+2. tests ciblés passants ;
+3. critère de sortie vérifié ;
+4. mise à jour de la documentation ;
+5. absence de régression CI ;
+6. décision explicite si le comportement est volontairement différent.
+
+La cartographie n’est pas terminée tant qu’un angle mort critique n’est pas résolu, documenté ou explicitement accepté par le responsable produit/juridique.
+
+
 ## Angles morts non encore pensés
 
 Audit indépendant postérieur aux cartographies user/evil/system. Ces risques ne sont pas des corrections ponctuelles : ils nécessitent une décision produit, juridique ou d’exploitation.
