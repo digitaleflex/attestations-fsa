@@ -175,3 +175,40 @@ Une system story représente une propriété technique distincte du système.
 | **Total** | **195** | **29** | **18** | **242** |
 
 **Couverture globale claire : 80,6 % implémentée, 12 % partielle, 7,4 % à créer.**
+
+## Angles morts non encore pensés
+
+Audit indépendant postérieur aux cartographies user/evil/system. Ces risques ne sont pas des corrections ponctuelles : ils nécessitent une décision produit, juridique ou d’exploitation.
+
+### P0 — capitaux
+
+- **Document officiel supprimable** : la route DELETE peut supprimer une attestation déjà imprimée ; prévoir soft-delete, motif et registre de révocation.
+- **Sceau partiel** : les attestations FORMATION/STAGE ne sont pas protégées par le sceau v2 ; `proof.valid` ne doit pasclaimed une preuve incomplète.
+- **Révocation destructrice** : REVOKE/RETROGRADE doivent être auditées et ne jamais supprimer les sessions ou réponses.
+- **Identité fictive** : interdire les valeurs de remplacement (`Candidat Anonyme`, date du jour, lieu inconnu) dans un document officiel.
+- **Claim-code** : limiter fortement la force brute et empêcher l’écrasement silencieux du profil du titulaire.
+- **Blocage de compte inopérant** : appliquer `BLOCKED/SUSPENDED` et révoquer les sessions actives.
+- **Opérateur/domaine unique** : prévoir domaine institutionnel, escalade et continuité des QR.
+- **RPO/RTO** : sauvegarde hors site chiffrée et restauration réellement pratiquée.
+- **Générateur PDF hors dépôt** : versionner, tester et valider juridiquement le gabarit officiel.
+
+### P1 — structurels
+
+- **Rotation de clé** : versionner et faire tourner `CERT_SEAL_SECRET` sans invalider l’historique.
+- **REJECTED vs REVOKED** : distinguer les états publiquement.
+- **Rate limiting fail-open** : comportement distribué et fail-closed sur les routes sensibles.
+- **Rôles** : source de vérité unique, normalisation et audit des élévations.
+- **Emails** : outbox, retry, bounce/webhook et domaine d’envoi contrôlé.
+- **Mentions légales** : Pages légales, cookies, transferts hors UE et hébergeur réellement publiés.
+- **Funnel** : instrumentation first-party sans PII pour mesurer inscription → attestation.
+- **Statistiques publiques** : agréger ou restreindre les compteurs d’exploitation.
+- **Numérotation FSA** : remplacer `count + 1` par une séquence transactionnelle.
+- **Fuseaux horaires** : définir une référence unique et normaliser dates-only/timestamps.
+
+### P2 — robustesse
+
+- Sessions d’examen abandonnées : expiration automatique et reprise contrôlée.
+- Catalogue de formations : empêcher les créations automatiques depuis une saisie d’attestation.
+- Purge automatique et quotas de stockage par compte.
+- Logs structurés, corrélation et masquage des PII dans les audits.
+- Invariants de validation des attestations et champs Zod non persistés.
