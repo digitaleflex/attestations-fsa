@@ -157,6 +157,51 @@ git push origin main
 
 Le workflow détecte si la DB est vide et restaure le dump automatiquement.
 
+### ⏰ Cron — ouverture automatique des examens
+
+Les examens `SCHEDULED` passent automatiquement en `PUBLISHED` à l'heure prévue
+par `POST /api/internal/exams/open`. Cette route est **interne** : elle exige
+l'en-tête `Authorization: Bearer $CRON_SECRET` (comparaison en temps constant) et
+ne modifie rien sans secret correct. L'opération est **idempotente** (mise à jour
+conditionnelle), chaque bascule est **journalisée** dans `AuditLog`, le cache des
+examens est invalidé, et la réponse n'expose aucune donnée publique d'examen.
+
+Configurer le secret (identique pour l'app et le cron) :
+
+```env
+# .env.production
+CRON_SECRET="$(openssl rand -base64 48)"   # min 16 caractères
+CRON_INTERVAL_SECONDS=300                 # 5 minutes
+# Optionnel : auteur des entrées d'audit (ID d'un utilisateur existant)
+# CRON_AUDIT_USER_ID=""
+```
+
+Docker (recommandé sur le VPS, qui est la source de production) :
+
+```bash
+docker compose -f compose.prod.yml --profile cron up -d exam-cron
+docker compose -f compose.prod.yml logs -f exam-cron
+```
+
+Le service `exam-cron` appelle l'endpoint toutes les 5 minutes, sur le réseau
+privé `backend` (jamais exposé par Traefik).
+
+Équivalent via un cron système (avant le build, le service n'est pas encore up) :
+
+```cron
+*/5 * * * * CRON_SECRET=xxx APP_URL=https://exemple.com /home/audest/attestations-fsa/scripts/cron-open-exams.sh >> /var/log/fsa-cron-open.log 2>&1
+```
+
+Test manuel :
+
+```bash
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://exemple.com/api/internal/exams/open
+# {"opened":2,"ids":["…","…"],"now":"2026-09-26T08:00:00.000Z"}
+```
+
+Réponses : `401` sans secret correct (aucune mutation), `200` avec
+`opened: 0` si rien n'était dû, `500` si la base est injoignable.
+
 ---
 
 ## 🐳 Architecture Docker
@@ -167,6 +212,7 @@ Le workflow détecte si la DB est vide et restaure le dump automatiquement.
 | -------------------------------- | ------------------- | -------------- |
 | `attestations-fsa-prod`          | Application Next.js | 3000           |
 | `attestations-fsa-postgres-prod` | PostgreSQL 17       | 5432 (interne) |
+| `attestations-fsa-exam-cron`     | Cron d'ouverture   | — (interne)   |
 
 ### Commandes Docker
 
