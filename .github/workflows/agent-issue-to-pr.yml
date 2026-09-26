@@ -121,19 +121,31 @@ jobs:
           OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_JSON }}
         run: |
           set -o pipefail
-          opencode run \
-            --pure \
-            --agent "$OPENCODE_AGENT" \
-            --model "$OPENCODE_MODEL" \
-            -f issue.md \
-            "Résous l'issue GitHub #${ISSUE_NUMBER} (contenu dans issue.md) dans ce repo.
+          # opencode-ai@1.18.32 déclare `-f/--file` comme option ARRAY (yargs) :
+          # placée AVANT le message, elle avale le prompt et l'agent échoue avec
+          # « File not found: Résous l'issue... » (le prompt est pris pour un fichier).
+          # On construit donc le prompt à part (heredoc) et on le passe en argument
+          # positionnel principal, avec `-f issue.md` en DERNIER argument.
+          # Heredoc quoté (aucune expansion parasite des backticks/$ du prompt),
+          # puis substitution explicite du numéro d'issue.
+          PROMPT=$(cat <<'PROMPT_EOF'
+          Résous l'issue GitHub #__ISSUE_NUMBER__ (contenu dans issue.md, déjà attaché en pièce jointe) dans ce repo.
 
           Règles impératives :
           1. Ne touche JAMAIS à : .env*, prisma/migrations/**, fichiers de secrets/clés, .github/workflows/**.
           2. Écris ou adapte les tests pour couvrir ton changement.
-          3. Lance \`pnpm verify\` et corrige jusqu'à ce que tout passe (tsc + eslint + vitest).
+          3. Lance `pnpm verify` et corrige jusqu'à ce que tout passe (tsc + eslint + vitest).
           4. Ne fais AUCUN git push, gh pr create, ni commit : le workflow s'en charge après le gate.
-          5. Termine par un résumé en français : changements, fichiers touchés, tests, points d'attention." \
+          5. Termine par un résumé en français : changements, fichiers touchés, tests, points d'attention.
+          PROMPT_EOF
+          )
+          PROMPT="${PROMPT/__ISSUE_NUMBER__/$ISSUE_NUMBER}"
+          opencode run \
+            --pure \
+            --agent "$OPENCODE_AGENT" \
+            --model "$OPENCODE_MODEL" \
+            "$PROMPT" \
+            -f issue.md \
             2>&1 | tee agent-output.txt
 
       - name: Vérifier qu'il y a des changements
