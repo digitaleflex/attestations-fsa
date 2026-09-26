@@ -79,11 +79,15 @@ test.describe("Vérification publique et verrouillage des examens", () => {
     const detailBody = (await detailResponse.json()) as { code?: string };
     expect(detailBody.code).toBe("EXAM_LOCKED");
 
-    // Démarrage impossible : examen non disponible.
+    // Démarrage impossible : l'examen existe mais n'est pas encore ouvert,
+    // donc `start` répond 423 EXAM_LOCKED (et non 404, réservé à l'inconnu).
     const startResponse = await page.request.post(
       `/api/exams/${lockedExam.id}/start`,
     );
-    expect(startResponse.status()).toBe(404);
+    expect(startResponse.status()).toBe(423);
+    expect(((await startResponse.json()) as { code?: string }).code).toBe(
+      "EXAM_LOCKED",
+    );
 
     // L'UI l'annonce comme à venir, elle ne propose pas « Commencer ».
     await page.goto("/exams");
