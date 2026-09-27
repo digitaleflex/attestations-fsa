@@ -25,6 +25,10 @@ const MIGRATION = read(
 const CREATE_ROUTE = read("app/api/attestations/route.ts");
 const HUB = read("lib/attestations/issue.ts");
 const INTERNSHIP_ROUTE = read("app/api/admin/internships/[id]/attestation/route.ts");
+// La création de l'attestation de stage a été extraite de la route vers le
+// module métier `lib/stage-attestation` (#265 / #266) : c'est là que vit
+// désormais l'unique `attestation.create` de cette voie.
+const STAGE_ISSUER = read("lib/stage-attestation/issue.ts");
 const GRADING_ROUTE = read("app/api/admin/submissions/[id]/correct/route.ts");
 const SCHEMA = read("prisma/schema.prisma");
 
@@ -65,8 +69,16 @@ describe("code applicatif — aucune CERTIFICATION sans session", () => {
   });
 
   it("les autres voies de création ne produisent que des STAGE", () => {
-    expect(INTERNSHIP_ROUTE).toMatch(/type: 'STAGE'/);
-    expect(INTERNSHIP_ROUTE).not.toMatch(/type: 'CERTIFICATION'/);
+    // Invariant réel, vérifié à l'endroit où l'attestation est créée :
+    // un seul site d'émission, typé STAGE, jamais CERTIFICATION.
+    expect(STAGE_ISSUER.match(/attestation\.create\(/g)).toHaveLength(1);
+    expect(STAGE_ISSUER).toMatch(/type:\s*["']STAGE["']/);
+    expect(STAGE_ISSUER).not.toMatch(/["']CERTIFICATION["']/);
+
+    // La route ne fait plus qu'orchestrer : elle délègue et n'écrit rien.
+    expect(INTERNSHIP_ROUTE).not.toMatch(/["']CERTIFICATION["']/);
+    expect(INTERNSHIP_ROUTE).not.toMatch(/attestation\.create\(/);
+    expect(INTERNSHIP_ROUTE).toMatch(/issueStageAttestation/);
   });
 
   it("la correction d'une session OFFICIAL passe par le hub unique", () => {
