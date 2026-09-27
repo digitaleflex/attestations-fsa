@@ -23,7 +23,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-type AttestationStatus = "VALIDATED" | "CLAIMED" | "REJECTED";
+type AttestationStatus = "VALIDATED" | "CLAIMED" | "REJECTED" | "REVOKED";
 type AttestationType = "FORMATION" | "STAGE" | "CERTIFICATION";
 
 interface AttestationProof {
@@ -31,28 +31,36 @@ interface AttestationProof {
   reason?: string | null;
 }
 
+// #281 — la réponse publique est une WHITELIST stricte. Ce type doit refléter
+// EXACTEMENT ce que la route publie aujourd'hui : `location` et `instructor`
+// n'en font plus partie (retirés de la whitelist #281) et n'ont jamais été
+// affichés ci-dessous. Les déclarer ici faisait croire à un contrat que
+// l'API ne tient pas — et aurait autorisé un jour un `...result` capable
+// de les republier.
 interface PublishedAttestation {
   id: string;
   code: string;
   fullName: string;
   type: AttestationType;
-  status: Exclude<AttestationStatus, "REJECTED">;
+  status: Exclude<AttestationStatus, "REJECTED" | "REVOKED">;
   startDate: string;
   endDate: string;
-  location: string;
-  instructor: string;
   score: number;
   issuedAt: string;
   proof: AttestationProof;
   formation?: {
     name?: string;
     category?: string;
-  };
+  } | null;
 }
 
 interface RevokedAttestation {
   code: string;
-  status: "REJECTED";
+  // #299/#301 — une révocation publique porte désormais le statut `REVOKED`
+  // (distinct de `REJECTED`, qui reste un refus d'émission). Les deux sont
+  // affichés par la même carte « révoquée » : le tiers vérifie une révocation,
+  // jamais un certificat valide.
+  status: "REJECTED" | "REVOKED";
   proof: AttestationProof & { revoked: true };
 }
 
