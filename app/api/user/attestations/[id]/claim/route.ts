@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { applyRateLimitByUser } from "@/lib/rate-limit";
 import { mutationSealData } from "@/lib/attestations/proof";
 
 export async function POST(
@@ -13,6 +14,17 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
+
+    // #310 — Le claim est une mutation sensible (bascule VALIDATED -> CLAIMED
+    // et rescellage du certificat) : quota distribué IP + utilisateur, et
+    // refus (503) si le compteur est indisponible — pas de filet mémoire
+    // fail-open ici, contrairement aux endpoints non sensibles.
+    const rateLimit = await applyRateLimitByUser(
+      request,
+      user.id,
+      "attestationClaim",
+    );
+    if (!rateLimit.allowed) return rateLimit.response;
 
     const { id } = await params;
 

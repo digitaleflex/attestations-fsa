@@ -1,4 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server";
+// `lib/rate-limit` est volontairement autonome (ni Prisma, ni Better Auth) :
+// il est chargé par le proxy. L'identité client vient de là, pas de
+// `lib/api-auth` (qui tirerait `lib/auth` dans le bundle du proxy).
+import { applyRateLimitByUser, getSessionBucket } from "@/lib/rate-limit";
+
+// #287 — Rate limit des endpoints d'authentification.
+/**
+ * `/api/auth/*` (Better Auth : sign-in, sign-up, request-password-reset…) est
+ * exclu de tout pré-filtre de session : rien n'y était limité, et
+ * `lib/auth.ts` n'est volontairement pas touché. La protection est donc posée
+ * ici, en amont du gestionnaire : double comptage IP (via le proxy de
+ * confiance) + seau de session (haché, non forgeable).
+ *
+ * `/api/auth/fsa-login` est laissé de côté : la route applique déjà son propre
+ * quota (par IP, et par IP+code sur la vérification d'OTP).
+ */
+const AUTH_RATE_LIMIT_PREFIX = "/api/auth";
+const AUTH_RATE_LIMIT_EXCLUDED = ["/api/auth/fsa-login", "/api/auth/logout"];
+
+function isAuthRateLimited(pathname: string): boolean {
+  if (!pathname.startsWith(AUTH_RATE_LIMIT_PREFIX)) return false;
+  return !AUTH_RATE_LIMIT_EXCLUDED.some((prefix) => pathname.startsWith(prefix));
+}
 
 // Routes protégées
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
@@ -57,6 +80,18 @@ function unauthorizedApiResponse() {
 }
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 0. Rate limit des endpoints d'authentification (#287).
+  // Bloc autonome et strictement local : il ne touche ni à la classification
+  // des routes, ni à la logique de session/compte qui suit.
+  if (isAuthRateLimited(pathname)) {
+    const rateLimit = await applyRateLimitByUser(
+      request,
+      getSessionBucket(request),
+      "authEndpoint",
+    );
+    if (!rateLimit.allowed) return rateLimit.response;
+  }
 
   // 1. Ignorer les routes internes et publiques
   if (
