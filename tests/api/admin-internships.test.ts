@@ -5,6 +5,8 @@ const db = vi.hoisted(() => ({
   internshipFindMany: vi.fn(),
   internshipFindUnique: vi.fn(),
   internshipUpdate: vi.fn(),
+  // #267 — la liste paginée compte le total des demandes correspondant au filtre.
+  internshipCount: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -13,6 +15,7 @@ vi.mock("@/lib/prisma", () => ({
       findMany: db.internshipFindMany,
       findUnique: db.internshipFindUnique,
       update: db.internshipUpdate,
+      count: db.internshipCount,
     },
   },
 }));
@@ -48,6 +51,7 @@ beforeEach(() => {
   deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
   deps.createNotification.mockResolvedValue(undefined as never);
   db.internshipFindMany.mockResolvedValue([{ id: "i1" }] as never);
+  db.internshipCount.mockResolvedValue(1 as never);
   db.internshipFindUnique.mockResolvedValue({
     status: "PENDING",
     userId: "user-1",

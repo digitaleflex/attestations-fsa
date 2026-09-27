@@ -3,11 +3,16 @@ import { NextRequest } from "next/server";
 
 const db = vi.hoisted(() => ({
   internshipFindMany: vi.fn(),
+  // #267 — l'export est paginé : le total alimente les en-têtes X-Total-*.
+  internshipCount: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    internshipRequest: { findMany: db.internshipFindMany },
+    internshipRequest: {
+      findMany: db.internshipFindMany,
+      count: db.internshipCount,
+    },
   },
 }));
 
@@ -28,6 +33,7 @@ function callGet(query = "") {
 beforeEach(() => {
   vi.clearAllMocks();
   deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+  db.internshipCount.mockResolvedValue(1 as never);
   db.internshipFindMany.mockResolvedValue([
     {
       id: "i1",
