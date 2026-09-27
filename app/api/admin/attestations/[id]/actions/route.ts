@@ -1,10 +1,37 @@
+// #301 — Actions de cycle de vie NON destructives.
+//
+//  REVOKE      : `status = REVOKED` + `revokedAt` + `revokedById` + motif.
+//                L'attestation reste en base, vérifiable et scellée ; elle
+//                n'est simplement plus opposable. La ligne reste lisible par
+//                le vérificateur public, qui y konstatera la révocation.
+//  RETROGRADE  : la session probante est ARCHIVÉE (statut `ARCHIVED` + date +
+//                motif) — jamais supprimée, ses réponses restent lisibles — et
+//                le sceau n'est pas réécrit. Réécrire `sealHash` invaliderait
+//                la vérification d'un document pourtant authentique.
+//
+// Dans les deux cas : MOTIF obligatoire, audit TOUJOURS écrit (y compris pour
+// un historique anonyme sans `userId`) et notification jamais silencieuse — le
+// titulaire s'il existe, sinon les administrateurs.
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
-import { createNotification } from '@/lib/notifications';
+import { createNotification, notifyAllAdmins } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
-import { mutationSealData } from '@/lib/attestations/proof';
+import {
+  LIFECYCLE_AUDIT_ACTIONS,
+  notificationAudience,
+  parseLifecycleReason,
+  retrogradePlan,
+  revokePlan,
+} from '@/lib/attestations/lifecycle';
+
+const SUPPORTED_ACTIONS = ['REVOKE', 'RETROGRADE'] as const;
+type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
+
+function isSupportedAction(action: unknown): action is SupportedAction {
+  return SUPPORTED_ACTIONS.includes(action as SupportedAction);
+}
 
 export async function POST(
   request: Request,
@@ -19,9 +46,16 @@ export async function POST(
 
   try {
     const { action, reason } = await request.json();
-    
-    if (!reason || reason.trim().length < 5) {
-        return NextResponse.json({ error: 'Un motif de minimum 5 caractères est obligatoire.' }, { status: 400 });
+
+    // Motif obligatoire : il est la justification de l'action et il est écrit
+    // dans l'audit. Aucune action n'est exécutée sans lui.
+    const parsed = parseLifecycleReason(reason);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.message, code: 'MOTIF_REQUIS' }, { status: 400 });
+    }
+
+    if (!isSupportedAction(action)) {
+      return NextResponse.json({ error: 'Action non reconnue' }, { status: 400 });
     }
 
     // Récupérer l'attestation actuelle avec les infos utilisateur
@@ -36,97 +70,119 @@ export async function POST(
       return NextResponse.json({ error: 'Attestation non trouvée' }, { status: 404 });
     }
 
-    const userId = attestation.userId;
+    // Une ligne supprimée logiquement est figée : ni révocation ni
+    // rétrogradation ne peuvent la modifier après coup.
+    if (attestation.deletedAt) {
+      return NextResponse.json(
+        {
+          error: 'Attestation supprimée logiquement : action impossible.',
+          code: 'ATTESTATION_ALREADY_SOFT_DELETED',
+        },
+        { status: 409 },
+      );
+    }
+
+    const ipAddress = request.headers.get("x-forwarded-for") || "unknown";
+    const actorId = adminUser.id ?? null;
+    const formationName = attestation.formation?.name ?? "la formation";
+    const audience = notificationAudience(attestation);
 
     if (action === 'REVOKE') {
-      // 🚩 RÉVOQUER : Simplement passer en rejeté
-      const mutation = {
-        status: 'REJECTED',
-      } satisfies Prisma.AttestationUncheckedUpdateInput;
+      const plan = revokePlan(attestation, { reason: parsed.reason, actorId, now: new Date() });
       const updated = await prisma.attestation.update({
         where: { id },
-        data: attestation.type === 'CERTIFICATION' && attestation.sessionId
-          ? { ...mutation, ...mutationSealData(attestation, mutation) }
-          : mutation
+        data: plan.data as Prisma.AttestationUncheckedUpdateInput,
       });
 
-      if (userId) {
+      // Audit : TOUJOURS, y compris pour une attestation anonyme (#301).
+      await createAuditLog({
+        userId: adminUser?.id || "",
+        action: LIFECYCLE_AUDIT_ACTIONS.REVOKE,
+        resource: 'ATTESTATION',
+        resourceId: id,
+        oldValue: { status: attestation.status },
+        newValue: {
+          adminId: adminUser?.id,
+          reason: parsed.reason,
+          status: 'REVOKED',
+          destructive: false,
+          previousStatus: attestation.status,
+        },
+        ipAddress,
+      });
+
+      // Notification : titulaire connu, sinon administrateurs.
+      if (audience.kind === 'user') {
         await createNotification({
-          userId,
+          userId: audience.userId,
           type: 'ATTESTATION_REJECTED',
           title: 'Attestation Révoquée ❌',
-          message: `Votre attestation pour "${attestation.formation?.name}" a été annulée par l'administration.`,
-          link: '/results'
+          message: `Votre attestation pour "${formationName}" a été annulée par l'administration. Motif : ${parsed.reason}`,
+          link: '/results',
         });
-
-        await createAuditLog({
-          userId: adminUser?.id || "",
-          action: 'ATTESTATION_REVOKED',
-          resource: 'ATTESTATION',
-          resourceId: id,
-          newValue: { adminId: adminUser?.id, reason },
-          ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+      } else {
+        await notifyAllAdmins({
+          type: 'ATTESTATION_REJECTED',
+          title: 'Attestation historique révoquée',
+          message: `L'attestation ${attestation.code} (${attestation.fullName}, ${formationName}) a été révoquée. Aucun compte candidat associé — suivi requis. Motif : ${parsed.reason}`,
+          link: `/admin/attestations/${id}`,
         });
       }
 
       return NextResponse.json({ message: 'Attestation révoquée', attestation: updated });
     }
 
-    if (action === 'RETROGRADE') {
-      // 🔄 RÉTROGRADER : Supprimer l'attestation et réinitialiser l'état d'examen
+    // RETROGRADE — la session probante est ARCHIVÉE, jamais supprimée.
+    const plan = retrogradePlan(attestation, { reason: parsed.reason, actorId, now: new Date() });
 
-      // 1. Supprimer les sessions d'examen liées à cette formation pour cet utilisateur
-      if (userId && attestation.formationId) {
-        await prisma.examSession.deleteMany({
-          where: {
-            userId,
-            exam: {
-              formationId: attestation.formationId
-            }
-          }
-        });
-      }
-
-      // 2. Remettre l'attestation en attente et réinitialiser les scores
-      const mutation = {
-        status: 'PENDING',
-        certificationScore: 0,
-        stageScore: 0,
-        certificationHours: 0,
-        stageHours: 0,
-      } satisfies Prisma.AttestationUncheckedUpdateInput;
-      await prisma.attestation.update({
-        where: { id },
-        data: attestation.type === 'CERTIFICATION' && attestation.sessionId
-          ? { ...mutation, ...mutationSealData(attestation, mutation) }
-          : mutation
+    if (plan.sessionArchive) {
+      await prisma.examSession.updateMany({
+        where: plan.sessionArchive.where as Prisma.ExamSessionWhereInput,
+        data: plan.sessionArchive.data as Prisma.ExamSessionUncheckedUpdateInput,
       });
-
-      // 3. Logger et notifier
-      if (userId) {
-        await createNotification({
-          userId,
-          type: 'GENERAL',
-          title: 'Examen à repasser 🔄',
-          message: `Votre évaluation pour "${attestation.formation?.name}" a été réinitialisée. Vous devez repasser l'examen. Motif : ${reason}`,
-          link: '/exams'
-        });
-
-        await createAuditLog({
-          userId: adminUser?.id || "",
-          action: 'USER_RETROGRADED',
-          resource: 'USER',
-          resourceId: userId,
-          oldValue: { attestationCode: attestation.code },
-          newValue: { adminId: adminUser?.id, action: 'RESET_EXAM_STATUS', reason },
-          ipAddress: request.headers.get("x-forwarded-for") || "unknown"
-        });
-      }
-
-      return NextResponse.json({ message: 'Candidat rétrogradé avec succès' });
     }
 
-    return NextResponse.json({ error: 'Action non reconnue' }, { status: 400 });
+    const updated = await prisma.attestation.update({
+      where: { id },
+      data: plan.attestation as Prisma.AttestationUncheckedUpdateInput,
+    });
+
+    // Audit : TOUJOURS (ressource ATTESTATION, y compris sans userId) — l'ancien
+    // journal n'était écrit que dans la branche `if (userId)`.
+    await createAuditLog({
+      userId: adminUser?.id || "",
+      action: LIFECYCLE_AUDIT_ACTIONS.RETROGRADE,
+      resource: 'ATTESTATION',
+      resourceId: id,
+      oldValue: { attestationCode: attestation.code, status: attestation.status },
+      newValue: {
+        adminId: adminUser?.id,
+        action: 'RESET_EXAM_STATUS',
+        reason: parsed.reason,
+        destructive: false,
+        sessionsArchived: plan.sessionArchive ? 1 : 0,
+      },
+      ipAddress,
+    });
+
+    if (audience.kind === 'user') {
+      await createNotification({
+        userId: audience.userId,
+        type: 'GENERAL',
+        title: 'Examen à repasser 🔄',
+        message: `Votre évaluation pour "${formationName}" a été réinitialisée. Vous devez repasser l'examen. Motif : ${parsed.reason}`,
+        link: '/exams',
+      });
+    } else {
+      await notifyAllAdmins({
+        type: 'GENERAL',
+        title: 'Rétrogradation sans compte candidat',
+        message: `L'attestation ${attestation.code} (${attestation.fullName}, ${formationName}) a été rétrogradée et ses sessions archivées. Aucun compte candidat associé — suivi requis. Motif : ${parsed.reason}`,
+        link: `/admin/attestations/${id}`,
+      });
+    }
+
+    return NextResponse.json({ message: 'Candidat rétrogradé avec succès', attestation: updated });
 
   } catch (error: any) {
     console.error("Erreur action admin:", error);

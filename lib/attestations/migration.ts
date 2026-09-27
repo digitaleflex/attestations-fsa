@@ -87,6 +87,9 @@ export interface MigrationAttestationRow {
   sealHash: string | null;
   sealedAt: Date | null;
   sealVersion: number | null;
+  /** #299/#301 — Horizon du cycle de vie (nullable sur les lignes antérieures). */
+  deletedAt?: Date | null;
+  revokedAt?: Date | null;
 }
 
 export interface MigrationSessionRow {
@@ -333,7 +336,10 @@ export function classifySnapshot(snapshot: MigrationSnapshot, now = new Date()):
     // plus neutre). Jamais de recouvrement.
     let migrationStatus: MigrationStatus;
     if (blockers.size > 0) migrationStatus = "MIGRATION_BLOCKED";
-    else if (row.status === "REJECTED") migrationStatus = "REVOKED";
+    // #299/#301 — `REJECTED` (refus d'émission) et `REVOKED` (révocation
+    // publique d'une attestation déjà émise) sont tous deux des lignes FIGÉES :
+    // on n'en propose ni la réémission ni le scellement.
+    else if (row.status === "REJECTED" || row.status === "REVOKED") migrationStatus = "REVOKED";
     else if (row.status === "PENDING") migrationStatus = "REQUIRES_REVIEW";
     else if (kind === "AMBIGUOUS") migrationStatus = "REQUIRES_REVIEW";
     else if (!proofComplete(row)) migrationStatus = "REQUIRES_REVIEW";

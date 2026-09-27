@@ -30,6 +30,9 @@ const ATTESTATION_COLUMNS = [
   "birthDate", "birthPlace", "startDate", "endDate", "issuedAt", "location", "instructor",
   "issuingCompany", "pdfKey", "pdfHash", "pdfVersion", "pdfGeneratedAt",
   "certificationScore", "certificationMention", "certificationHours", "sealHash", "sealedAt", "sealVersion",
+  // #299/#301 — Horizon du cycle de vie : une ligne supprimée logiquement ou
+  // révoquée reste dans l'inventaire (elle n'est jamais effacée).
+  "deletedAt", "revokedAt",
 ];
 const SESSION_COLUMNS = [
   "id", "userId", "examId", "status", "finalScore", "startedAt", "submittedAt", "gradedAt",
@@ -59,6 +62,9 @@ const NULLABLE_DEFAULTS: Record<string, unknown> = {
   userId: null, sessionId: null, email: null, pdfKey: null, pdfHash: null, pdfVersion: null,
   pdfGeneratedAt: null, certificationScore: null, certificationMention: null, certificationHours: null,
   sealHash: null, sealedAt: null, sealVersion: null,
+  // #299/#301 — Absents sur une base antérieure à la migration : l'inventaire
+  // reste lisible et une ligne sans `deletedAt` vaut « non supprimée ».
+  deletedAt: null, revokedAt: null,
 };
 
 /** Ouvre une transaction `READ ONLY` et charge le snapshot de classification. */

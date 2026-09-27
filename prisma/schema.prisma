@@ -169,6 +169,30 @@ model Attestation {
   sealHash                  String?
   sealedAt                  DateTime?
   sealVersion               Int?
+  // #299/#301 — Cycle de vie NON destructif.
+  //
+  // Une attestation émise, imprimée et vérifiable par un tiers n'est JAMAIS
+  // supprimée physiquement : la ligne porte l'historique de son retrait, le
+  // PDF, son hash et son sceau restent intacts.
+  //
+  //   deletedAt / deletedById / deleteReason : suppression LOGIQUE. Le motif est
+  //     obligatoire côté API ; l'auteur est conservé pour la traçabilité.
+  //   revokedAt / revokedById / revokeReason : révocation PUBLIQUE horodatée.
+  //     Elle accompagne le soft-delete d'une attestation VALIDATED/CLAIMED et
+  //     l'action admin REVOKE (statut `REVOKED`).
+  //   retrogradedAt / retrogradedById / retrogradeReason : dernière rétrogradation.
+  //
+  // `*ById` est un identifiant TEXT volontairement SANS clé étrangère : la
+  // trace d'audit doit survivre à la suppression du compte auteur.
+  deletedAt                 DateTime?
+  deletedById               String?
+  deleteReason              String?
+  revokedAt                 DateTime?
+  revokedById               String?
+  revokeReason              String?
+  retrogradedAt             DateTime?
+  retrogradedById           String?
+  retrogradeReason          String?
   formation                 Formation             @relation(fields: [formationId], references: [id])
   user                      User?                 @relation(fields: [userId], references: [id])
   correctionRequests        CorrectionRequest[]
@@ -180,6 +204,9 @@ model Attestation {
   @@index([userId, status])
   @@index([formationId])
   @@index([issuedAt])
+  // #299/#301 — index de l'inventaire des lignes supprimées logiquement.
+  @@index([deletedAt])
+  @@index([status, deletedAt])
 }
 
 model Settings {
@@ -304,6 +331,13 @@ model ExamSession {
   updatedAt   DateTime          @updatedAt
   answers     Json?             @default("{}")
   observations String?          // notes de correction (texte riche)
+  // #301 — Une session probante n'est JAMAIS supprimée : la rétrogradation
+  // l'ARCHIVE (statut `ARCHIVED` + horodatage + motif). `answers` reste
+  // lisible, le journal d'examen reste reconstituable. `archivedById` est sans
+  // clé étrangère pour que la trace survive à la suppression du compte admin.
+  archivedAt    DateTime?
+  archivedById  String?
+  archiveReason String?
   reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)
   exam        Exam              @relation(fields: [examId], references: [id])
@@ -315,6 +349,7 @@ model ExamSession {
   @@index([userId, status])
   @@index([submittedAt])
   @@index([gradedAt])
+  @@index([archivedAt])
 }
 
 // Inscription explicite à un examen. L'absence de cette ligne ne vaut jamais
@@ -509,6 +544,10 @@ enum AttestationStatus {
   VALIDATED
   REJECTED
   CLAIMED
+  // #299/#301 — révocation PUBLIQUE : la ligne reste en base, vérifiable et
+  // scellée, mais elle n'est plus opposable. Elle remplace l'usage abusive de
+  // `REJECTED` pour une révocation, qui confondait deux événements distincts.
+  REVOKED
 }
 
 enum AttestationType {

@@ -28,6 +28,7 @@ const deps = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   getAdminUser: vi.fn(),
   createNotification: vi.fn(),
+  notifyAllAdmins: vi.fn(),
   createAuditLog: vi.fn(),
 }));
 
@@ -37,6 +38,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/lib/notifications", () => ({
   createNotification: deps.createNotification,
+  notifyAllAdmins: deps.notifyAllAdmins,
 }));
 vi.mock("@/lib/audit", () => ({ createAuditLog: deps.createAuditLog }));
 
@@ -65,8 +67,11 @@ function callPatch(body: unknown) {
   });
 }
 
-function callDelete() {
-  return DELETE(makeRequest({}, { "x-forwarded-for": "1.2.3.4" }), {
+// #299 — la suppression physique est remplacée par une suppression LOGIQUE.
+// Le détail du nouveau contrat (motif obligatoire, révocation publique,
+// notification des anonymes) est couvert par tests/api/attestation-soft-delete-299.test.ts.
+function callDelete(body: unknown = { reason: "Erreur de saisie" }) {
+  return DELETE(makeRequest(body, { "x-forwarded-for": "1.2.3.4" }), {
     params: Promise.resolve({ id: "att-1" }),
   });
 }
@@ -227,22 +232,33 @@ describe("DELETE /api/attestations/[id]", () => {
     expect(db.attestationDelete).not.toHaveBeenCalled();
   });
 
-  it("supprime l'attestation et journalise l'audit", async () => {
+  it("supprime l'attestation logiquement et journalise l'audit", async () => {
     deps.getAdminUser.mockResolvedValue({
       id: "admin-1",
       name: "Admin",
     } as never);
     const res = await callDelete();
     expect(res.status).toBe(200);
-    expect(db.attestationDelete).toHaveBeenCalledWith({ where: { id: "att-1" } });
+    // Aucune suppression physique : la ligne est marquée, pas effacée.
+    expect(db.attestationDelete).not.toHaveBeenCalled();
+    expect(db.attestationUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "att-1" },
+        data: expect.objectContaining({
+          deletedById: "admin-1",
+          deleteReason: "Erreur de saisie",
+          deletedAt: expect.any(Date),
+        }),
+      }),
+    );
     expect(deps.createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: "ATTESTATION_DELETED" }),
     );
   });
 
-  it("500 si la suppression échoue", async () => {
+  it("500 si l'écriture logique échoue", async () => {
     deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
-    db.attestationDelete.mockRejectedValue(new Error("db down") as never);
+    db.attestationUpdate.mockRejectedValue(new Error("db down") as never);
     const res = await callDelete();
     expect(res.status).toBe(500);
   });
