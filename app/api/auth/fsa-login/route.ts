@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { rateLimits } from "@/lib/rate-limit";
+import {
+  accountBlockMessage,
+  getAccountAccessByEmail,
+  revokeUserSessions,
+} from "@/lib/account-status";
 
 const RequestOtpSchema = z.object({
   action: z.literal("request-otp"),
@@ -196,6 +201,19 @@ export async function POST(request: Request) {
       email = foundAttestation.email;
       candidateName = foundAttestation.fullName;
       attestation = foundAttestation;
+    }
+
+    // #304 — Statut de compte : un compte BLOCKED / SUSPENDED ne peut ni
+    // demander ni valider un code de connexion. Contrôle effectué AVANT
+    // l'envoi de l'OTP (injection d'information : ne pas révéler qu'un
+    // dossier existe) et la session est révoquée si elle existait encore.
+    const access = await getAccountAccessByEmail(email);
+    if (!access.allowed && access.reason !== "NOT_FOUND") {
+      await revokeUserSessions(access.user?.id ?? "");
+      return NextResponse.json(
+        { message: accountBlockMessage(access) },
+        { status: 403 },
+      );
     }
 
     // --- ACTION : REQUEST OTP ---

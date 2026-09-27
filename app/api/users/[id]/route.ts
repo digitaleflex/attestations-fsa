@@ -7,6 +7,7 @@ import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
 import { VISIBLE_EXAM_STATUSES } from "@/lib/exams/availability";
+import { revokeUserSessions } from "@/lib/account-status";
 import {
   grantExamEnrollment,
   revokeExamEnrollment,
@@ -22,6 +23,14 @@ const UpdateUserSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   status: z.enum(["ACTIVE", "BLOCKED", "SUSPENDED"]).optional(),
+  // #304 — Date de fin de suspension (null = suspension/bannissement
+  // sans échéance). Le compte redevient automatiquement utilisable à cette
+  // date (lib/account-status.ts).
+  suspendedUntil: z
+    .string()
+    .or(z.date())
+    .nullable()
+    .optional(),
   resetPasswordRequired: z.boolean().optional(),
   blockedReason: z.string().optional(),
   // Affectation à un examen (null = retirer l'affectation)
@@ -232,10 +241,25 @@ export async function PATCH(
     if (data.birthPlace) updateData.birthPlace = data.birthPlace;
     if (data.phone) updateData.phone = data.phone;
     if (data.address) updateData.address = data.address;
+    // #304 — Le statut passe enfin du « décor » à l'état réel : il est
+    // propagé aux champs Better Auth (banned / banExpires) qui bloquent la
+    // connexion, et toutes les sessions vivantes du compte sont révoquées.
+    const isBlockingStatus =
+      data.status === "BLOCKED" || data.status === "SUSPENDED";
     if (data.status) {
       updateData.status = data.status;
-      if (data.status === 'BLOCKED' || data.status === 'SUSPENDED') {
+      if (isBlockingStatus) {
         updateData.lastBlockedAt = new Date();
+        updateData.banned = true;
+        updateData.banReason = data.blockedReason ?? "Compte suspendu par l'administration";
+        updateData.banExpires =
+          data.suspendedUntil != null ? new Date(data.suspendedUntil) : null;
+      } else {
+        // Réactivation : on purge tous les marqueurs de blocage.
+        updateData.banned = false;
+        updateData.banReason = null;
+        updateData.banExpires = null;
+        updateData.lastBlockedAt = null;
       }
     }
     if (data.resetPasswordRequired !== undefined) updateData.resetPasswordRequired = data.resetPasswordRequired;
@@ -318,6 +342,16 @@ export async function PATCH(
 
       return updatedUser;
     });
+
+    // #304 — Révocation des sessions du compte dont le statut vient de changer.
+    // Sans cela, un compte banni conserverait sa session (30 jours) et
+    // continuerait à appeler les routes utilisateur.
+    if (data.status) {
+      const revoked = await revokeUserSessions(id);
+      console.log(
+        `[ADMIN] Statut ${data.status} appliqué à ${id} — ${revoked} session(s) révoquée(s)`,
+      );
+    }
 
     // Enregistrer le log d'audit
     await createAuditLog({
