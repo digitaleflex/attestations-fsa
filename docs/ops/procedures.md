@@ -116,7 +116,7 @@ sans `--build` avec de nouveaux args compose ne les change pas.
 ### 2.3 Rollback des données : restauration d'un backup pré-deploy
 
 Chaque deploy crée `db-backup-<horodatage>.dump` (+ `.sha256`) dans
-`/home/audest/backups/attestation-fsa`, rétention 10 (`vps-pre-deploy-backup.sh:29-35,48,58,88-90`).
+`/home/audest/backups/attestation-fsa`, rétention 10 (`vps-pre-deploy-backup.sh:43,247-248`).
 
 ```bash
 # 1. Lister et choisir le dump le plus récent ANTÉRIEUR à la corruption :
@@ -188,7 +188,7 @@ docker compose --env-file .env.production -f compose.prod.yml up -d fsa-app
 |---|---|---|
 | `/home/audest/attestations-fsa/.env.production` (VPS) | secrets runtime injectés dans les conteneurs | `deploy.yml:45` (`--env-file .env.production`), `compose.prod.yml:32-52` |
 | Secrets du dépôt GitHub (environment `production`) | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_PORT` | `deploy.yml:19,28-31` |
-| `~/.config/attestations-fsa/backup.env` (VPS) | `BACKUP_REMOTE` (rclone), `BACKUP_AGE_RECIPIENT` (clé publique age) | `vps-pre-deploy-backup.sh:18-24` |
+| `~/.config/attestations-fsa/backup.env` (VPS) | `BACKUP_REMOTE` (rclone), `BACKUP_AGE_RECIPIENT` (clé publique age) — c'est là que se pose aussi `NODE_ENV=production` qui rend l'offsite bloquant (§ 5.5) | `vps-pre-deploy-backup.sh:28-34` |
 | Fournisseurs amont | clés Resend / Upstash / Pusher (les **valeurs** sont dans .env.production) | `.env.example:18-68` |
 
 ### 4.2 Séquence standard
@@ -238,17 +238,22 @@ d'une personne ayant accès au VPS).` En attendant : rotation systématique en c
 | Type | Quoi | Où | Déclenchement |
 |---|---|---|---|
 | Dump custom `pg_dump -Fc` | base entière | `/home/audest/backups/attestation-fsa/db-backup-*.dump` + `.sha256`, rétention 10 | **à chaque deploy CI** (`deploy.yml:56-59`) ; script standalone `bash scripts/vps-pre-deploy-backup.sh` |
-| Offsite chiffré (optionnel) | dump (+ `.age`) via rclone | `BACKUP_REMOTE` (`vps-pre-deploy-backup.sh:64-85`) | si configuré dans `~/.config/attestations-fsa/backup.env` |
+| Archives des volumes d'uploads | `public/uploads` + `private/uploads` (CV/images + **scans d'examen**) en `.tar.gz` + `.sha256` | même répertoire, `uploads-<label>-<horodatage>.tar.gz` | même déclencheur (le script archive les deux volumes, `vps-pre-deploy-backup.sh:174-219`) |
+| **Offsite chiffré — NON automatique, à activer (§ 5.5)** | dump + archives, en `.age` (jamais en clair dès que l'offsite est exigé) via `rclone copy` | `BACKUP_REMOTE` | à chaque deploy **si et seulement si** `BACKUP_REMOTE` + `BACKUP_AGE_RECIPIENT` sont configurés (§ 5.5) |
 | Dump JSON logique | tables sans mots de passe ni tokens de session (`db-dump.ts:40-100`) | `Backup/db-dump-<ts>.json` (gitignoré, `.gitignore:65`) | manuel : `node scripts/db-dump.ts` |
 | SQL depuis le JSON | INSERT compatibles | stdout | `node scripts/json-to-sql.mjs <dump.json> > Backup/deploy-dump.sql` (motif `deploy-to-vps.sh:113-118`) |
 
-⚠️ **Ce qui N'EST PAS sauvegardé** : les fichiers uploadés (`public/uploads`,
-`private/uploads/scans`) — pas de volume, pas de script. Voir runbook Incident 6.
+⚠️ **L'offsite n'est PAS automatique.** Tant que les variables du § 5.5 ne sont pas
+posées, un deploy ne produit **que** des copies locales sur le même VPS : le jour où la
+machine brûle, ces copies brûlent avec elle. Depuis le durcissement #306, l'absence
+d'offsite **fait échouer** le deploy au lieu de n'émettre qu'un avertissement
+(`vps-pre-deploy-backup.sh:64-111`) — mais **seulement si `NODE_ENV=production` est
+effectif dans l'environnement du script** (voir la limite § 5.5).
 
 `TODO(humain): le cron quotidien suggéré par le commentaire du script
 (0 3 * * * cd /home/audest/attestations-fsa && ./scripts/vps-pre-deploy-backup.sh,
 vps-pre-deploy-backup.sh:9-10) est-il réellement installé ? Vérifier avec crontab -l et
-documenter ici. De même : BACKUP_REMOTE/age activés ou non ?`
+documenter ici.`
 
 ### 5.2 Restauration
 
@@ -280,3 +285,129 @@ Leur raison d'être : le transfert Prisma Postgres → PostgreSQL self-hosted
 (`MIGRATION-GUIDE.md`). Piège commun : les dumps issus de Prisma Postgres contiennent
 l'extension `prisma_postgres` que seul `fix-dump-for-local-postgres.sh` retire
 (`fix-dump-for-local-postgres.sh:19-30`, `MIGRATION-GUIDE.md:272-277`).
+
+### 5.5 Activer la sauvegarde hors site chiffrée (#306)
+
+**L'offsite n'est pas un effet de bord du backup : c'est une configuration, et elle n'existe
+pas tant qu'un humain ne l'a pas posée.** Aucune valeur secrète n'est écrite dans ce document ;
+seules les commandes et les noms de variables le sont.
+
+#### 5.5.1 État au moment de la rédaction (constaté, re-vérifiable)
+
+Relevé sur l'hôte `/home/audest` (secrets non reproduits) :
+
+```bash
+command -v rclone && rclone version | head -1   # → présent
+command -v age || echo "ABSENT"                 # → ABSENT : rien ne peut être chiffré
+cut -d= -f1 ~/.config/attestations-fsa/backup.env   # → BACKUP_REMOTE présent,
+                                                   #   BACKUP_AGE_RECIPIENT commenté
+```
+
+Conséquence tant que ce n'est pas corrigé : le script **envoie le dump et les archives
+d'uploads en clair** vers le bucket (le `WARN` de `vps-pre-deploy-backup.sh:126-139` le dit,
+mais l'upload part quand même). Des données nominatives de candidats et des scans d'examen
+traversent alors le réseau en clair.
+
+#### 5.5.2 Ordre des opérations (l'ordre compte)
+
+1. **Clé `age` — sur une machine de confiance, jamais sur le VPS de production.**
+   ```bash
+   # UNE SEULE FOIS, sur le poste qui portera l'escrow :
+   age-keygen -o ~/fsa-backup-age.key      # → age1… (privé) + .pub (public)
+   # La clé PRIVÉE ne doit JAMAIS être sur le VPS ni dans le bucket.
+   cat ~/fsa-backup-age.key.pub            # → la valeur à mettre dans BACKUP_AGE_RECIPIENT
+   ```
+   `TODO(humain) — ESCROW : où est conservée la clé privée, qui d'autre peut la lire, comment
+   est-elle testée avant chaque exercice de restauration ? Personne ne peut déchiffrer les
+   sauvegardes hors site sans elle ; le § 4.3 la signale déjà comme non documentée.`
+
+2. **`age` sur l'hôte de production** (le refuse est bloquant dès que `NODE_ENV=production`) :
+   ```bash
+   sudo apt-get install -y age
+   age --version
+   ```
+
+3. **Remote `rclone`** (le bucket doit déjà exister, hors du dépôt) :
+   ```bash
+   rclone config            # assistant interactif ; stocker le secret dans
+                            # ~/.config/rclone/rclone.conf (chmod 600), JAMAIS dans le dépôt
+   rclone lsd spaces:       # doit lister le bucket → le réseau et les identifiants marchent
+   ```
+   ⚠️ Choisir un bucket **d'un autre compte fournisseur** que le VPS : une sauvegarde
+   copiée chez le même fournisseur, sur le même compte, ne protège pas de la perte du compte.
+
+4. **Fichier de configuration** — l'unique source lue par le cron et par la CI
+   (`vps-pre-deploy-backup.sh:28-34`), hors dépôt, `chmod 600` :
+   ```bash
+   install -d -m 700 ~/.config/attestations-fsa
+   cat > ~/.config/attestations-fsa/backup.env <<'EOF'
+   BACKUP_REMOTE="<remote rclone, ex. spaces:fsa-backups>"
+   BACKUP_AGE_RECIPIENT="age1..."
+   # Rend le deploy CI fail-closed : la session SSH de deploy.yml n'exporte pas NODE_ENV,
+   # mais elle charge ce fichier (set -a). Voir la limite ci-dessous.
+   NODE_ENV=production
+   EOF
+   chmod 600 ~/.config/attestations-fsa/backup.env
+   ```
+   **Ne pas** mettre la clé privée ici, ni dans `.env.production` : `.env.example` ne déclare
+   que `BACKUP_REMOTE` et `BACKUP_AGE_RECIPIENT`, et ces deux variables sont lues sur
+   l'hôte (le script tourne en dehors de tout conteneur) — c'est pourquoi elles sont
+   volontairement absentes de `compose.prod.yml`.
+
+5. **Vérification sans déployer** (le script se refuse à démarrer si l'offsite est incomplet —
+   c'est exactement le comportement attendu) :
+   ```bash
+   cd /home/audest/attestations-fsa
+   NODE_ENV=production BACKUP_DIR=/tmp/essai-backup \
+     bash scripts/vps-pre-deploy-backup.sh
+   # Attendu : « ==> Offsite EXIGÉ et configuré : … » puis « ==> Offsite upload OK -> … »
+   # Puis, hors ligne, la preuve que c'est bien chiffré ET lisible :
+   rclone copy spaces:fsa-backups/<fichier>.age /tmp/essai-backup/
+   age -d -i ~/fsa-backup-age.key /tmp/essai-backup/<fichier>.age > /tmp/essai-backup/verif.dump
+   ( cd /tmp/essai-backup && sha256sum -c <fichier>.dump.sha256 )
+   ```
+   Un backup offsite jamais déchiffré ne vaut rien : cette vérification doit être refaite à
+   chaque exercice, pas seulement à l'activation.
+
+#### 5.5.3 Limite connue : l'indicateur `NODE_ENV=production`
+
+Le blocage est conditionné à `NODE_ENV=production` (`vps-pre-deploy-backup.sh:79-80`), seul
+indicateur de production déjà utilisé par le dépôt (`compose.prod.yml:48`,
+`deploy-to-vps.sh:165`, `.env.example:67`). Or la session SSH de `deploy.yml:60-106` et la
+ligne de cron n'exportent pas `NODE_ENV`. **Conséquence : tant que
+`NODE_ENV=production` n'est pas dans `backup.env` (étape 4) ou dans l'environnement du
+script, un deploy dont l'offsite est cassé n'échoue toujours pas — il n'affiche qu'un
+`WARN`.** Trancher entre : (a) `NODE_ENV=production` dans `backup.env` (déjà écrit, aucun
+changement de code), (b) ajouter l'export dans `deploy.yml:105-106` et dans le crontab.
+`TODO(humain): choisir (a) ou (b) — le dépôt ne tranche pas.`
+
+#### 5.5.4 À ARBITRER — RPO
+
+> **À ARBITRER — RPO (perte de données maximale acceptable).** Aucune valeur n'est écrite ici
+> à dessein : c'est une décision métier (direction + N2, cf. #305), pas une déduction
+> technique. Le technique peut au contraire en proposer un, une fois les deux faits
+> suivants établis :
+> - les sauvegardes sont **créées à chaque déploiement** (`deploy.yml:105-106`) : sans cron,
+>   le RPO est « depuis le dernier déploiement », ce qui peut couvrir plusieurs jours ;
+> - la **rétention locale est de 10 générations** et la **rétention offsite n'est définie
+>   nulle part** (`vps-pre-deploy-backup.sh:237-248` ne purge que le local) : un RPO de 24 h
+>   est incompatible avec une rétention de 10 dumps si les déploiements sont rares.
+>
+> Emplacement de la décision : `docs/decisions-bloquantes.md` (#159) + issue #306, vague 6
+> du `docs/ROADMAP.md`. Tant que ce n'est pas écrit, le RPO n'est pas connu et aucun
+> dimensionnement de rétention ne peut être justifié.
+
+#### 5.5.5 À ARBITRER — RTO
+
+> **À ARBITRER — RTO (délai maximal de reprise acceptable).** Également non écrit ici à dessein.
+> Le chemin de restauration existe (`pg_restore` du § 2.3) mais **n'est ni scripté ni
+> exercité** : le § 2.3 est un gabarit, et le § 5.3 fournit l'infrastructure d'un exercice à
+> blanc. Le RPO ci-dessus ne vaut que si le RTO est inférieur à la fenêtre d'indisponibilité
+> acceptée.
+> Élément de mesure à produire lors du premier exercice (§ 2.3 + `data-coherence-migration-design.md` §7.4) :
+> temps de téléchargement du `.age`, temps de `age -d`, temps de `pg_restore`, temps de
+> migrations, temps de démarrage + healthcheck. **Le RTO est le maximum observé, pas la
+> moyenne** — et il doit être re-mesuré à chaque changement de taille de base.
+>
+> Emplacement de la décision : `docs/decisions-bloquantes.md` (#159) + issue #306, vague 6 du
+> `docs/ROADMAP.md`. Premier exercice à dater et à consigner dans ce document (§ 5.3).

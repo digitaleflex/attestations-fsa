@@ -37,8 +37,12 @@ interface AttestationProof {
 // affichés ci-dessous. Les déclarer ici faisait croire à un contrat que
 // l'API ne tient pas — et aurait autorisé un jour un `...result` capable
 // de les republier.
+//
+// Le cuid interne `id` a été retiré de la whitelist : il n'est ni utile ni
+// justifié pour un tiers. `<OfficialDocument>` se passe de lui (empreinte
+// rattachée au `code`, pied de document sans identifiant interne), donc ce
+// type ne le déclare plus — sans quoi il ferait croire que l'API le publie.
 interface PublishedAttestation {
-  id: string;
   code: string;
   fullName: string;
   type: AttestationType;
@@ -151,7 +155,7 @@ function VerifierContent() {
                   Authentifier un document
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base max-w-md mx-auto">
-                  Entrez le code officiel de l'attestation ou son identifiant unique pour vérifier son authenticité.
+                  Entrez le code officiel imprimé sur l&apos;attestation pour vérifier son authenticité.
                 </p>
               </div>
 
@@ -166,7 +170,7 @@ function VerifierContent() {
                         {...register("code")}
                         id="verification-code"
                         type="text"
-                        placeholder="Ex: FSA-2026-04-00001-A3F7C..."
+                        placeholder="Ex: FSA-2026-M01-00042-f0f9a"
                         className="w-full h-12 pl-12 pr-4 bg-transparent border-none rounded-lg text-base font-bold tracking-wide text-slate-900 placeholder:text-slate-500 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                         autoComplete="off"
                         disabled={loading}
@@ -198,11 +202,18 @@ function VerifierContent() {
                   </div>
                 )}
 
-                {/* Exemples de format discrets */}
+                {/* Exemples de format discrets
+                    Un SEUL mode de saisie existe : le code FSA complet.
+                    `/api/verifier` compare le paramètre `code` par ÉGALITÉ
+                    stricte depuis le début (`code: { equals: validCode }`) :
+                    aucun fragment, aucun « hash final » n'a jamais été accepté.
+                    L'exemple suit la forme réellement émise par
+                    `lib/attestations/issue.ts` — `FSA-<année>-M<mois>-<séquence
+                    sur 5 chiffres>-<5 caractères>` (REFERENCE_CODE_PATTERN). */}
                 <div className="mt-4 flex flex-col items-center gap-1.5 text-[11px] text-slate-600 font-medium tracking-wide">
                   <span className="flex items-center gap-1">
                     <Info className="w-3.5 h-3.5 text-brand" />
-                    Format standard : FSA-2026-04-00001-A3F7C ou le hash final (ex : A3F7C)
+                    Format standard : FSA-2026-M01-00042-f0f9a
                   </span>
                 </div>
               </div>
@@ -257,7 +268,6 @@ function VerifierContent() {
                 <div className="bg-white rounded-3xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.03)] border border-slate-100">
                   <OfficialDocument
                     data={{
-                      id: result.id,
                       code: result.code,
                       fullName: result.fullName,
                       formationName: result.formation?.name || "Formation",

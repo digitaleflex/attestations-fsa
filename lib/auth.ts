@@ -68,6 +68,13 @@ import {
 //   BETTER_AUTH_TRUST_ORIGINS_ALLOW_WILDCARDS="true"
 //       → échappatoire EXPLICITE en production, à réserver au cas d'un
 //         déploiement multi-tenant sur un domaine à jokers. Refusée par défaut.
+//
+// Second risque, traité par la MÊME porte : le SCHÉMA. Une origine `http://`
+// est en clair — les cookies de session et les jetons y transitent en lisible,
+// donc sur un canal qu'un tiers peut lire ET modifier. Une allowlist qui
+// l'accepte lui permet de rejouer une requête cross-site authentifiée hors de
+// tout contrôle. Hors développement, `https` n'est donc pas une préférence
+// mais une EXIGENCE, appliquée SANS échappatoire : voir `resolveTrustedOrigins`.
 
 /** Origines de développement uniquement (jamais en production). */
 const DEV_ONLY_TRUSTED_ORIGINS = [
@@ -80,11 +87,16 @@ const DEV_ONLY_TRUSTED_ORIGINS = [
   "https://*.vercel.app",
 ];
 
-/** Origines de production connues, exactes (aucun joker). */
-const KNOWN_PRODUCTION_TRUSTED_ORIGINS = [
-  "https://fsa.eurin.tech",
-  "http://fsa.eurin.tech",
-];
+/**
+ * Origines de production connues, exactes (aucun joker) et en HTTPS.
+ *
+ * #283 — le SCHÉMA n'est pas négociable : une entrée `http://` a été retirée
+ * de cette liste. Même règle appliquée à toutes les autres origines en
+ * production (`resolveTrustedOrigins`), celle-ci n'en est que le cas nominal.
+ * Le hostname reste `fsa.eurin.tech` : sa valeur est un arbitrage de
+ * déploiement distinct (#305), ce correctif ne touche qu'au schéma.
+ */
+const KNOWN_PRODUCTION_TRUSTED_ORIGINS = ["https://fsa.eurin.tech"];
 
 export type TrustedOriginsEnv = {
   NODE_ENV?: string;
@@ -145,10 +157,26 @@ function parseConfiguredOrigin(
 }
 
 /**
+ * Une origine `http://` est EN CLAIR : le canal est lisible et modifiable par
+ * un tiers, ce qui suffit à rejouer une requête cross-site authentifiée.
+ * #283 — hors développement, le schéma `https` est une EXIGENCE.
+ *
+ * Volontairement fondé sur le préfixe et non sur `new URL()` : les origines à
+ * joker (échappatoire `BETTER_AUTH_TRUST_ORIGINS_ALLOW_WILDCARDS`) ne sont pas
+ * des URL analysables, et doivent donc subir exactement le même refus.
+ */
+function isCleartextOrigin(origin: string): boolean {
+  return origin.toLowerCase().startsWith("http://");
+}
+
+/**
  * Construit la liste `trustedOrigins` de Better Auth.
  *
  * @param env     Environnement (injectable pour les tests)
  * @returns liste dédupliquée, sans origine invalide
+ * @throws  si une origine en HTTP est configurée en production (voir #283) :
+ *          le défaut est BLOQUANT et remonte au chargement du module, donc au
+ *          démarrage, plutôt qu'un avertissement ignoré.
  */
 export function resolveTrustedOrigins(
   env: TrustedOriginsEnv = process.env as TrustedOriginsEnv,
@@ -169,6 +197,7 @@ export function resolveTrustedOrigins(
   ];
 
   const origins: string[] = [];
+  const cleartext: string[] = [];
   for (const candidate of configured) {
     const origin = parseConfiguredOrigin(candidate, allowWildcards);
     if (!origin) {
@@ -179,7 +208,29 @@ export function resolveTrustedOrigins(
       );
       continue;
     }
+    // #283 — HTTPS obligatoire en production, AVANT l'ajout à l'allowlist :
+    // l'origine en clair n'est jamais « tolérée puis signalée », elle n'existe
+    // pas pour Better Auth.
+    if (isProduction && isCleartextOrigin(origin)) {
+      cleartext.push(origin);
+      continue;
+    }
     if (!origins.includes(origin)) origins.push(origin);
+  }
+
+  // Rejet BRUYANT et BLOQUANT. Ignorer l'origine en clair laisserait
+  // Better Auth démarrer avec une allowlist incomplète : le symptôme
+  // (callback refusé, 403 opaque en production) arriverait BIEN plus tard et
+  // sans cause visible. `resolveTrustedOrigins` est appelé au chargement de ce
+  // module, donc avant tout traitement de requête : on échoue au démarrage, en
+  // nommant les origines fautives et la variable à corriger.
+  if (cleartext.length > 0) {
+    const message =
+      `[AUTH] Origine(s) de confiance en HTTP REFUSÉE(S) en production : ${cleartext.join(", ")}. ` +
+      "Le schéma https:// est obligatoire hors développement : corrigez APP_URL / " +
+      "NEXT_PUBLIC_APP_URL / BETTER_AUTH_URL / BETTER_AUTH_TRUSTED_ORIGINS / AUTH_TRUSTED_ORIGINS.";
+    console.error(message);
+    throw new Error(message);
   }
 
   if (origins.length === 0) {

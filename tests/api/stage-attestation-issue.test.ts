@@ -1,6 +1,6 @@
 // #265 — Refus des demandes non ACCEPTED et garantie d'idempotence
 // (une seule attestation STAGE par InternshipRequest, y compris en concurrence).
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 
@@ -203,13 +203,24 @@ function callPost(body: unknown, id = "intern-1") {
 
 const validBody = { startDate: "2026-01-01", endDate: "2026-06-01", stageScore: 15 };
 
+const SEAL_SECRET = "stage-attestation-test-secret-0123456789abcdef";
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // #288 — le scellement est désormais obligatoire sur cette voie : sans clé,
+  // l'émission est refusée en 503 et rien n'est écrit. Ces tests couvrent
+  // l'idempotence et les valeurs persistées, pas l'absence de clé : on
+  // configure donc une clé valide pour tout le fichier.
+  process.env.CERT_SEAL_SECRET = SEAL_SECRET;
   clearStageAttestationInFlightForTests();
   state = freshState();
   installFakePrisma(state);
   deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
   deps.createAuditLog.mockResolvedValue(undefined as never);
+});
+
+afterEach(() => {
+  delete process.env.CERT_SEAL_SECRET;
 });
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
 import { getAdminUser } from '@/lib/auth';
-import { sealCertificate } from '@/lib/crypto/seal';
+import { getSealSecret, reportSealDisabledIfProduction, sealCertificate } from '@/lib/crypto/seal';
 import { z } from 'zod';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
@@ -117,6 +117,17 @@ export async function POST(request: Request) {
       }, { status: 422 });
     }
 
+    // #288 — Garde duco : le scellement est OBLIGATOIRE, y compris en dev.
+    // Sans clé, on refuse l'émission AVANT toute écriture : l'écriture
+    // conditionnelle du sceau créait une ligne non scellée en silence.
+    // Même refus dur que le hub d'émission des certifications
+    // (`lib/attestations/issue.ts:150-153`) ; statut aligné sur la mutation
+    // de cycle de vie (`app/api/attestations/[id]/route.ts:231`).
+    if (!getSealSecret()) {
+      reportSealDisabledIfProduction();
+      return NextResponse.json({ message: 'Émission bloquée : clé de scellement indisponible.' }, { status: 503 });
+    }
+
     // Chercher ou créer la formation par son nom
     let formationRecord = await prisma.formation.findFirst({ where: { name: formation } })
     if (!formationRecord) {
@@ -183,11 +194,19 @@ export async function POST(request: Request) {
       endDate: new Date(endDate),
     });
 
+    // Défense en profondeur : si le sceau reste nul malgré la garde d'entrée,
+    // on n'écrit pas de ligne sans preuve (cf. `lib/attestations/issue.ts:264`).
+    if (!seal) {
+      return NextResponse.json({ message: 'Émission bloquée : clé de scellement indisponible.' }, { status: 503 });
+    }
+
     // Création de l'attestation
     await prisma.attestation.create({
       data: {
         ...attestationData,
-        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt, sealVersion: seal.sealVersion } : {}),
+        sealHash: seal.sealHash,
+        sealedAt: seal.sealedAt,
+        sealVersion: seal.sealVersion,
       } as import('@prisma/client').Prisma.AttestationCreateInput
     })
     console.log('[POST /api/attestations] Success');

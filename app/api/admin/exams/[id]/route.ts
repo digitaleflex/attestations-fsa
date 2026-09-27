@@ -5,6 +5,7 @@ import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { handleApiError } from "@/lib/error-handler";
 import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
 import { validateExamStatusTransition } from "@/lib/exams/transitions";
 
@@ -313,11 +314,14 @@ export async function PATCH(
 
     return NextResponse.json(exam);
   } catch (error) {
-    console.error("[EXAM_UPDATE_ERROR]", error);
-    return NextResponse.json(
-      { message: "Erreur lors de la mise à jour de l'examen", details: error instanceof Error ? error.message : "Erreur inconnue" },
-      { status: 500 },
-    );
+    // #321 — plus de `details: error.message` : les violations de contrainte de
+    //        l'update n'atteignent plus le client. Journal serveur + Sentry,
+    //        générique en production, lisible en développement.
+    return handleApiError(error, {
+      route: "/api/admin/exams/[id]",
+      operation: "update_exam",
+      userId: adminUser?.id ?? undefined,
+    });
   }
 }
 
@@ -353,11 +357,13 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Examen supprimé avec succès" });
   } catch (error) {
-    console.error("[EXAM_DELETE_ERROR]", error);
-    return NextResponse.json(
-      { message: "Erreur lors de la suppression de l'examen", details: error instanceof Error ? error.message : "Erreur inconnue" },
-      { status: 500 },
-    );
+    // #321 — idem DELETE : l'erreur Prisma de suppression (clé étrangère,
+    //        contraintes) reste côté serveur.
+    return handleApiError(error, {
+      route: "/api/admin/exams/[id]",
+      operation: "delete_exam",
+      userId: adminUser?.id ?? undefined,
+    });
   }
 }
 

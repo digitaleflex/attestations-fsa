@@ -64,8 +64,14 @@ services:
       ADMIN_USER_IDS: ${ADMIN_USER_IDS}
       # M9 — fuseau de référence du planning des examens (jour J = 00:00 ici).
       APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Porto-Novo}
-      # #151 — Observabilité Sentry, OPTIONNELLE. Sans SENTRY_DSN : no-op total,
-      # l'application démarre normalement. Le healthcheck /api/health est inchangé.
+      # #307/#258 — Générateur du PDF officiel, OBLIGATOIRE en production : lu au
+      # runtime par lib/attestations/pdf.ts. Sans cette entrée, le module peut
+      # être présent sur le disque et rester invisible du conteneur, et toute
+      # émission CERTIFICATION échoue (OfficialPdfUnavailableError).
+      ATTESTATION_PDF_GENERATOR_MODULE: ${ATTESTATION_PDF_GENERATOR_MODULE}
+      # #151 — Observabilité Sentry. SENTRY_DSN est OBLIGATOIRE en production
+      # (sans elle : no-op total, aucune remontée d'erreur). SENTRY_AUTH_TOKEN
+      # est, lui, un secret de BUILD : il n'a rien à faire dans le conteneur.
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
       SENTRY_RELEASE: ${SENTRY_RELEASE:-}

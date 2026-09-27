@@ -60,6 +60,10 @@ export async function GET(request: Request) {
     // SELECT DE TRAVAIL (#281) : charge tout ce dont le recalcul du scellement
     // a besoin (y compris des PII). Ces champs ne sont JAMAIS publiés — la
     // réponse publique est construite par whitelist explicite plus bas.
+    // Le cuid `id` n'y figure plus : `attestationSealPayload` ne le lit pas et
+    // la whitelist ne le publie plus. Le charger ici n'aurait fait que
+    // entretenir l'illusion qu'il alimente la preuve, et inviterait à le
+    // republier un jour par megarde.
     const attestation = await prisma.attestation.findFirst({
       where: {
         code: { equals: validCode, mode: 'insensitive' },
@@ -67,7 +71,6 @@ export async function GET(request: Request) {
         deletedAt: null,
       },
       select: {
-        id: true,
         code: true,
         fullName: true,
         type: true,
@@ -157,14 +160,17 @@ export async function GET(request: Request) {
     // ajoutée au modèle reste donc privée par défaut, au lieu de fuiter
     // silencieusement à chaque appel public.
     //
-    // Publie : l'identité du document (code / id), le nom du titulaire, le
-    // type, le statut, les dates de validité, le score, la formation, et la
-    // preuve (scellement + métadonnées du PDF). Sont volontairement exclus :
-    // email, gender, birthDate, birthPlace, location, instructor,
-    // issuingCompany, observations internes, userId, sessionId, formationId,
-    // pdfKey/pdfHash bruts (redistribués via la preuve) et sealHash.
+    // Publie : l'identité du document (le code FSA public, seul identifiant
+    // opposable), le nom du titulaire, le type, le statut, les dates de
+    // validité, le score, la formation, et la preuve (scellement +
+    // métadonnées du PDF). Sont volontairement exclus : le cuid interne
+    // `id` — qui n'est ni utile ni justifié pour un tiers, et dont l'empreinte
+    // publique du document sait désormais se passer (l'empreinte se rattache
+    // au `code`, voir `AttestationWatermark`) —, email, gender, birthDate,
+    // birthPlace, location, instructor, issuingCompany, observations
+    // internes, userId, sessionId, formationId, pdfKey/pdfHash bruts
+    // (redistribués via la preuve) et sealHash.
     const responseData = {
-      id: attestation.id,
       code: attestation.code,
       fullName: attestation.fullName,
       type: attestation.type,

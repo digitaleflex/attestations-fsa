@@ -14,13 +14,18 @@ set -euo pipefail
 # `prisma migrate deploy`. Lancement manuel possible sur le VPS, ex. via cron :
 #   0 3 * * * cd /home/audest/attestations-fsa && ./scripts/vps-pre-deploy-backup.sh
 #
-# Offsite chiffré (optionnel) — définir dans l'environnement :
+# Offsite chiffré — variables attendues dans BACKUP_ENV_FILE ou l'environnement :
 #   BACKUP_REMOTE         destination rclone, ex: "spaces:fsa-backups"
 #   BACKUP_AGE_RECIPIENT  clé publique age, ex: "age1..."
-# Sans ces variables, le backup reste local uniquement.
+#
+# L'offsite est FACULTATIF hors production (sauvegarde locale seule) et
+# OBLIGATOIRE dès que NODE_ENV=production (voir enforce_offsite). Dans ce mode,
+# une configuration incomplète ou un envoi en échec termine le script en code
+# non nul : le déploiement s'arrête, l'échec est visible, et un envoi NON
+# chiffré ne peut jamais partir.
 # =================================================================
 
-# Charge une config locale optionnelle (BACKUP_REMOTE, BACKUP_AGE_RECIPIENT…).
+# Charge une config locale (BACKUP_REMOTE, BACKUP_AGE_RECIPIENT…).
 # Utilisée par le cron et la CI (les deux tournent sur le VPS en tant qu'audest).
 BACKUP_ENV_FILE="${BACKUP_ENV_FILE:-$HOME/.config/attestations-fsa/backup.env}"
 if [ -f "$BACKUP_ENV_FILE" ]; then
@@ -56,30 +61,91 @@ fi
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR" 2>/dev/null || true
 
-# --- Envoi offsite (optionnel), factorisé pour la base ET les fichiers ------
+# =================================================================
+# OFFSITE — fail-closed dès que NODE_ENV=production
+# =================================================================
+# Indicateur : NODE_ENV=production, le marqueur production déjà utilisé par
+# le dépôt (compose.prod.yml:48, deploy-to-vps.sh:165, .env.example:67,
+# lib/auth.ts:30-34). Aucun indicateur n'est inventé ici.
+#
+# PORTÉE : la session SSH de `deploy.yml` et le cron n'exportent pas
+# NODE_ENV ; ils chargent en revanche BACKUP_ENV_FILE (ci-dessus), lu avec
+# `set -a`. Y écrire `NODE_ENV=production` rend donc le déploiement CI
+# fail-closed SANS modifier le workflow. Voir docs/ops/procedures.md § 5.5.
+#
+# Hors production (développement, exécution locale, bancs d'essai), le
+# comportement historique est conservé : sauvegarde locale seule, WARN et
+# envoi non chiffré tolérés.
+STRICT_OFFSITE=0
+[ "${NODE_ENV:-}" = "production" ] && STRICT_OFFSITE=1
+
+# Sort en non nul : le déploiement appelant s'arrête sur place (deploy.yml
+# s'exécute sous `set -e`), et un ordonnanceur peut alerter sur l'échec.
+offsite_refuse() {
+  echo "ERROR: sauvegarde hors site EXIGÉE mais impossible — $1" >&2
+  echo "       Backup local conservé dans $BACKUP_DIR, mais aucun deploy ne doit" >&2
+  echo "       continuer sans copie hors site. Voir docs/ops/procedures.md § 5.5." >&2
+  exit 1
+}
+
+# Vérifie la configuration AVANT de produire le dump : une configuration
+# hors site cassée doit arrêter le déploiement immédiatement, pas après une
+# sauvegarde locale que personne n'aura le temps de copier.
+enforce_offsite() {
+  if [ "$STRICT_OFFSITE" != "1" ]; then
+    return 0
+  fi
+  if [ -z "$REMOTE" ]; then
+    offsite_refuse "BACKUP_REMOTE absent ou vide (NODE_ENV=production)."
+  fi
+  command -v rclone >/dev/null 2>&1 \
+    || offsite_refuse "rclone est introuvable dans le PATH — BACKUP_REMOTE=$REMOTE est inutilisable."
+  if [ -z "$AGE_RECIPIENT" ]; then
+    offsite_refuse "BACKUP_AGE_RECIPIENT absent ou vide — aucun envoi chiffré n'est possible."
+  fi
+  command -v age >/dev/null 2>&1 \
+    || offsite_refuse "age est introuvable dans le PATH — un envoi NON chiffré ne partira pas."
+  echo "==> Offsite EXIGÉ et configuré : $REMOTE (chiffré age pour $AGE_RECIPIENT)"
+}
+
+enforce_offsite
+
+# --- Envoi offsite, factorisé pour la base ET les fichiers -----------------
 # $1 = fichier à envoyer. Envoie aussi son .sha256 s'il existe.
+# ÉCHEC = SORTIE NON NULLE dès qu'un envoi a été demandé : un upload qui rate
+# en silence laisse croire à une sauvegarde qu'il n'y a pas.
 send_offsite() {
   local file="$1"
   [ -f "$file" ] || return 0
 
   if ! command -v rclone >/dev/null 2>&1; then
+    # Non atteignable si enforce_offsite est passé : il l'a déjà refusé.
     echo "WARN: BACKUP_REMOTE défini mais rclone absent — offsite ignoré." >&2
     return 0
   fi
 
   local upload_file="$file"
-  if [ -n "$AGE_RECIPIENT" ]; then
-    if command -v age >/dev/null 2>&1; then
-      age -r "$AGE_RECIPIENT" -o "$file.age" "$file"
-      chmod 600 "$file.age" 2>/dev/null || true
-      upload_file="$file.age"
-    else
-      echo "WARN: BACKUP_AGE_RECIPIENT défini mais age absent — envoi NON chiffré." >&2
+  if [ -z "$AGE_RECIPIENT" ]; then
+    echo "WARN: BACKUP_AGE_RECIPIENT vide — envoi NON chiffré de $file." >&2
+  elif command -v age >/dev/null 2>&1; then
+    if ! age -r "$AGE_RECIPIENT" -o "$file.age" "$file"; then
+      offsite_refuse "échec du chiffrement age de $(basename "$file") (clé publique invalide ?)."
     fi
+    chmod 600 "$file.age" 2>/dev/null || true
+    upload_file="$file.age"
+  else
+    # Non atteignable si enforce_offsite est passé : il l'a déjà refusé.
+    echo "WARN: BACKUP_AGE_RECIPIENT défini mais age absent — envoi NON chiffré." >&2
   fi
 
-  rclone copy "$upload_file" "$REMOTE" --no-traverse
-  [ -f "$file.sha256" ] && rclone copy "$file.sha256" "$REMOTE" --no-traverse
+  if ! rclone copy "$upload_file" "$REMOTE" --no-traverse; then
+    offsite_refuse "échec de l'envoi de $(basename "$upload_file") vers $REMOTE."
+  fi
+  if [ -f "$file.sha256" ]; then
+    if ! rclone copy "$file.sha256" "$REMOTE" --no-traverse; then
+      offsite_refuse "échec de l'envoi du checksum $(basename "$file.sha256") vers $REMOTE."
+    fi
+  fi
   echo "==> Offsite upload OK -> $REMOTE ($(basename "$upload_file"))"
 }
 
@@ -153,8 +219,12 @@ else
 fi
 
 # =================================================================
-# 3. OFFSITE (optionnel)
+# 3. OFFSITE
 # =================================================================
+# Hors production, l'offsite reste facultatif. Dès qu'il est exigé
+# (enforce_offsite), BACKUP_REMOTE est forcément non vide et send_offsite ne
+# peut plus avaler un échec : chaque envoi qui rate termine le script en
+# erreur, donc le job de déploiement en rouge.
 if [ -n "$REMOTE" ]; then
   send_offsite "$BACKUP_FILE"
   for f in "$BACKUP_DIR"/uploads-*-"$TIMESTAMP".tar.gz; do

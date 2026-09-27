@@ -5,6 +5,7 @@ import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
+import { handleApiError } from "@/lib/error-handler";
 import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
 import { isExamStatus } from "@/lib/exams/transitions";
 
@@ -75,6 +76,9 @@ const ExamSchema = z.object({
 
 // POST /api/admin/exams - create a new exam
 export async function POST(request: Request) {
+  // Déclaré hors du `try` pour être joignable depuis le contexte Sentry du
+  // handler d'erreur (#321).
+  let adminUserId: string | undefined;
   try {
     const adminUser = await getAdminUser(request);
     if (!adminUser) {
@@ -83,6 +87,7 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+    adminUserId = adminUser.id ?? undefined;
 
     const body = await request.json();
     const parse = ExamSchema.safeParse(body);
@@ -254,15 +259,14 @@ export async function POST(request: Request) {
       { status: 201 },
     );
     } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Erreur inconnue";
-    console.error("Erreur lors de la création de l'examen:", error);
-    return NextResponse.json(
-      {
-        error: "Erreur lors de la création de l'examen",
-        details: message,
-      },
-      { status: 500 },
-    );
+    // #321 — le champ `details` portait le message Prisma brut (contraintes,
+    //        colonnes, valeurs) jusqu'au client. Détail journalisé + Sentry ;
+    //        générique en production, lisible en développement.
+    return handleApiError(error, {
+      route: "/api/admin/exams",
+      operation: "create_exam",
+      userId: adminUserId,
+    });
   }
 }
 

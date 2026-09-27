@@ -73,15 +73,14 @@ export async function POST(req: Request) {
     })
 
   } catch (error) {
-    console.error('[SIGNALEMENT POST ERROR]', error)
-    // ✅ FIX: Return proper JSON instead of relying on handleApiError
-    return NextResponse.json(
-      {
-        error: 'Erreur lors de la création du signalement',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
-      },
-      { status: 500 }
-    )
+    // #321 — `details: error.message` exposait au public le message Prisma
+    //        (schéma `Contact`, colonnes, contraintes). Même mécanisme que
+    //        GET/DELETE ci-dessous : générique en production, lisible en
+    //        développement, détail journalisé et remonté à Sentry.
+    return handleApiError(error, {
+      route: '/api/signalement',
+      operation: 'create_report',
+    })
   }
 }
 

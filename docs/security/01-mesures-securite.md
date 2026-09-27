@@ -27,8 +27,13 @@ Ensemble des mesures de sécurité implémentées dans l'application.
 
 ### 4. Headers de sécurité
 
-- CSRF protection
 - Headers HTTP sécurisés (via Next.js)
+- Ce n'est pas un en-tête : la protection contre les requêtes cross-site est un
+  **contrôle d'origine** décrit au §6 (`trustedOrigins`). Elle couvre
+  `/api/auth/*` en méthodes de mutation, et seulement si la requête porte
+  déjà des cookies. Aucun jeton anti-CSRF n'est émis. Les routes hors
+  `/api/auth` ne sont pas soumises à ce contrôle et reposent sur
+  `SameSite=Lax`.
 
 ### 5. Chiffrement
 

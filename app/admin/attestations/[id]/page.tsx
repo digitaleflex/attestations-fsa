@@ -462,7 +462,6 @@ export default function AttestationDetailsPage() {
                 <OfficialDocumentComponent
                     id="official-preview-card"
                     data={{
-                        id: data.id,
                         code: data.code,
                         fullName: data.fullName,
                         formationName: data.formation?.name || "Formation Professionnelle",

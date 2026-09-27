@@ -14,7 +14,7 @@
 import { Prisma } from "@prisma/client";
 import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/prisma";
-import { sealCertificate } from "@/lib/crypto/seal";
+import { getSealSecret, reportSealDisabledIfProduction, sealCertificate } from "@/lib/crypto/seal";
 import {
   STAGE_LIMITS,
   validateStageAttestationInput,
@@ -281,12 +281,35 @@ export async function issueStageAttestation({
           });
           const code = `FSA-${year}-${month}-${String(count + 1).padStart(5, "0")}-${nanoid()}`;
 
+          // #288 — Garde duco : le scellement est OBLIGATOIRE, y compris en dev.
+          // L'écriture conditionnelle du sceau créait une attestation non
+          // scellée en silence. Même refus dur que le hub d'émission des
+          // certifications (`lib/attestations/issue.ts:150-153`) : l'exception
+          // est levée DANS la transaction, donc la demande n'est pas non
+          // plus archivée (jeton `ACCEPTED` intact) et rien n'est écrit.
+          if (!getSealSecret()) {
+            reportSealDisabledIfProduction();
+            throw new StageAttestationError(
+              503,
+              "CONFIGURATION_MISSING",
+              "Émission bloquée : clé de scellement indisponible.",
+            );
+          }
+
           const seal = sealCertificate({
             code,
             fullName: internship.fullName,
             formationName: formation.name,
             endDate: new Date(input.endDate),
           });
+          // Défense en profondeur (cf. `lib/attestations/issue.ts:264`).
+          if (!seal) {
+            throw new StageAttestationError(
+              503,
+              "CONFIGURATION_MISSING",
+              "Émission bloquée : clé de scellement indisponible.",
+            );
+          }
 
           // 5. Création — puis bascule du jeton de statut.
           const attestation = await tx.attestation.create({
@@ -308,7 +331,14 @@ export async function issueStageAttestation({
               stageScore: input.stageScore ?? null,
               stageObservations: input.stageObservations ?? null,
               userId: internship.userId,
-              ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
+              // Sceau obligatoire : les trois champs sont écrits sans condition,
+              // comme dans le hub d'émission (`lib/attestations/issue.ts:293-295`).
+              // `sealVersion` suit la version du snapshot ci-dessus (v1 tant que
+              // la bascule v2 — #300 — n'a pas eu lieu), donc la vérification
+              // publique reste cohérente.
+              sealHash: seal.sealHash,
+              sealedAt: seal.sealedAt,
+              sealVersion: seal.sealVersion,
             },
             select: { id: true, code: true },
           });

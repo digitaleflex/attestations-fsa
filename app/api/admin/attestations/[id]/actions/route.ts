@@ -18,6 +18,7 @@ import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
 import { createNotification, notifyAllAdmins } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
+import { handleApiError } from '@/lib/error-handler';
 import {
   LIFECYCLE_AUDIT_ACTIONS,
   notificationAudience,
@@ -44,8 +45,13 @@ export async function POST(
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
+  // #321 — étiquette d'action déclarée hors du `try` : le handler d'erreur a
+  // besoin de savoir QUELLE action a échoué pour le diagnostic Sentry.
+  let actionLabel = 'inconnue';
+
   try {
     const { action, reason } = await request.json();
+    actionLabel = typeof action === 'string' ? action : 'inconnue';
 
     // Motif obligatoire : il est la justification de l'action et il est écrit
     // dans l'audit. Aucune action n'est exécutée sans lui.
@@ -184,8 +190,18 @@ export async function POST(
 
     return NextResponse.json({ message: 'Candidat rétrogradé avec succès', attestation: updated });
 
-  } catch (error: any) {
-    console.error("Erreur action admin:", error);
-    return NextResponse.json({ error: error.message || 'Erreur serveur' }, { status: 500 });
+  } catch (error: unknown) {
+    // #321 — le message brut n'est PLUS renvoyé au client. Un message Prisma
+    //        expose des noms de tables, des colonnes, des contraintes et
+    //        parfois des valeurs. `handleApiError` journalise le détail complet
+    //        (message + stack) côté serveur, le remonte à Sentry, et ne laisse
+    //        le message lisible qu'en développement — en production le client
+    //        reçoit un message générique. Les erreurs MÉTIER ne passent pas
+    //        par ici : elles sont renvoyées explicitement plus haut.
+    return handleApiError(error, {
+      route: '/api/admin/attestations/[id]/actions',
+      operation: `lifecycle:${actionLabel}`,
+      userId: adminUser.id ?? undefined,
+    });
   }
 }

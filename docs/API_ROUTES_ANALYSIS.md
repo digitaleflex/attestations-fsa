@@ -32,7 +32,9 @@
 
 **Vulnerabilities:**
 - No rate limiting on login/register endpoints
-- Missing CSRF protection on session operations
+- No CSRF **token** — and none is planned. Origin check already applies to
+  `/api/auth/*` (mutation methods, cookie-bearing requests only); routes outside
+  `/api/auth` have no origin check and rely on `SameSite=Lax`
 - No account lockout after failed attempts
 
 ---
@@ -239,7 +241,7 @@
 | Feature | Priority | Affected Routes |
 |---------|----------|-----------------|
 | **Rate Limiting on Auth** | P1 | `/api/auth/*` |
-| **CSRF Protection** | P1 | All state-changing endpoints |
+| **CSRF Protection** | P1 | All state-changing endpoints — but note: `/api/auth/*` already has an origin check (mutation methods, cookie-bearing requests only); the gap is the **other** state-changing routes, which have no origin check and rely on `SameSite=Lax` |
 | **Audit Logging** | P2 | Grade changes, user modifications |
 | **IP-based Blocking** | P2 | All endpoints |
 | **Request Size Limits** | P2 | POST endpoints |
@@ -276,7 +278,7 @@
 
 ### Phase 2: High Priority (This Week)
 1. Add rate limiting to password reset & email verification
-2. Implement CSRF protection middleware
+2. Extend the existing origin check (`trustedOrigins`) to the other state-changing routes — **not** a CSRF token middleware; token-based protection is explicitly out of scope for this repo
 3. Add audit logging for grade modifications
 4. Fix claim-code exact matching
 

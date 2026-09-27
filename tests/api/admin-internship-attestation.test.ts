@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const db = vi.hoisted(() => ({
@@ -55,8 +55,13 @@ function callPost(body: unknown) {
   return POST(request, { params: Promise.resolve({ id: "intern-1" }) });
 }
 
+const SEAL_SECRET = "internship-test-secret-0123456789abcdef";
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // #288 — le scellement est désormais obligatoire : la clé est configurée
+  // pour tout le fichier, y compris pour les tests d'émission « nominale ».
+  process.env.CERT_SEAL_SECRET = SEAL_SECRET;
   deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
   deps.createAuditLog.mockResolvedValue(undefined as never);
   db.internshipFindUnique.mockResolvedValue({
@@ -79,6 +84,10 @@ beforeEach(() => {
   db.attestationCreate.mockResolvedValue({ id: "att-1", code: "FSA-2026-M09-00001-abcde" } as never);
   db.internshipUpdate.mockResolvedValue({ id: "intern-1" } as never);
   db.internshipUpdateMany.mockResolvedValue({ count: 1 } as never);
+});
+
+afterEach(() => {
+  delete process.env.CERT_SEAL_SECRET;
 });
 
 describe("POST /api/admin/internships/[id]/attestation (#137)", () => {
@@ -109,7 +118,6 @@ describe("POST /api/admin/internships/[id]/attestation (#137)", () => {
   });
 
   it("scelle l'attestation STAGE (sealHash + sealedAt) quand clé configurée (#155)", async () => {
-    process.env.CERT_SEAL_SECRET = "internship-test-secret-0123456789abcdef";
     const res = await callPost({
       startDate: "2026-01-01",
       endDate: "2026-06-01",
@@ -124,18 +132,22 @@ describe("POST /api/admin/internships/[id]/attestation (#137)", () => {
     expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
   });
 
-  it("ne scelle pas sans clé (dégradé, non bloquant) (#155)", async () => {
+  // #288 — l'ancien comportement « pas de clé => attestation créée non
+  // scellée, en silence » était un trou de preuve. L'émission est désormais
+  // refusée en dur, et la demande n'est pas davantage archivée.
+  it("refuse d'émettre sans clé de scellement (aucune ligne non scellée) (#288)", async () => {
     delete process.env.CERT_SEAL_SECRET;
     const res = await callPost({
       startDate: "2026-01-01",
       endDate: "2026-06-01",
       stageScore: 15,
     });
-    expect([200, 201]).toContain(res.status);
-
-    const createArgs = db.attestationCreate.mock.calls[0][0] as {
-      data: { sealHash?: string };
-    };
-    expect(createArgs.data.sealHash).toBeUndefined();
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toMatchObject({
+      code: "CONFIGURATION_MISSING",
+      message: expect.stringContaining("clé de scellement indisponible"),
+    });
+    expect(db.attestationCreate).not.toHaveBeenCalled();
+    expect(db.internshipUpdateMany).not.toHaveBeenCalled();
   });
 });

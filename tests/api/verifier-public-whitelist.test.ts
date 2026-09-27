@@ -138,7 +138,6 @@ describe("#281 — whitelist stricte de la réponse publique du vérificateur", 
         "endDate",
         "formation",
         "fullName",
-        "id",
         "issuedAt",
         "proof",
         "score",
@@ -147,6 +146,35 @@ describe("#281 — whitelist stricte de la réponse publique du vérificateur", 
         "type",
       ].sort(),
     );
+  });
+
+  // #281 — le cuid interne `id` est la seule clé de la réponse qui ne fasse
+  // pas partie de la preuve publique : il n'est ni utile au tiers, ni
+  // justifié (et son retrait a imposé de rattacher l'empreinte du document au
+  // `code`). Ces cas verrouillent son absence par NOM, pas seulement par
+  // l'égalité stricte de la liste de clés : le jour où quelqu'un réintroduit
+  // `id` — ou un `attestationId` / `attestation_id` sous un autre nom — le
+  // test échoue.
+  it("ne publie aucun identifiant interne de la ligne Prisma", async () => {
+    const { attestation } = await body();
+
+    const INTERNE = /^(id|.*Id|_id|uuid|uid|pk|rowId)$/i;
+    const fuites = Object.keys(attestation).filter((cle) => INTERNE.test(cle));
+    expect(fuites).toEqual([]);
+
+    // Le cuid lui-même ne doit apparaître nulle part dans la charge utile.
+    expect(attestation).not.toHaveProperty("id");
+    expect(JSON.stringify(attestation)).not.toContain("a1");
+  });
+
+  it("ne publie la preuve que depuis des données déjà publiques", async () => {
+    const { attestation } = await body();
+    const proof = attestation.proof as { pdf?: unknown; sealedAt?: unknown };
+
+    // La preuve porte le code et les métadonnées PDF, jamais l'identifiant de
+    // ligne qui allowlistait jusqu'ici la réponse entière.
+    expect(JSON.stringify(proof)).not.toContain("a1");
+    expect(proof.sealedAt).toBeTruthy();
   });
 
   it("ne publie jamais l'email du titulaire", async () => {
@@ -200,7 +228,6 @@ describe("#281 — whitelist stricte de la réponse publique du vérificateur", 
     const { attestation } = await body();
 
     expect(attestation.code).toBe("FSA-2026-M01-00001-abcde");
-    expect(attestation.id).toBe("a1");
     expect(attestation.fullName).toBe("Alice Koffi");
     expect(attestation.type).toBe("CERTIFICATION");
     expect(attestation.status).toBe("VALIDATED");

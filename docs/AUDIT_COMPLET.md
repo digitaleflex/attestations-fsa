@@ -111,10 +111,19 @@ Le code contient 369 utilisations de `any` qui nuisent à la sécurité des type
 - 30 jours de session sans refresh peut être risqué
 - **Recommandation**: Réduire à 7-14 jours avec refresh automatique
 
-### 11. **Pas de CSRF explicite**
+### 11. **Pas de jeton CSRF explicite**
 
-- Le fichier `lib/csrf.ts` existe mais l'implémentation n'est pas visible
-- **Vérifier**: Que la protection CSRF est active sur les mutations
+- **Fait vérifié : `lib/csrf.ts` n'existe pas et n'a jamais existé.** Aucun jeton
+  anti-CSRF n'est émis ni exigé, et il n'y en aura pas.
+- Ce qui existe réellement : le contrôle de l'en-tête `Origin` par l'allowlist
+  `trustedOrigins` de Better Auth (`lib/auth.ts`), sur `/api/auth/*`, méthodes
+  de mutation uniquement et seulement si la requête porte des cookies ; plus
+  l'attribut `SameSite=Lax` du cookie de session.
+- **Écart de couverture :** les routes applicatives hors `/api/auth`
+  (`/api/user`, `/api/admin`, …) ne sont soumises à aucun contrôle d'origine et
+  ne reposent que sur `SameSite=Lax`.
+- **Vérifier:** que le comportement observé correspond à cette description, et
+  non à l'existence d'un jeton.
 
 ---
 

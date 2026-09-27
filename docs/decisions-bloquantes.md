@@ -260,9 +260,10 @@ dans `finalScore`.
 BotID.
 
 **Justification technique**
-- `lib/csrf.ts` n'est **jamais appelé côté serveur** et le cookie `csrf_token`
-  n'est **jamais posé** : le header `x-csrf-token` émis par `lib/api-client.ts`
-  n'est validé par **aucune** route. Protection inexistante.
+- `lib/csrf.ts` **n'a jamais été créé** et le cookie `csrf_token` n'a **jamais été
+  posé** : le header `x-csrf-token` émis par `lib/api-client.ts` n'est validé par
+  **aucune** route. La protection n'a donc jamais existé — il n'y avait aucun
+  code serveur à appeler ni aucun fichier à supprimer.
 - `BotIdClient` est monté (`app/layout.tsx`) mais **aucun `checkBotId`** n'existe
   côté serveur → protection inactive, pour un coût réel (config, dépendance,
   surface).
@@ -272,10 +273,11 @@ BotID.
   routes via sa configuration (`trustedOrigins` / `BETTER_AUTH_URL`) : c'est ce
   point-là qu'il faut vérifier, pas un mécanisme maison inerte.
 
-**Conséquence** : supprimer `lib/csrf.ts` et l'envoi `x-csrf-token`
-(`lib/api-client.ts`), `BotIdClient` (`app/layout.tsx`), la config `botid`
-(`next.config.mjs`) et la dépendance `botid`. Aucune route ne consomme
-`x-csrf-token` (vérifié).
+**Conséquence** : retirer l'envoi de l'en-tête `x-csrf-token`
+(`lib/api-client.ts`) — c'est la seule suppression de code réellement
+effective, `lib/csrf.ts` n'ayant jamais existé —, `BotIdClient`
+(`app/layout.tsx`), la config `botid` (`next.config.mjs`) et la dépendance
+`botid`. Aucune route ne consomme `x-csrf-token` (vérifié).
 
 **Règle** : si l'on veut un jour CSRF/BotID, l'implémenter **côté serveur avec
 tests** — pas d'entre-deux.

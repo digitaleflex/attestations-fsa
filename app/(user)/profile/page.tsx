@@ -57,6 +57,18 @@ import {
   CandidateLoading,
 } from "@/components/CandidateStates";
 
+/**
+ * #303 — Contrat de saisie du formulaire de réclamation.
+ *
+ * `POST /api/user/claim-code` exige désormais le code FSA COMPLET : plancher de
+ * 8 caractères (`MIN_CODE_LENGTH` côté route), recherche par égalité stricte,
+ * plus aucune recherche par suffixe. La validation locale reproduit ces deux
+ * bornes sans être plus stricte que le serveur, et n'invente aucun contrôle de
+ * format au-delà de ce que la route accepte.
+ */
+const MIN_CLAIM_CODE_LENGTH = 8;
+const MAX_CLAIM_CODE_LENGTH = 50;
+
 export default function UserProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -183,10 +195,13 @@ export default function UserProfilePage() {
   };
 
   const handleClaimCode = async () => {
-    if (!claimCode || claimCode.length < 5) {
-      toast.error(
-        "Veuillez entrer au moins les 5 derniers caractères de votre code.",
-      );
+    const code = claimCode.trim();
+    if (code.length < MIN_CLAIM_CODE_LENGTH) {
+      toast.error("Saisissez le code FSA complet figurant sur votre relevé.");
+      return;
+    }
+    if (code.length > MAX_CLAIM_CODE_LENGTH) {
+      toast.error("Le code FSA saisi est trop long.");
       return;
     }
     setIsClaiming(true);
@@ -194,12 +209,20 @@ export default function UserProfilePage() {
       const response = await fetch("/api/user/claim-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ codePart: claimCode.trim() }),
+        body: JSON.stringify({ codePart: code }),
       });
       const data = await response.json();
       if (!response.ok) {
+        // Sur une entrée invalide, la route renvoie un 400 porteur d'un motif
+        // précis (`details`) : on l'affiche plutôt qu'un libellé générique.
+        // Aucun signal d'énumération n'est réintroduit — le corps du 400 est
+        // identique que la saisie corresponde ou non à une attestation.
+        const detail = data.details?.[0]?.message;
         throw new Error(
-          data.error || data.message || "Erreur lors de la liaison du code",
+          detail ||
+            data.error ||
+            data.message ||
+            "Erreur lors de la liaison du code",
         );
       }
       toast.success("Succès ! Votre dossier a été lié à votre compte.");
@@ -365,17 +388,29 @@ export default function UserProfilePage() {
             </h3>
           </div>
           <p className="text-sm text-slate-500 mb-4">
-            Entrez les 5 derniers caractères de votre code FSA figurant sur
-            votre relevé ou attestation pour rattacher votre dossier à votre
-            compte.
+            Saisissez le code FSA complet figurant sur votre relevé ou
+            attestation pour rattacher votre dossier à votre compte.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 max-w-md">
+            {/*
+              Saisie brute, telle que l'utilisateur la tape. Ni classe
+              `lowercase` ni `.toLowerCase()` : le code affiché est alors
+              exactement celui du relevé, dans la casse imprimée (FSA-2026-M01-…),
+              et le placeholder — déjà écrit en majuscules — est enfin montré tel
+              qu'il est écrit. Le serveur compare sans tenir compte de la casse :
+              la saisie en minuscules est acceptée comme avant, et ce qui part
+              en soumission n'a pas changé.
+            */}
             <Input
-              placeholder="Ex: 2ee8f"
-              className="h-11 rounded-xl font-mono lowercase"
+              placeholder="Ex: FSA-2026-M01-00042-a3f9c"
+              className="h-11 rounded-xl font-mono"
               value={claimCode}
-              onChange={(e) => setClaimCode(e.target.value.toLowerCase())}
-              maxLength={30}
+              onChange={(e) => setClaimCode(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={MAX_CLAIM_CODE_LENGTH}
             />
             <Button
               onClick={handleClaimCode}

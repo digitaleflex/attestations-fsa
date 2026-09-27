@@ -6,7 +6,16 @@ import { cn } from "@/lib/utils";
 import { AttestationWatermark } from "@/components/AttestationWatermark";
 
 interface PublishedDocumentData {
-  id: string;
+  /**
+   * Code FSA — ancre publique et unique du document.
+   *
+   * #281 — ce champ REMPLACE l'ancien `id` (cuid interne de base). Il
+   * n'est plus fourni par `/api/verifier`, qui refuse de publier un
+   * identifiant interne : ni l'empreinte du filigrane ni le pied du document
+   * n'ont plus besoin d'un `id` pour être adressables. Les appelants qui
+   * lisent la base (`app/admin/attestations/[id]`, `app/(user)/attestations/
+   * [id]`) n'ont donc plus rien à transmettre.
+   */
   code: string;
   fullName: string;
   formationName: string;
@@ -166,10 +175,14 @@ export default function OfficialDocument({ data, id = "official-document-content
                 />
             </div>
 
-            {/* ✅ ANTI-FORGERY: Security watermark */}
+            {/* ✅ ANTI-FORGERY: Security watermark
+                #281 — l'empreinte se rattache au CODE FSA, seule donnée
+                publique et unique du document. Elle ne dépend plus d'un
+                identifiant interne (cuid `id`) : celui-ci n'est pas publié
+                par `/api/verifier`, il n'a donc rien à porter dans le DOM
+                public. Aucun repli n'est fabriqué si le code est absent —
+                `AttestationWatermark` ne rend alors rien. */}
             <AttestationWatermark
-              attestationId={data.id}
-              userId={data.id} // Will be replaced with actual userId
               code={data.code}
               generatedAt={data.issuedAt && !isNaN(new Date(data.issuedAt).getTime()) 
                 ? new Date(data.issuedAt).toISOString() 
@@ -265,10 +278,15 @@ export default function OfficialDocument({ data, id = "official-document-content
                     </div>
                 </div>
 
-                {/* Footer de la fiche */}
+                {/* Footer de la fiche
+                    #281 — le cuid interne n'est plus affiché : il ne fait pas
+                    partie de la preuve publique. Le code FSA, lui, est public,
+                    unique et déjà présent sur le document. Le conteneur et ses
+                    classes sont inchangés pour que la ligne conserve sa
+                    position (centrée sur mobile, alignée à gauche en grand
+                    écran) malgré la disparition du second libellé. */}
                 <div className="mt-6 @lg:mt-8 @3xl:mt-10 pt-4 @lg:pt-5 @3xl:pt-6 w-full flex flex-col @lg:flex-row items-center justify-between gap-2 @lg:gap-3 text-[10px] @3xl:text-[9px] font-mono border-t text-center @lg:text-left" style={{ color: MUTED, borderTopColor: '#e2e8f0' }}>
                     <div className="flex flex-wrap justify-center @lg:justify-start gap-x-4 gap-y-1 min-w-0">
-                        <span className="font-medium">ID: {data.id?.slice(0, 8) || "--------"}...</span>
                         <span className="font-bold break-all" style={{ color: INK_SOFT }}>CODE: {data.code}</span>
                     </div>
                     <span className="font-black tracking-[0.15em] @lg:tracking-[0.2em] uppercase" style={{ color: INK_SOFT }}>© FERME SAINT ANDRÉ • PORTAL</span>

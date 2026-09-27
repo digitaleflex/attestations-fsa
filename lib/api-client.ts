@@ -25,8 +25,10 @@ export async function apiFetch<T = unknown>(
   notify: boolean = true,
 ): Promise<T> {
   // #142 A1 — couche CSRF factice retirée : le cookie csrf_token n'était
-  // jamais posé ni validé côté serveur. La protection réelle = SameSite=Lax
-  // (Better Auth).
+  // jamais posé ni validé côté serveur. La protection réelle est double :
+  // allowlist `trustedOrigins` (en-tête Origin, contrôlé par Better Auth sur
+  // /api/auth/*) et SameSite=Lax du cookie de session. Voir #285 et
+  // docs/SECURITY_FIX_GUIDE.md §2.5.
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((options.headers as Record<string, string>) || {}),

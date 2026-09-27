@@ -168,6 +168,33 @@ export const rateLimits = {
       })
     : null,
 
+  // #315 — Statistiques publiques (GET /api/public/stats).
+  //
+  // Seau DÉDIÉ, et non le seau générique `api` : sous un même NAT (campus,
+  // entreprise), l'IP d'un administrateur — derrière une authentification — et
+  // celle d'un robot partagent aujourd'hui le même budget de 100 req/min, alors
+  // que la seconde moitié n'est authentifiée par rien du tout. Séparer les deux
+  // compteurs empêche qu'un crawl prive l'administrateur de son budget, et
+  // réciproquement. C'est le seul objet de ce seau : le GÉNÉRIQUE `api` reste
+  // intact pour les autres routes.
+  //
+  // Budget volontairement large (10 req/s par IP) : la route est PUBLIQUE,
+  // servie par le cache de l'edge (`s-maxage=3600`) et ne fait que deux COUNT.
+  // Sur un déploiement auto-hébergé, sans CDN, chaque affichage de page atteint
+  // l'origine — et tout un campus, toute une entreprise se partagent une SEULE
+  // IP publique. Un quota serré n'y bloquerait pas un robot mais des visiteurs
+  // légitimes : ce serait une panne, pas une protection. Ce que le quota borne
+  // réellement, c'est une amplification déjà triviale (deux COUNT d'index par
+  // seconde et par IP) au lieu d'un `for i in seq 1 10000` sans fin.
+  publicStats: redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(600, "1 m"), // 600 req / minute
+        analytics: true,
+        prefix: "ratelimit:public-stats",
+      })
+    : null,
+
   // Soumission examen
   submission: redis
     ? new Ratelimit({
@@ -317,6 +344,20 @@ export const rateLimits = {
       })
     : null,
 
+  // #303 — Réclamation d'attestation par code (POST /api/user/claim-code).
+  // Deviner un code revient à deviner ses 5 caractères hexadécimaux de fin
+  // (20 bits, 1 048 576 combinaisons) : c'est une devinette de secret, donc
+  // même fenêtre que `login` / `fsaOtpVerify` (15 min) et budget doublé,
+  // l'entrée légitime étant un code de 25 caractères saisi à la main.
+  claimCode: redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, "15 m"), // 10 tentatives / 15 min
+        analytics: true,
+        prefix: "ratelimit:claim-code",
+      })
+    : null,
+
   // ==========================================
   // ADMIN RATE LIMITS - Sécurité renforcée
   // ==========================================
@@ -381,6 +422,7 @@ export const memoryFallbackLimits: Record<
   report: { max: 3, windowMs: 60 * MINUTE },
   verify: { max: 10, windowMs: 60 * MINUTE },
   api: { max: 100, windowMs: 1 * MINUTE },
+  publicStats: { max: 600, windowMs: 1 * MINUTE },
   submission: { max: 5, windowMs: 60 * MINUTE },
   examRead: { max: 60, windowMs: 1 * MINUTE },
   examStart: { max: 20, windowMs: 60 * MINUTE },
@@ -396,6 +438,7 @@ export const memoryFallbackLimits: Record<
   // 100 Mo / heure et par identité (le quota de débit, pas le nombre d'appels).
   uploadBytes: { max: 100 * 1024 * 1024, windowMs: 60 * MINUTE },
   attestationClaim: { max: 20, windowMs: 60 * MINUTE },
+  claimCode: { max: 10, windowMs: 15 * MINUTE },
   adminBulk: { max: 10, windowMs: 5 * MINUTE },
   adminNotifications: { max: 5, windowMs: 10 * MINUTE },
   adminSettings: { max: 20, windowMs: 60 * MINUTE },
@@ -429,6 +472,25 @@ const FAIL_CLOSED_LIMIT_TYPES = new Set<string>([
   "uploadBytes",
   // Mutation sensible
   "attestationClaim",
+  // Devinette de secret (code de réclamation) : jamais fail-open.
+  "claimCode",
+  // `publicStats` en est DÉLIBÉRÉMENT absent. Le critère d'entrée dans la
+  // liste est : « l'indisponibilité du compteur listenerait-elle un endpoint
+  // qu'on ne peut pas laisser passer ? »
+  //
+  //  - ce que contient la liste : authentification, upload, mutation sensible,
+  //    devinette de secret. Sur tous, un fail-open reviendrait à laisser
+  //    passer l'attaque pendant la panne — exactement la fenêtre à protéger.
+  //  - `publicStats` : lecture seule, anonyme, mise en cache, aucun secret et
+  //    aucune mutation à protéger. Son indisponibilité n'abat qu'un compteur de
+  //    transparence — et un 503 le temps d'une panne Upstash mettrait cet
+  //    indicateur hors ligne pour TOUT le monde, robots compris. L'indicateur
+  //    de transparence DOIT survivre à la panne de son propre garde.
+  //
+  // Ce n'est pas une absence de limite : le filet mémoire prend le relais
+  // (compteur réel, mais par instance Node, cf. l'avertissement ci-dessus) —
+  // le même compromis que le seau générique `api`, dont cette route a été
+  // détachée. C'est de la dégradation assumée, pas un contournement.
 ]);
 
 export function isFailClosedLimitType(limitType: string): boolean {
