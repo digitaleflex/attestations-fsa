@@ -87,6 +87,7 @@ function installFakePrisma(state: FakeState, mode: Mode = "serial") {
   let active = 0;
 
   const client = {
+    $queryRaw: async () => [{ nextval: BigInt(state.attestations.length + 1) }],
     internshipRequest: {
       findUnique: async () => (state.internship ? structuredClone(state.internship) : null),
       updateMany: async ({ where, data }: any) => {

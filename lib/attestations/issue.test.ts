@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $queryRaw: async () => [{ nextval: BigInt(1) }],
     examSession: { findUnique: mocks.sessionFindUnique },
     formation: { findFirst: mocks.formationFindFirst },
     attestation: {
@@ -207,7 +208,8 @@ describe("issueExamAttestation", () => {
     const result = await issueExamAttestation("session-1", issueOptions);
 
     expect(result.created).toBe(true);
-    expect(result.code).toMatch(/^FSA-2026-M01-00005-[0-9a-f]{5}$/);
+    // #316 — le numéro de séquence vient de nextval(), plus de count()+1.
+    expect(result.code).toMatch(/^FSA-2026-M01-00001-[0-9a-f]{5}$/);
     expect(mocks.attestationCreate).toHaveBeenCalledTimes(1);
 
     const arg = mocks.attestationCreate.mock.calls[0][0] as {

@@ -19,14 +19,16 @@
  * `timeZone` : ces méthodes lisent le fuseau de la machine.
  */
 
-/** Fuseau de référence de l'application. Fixé par la spécification. */
-export const APP_TIMEZONE = "Africa/Porto-Novo";
+import { getAppTimeZone } from "./time";
+
+/** Fuseau de référence de l'application. Lu depuis `APP_TIMEZONE`, défaut Africa/Porto-Novo. */
+export const APP_TIMEZONE = getAppTimeZone();
 
 /** Libellé affiché aux candidats et aux admins (le fuseau n'est pas deviné). */
-export const APP_TIMEZONE_LABEL = "Africa/Porto-Novo (UTC+1)";
+export const APP_TIMEZONE_LABEL = `${APP_TIMEZONE}`;
 
 /** Acronyme court pour les zones où l'espace manque (badges, colonnes). */
-export const APP_TIMEZONE_SHORT = "Porto-Novo";
+export const APP_TIMEZONE_SHORT = APP_TIMEZONE.split("/").pop() ?? APP_TIMEZONE;
 
 export type DateLike = string | number | Date | null | undefined;
 

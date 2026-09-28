@@ -274,12 +274,11 @@ export async function issueStageAttestation({
           const now = new Date();
           const year = now.getFullYear();
           const month = `M${String(now.getMonth() + 1).padStart(2, "0")}`;
-          const count = await tx.attestation.count({
-            where: {
-              issuedAt: { gte: new Date(year, now.getMonth(), 1), lt: new Date(year, now.getMonth() + 1, 1) },
-            },
-          });
-          const code = `FSA-${year}-${month}-${String(count + 1).padStart(5, "0")}-${nanoid()}`;
+          // #316 — nextval() est atomique et évite les P2002 en concurrence.
+          const [{ nextval }] = await tx.$queryRaw<{ nextval: bigint }[]>`
+            SELECT nextval('attestation_code_seq') AS nextval
+          `;
+          const code = `FSA-${year}-${month}-${String(Number(nextval)).padStart(5, "0")}-${nanoid()}`;
 
           // #288 — Garde duco : le scellement est OBLIGATOIRE, y compris en dev.
           // L'écriture conditionnelle du sceau créait une attestation non

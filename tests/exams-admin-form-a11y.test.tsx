@@ -79,7 +79,7 @@ describe("champ du jour d'ouverture", () => {
     const html = renderStep();
     // Un admin qui saisit 08:00 en croyant écrire de l'UTC fait commencer
     // l'épreuve une heure trop tôt : il faut donc écrire le fuseau.
-    expect(html).toContain("Africa/Porto-Novo (UTC+1)");
+    expect(html).toContain("Africa/Porto-Novo");
   });
 });
 

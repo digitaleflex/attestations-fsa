@@ -152,6 +152,18 @@ export async function issueExamAttestation(
       return { created: false, error: "Émission bloquée : clé de scellement indisponible." };
     }
 
+    // #302 — Refuser d'émettre si l'identité est incomplète.
+    // Un document officiel ne doit jamais porter de PII fictives.
+    const candidateName = session.candidate.name?.trim();
+    const candidateBirthDate = session.candidate.birthDate;
+    const candidateBirthPlace = session.candidate.birthPlace?.trim();
+    if (!candidateName || !candidateBirthDate || !candidateBirthPlace) {
+      return {
+        created: false,
+        error: "Identité incomplète : nom, date et lieu de naissance sont requis pour émettre un document officiel.",
+      };
+    }
+
     const existing = await prisma.attestation.findFirst({
       where: { sessionId: session.id, type: "CERTIFICATION" },
     });
@@ -178,7 +190,7 @@ export async function issueExamAttestation(
         proof = await generateOfficialPdf(
           snapshot(session, { id: formationId, name: formationName }, {
             code: existing.code,
-            fullName: session.candidate.name || "Candidat Anonyme",
+            fullName: candidateName,
             status: "VALIDATED",
             endDate,
             certificationScore: finalScore,
@@ -191,7 +203,7 @@ export async function issueExamAttestation(
       }
       const payload = snapshot(session, { id: formationId, name: formationName }, {
         code: existing.code,
-        fullName: session.candidate.name || "Candidat Anonyme",
+        fullName: candidateName,
         status: passed ? "VALIDATED" : "REJECTED",
         issuedAt: existing.issuedAt,
         endDate,
@@ -228,16 +240,12 @@ export async function issueExamAttestation(
     const now = options.now ?? new Date();
     const year = now.getFullYear();
     const month = `M${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const count = await prisma.attestation.count({
-      where: {
-        issuedAt: {
-          gte: new Date(year, now.getMonth(), 1),
-          lt: new Date(year, now.getMonth() + 1, 1),
-        },
-      },
-    });
-    const code = `FSA-${year}-${month}-${String(count + 1).padStart(5, "0")}-${customNanoid()}`;
-    const fullName = session.candidate.name || "Candidat Anonyme";
+    // #316 — nextval() est atomique et évite les P2002 en concurrence.
+    const [{ nextval }] = await prisma.$queryRaw<{ nextval: bigint }[]>`
+      SELECT nextval('attestation_code_seq') AS nextval
+    `;
+    const code = `FSA-${year}-${month}-${String(Number(nextval)).padStart(5, "0")}-${customNanoid()}`;
+    const fullName = candidateName;
     const initial = snapshot(session, { id: formationId, name: formationName }, {
       code,
       status: "VALIDATED",
@@ -274,8 +282,8 @@ export async function issueExamAttestation(
         issuedAt: now,
         email: session.candidate.email,
         gender: session.candidate.gender,
-        birthDate: session.candidate.birthDate ?? new Date(),
-        birthPlace: session.candidate.birthPlace ?? "Non renseigné",
+        birthDate: candidateBirthDate,
+        birthPlace: candidateBirthPlace,
         formationId,
         type: "CERTIFICATION",
         status: "VALIDATED",

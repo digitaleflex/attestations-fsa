@@ -38,6 +38,7 @@ vi.mock("@/lib/prisma", () => {
   // La voie stage passe par une transaction sérialisable : le client
   // transactionnel reçoit les mêmes mocks.
   const client = {
+    $queryRaw: async () => [{ nextval: BigInt(1) }],
     formation: { findFirst: db.formationFindFirst, create: db.formationCreate },
     attestation: {
       count: db.attestationCount,

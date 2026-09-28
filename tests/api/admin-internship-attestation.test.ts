@@ -17,6 +17,7 @@ vi.mock("@/lib/prisma", () => {
   // #265 — l'émission passe désormais par une transaction sérialisable :
   // le client transactionnel est le même jeu de mocks.
   const tx = {
+    $queryRaw: async () => [{ nextval: BigInt(1) }],
     internshipRequest: {
       findUnique: db.internshipFindUnique,
       update: db.internshipUpdate,

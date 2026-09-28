@@ -81,7 +81,7 @@ describe("avant l'ouverture : rien ne fuit", () => {
     const html = renderCountdown();
     // 15/03/2027 08:00 à Porto-Novo, quelle que soit la machine de lecture.
     expect(html).toContain("15/03/2027 08:00");
-    expect(html).toContain("Africa/Porto-Novo (UTC+1)");
+    expect(html).toContain("Africa/Porto-Novo");
   });
 });
 

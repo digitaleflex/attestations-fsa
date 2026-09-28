@@ -20,6 +20,7 @@ vi.mock("@/lib/attestations/pdf", () => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $queryRaw: async () => [{ nextval: BigInt(1) }],
     examSession: { findUnique: db.sessionFindUnique },
     formation: { findFirst: db.formationFindFirst },
     attestation: {

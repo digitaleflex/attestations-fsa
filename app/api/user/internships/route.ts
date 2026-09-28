@@ -9,7 +9,13 @@ const InternshipApplicationSchema = z.object({
   university: z.string().min(2, "L’université est requise").optional(),
   level: z.string().min(2, "Le niveau est requis").optional(),
   position: z.string().min(2, "Le poste souhaité est requis"),
-  cvUrl: z.string().url("URL du CV invalide").optional().or(z.literal("")),
+  // #264 — seules les URLs https sont autorisées (pas javascript:, file:, data:).
+  cvUrl: z
+    .string()
+    .url("URL du CV invalide")
+    .refine((url) => url.startsWith("https://"), "L'URL du CV doit utiliser HTTPS")
+    .optional()
+    .or(z.literal("")),
   message: z
     .string()
     .min(10, "La motivation doit contenir au moins 10 caractères")

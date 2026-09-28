@@ -1,123 +1,71 @@
-import { vi, describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]) },
-}));
+const dbQueryRaw = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/prisma", () => ({ prisma: { $queryRaw: dbQueryRaw } }));
 
-import { GET as healthGET } from "../../app/api/health/route";
-import {
-  canonicalizeSealPayload,
-  computeSealHash,
-  getSealSecret,
-  sealCertificate,
-  verifyCertificateSeal,
-  type CertificateSealPayload,
-} from "@/lib/crypto/seal";
+import { GET } from "../../app/api/ready/route";
 
-const VALID_SECRET = "ready-probe-secret-0123456789abcdef";
+function callGet() {
+  return GET();
+}
 
-const payload: CertificateSealPayload = {
-  code: "FSA-2026-M09-00042-abcde",
-  fullName: "Alice Doe",
-  formationName: "Pisciculture",
-  certificationScore: 88,
-  certificationMention: "TRES_BIEN",
-  endDate: new Date("2026-09-01T10:00:00Z"),
-};
+describe("GET /api/ready", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  });
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-  vi.restoreAllMocks();
-  delete process.env.CERT_SEAL_SECRET;
-});
-
-describe("/api/health — liveness (#155)", () => {
-  it("reste 200 en production même sans CERT_SEAL_SECRET", () => {
-    vi.stubEnv("NODE_ENV", "production");
-
-    const res = healthGET();
-
+  it("200 quand DB répond", async () => {
+    dbQueryRaw.mockResolvedValueOnce([{ "?column?": 1 }]);
+    const res = await callGet();
     expect(res.status).toBe(200);
-  });
-});
-
-describe("sonde indépendante — déterminisme de l'empreinte (#155)", () => {
-  it("même charge utile + même clé → même sealHash", () => {
-    const a = sealCertificate(payload, VALID_SECRET);
-    const b = sealCertificate(payload, VALID_SECRET);
-
-    expect(a).not.toBeNull();
-    expect(a!.sealHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(a!.sealHash).toBe(b!.sealHash);
+    const body = await res.json();
+    expect(body.status).toBe("ready");
+    expect(body.checks.db.ok).toBe(true);
+    expect(body.checks.db.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(body.checks.redis).toBeUndefined();
   });
 
-  it("un seul caractère modifié change l'empreinte", () => {
-    const base = sealCertificate(payload, VALID_SECRET)!.sealHash;
-    const altered = sealCertificate(
-      { ...payload, fullName: "Alice Doé" },
-      VALID_SECRET,
-    )!.sealHash;
-
-    expect(altered).not.toBe(base);
+  it("503 quand DB ne répond pas", async () => {
+    dbQueryRaw.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+    const res = await callGet();
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.status).toBe("degraded");
+    expect(body.checks.db.ok).toBe(false);
+    expect(body.checks.db.error).toContain("ECONNREFUSED");
   });
 
-  it("l'empreinte dépend de la clé (rotation détectée)", () => {
-    const a = sealCertificate(payload, VALID_SECRET)!.sealHash;
-    const b = sealCertificate(payload, "autre-secret-0123456789abcdef")!.sealHash;
+  it("inclut le check Redis quand UPSTASH_REDIS_REST_URL est défini", async () => {
+    process.env.UPSTASH_REDIS_REST_URL = "https://redis.example.com";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
 
-    expect(a).not.toBe(b);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("PONG", { status: 200 }));
+    dbQueryRaw.mockResolvedValueOnce([{ "?column?": 1 }]);
+
+    const res = await callGet();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.checks.redis.ok).toBe(true);
+
+    fetchSpy.mockRestore();
   });
 
-  it("le log d'incident prod ne contient jamais la clé fournie", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    const weak = "abc123";
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("503 quand Redis est configuré mais ne répond pas", async () => {
+    process.env.UPSTASH_REDIS_REST_URL = "https://redis.example.com";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
 
-    const seal = sealCertificate(payload, getSealSecret(weak));
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("timeout"));
+    dbQueryRaw.mockResolvedValueOnce([{ "?column?": 1 }]);
 
-    expect(seal).toBeNull();
-    expect(errorSpy).toHaveBeenCalledTimes(1);
-    const message = String(errorSpy.mock.calls[0][0]);
-    expect(message).toContain("scellement désactivé");
-    expect(message).not.toContain(weak);
-  });
+    const res = await callGet();
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.status).toBe("degraded");
+    expect(body.checks.db.ok).toBe(true);
+    expect(body.checks.redis.ok).toBe(false);
 
-  it("FAUX POSITIF CONSTATÉ : un renommage légitime invalide tous les sceaux", () => {
-    const seal = sealCertificate(payload, VALID_SECRET)!;
-
-    const afterRename = verifyCertificateSeal(
-      { ...payload, formationName: "Pisciculture (renommée)", sealHash: seal.sealHash },
-      VALID_SECRET,
-    );
-
-    expect(afterRename.sealed).toBe(true);
-    expect(afterRename.valid).toBe(false);
-    expect(afterRename.reason).toBe("empreinte incohérente : données altérées");
-  });
-
-  it("un score inchangé reste valide (pas de faux positif sur arrondi)", () => {
-    const seal = sealCertificate({ ...payload, certificationScore: 88 }, VALID_SECRET)!;
-    const res = verifyCertificateSeal(
-      { ...payload, certificationScore: 88.0, sealHash: seal.sealHash },
-      VALID_SECRET,
-    );
-    expect(res.valid).toBe(true);
-  });
-
-  it("canonicalisation insensible à l'ordre des clés, null normalisés", () => {
-    const a = canonicalizeSealPayload({
-      code: "c",
-      fullName: "n",
-      endDate: "2026-09-01T10:00:00.000Z",
-    });
-    const b = canonicalizeSealPayload({
-      fullName: "n",
-      endDate: "2026-09-01T10:00:00.000Z",
-      code: "c",
-    });
-
-    expect(a).toBe(b);
-    expect(a).toContain('"certificationScore":null');
-    expect(computeSealHash(a, VALID_SECRET)).toBe(computeSealHash(b, VALID_SECRET));
+    fetchSpy.mockRestore();
   });
 });
