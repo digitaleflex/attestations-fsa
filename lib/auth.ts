@@ -93,9 +93,14 @@ const DEV_ONLY_TRUSTED_ORIGINS = [
  * #283 — le SCHÉMA n'est pas négociable : une entrée `http://` a été retirée
  * de cette liste. Même règle appliquée à toutes les autres origines en
  * production (`resolveTrustedOrigins`), celle-ci n'en est que le cas nominal.
- * #305 — domaine définitif : `hashcode.cloud`.
+ * #305 — domaine lu depuis NEXT_PUBLIC_APP_URL, plus de valeur en dur.
  */
-const KNOWN_PRODUCTION_TRUSTED_ORIGINS = ["https://hashcode.cloud"];
+function getKnownProductionOrigins(): string[] {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl && appUrl.startsWith("https://")) return [appUrl];
+  // Fallback si la variable est absente (dev/tests)
+  return ["https://hashcode.cloud"];
+}
 
 export type TrustedOriginsEnv = {
   NODE_ENV?: string;
@@ -192,7 +197,7 @@ export function resolveTrustedOrigins(
     ...splitOriginList(env.AUTH_TRUSTED_ORIGINS),
     // En production : uniquement les domaines exacts du projet. Les jokers
     // (localhost, LAN, tunnels) sont PurVU de la configuration.
-    ...(isProduction ? KNOWN_PRODUCTION_TRUSTED_ORIGINS : DEV_ONLY_TRUSTED_ORIGINS),
+    ...(isProduction ? getKnownProductionOrigins() : DEV_ONLY_TRUSTED_ORIGINS),
   ];
 
   const origins: string[] = [];
