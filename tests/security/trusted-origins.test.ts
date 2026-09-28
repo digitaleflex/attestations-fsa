@@ -118,7 +118,7 @@ describe("#283 — resolveTrustedOrigins en production", () => {
 
   it("retombe sur l'URL de l'application quand rien n'est configuré", () => {
     expect(resolveTrustedOrigins({ NODE_ENV: "production" })).toContain(
-      "https://fsa.eurin.tech",
+      "https://hashcode.cloud",
     );
   });
 });

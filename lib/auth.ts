@@ -64,7 +64,7 @@ import {
 //       → origine(s) de l'application (exactes).
 //   BETTER_AUTH_TRUSTED_ORIGINS / AUTH_TRUSTED_ORIGINS
 //       → liste d'origines supplémentaires séparées par des virgules
-//         (ex. « https://verifier.fsa.eurin.tech »).
+//         (ex. « https://hashcode.cloud/verifier »).
 //   BETTER_AUTH_TRUST_ORIGINS_ALLOW_WILDCARDS="true"
 //       → échappatoire EXPLICITE en production, à réserver au cas d'un
 //         déploiement multi-tenant sur un domaine à jokers. Refusée par défaut.
@@ -93,10 +93,9 @@ const DEV_ONLY_TRUSTED_ORIGINS = [
  * #283 — le SCHÉMA n'est pas négociable : une entrée `http://` a été retirée
  * de cette liste. Même règle appliquée à toutes les autres origines en
  * production (`resolveTrustedOrigins`), celle-ci n'en est que le cas nominal.
- * Le hostname reste `fsa.eurin.tech` : sa valeur est un arbitrage de
- * déploiement distinct (#305), ce correctif ne touche qu'au schéma.
+ * #305 — domaine définitif : `hashcode.cloud`.
  */
-const KNOWN_PRODUCTION_TRUSTED_ORIGINS = ["https://fsa.eurin.tech"];
+const KNOWN_PRODUCTION_TRUSTED_ORIGINS = ["https://hashcode.cloud"];
 
 export type TrustedOriginsEnv = {
   NODE_ENV?: string;
