@@ -5,7 +5,9 @@ import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
+import { handleApiError } from "@/lib/error-handler";
 import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
+import { isExamStatus } from "@/lib/exams/transitions";
 
 interface OptionPayload {
   text: string;
@@ -74,6 +76,9 @@ const ExamSchema = z.object({
 
 // POST /api/admin/exams - create a new exam
 export async function POST(request: Request) {
+  // Déclaré hors du `try` pour être joignable depuis le contexte Sentry du
+  // handler d'erreur (#321).
+  let adminUserId: string | undefined;
   try {
     const adminUser = await getAdminUser(request);
     if (!adminUser) {
@@ -82,6 +87,7 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+    adminUserId = adminUser.id ?? undefined;
 
     const body = await request.json();
     const parse = ExamSchema.safeParse(body);
@@ -124,6 +130,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // #256 m9 — le statut de création est validé contre la liste canonique
+    // (DRAFT | PUBLISHED | SCHEDULED | ARCHIVED) : pas de valeur arbitraire
+    // en base, et un SCHEDULED doit porter sa date d'ouverture.
+    const requestedStatus = status === "" ? "DRAFT" : status;
+    if (!isExamStatus(requestedStatus)) {
+      return NextResponse.json(
+        {
+          message: `Statut d'examen invalide : ${String(status)}`,
+          code: "INVALID_EXAM_STATUS",
+        },
+        { status: 400 },
+      );
+    }
+    const parsedScheduledAt =
+      scheduledAt && !isNaN(new Date(scheduledAt).getTime())
+        ? new Date(scheduledAt)
+        : null;
+    if (requestedStatus === "SCHEDULED" && parsedScheduledAt === null) {
+      return NextResponse.json(
+        {
+          message:
+            "Un examen programmé (SCHEDULED) doit porter une date d'ouverture (scheduledAt).",
+          code: "MISSING_SCHEDULED_AT",
+        },
+        { status: 400 },
+      );
+    }
+
     const enabledParts = parts.filter((p) => p.enabled);
     const totalPoints = enabledParts.reduce(
       (sum, p) => sum + p.points,
@@ -152,9 +186,9 @@ export async function POST(request: Request) {
         totalPoints: Math.round(totalPoints),
         randomizeQuestions,
         showResults,
-        status: status as ExamStatus,
+        status: requestedStatus as ExamStatus,
         type: (body.type as ExamType) || "OFFICIAL",
-        scheduledAt: (scheduledAt && !isNaN(new Date(scheduledAt).getTime())) ? new Date(scheduledAt) : null,
+        scheduledAt: parsedScheduledAt,
         
         // Legacy summary fields — partNPoints = somme de TOUTES les parties
         // du type (cohérent avec totalPoints, même à parties multiples).
@@ -225,15 +259,14 @@ export async function POST(request: Request) {
       { status: 201 },
     );
     } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Erreur inconnue";
-    console.error("Erreur lors de la création de l'examen:", error);
-    return NextResponse.json(
-      {
-        error: "Erreur lors de la création de l'examen",
-        details: message,
-      },
-      { status: 500 },
-    );
+    // #321 — le champ `details` portait le message Prisma brut (contraintes,
+    //        colonnes, valeurs) jusqu'au client. Détail journalisé + Sentry ;
+    //        générique en production, lisible en développement.
+    return handleApiError(error, {
+      route: "/api/admin/exams",
+      operation: "create_exam",
+      userId: adminUserId,
+    });
   }
 }
 

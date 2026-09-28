@@ -10,23 +10,48 @@ Ce document décrit l'ensemble des systèmes anti-triche implémentés dans la p
 
 ### 1. Protection CSRF (Cross-Site Request Forgery)
 
-**Statut:** ✅ ACTIVÉ  
+> **Correction documentaire.** Cette section décrivait un jeton anti-CSRF
+> (`lib/csrf.ts`, tokens `crypto.getRandomValues()`, cookie `SameSite=strict`).
+> **Ce composant n'a jamais existé dans ce dépôt** : ni `lib/csrf.ts`, ni
+> route `/api/csrf-token`, ni en-tête `x-csrf-token`. La description ci-dessous
+> est l'état réel.
+
+**Statut:** ✅ ACTIVÉ — **par contrôle d'origine, pas par jeton**  
 **Fichiers:**
-- `middleware.ts` (lignes 68-99)
-- `lib/csrf.ts` (nouveau)
+- `lib/auth.ts` (allowlist `trustedOrigins`, `resolveTrustedOrigins()`)
+- `app/api/auth/[...all]/route.ts` (routeur Better Auth qui applique le contrôle)
 
 **Fonctionnement:**
-- Génération de tokens CSRF cryptographiquement sûrs via `crypto.getRandomValues()`
-- Validation automatique sur toutes les requêtes POST/PUT/DELETE/PATCH
-- Tokens stockés dans les cookies avec flag `SameSite=strict`
-- Expiration: 24 heures
+- **Aucun jeton n'est généré ni exigé.** La page cookies publique et
+  `docs/SECURITY_FIX_GUIDE.md` (§2.5) décrivent le même dispositif.
+- Le routeur Better Auth compare l'en-tête `Origin` (à défaut `Referer`) à
+  l'allowlist `trustedOrigins` et refuse la requête (`403`) si l'origine est
+  absente, vaut `null`, ou n'est pas dans la liste.
+- **Étendue réelle :** routes `/api/auth/*`, **méthodes de mutation
+  uniquement** (`GET`/`HEAD`/`OPTIONS` sortent avant le contrôle), et
+  **seulement si la requête porte déjà des cookies**. Une requête sans cookie
+  n'est pas bloquée.
+- En complément, l'attribut `SameSite=Lax` du cookie de session empêche le
+  navigateur d'y joindre des cookies depuis un autre site (hors navigation de
+  premier niveau vers la Plateforme).
 
-**Protection contre:**
-- Requêtes forgées depuis des sites tiers
-- Attaques par injection de formulaires
+**Limite assumée — à lire avant d'écrire « protégé » :**
+- Les routes applicatives **hors `/api/auth`** (`/api/user`, `/api/admin`,
+  `/api/exams`, …) ne passent par **aucun** contrôle d'origine. Elles reposent
+  sur `SameSite=Lax`, la validation de session de `lib/api-auth` et le rate
+  limiting.
+- `SameSite=Lax` n'interdit pas une requête *same-site* issue d'un sous-domaine
+  compromis.
+- `disableOriginCheck` / `disableCSRFCheck` désactiveraient le contrôle ;
+  `lib/auth.ts` ne les pose pas.
+
+**Protection réelle contre:**
+- Requêtes cross-site authentifiées adressées à `/api/auth/*` depuis une origine
+  non approuvée
+- Attaques par injection de formulaires sur les mêmes routes
 
 **Endpoints concernés:**
-- Toutes les routes protégées (sauf routes publiques et auth)
+- `/api/auth/*` uniquement (pas « toutes les routes protégées »)
 
 ---
 
@@ -366,7 +391,9 @@ const logs = await prisma.securityLog.findMany({
 
 ### Sécurité
 
-- **CSRF:** Tokens de 32 bytes (256 bits d'entropie)
+- **CSRF:** Pas de jeton. Contrôle d'origine (`Origin` vs `trustedOrigins`) sur
+  `/api/auth/*` en mutation, et `SameSite=Lax` sur le cookie de session. Les
+  routes hors `/api/auth` ne sont pas couvertes par ce contrôle.
 - **Fingerprints:** Hash 32-bit, suffisant pour la détection
 - **Rate Limits:** Sliding window (plus précis que fixed window)
 

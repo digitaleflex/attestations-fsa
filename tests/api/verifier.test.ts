@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
 import { sealCertificate } from "@/lib/crypto/seal";
+import { attestationSealPayload } from "@/lib/attestations/proof";
 
 const SEAL_SECRET = "verifier-test-secret-0123456789abcdef";
 
@@ -159,6 +160,31 @@ describe("GET /api/verifier", () => {
     expect(body.attestation.code).toBe("FSA-2026-M01-00001-abcde");
   });
 
+  it("mappe stageScore -> score lorsque le certificat n'a pas de score de certification", async () => {
+    db.attestationFindFirst.mockResolvedValue({
+      id: "a3",
+      code: "FSA-2026-M01-00003-abcde",
+      fullName: "Chloé",
+      type: "STAGE",
+      status: "VALIDATED",
+      certificationScore: null,
+      stageScore: 91,
+      certificationMention: null,
+      sealHash: null,
+      sealedAt: null,
+      issuedAt: new Date("2026-02-01"),
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-02-01"),
+      location: "En ligne",
+      instructor: "FSA",
+      formation: { name: "Pisciculture", category: "AGRICULTURE" },
+    } as never);
+
+    const res = await GET(req("FSA-2026-M01-00003-abcde"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).attestation.score).toBe(91);
+  });
+
   it("expose une preuve de scellement valide (#155)", async () => {
     db.attestationFindFirst.mockResolvedValue(sealedAttestation() as never);
 
@@ -186,6 +212,35 @@ describe("GET /api/verifier", () => {
     const body = await res.json();
     expect(body.attestation.proof.sealed).toBe(true);
     expect(body.attestation.proof.valid).toBe(false);
+  });
+
+  it("expose pdfKey indirectement et les métadonnées du PDF canonique", async () => {
+    const row = {
+      ...sealedAttestation(),
+      sealVersion: 2,
+      pdfKey: "attestations/FSA-2026-M01-00001-abcde/v1.pdf",
+      pdfHash: "b".repeat(64),
+      pdfVersion: 1,
+      pdfGeneratedAt: new Date("2026-01-03T00:00:00Z"),
+    };
+    const payload = attestationSealPayload(row);
+    const seal = sealCertificate(payload, SEAL_SECRET)!;
+    db.attestationFindFirst.mockResolvedValue({
+      ...row,
+      ...seal,
+      issuedAt: new Date("2026-01-02T00:00:00Z"),
+    } as never);
+
+    const res = await GET(req(row.code));
+    const body = await res.json();
+    expect(body.attestation.proof.valid).toBe(true);
+    expect(body.attestation.proof.sealVersion).toBe(2);
+    expect(body.attestation.proof.pdf).toMatchObject({
+      available: true,
+      version: 1,
+      hash: "b".repeat(64),
+    });
+    expect(JSON.stringify(body)).not.toContain("X-Amz-Signature");
   });
 
   it("respecte le rate limiting (renvoie la réponse 429)", async () => {

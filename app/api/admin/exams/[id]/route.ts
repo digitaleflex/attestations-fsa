@@ -5,7 +5,9 @@ import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { handleApiError } from "@/lib/error-handler";
 import { ExamStatus, ExamType, QuestionType } from "@prisma/client";
+import { validateExamStatusTransition } from "@/lib/exams/transitions";
 
 interface OptionPayload {
   text: string;
@@ -99,6 +101,7 @@ export async function PATCH(
       description,
       status,
       scheduledAt,
+      opensOn: opensOnInput,
       parts,
       formationId,
       session,
@@ -109,9 +112,105 @@ export async function PATCH(
       type,
     } = body;
 
+    // #256 m9 — un PATCH sans aucun champ exploitable n'est pas un no-op : il
+    // n'a rien à écrire. On le refuse en 400 plutôt que d'ignorer silencieusement
+    // la requête. En revanche, un `status` ABSENT du body laisse le statut
+    // inchangé (no-op sur la transition) : seul un `status` présent mais vide ou
+    // invalide est un 400.
+    const PATCHABLE_FIELDS = [
+      "status",
+      "name",
+      "title",
+      "description",
+      "scheduledAt",
+      "opensOn",
+      "parts",
+      "formationId",
+      "session",
+      "duration",
+      "passingScore",
+      "randomizeQuestions",
+      "showResults",
+      "type",
+    ] as const;
+    if (
+      !body ||
+      typeof body !== "object" ||
+      !PATCHABLE_FIELDS.some((field) => field in body)
+    ) {
+      return NextResponse.json(
+        {
+          message: "Corps de requête vide : rien à mettre à jour.",
+          code: "EMPTY_EXAM_PATCH",
+        },
+        { status: 400 },
+      );
+    }
+
     // 1. Calculate summary data and prepare atomic update
     const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : null;
     const isValidDate = scheduledAtDate === null || !isNaN(scheduledAtDate.getTime());
+    if (!isValidDate) {
+      return NextResponse.json(
+        {
+          message: `Date de démarrage illisible : ${String(scheduledAt)}`,
+          code: "INVALID_SCHEDULED_AT",
+        },
+        { status: 400 },
+      );
+    }
+
+    // #256 m9 — `opensOn` (journée d'ouverture) est stocké TEL QUE FOURNI ; sa
+    // normalisation au minuit de `APP_TIMEZONE` est faite à la lecture, par
+    // `lib/exams/time.ts` (règle unique). Une date illisible est un 400.
+    const hasOpensOnInput = "opensOn" in body;
+    const opensOnDate =
+      opensOnInput && opensOnInput !== null && opensOnInput !== undefined
+        ? new Date(opensOnInput)
+        : null;
+    if (opensOnDate && isNaN(opensOnDate.getTime())) {
+      return NextResponse.json(
+        {
+          message: `Journée d'ouverture illisible : ${String(opensOnInput)}`,
+          code: "INVALID_OPENS_ON",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Matrice des transitions de statut : une transition invalide est refusée en
+    // 400 AVANT toute écriture. `status` absent du body = inchangé.
+    const current = await prisma.exam.findUnique({
+      where: { id },
+      select: { id: true, status: true, scheduledAt: true, opensOn: true },
+    });
+    if (!current) {
+      return NextResponse.json(
+        { message: "Examen non trouvé" },
+        { status: 404 },
+      );
+    }
+    const effectiveScheduledAt = scheduledAt
+      ? scheduledAtDate
+      : scheduledAt === null
+        ? null
+        : current.scheduledAt;
+    // `undefined` = la base ne connaît pas cette information (champ non lu) :
+    // l'exigence d'`opensOn` est alors ignorée plutôt que refusée à tort.
+    // `null`, en revanche, est une information connue : aucun jour d'ouverture.
+    const effectiveOpensOn = hasOpensOnInput ? opensOnDate : current.opensOn;
+    const transition = validateExamStatusTransition({
+      from: current.status,
+      to: status ?? null,
+      scheduledAt: effectiveScheduledAt,
+      opensOn: effectiveOpensOn,
+    });
+    if (!transition.ok) {
+      return NextResponse.json(
+        { message: transition.message, code: transition.code },
+        { status: transition.status },
+      );
+    }
     
     // Calculate totals for summary fields
     const enabledParts = (parts && Array.isArray(parts)) ? parts.filter((p: ExamPartPayload) => p.enabled) : [];
@@ -124,8 +223,13 @@ export async function PATCH(
         name: name || title,
         title: title,
         description,
+        // `status` absent du body = inchangé (no-op sur la transition) : ni
+        // écriture ni régression de statut.
         status,
-        scheduledAt: isValidDate ? scheduledAtDate : null,
+        // `scheduledAt` / `opensOn` : PATCH partiel — un champ absent du body
+        // ne doit jamais être remis à `null`.
+        scheduledAt: "scheduledAt" in body ? scheduledAtDate : undefined,
+        opensOn: hasOpensOnInput ? opensOnDate : undefined,
         formation: formationId ? { connect: { id: formationId } } : undefined,
         session,
         duration: (duration !== undefined && duration !== null) ? parseInt(duration.toString()) : undefined,
@@ -210,11 +314,14 @@ export async function PATCH(
 
     return NextResponse.json(exam);
   } catch (error) {
-    console.error("[EXAM_UPDATE_ERROR]", error);
-    return NextResponse.json(
-      { message: "Erreur lors de la mise à jour de l'examen", details: error instanceof Error ? error.message : "Erreur inconnue" },
-      { status: 500 },
-    );
+    // #321 — plus de `details: error.message` : les violations de contrainte de
+    //        l'update n'atteignent plus le client. Journal serveur + Sentry,
+    //        générique en production, lisible en développement.
+    return handleApiError(error, {
+      route: "/api/admin/exams/[id]",
+      operation: "update_exam",
+      userId: adminUser?.id ?? undefined,
+    });
   }
 }
 
@@ -250,11 +357,13 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Examen supprimé avec succès" });
   } catch (error) {
-    console.error("[EXAM_DELETE_ERROR]", error);
-    return NextResponse.json(
-      { message: "Erreur lors de la suppression de l'examen", details: error instanceof Error ? error.message : "Erreur inconnue" },
-      { status: 500 },
-    );
+    // #321 — idem DELETE : l'erreur Prisma de suppression (clé étrangère,
+    //        contraintes) reste côté serveur.
+    return handleApiError(error, {
+      route: "/api/admin/exams/[id]",
+      operation: "delete_exam",
+      userId: adminUser?.id ?? undefined,
+    });
   }
 }
 

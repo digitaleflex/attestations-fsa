@@ -20,6 +20,14 @@ interface ErrorContext {
 
 /**
  * Types d'erreurs connues avec codes HTTP associés
+ *
+ * Pas d'entrée `CSRF` : aucune validation de jeton n'existe dans ce dépôt
+ * (le dépôt n'émet ni n'exige de jeton anti-CSRF). La protection contre les
+ * requêtes cross-site est le contrôle d'origine `trustedOrigins` de Better
+ * Auth sur `/api/auth/*`, qui rejette lui-même la requête en 403, plus
+ * `SameSite=Lax`. Voir `docs/SECURITY_FIX_GUIDE.md` §2.5. Ne pas reintroduire
+ * cette entrée : un code d'erreur pour une protection inexistante laisse
+ * croire à un contrôle qui n'a pas lieu d'être.
  */
 export const ErrorTypes = {
   VALIDATION: { code: "VALIDATION_ERROR", status: 400 },
@@ -28,7 +36,6 @@ export const ErrorTypes = {
   FORBIDDEN: { code: "FORBIDDEN", status: 403 },
   CONFLICT: { code: "CONFLICT", status: 409 },
   RATE_LIMIT: { code: "RATE_LIMIT_EXCEEDED", status: 429 },
-  CSRF: { code: "CSRF_VALIDATION_FAILED", status: 403 },
   SERVER: { code: "INTERNAL_SERVER_ERROR", status: 500 },
 } as const;
 

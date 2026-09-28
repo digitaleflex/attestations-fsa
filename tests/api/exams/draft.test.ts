@@ -1,13 +1,32 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+const db = vi.hoisted(() => ({
+  examFindUnique: vi.fn(),
+  enrollmentFindUnique: vi.fn(),
+}));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    exam: { findUnique: db.examFindUnique },
+    examEnrollment: { findUnique: db.enrollmentFindUnique },
+  },
+}));
+
 vi.mock("@/lib/auth", () => ({
   getCurrentUser: vi.fn(),
+  getAdminUser: vi.fn().mockResolvedValue(null),
+}));
+
+// #256 — la synchronisation du brouillon est bornée par IP et par utilisateur.
+vi.mock("@/lib/rate-limit", () => ({
+  applyRateLimitByUser: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
 vi.mock("@/lib/exam-draft", () => ({
   saveDraft: vi.fn(),
   loadDraft: vi.fn(),
   deleteDraft: vi.fn(),
+  isValidExamDraft: vi.fn().mockReturnValue(true),
 }));
 
 import { POST, GET, DELETE } from "@/app/api/exams/[id]/draft/route";
@@ -34,6 +53,14 @@ describe("POST /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
+    // #256 m9 — jour J atteint : le verrou 423 ne doit pas masquer le flux.
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "MOCK",
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
+    } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
   it("rejette sans authentification", async () => {
@@ -63,6 +90,14 @@ describe("GET /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
+    // #256 m9 — jour J atteint : le verrou 423 ne doit pas masquer le flux.
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "MOCK",
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
+    } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
   it("retourne un brouillon existant", async () => {
@@ -85,6 +120,14 @@ describe("DELETE /api/exams/[id]/draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ id: "user-1", role: "user" });
+    // #256 m9 — jour J atteint : le verrou 423 ne doit pas masquer le flux.
+    db.examFindUnique.mockResolvedValue({
+      id: "exam-1",
+      type: "MOCK",
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
+    } as never);
+    db.enrollmentFindUnique.mockResolvedValue(null as never);
   });
 
   it("supprime le brouillon", async () => {

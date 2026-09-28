@@ -13,6 +13,12 @@ import {
   HandMetal
 } from "lucide-react";
 import { ExamFormData } from "../types";
+import {
+  APP_TIMEZONE_SHORT,
+  formatAppDateTime,
+  formatAppLongDate,
+  fromAppWallClock,
+} from "@/lib/exams/schedule-ui";
 
 type Props = {
   formData: ExamFormData;
@@ -55,10 +61,31 @@ export function StepSummary({ formData, saving, onSave }: Props) {
               {formData.randomizeQuestions && <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[9px] font-bold uppercase tracking-tight">🔀 Aléatoire</Badge>}
               {formData.showResults && <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none text-[9px] font-bold uppercase tracking-tight">👁️ Résultats</Badge>}
             </div>
-            {formData.status === 'SCHEDULED' && formData.scheduledAt && (
-              <div className="text-sm text-slate-600 flex items-center gap-2 font-medium">
-                <span className="text-slate-500">📅 Programmé le:</span> {new Date(formData.scheduledAt).toLocaleString("fr-FR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              </div>
+            {/* Rappel en heure Africa/Porto-Novo : la récapitulation est la
+                dernière occasion de repérer une heure saisie dans le mauvais
+                fuseau, avant l'enregistrement. */}
+            {formData.status === "SCHEDULED" && formData.scheduledAt && (
+              <dl className="space-y-1.5 rounded-xl border border-slate-200 bg-white p-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <dt className="text-slate-500">Ouverture au public</dt>
+                  <dd className="font-semibold text-slate-800">
+                    {formData.opensOn
+                      ? `${formatAppLongDate(
+                          fromAppWallClock(`${formData.opensOn}T00:00`),
+                        )} à minuit`
+                      : "Non renseignée"}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <dt className="text-slate-500">Début de l&apos;épreuve</dt>
+                  <dd className="font-semibold text-slate-800">
+                    {formatAppDateTime(fromAppWallClock(formData.scheduledAt))}
+                  </dd>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Heure de {APP_TIMEZONE_SHORT} — les candidats voient la même
+                </p>
+              </dl>
             )}
           </div>
         </Card>

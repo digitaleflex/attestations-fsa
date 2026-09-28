@@ -3,6 +3,16 @@
 // Un driver reçoit une clé logique (ex: "cv/ab12cd34.pdf") et ne connaît
 // pas les détails des appelants (route upload, scripts de migration).
 
+/** Options de génération d'URL de lecture. */
+export interface SignedUrlOptions {
+  /**
+   * Autorise le retour d'une URL publique stable (`S3_PUBLIC_BASE_URL`)
+   * au lieu d'une URL signée. Réservé aux objets réellement publics
+   * (logo d'institution) : jamais aux CV, images ou PDF nominatifs.
+   */
+  allowPublicBaseUrl?: boolean;
+}
+
 export interface StorageDriver {
   /**
    * Écrit un objet. Écrase silencieusement un objet de même clé.
@@ -14,11 +24,18 @@ export interface StorageDriver {
 
   /**
    * Retourne une URL temporaire d'accès en lecture (URL signée pour S3/R2,
-   * chemin public pour le driver local de développement).
+   * chemin du driver local en développement).
    * @param key Clé logique.
-   * @param expiresInSeconds Durée de validité (ignorée par le driver local).
+   * @param expiresInSeconds Durée de validité, bornée par l'appelant
+   *        (`normalizeReadUrlTtl`, 60 s par défaut). Ignorée par le driver local.
+   * @param options `allowPublicBaseUrl` n'est honored que pour les objets
+   *        explicitement publics (bucket privé par défaut).
    */
-  getSignedUrl(key: string, expiresInSeconds?: number): Promise<string>;
+  getSignedUrl(
+    key: string,
+    expiresInSeconds?: number,
+    options?: SignedUrlOptions
+  ): Promise<string>;
 
   /** Supprime un objet. Idempotent : ne lève pas si l'objet est absent. */
   delete(key: string): Promise<void>;

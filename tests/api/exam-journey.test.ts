@@ -14,6 +14,7 @@ const db = vi.hoisted(() => ({
   examPartFindFirst: vi.fn(),
   examPartFindMany: vi.fn(),
   userFindUnique: vi.fn(),
+  enrollmentFindUnique: vi.fn(),
   formationFindFirst: vi.fn(),
   attestationFindFirst: vi.fn(),
   attestationCreate: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock("@/lib/prisma", () => ({
       findMany: db.examPartFindMany,
     },
     user: { findUnique: db.userFindUnique },
+    examEnrollment: { findUnique: db.enrollmentFindUnique },
     formation: { findFirst: db.formationFindFirst },
     attestation: {
       findFirst: db.attestationFindFirst,
@@ -171,20 +173,23 @@ beforeEach(() => {
   db.attestationCount.mockResolvedValue(0 as never);
   db.attestationFindMany.mockResolvedValue([] as never);
   db.userFindUnique.mockResolvedValue({ id: "user-1", examId: null } as never);
+  db.enrollmentFindUnique.mockResolvedValue({ id: "enrollment-1", status: "ACTIVE" } as never);
   db.formationFindFirst.mockResolvedValue({ id: "formation-1" } as never);
 });
 
 describe("Parcours cœur : submit → correct → attestation (#136)", () => {
-  it("soumission QCM → COMPLETED → attestation émise", async () => {
+  it("soumission QCM → GRADED → attestation émise", async () => {
     // submit : session IN_PROGRESS, examen 100% QCM
     db.sessionFindFirst
       .mockResolvedValueOnce({
+        id: "sub-1",
         startedAt: new Date(Date.now() - 600_000),
         status: "IN_PROGRESS",
+        submittedAt: null,
       } as never)
       .mockResolvedValueOnce({
         id: "sub-1",
-        status: "COMPLETED",
+        status: "GRADED",
         scorePart1: 20,
         totalScore: 20,
         finalScore: 100,
@@ -205,6 +210,10 @@ describe("Parcours cœur : submit → correct → attestation (#136)", () => {
       type: "OFFICIAL",
       passingScore: 65,
       formationId: "formation-1",
+      // #256 m9 — jour J atteint : sinon la soumission est refusée en 423
+      // (examen reverrouillé) avant même la lecture de la session.
+      status: "PUBLISHED",
+      scheduledAt: new Date(Date.now() - 60_000),
     } as never);
     db.examPartFindMany.mockResolvedValue([
       { order: 1, type: "QCM", points: 20 },
@@ -215,7 +224,7 @@ describe("Parcours cœur : submit → correct → attestation (#136)", () => {
     });
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.status).toBe("COMPLETED");
+    expect(body.status).toBe("GRADED");
     expect(body.finalScore).toBe(100);
     // Attestation émise pour l'examen officiel réussi
     expect(deps.issueExamAttestation).toHaveBeenCalledWith("sub-1");

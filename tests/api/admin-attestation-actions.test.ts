@@ -1,9 +1,14 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+// #301 — Cette suite couvre le socle (authentification, motif, action inconnue)
+// et le refus sur une attestation supprimée logiquement. Le détail du contrat
+// non destructif (REVOKED, archivage des sessions, notification des anonymes)
+// est couvert par tests/api/attestation-lifecycle-301.test.ts.
 const db = vi.hoisted(() => ({
   attestationFindUnique: vi.fn(),
   attestationUpdate: vi.fn(),
   sessionDeleteMany: vi.fn(),
+  sessionUpdateMany: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -12,19 +17,21 @@ vi.mock("@/lib/prisma", () => ({
       findUnique: db.attestationFindUnique,
       update: db.attestationUpdate,
     },
-    examSession: { deleteMany: db.sessionDeleteMany },
+    examSession: { deleteMany: db.sessionDeleteMany, updateMany: db.sessionUpdateMany },
   },
 }));
 
 const deps = vi.hoisted(() => ({
   getAdminUser: vi.fn(),
   createNotification: vi.fn(),
+  notifyAllAdmins: vi.fn(),
   createAuditLog: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({ getAdminUser: deps.getAdminUser }));
 vi.mock("@/lib/notifications", () => ({
   createNotification: deps.createNotification,
+  notifyAllAdmins: deps.notifyAllAdmins,
 }));
 vi.mock("@/lib/audit", () => ({ createAuditLog: deps.createAuditLog }));
 
@@ -47,8 +54,10 @@ function makeAttestation(overrides: Record<string, unknown> = {}) {
     id: "att-1",
     code: "FSA-2026-M09-00001-abcde",
     userId: "user-1",
+    sessionId: "session-1",
     formationId: "formation-1",
     status: "VALIDATED",
+    deletedAt: null,
     formation: { id: "formation-1", name: "Formation A" },
     ...overrides,
   } as never;
@@ -58,11 +67,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
   deps.createNotification.mockResolvedValue(undefined as never);
+  deps.notifyAllAdmins.mockResolvedValue([] as never);
   deps.createAuditLog.mockResolvedValue(undefined as never);
   db.attestationFindUnique.mockResolvedValue(makeAttestation() as never);
   db.attestationUpdate.mockResolvedValue(
-    makeAttestation({ status: "REJECTED" }) as never,
+    makeAttestation({ status: "REVOKED" }) as never,
   );
+  db.sessionUpdateMany.mockResolvedValue({ count: 1 } as never);
   db.sessionDeleteMany.mockResolvedValue({ count: 1 } as never);
 });
 
@@ -85,20 +96,21 @@ describe("POST /api/admin/attestations/[id]/actions (#137)", () => {
     expect(res.status).toBe(404);
   });
 
-  it("REVOKE → status REJECTED + notification + audit", async () => {
+  it("REVOKE → statut REVOKED + notification + audit, sans suppression", async () => {
     const res = await callActions({ action: "REVOKE", reason: "Fraude avérée" });
     expect(res.status).toBe(200);
     expect(db.attestationUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "att-1" },
-        data: { status: "REJECTED" },
+        data: expect.objectContaining({ status: "REVOKED", revokeReason: "Fraude avérée" }),
       }),
     );
+    expect(db.sessionDeleteMany).not.toHaveBeenCalled();
     expect(deps.createNotification).toHaveBeenCalled();
     expect(deps.createAuditLog).toHaveBeenCalled();
   });
 
-  it("RETROGRADE → sessions supprimées + status PENDING + scores réinitialisés", async () => {
+  it("RETROGRADE → sessions archivées (jamais supprimées) + statut PENDING", async () => {
     db.attestationUpdate.mockResolvedValue(
       makeAttestation({ status: "PENDING" }) as never,
     );
@@ -107,12 +119,10 @@ describe("POST /api/admin/attestations/[id]/actions (#137)", () => {
       reason: "Examen à repasser",
     });
     expect(res.status).toBe(200);
-    expect(db.sessionDeleteMany).toHaveBeenCalledWith(
+    expect(db.sessionDeleteMany).not.toHaveBeenCalled();
+    expect(db.sessionUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          userId: "user-1",
-          exam: { formationId: "formation-1" },
-        },
+        data: expect.objectContaining({ status: "ARCHIVED", archiveReason: "Examen à repasser" }),
       }),
     );
     expect(db.attestationUpdate).toHaveBeenCalledWith(

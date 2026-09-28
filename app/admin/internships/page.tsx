@@ -57,6 +57,11 @@ export default function AdminInternshipsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Request | null>(null);
   const [filter, setFilter] = useState('ALL');
+  // #267 — pagination serveur : la liste admin n'est plus « tout charger ».
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [attestModal, setAttestModal] = useState<Request | null>(null);
   const [attestForm, setAttestForm] = useState({
     startDate: '',
@@ -69,13 +74,18 @@ export default function AdminInternshipsPage() {
 
   useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [page, filter, pageSize]);
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch("/api/admin/internships");
+      // #267 — filtre + pagination désormais gérés par l'API.
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (filter !== 'ALL') params.set('status', filter);
+      const res = await fetch(`/api/admin/internships?${params.toString()}`);
       const data = await res.json();
-      setRequests(Array.isArray(data) ? data : []);
+      setRequests(Array.isArray(data?.requests) ? data.requests : []);
+      setTotal(typeof data?.pagination?.total === 'number' ? data.pagination.total : 0);
+      setTotalPages(typeof data?.pagination?.totalPages === 'number' ? data.pagination.totalPages : 1);
     } catch (error) {
       toast.error("Erreur lors du chargement");
       setRequests([]);
@@ -84,17 +94,26 @@ export default function AdminInternshipsPage() {
     }
   };
 
+  const changeFilter = (status: string) => {
+    setFilter(status);
+    setPage(1);
+  };
+
   const updateStatus = async (id: string, status: string) => {
     try {
-      const res = await fetch("/api/admin/internships", {
+      const res = await fetch(`/api/admin/internships/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status })
+        body: JSON.stringify({ status })
       });
       if (res.ok) {
         toast.success(`Demande mise à jour: ${status}`);
         fetchRequests();
         setSelected(null);
+      } else {
+        // #267 — transition interdite / statut invalide : 400 explicite.
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || "Transition de statut refusée");
       }
     } catch (error) {
       toast.error("Erreur de mise à jour");
@@ -130,9 +149,8 @@ export default function AdminInternshipsPage() {
     }
   };
 
-  const filtered = Array.isArray(requests)
-    ? (filter === 'ALL' ? requests : requests.filter(r => r.status === filter))
-    : [];
+  // Le filtrage est désormais côté serveur (#267) : plus de filtre local.
+  const filtered = requests;
 
   if (loading) return <div className="p-20 flex justify-center"><Loader2 className="animate-spin" /></div>;
 
@@ -140,14 +158,18 @@ export default function AdminInternshipsPage() {
     <div className="p-4 sm:p-8 space-y-6">        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Gestion des Stages</h1>
-          <p className="text-slate-500">Gérez les demandes de stage entrants ({`{requests.length}`}).</p>
+          <p className="text-slate-500">Gérez les demandes de stage entrants ({`{total}`}).</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               className="h-9 gap-2"
-              onClick={() => window.open(`/api/admin/internships/export?status=${filter}`, '_blank')}
+              onClick={() => {
+                const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+                if (filter !== 'ALL') params.set('status', filter);
+                window.open(`/api/admin/internships/export?${params.toString()}`, '_blank');
+              }}
             >
               <Download className="w-4 h-4" />
               Export Excel
@@ -157,7 +179,7 @@ export default function AdminInternshipsPage() {
                   key={s}
                   variant={filter === s ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setFilter(s)}
+                  onClick={() => changeFilter(s)}
                   className="h-9"
                 >
                     {s === 'ALL' ? 'Tous' : statusMap[s].label}
@@ -165,6 +187,37 @@ export default function AdminInternshipsPage() {
             ))}
         </div>
       </div>
+
+      {/* #267 — pagination serveur */}
+      {total > 0 && (
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs text-slate-500">
+            Page {page} sur {totalPages} — {total} demande{total > 1 ? 's' : ''}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" />
+              Précédent
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Suivant
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4">
         {filtered.length === 0 ? (

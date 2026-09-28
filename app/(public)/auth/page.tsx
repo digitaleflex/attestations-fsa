@@ -24,18 +24,34 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  div as MotionDiv,
+  form as MotionForm,
+  span as MotionSpan,
+} from "framer-motion/client";
+import { AnimatePresence } from "@/lib/framer-motion-client";
 import { authClient } from "@/lib/auth-client";
 import { translateAuthError } from "@/lib/error-translator";
+
+// Même règle que `app/api/auth/fsa-login` : l'identifiant est soit une adresse
+// e-mail complète, soit un code FSA COMPLET. Les « 5 derniers caractères » ne
+// sont pas un code et ne sont plus acceptés : cette recherche par suffixe
+// ramenait l'espace de recherche du secret à 20 bits.
+const MIN_FSA_IDENTIFIER_LENGTH = 8;
+const FSA_IDENTIFIER_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const FsaCodeSchema = z.object({
   fsaCode: z
     .string()
-    .min(
-      5,
-      "Le code FSA ou le hash final doit comporter au moins 5 caractères.",
-    )
-    .max(50, "Le code saisi est trop long."),
+    .trim()
+    .min(1, "Saisissez votre e-mail ou votre code FSA.")
+    .max(50, "Le code saisi est trop long.")
+    .refine(
+      (value) =>
+        FSA_IDENTIFIER_EMAIL.test(value) ||
+        value.length >= MIN_FSA_IDENTIFIER_LENGTH,
+      "Saisissez votre adresse e-mail complète ou votre code FSA complet (ex : FSA-2026-M01-00042-f0f9a). Un fragment du code n'est pas accepté.",
+    ),
 });
 
 const OtpSchema = z.object({
@@ -92,14 +108,30 @@ function humanizeAuthError(raw: string): string {
   return URL_ERROR_MESSAGES[raw] ?? translateAuthError(raw);
 }
 
+function getSafeCallbackUrl(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  try {
+    const baseUrl = new URL("https://internal.invalid");
+    const callbackUrl = new URL(value, baseUrl);
+    if (callbackUrl.origin !== baseUrl.origin) return "/dashboard";
+
+    return `${callbackUrl.pathname}${callbackUrl.search}${callbackUrl.hash}`;
+  } catch {
+    return "/dashboard";
+  }
+}
+
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const callbackUrl =
+  const callbackUrl = getSafeCallbackUrl(
     searchParams?.get("callbackUrl") ||
-    searchParams?.get("callbackURL") ||
-    "/dashboard";
+      searchParams?.get("callbackURL"),
+  );
 
   // États de l'interface
   const [step, setStep] = useState<1 | 2>(1);
@@ -489,7 +521,7 @@ function AuthContent() {
     step === 1
       ? tab === "password"
         ? "Connectez-vous avec votre adresse e-mail et votre mot de passe."
-        : "Saisissez votre e-mail ou votre code d'attestation FSA pour recevoir un code de connexion."
+        : "Saisissez votre e-mail ou votre code d'attestation FSA complet pour recevoir un code de connexion."
       : verificationMode === "email"
         ? "Pour activer votre compte, saisissez le code de vérification à 6 chiffres envoyé à :"
         : "Pour votre sécurité, un code d'authentification à 6 chiffres a été envoyé à :";
@@ -555,7 +587,7 @@ function AuthContent() {
           <AnimatePresence initial={false} custom={direction} mode="wait">
             {step === 1 ? (
               /* ================= ÉTAPE 1 : CONNEXION ================= */
-              <motion.form
+              <MotionForm
                 key="step1"
                 custom={direction}
                 variants={slideVariants}
@@ -588,7 +620,7 @@ function AuthContent() {
                       }`}
                     >
                       {tab === id && (
-                        <motion.span
+                        <MotionSpan
                           layoutId="auth-tab-pill"
                           className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-brand to-brand-dark shadow-lg shadow-brand/20"
                           transition={{
@@ -682,13 +714,14 @@ function AuthContent() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-4 top-4 text-slate-300 hover:text-brand transition-colors"
+                          className="absolute right-4 top-4 rounded-md text-slate-300 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={
                             showPassword
                               ? "Masquer le mot de passe"
                               : "Afficher le mot de passe"
                           }
-                          tabIndex={-1}
+                          aria-pressed={showPassword}
+                          disabled={loading}
                         >
                           {showPassword ? (
                             <EyeOff className="w-5 h-5" />
@@ -741,7 +774,7 @@ function AuthContent() {
                           value={fsaCode}
                           onChange={handleFsaCodeChange}
                           required
-                          placeholder="Ex: candidat@email.com ou code FSA"
+                          placeholder="candidat@email.com ou FSA-2026-M01-00042-f0f9a"
                           className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
                             fieldErrors.fsaCode
                               ? "border-red-500 focus:ring-red-500/5"
@@ -761,14 +794,12 @@ function AuthContent() {
                         <GraduationCap className="w-5 h-5 text-brand shrink-0 mt-0.5" />
                         <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
                           Saisissez votre e-mail (si pré-enregistré par
-                          l&apos;administration) ou le code FSA figurant sur
-                          votre relevé ou attestation. Pour aller plus vite,
-                          vous pouvez aussi saisir uniquement les 5 derniers
-                          caractères du code FSA (ex:{" "}
+                          l&apos;administration) ou le code FSA complet
+                          figurant sur votre relevé ou attestation (ex :{" "}
                           <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-brand-dark">
-                            f0f9a
+                            FSA-2026-M01-00042-f0f9a
                           </code>
-                          ).
+                          ). Les fragments du code ne sont pas acceptés.
                         </p>
                       </div>
                     </div>
@@ -792,10 +823,10 @@ function AuthContent() {
                     </Button>
                   </>
                 )}
-              </motion.form>
+              </MotionForm>
             ) : verificationMode === "email" ? (
               /* ================= ÉTAPE 2 : VÉRIFICATION E-MAIL ================= */
-              <motion.div
+              <MotionDiv
                 key="email-verify"
                 custom={direction}
                 variants={slideVariants}
@@ -888,10 +919,10 @@ function AuthContent() {
                     </button>
                   </div>
                 </form>
-              </motion.div>
+              </MotionDiv>
             ) : (
               /* ================= ÉTAPE 2 : OTP FSA ================= */
-              <motion.div
+              <MotionDiv
                 key="step2"
                 custom={direction}
                 variants={slideVariants}
@@ -984,7 +1015,7 @@ function AuthContent() {
                     </button>
                   </div>
                 </form>
-              </motion.div>
+              </MotionDiv>
             )}
           </AnimatePresence>
         </div>

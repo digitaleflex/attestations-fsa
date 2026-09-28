@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
+import { handleApiError } from '@/lib/error-handler';
 
 export async function GET(
   request: Request,
@@ -39,7 +40,14 @@ export async function GET(
     });
 
     return NextResponse.json(logs);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    // #321 — plus de `error.message` brut : les erreurs Prisma de cette lecture
+    //        (colonnes, contraintes) partaient au client. Détail conservé côté
+    //        serveur et en production uniquement sous forme générique.
+    return handleApiError(error, {
+      route: '/api/admin/attestations/[id]/audit',
+      operation: 'list_attestation_audit',
+      userId: adminUser.id ?? undefined,
+    });
   }
 }

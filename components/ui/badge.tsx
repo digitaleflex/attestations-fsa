@@ -4,7 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  // `focus:` -> `focus-visible:` : un badge n'est pas un contrôle, mais
+  // lorsqu'il est rendu focusable (lien, bouton) l'anneau doit apparaître au
+  // clavier seulement, pas au clic. `ring-offset-2` aligne l'anneau sur celui
+  // de `Button`.
+  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
   {
     variants: {
       variant: {

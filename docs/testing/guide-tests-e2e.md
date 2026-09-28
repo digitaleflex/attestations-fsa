@@ -15,7 +15,7 @@
 ### 1. Prérequis
 
 - Docker Desktop en marche (daemon actif)
-- Node 22 + pnpm 9.15.4
+- Node 24 + pnpm 9.15.4
 - Navigateur Playwright : `npx playwright install chromium`
 
 ### 2. Base de données E2E (séparée de la dev)

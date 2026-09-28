@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { formatAppDate } from "@/lib/exams/schedule-ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -271,8 +272,12 @@ export default function AdminExamsPage() {
                     <div className="flex items-center justify-between mt-auto">
                         <div className="flex flex-col">
                             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                                <Clock className="w-3.5 h-3.5" />
-                                {new Date(exam.status === 'SCHEDULED' && exam.scheduledAt ? exam.scheduledAt : exam.createdAt).toLocaleDateString("fr-FR", { month: 'short', day: 'numeric', year: 'numeric' })}
+                                <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                                {/* Heure Africa/Porto-Novo : la machine de l'admin
+                                    peut être n'importe où, la date affichée non. */}
+                                <time dateTime={new Date(exam.status === 'SCHEDULED' && exam.scheduledAt ? exam.scheduledAt : exam.createdAt).toISOString()}>
+                                    {formatAppDate(exam.status === 'SCHEDULED' && exam.scheduledAt ? exam.scheduledAt : exam.createdAt)}
+                                </time>
                             </div>
                         </div>
                         <Link href={`/admin/exams/${exam.id}/edit`}>

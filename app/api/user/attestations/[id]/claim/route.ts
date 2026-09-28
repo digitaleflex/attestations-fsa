@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { applyRateLimitByUser } from "@/lib/rate-limit";
+import { mutationSealData } from "@/lib/attestations/proof";
 
 export async function POST(
   request: Request,
@@ -12,11 +15,22 @@ export async function POST(
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
+    // #310 — Le claim est une mutation sensible (bascule VALIDATED -> CLAIMED
+    // et rescellage du certificat) : quota distribué IP + utilisateur, et
+    // refus (503) si le compteur est indisponible — pas de filet mémoire
+    // fail-open ici, contrairement aux endpoints non sensibles.
+    const rateLimit = await applyRateLimitByUser(
+      request,
+      user.id,
+      "attestationClaim",
+    );
+    if (!rateLimit.allowed) return rateLimit.response;
+
     const { id } = await params;
 
     const attestation = await prisma.attestation.findUnique({
       where: { id },
-      select: { userId: true, status: true }
+      include: { formation: { select: { name: true } } }
     });
 
     if (!attestation) {
@@ -29,9 +43,14 @@ export async function POST(
 
     // On passe en statut CLAIMED seulement si elle était VALIDATED
     if (attestation.status === "VALIDATED") {
+      const mutation = {
+        status: "CLAIMED",
+      } satisfies Prisma.AttestationUncheckedUpdateInput;
       await prisma.attestation.update({
         where: { id },
-        data: { status: "CLAIMED" }
+        data: attestation.type === "CERTIFICATION" && attestation.sessionId
+          ? { ...mutation, ...mutationSealData(attestation, mutation) }
+          : mutation
       });
     }
 

@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_APP_PORT, E2E_BASE_URL, getE2eDatabaseUrl } from "./e2e/setup/env";
+import {
+  E2E_APP_PORT,
+  E2E_BASE_URL,
+  E2E_CERT_SEAL_SECRET,
+  E2E_PDF_GENERATOR_MODULE,
+  E2E_STORAGE_DIR,
+  E2E_TEST_PDF_GENERATOR,
+  getE2eDatabaseUrl,
+} from "./e2e/setup/env";
 import { E2E_DIST_DIR, snapshotTsconfig } from "./e2e/setup/tsconfig-restore";
 
 /**
@@ -94,6 +102,33 @@ export default defineConfig({
       // définie dans process.env n'est jamais écrasée par .env.local).
       UPSTASH_REDIS_REST_URL: "",
       UPSTASH_REDIS_REST_TOKEN: "",
+      // ── Émission d'attestation + preuve PDF (#258) ─────────────────────
+      // Le flux métier n'émet une CERTIFICATION que si un générateur PDF
+      // SERVEUR est configuré. La suite charge ici une fixture locale
+      // (`e2e/fixtures/pdf-generator.mjs`) qui produit un PDF minimal
+      // réellement valide : aucun document officiel n'est simulé, et toute la
+      // chaîne réelle (génération → stockage → SHA-256 → scellement →
+      // vérification publique → redirection 307) est bien exercée.
+      ATTESTATION_PDF_GENERATOR_MODULE: E2E_PDF_GENERATOR_MODULE,
+      // Double garde de la fixture : sans ce marqueur (ou en NODE_ENV
+      // =production) elle refuse de produire le moindre octet.
+      E2E_TEST_PDF_GENERATOR: E2E_TEST_PDF_GENERATOR,
+      // Clé de scellement factice, propre à la suite. Sans elle,
+      // `issueExamAttestation` refuse d'émettre (blocage #155) ET le
+      // vérificateur ne peut pas prouver la validité du sceau.
+      CERT_SEAL_SECRET: E2E_CERT_SEAL_SECRET,
+      // Stockage des PDF du run hors `public/` : le bucket de production est
+      // privé, le PDF E2E ne doit donc pas être servi en statique par
+      // `next dev` ni laisser d'artefact non suivi dans l'arbre de travail.
+      STORAGE_DRIVER: "local",
+      STORAGE_LOCAL_DIR: E2E_STORAGE_DIR,
+      // Préfixe PUBLIC ABSOLU : `/api/verifier/pdf` fait un
+      // `NextResponse.redirect(url)`, qui refuse une URL relative
+      // (« URL is malformed »). En production, le driver S3/R2 renvoie
+      // toujours une URL signée absolue ; le driver local doit donc être
+      // configuré avec une origine explicite pour que la suite prouve la
+      // redirection 307 + `no-store` au lieu d'un 500 de configuration.
+      STORAGE_PUBLIC_PREFIX: `${E2E_BASE_URL}/uploads`,
     },
   },
 });

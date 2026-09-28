@@ -63,7 +63,15 @@ export interface Attestation {
   instructor: string;
   issuingCompany: string;
   status: AttestationStatus;
-  pdfUrl: string | null;
+  pdfUrl: string | null; // historique uniquement ; ne jamais y stocker une URL signée
+  pdfKey: string | null;
+  pdfHash: string | null;
+  pdfVersion: number | null;
+  pdfGeneratedAt: Date | string | null;
+  sealHash?: string | null;
+  sealedAt?: Date | string | null;
+  sealVersion?: number | null;
+  sessionId?: string | null;
   gender: "M" | "F" | null;
   stageHours: number | null;
   stageScore: number | null;

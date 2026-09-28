@@ -5,9 +5,16 @@ import { LocalStorageDriver } from "./local-driver";
 import { StorageConfigError } from "./types";
 
 describe("buildObjectKey", () => {
-  it("génère une clé préfixée par sous-dossier avec extension canonique", () => {
-    expect(buildObjectKey("application/pdf", "abc123")).toBe("cv/abc123.pdf");
-    expect(buildObjectKey("image/webp", "xyz")).toBe("images/xyz.webp");
+  it("génère une clé préfixée par usage avec extension canonique", () => {
+    expect(buildObjectKey("application/pdf", "cv", "abc123")).toBe("cv/abc123.pdf");
+    expect(buildObjectKey("image/webp", "cv", "xyz123")).toBe("cv/xyz123.webp");
+  });
+
+  it("sépare les usages par préfixe dédié", () => {
+    expect(buildObjectKey("application/pdf", "internship", "abc123")).toBe("stages/abc123.pdf");
+    expect(buildObjectKey("application/pdf", "attestation", "abc123")).toBe("attestations/abc123.pdf");
+    expect(buildObjectKey("application/pdf", "export", "abc123")).toBe("exports/abc123.pdf");
+    expect(buildObjectKey("image/png", "temporary", "abc123")).toBe("temporary/abc123.png");
   });
 });
 

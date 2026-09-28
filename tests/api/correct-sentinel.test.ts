@@ -2,14 +2,14 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 const db = vi.hoisted(() => ({
   sessionFindUnique: vi.fn(),
-  sessionUpdate: vi.fn(),
+  sessionUpdateMany: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     examSession: {
       findUnique: db.sessionFindUnique,
-      update: db.sessionUpdate,
+      updateMany: db.sessionUpdateMany,
     },
   },
 }));
@@ -47,6 +47,7 @@ function makeSubmission(overrides: Record<string, unknown> = {}) {
     examId: "exam-1",
     userId: "user-1",
     status: "PENDING_REVIEW",
+    submittedAt: new Date("2026-09-01T10:00:00Z"),
     scorePart1: 60,
     scorePart2: null,
     scorePart3: null,
@@ -96,9 +97,42 @@ beforeEach(() => {
   deps.pusherTrigger.mockResolvedValue(undefined as never);
   deps.issueExamAttestation.mockResolvedValue({ created: true } as never);
   deps.sendExamResults.mockResolvedValue(undefined as never);
+  db.sessionUpdateMany.mockResolvedValue({ count: 1 } as never);
 });
 
-describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#117)", () => {
+describe("POST /api/admin/submissions/[id]/correct — transitions et barème (#257)", () => {
+  it.each(["IN_PROGRESS", "PENDING"])(
+    "refuse une correction d'une session %s non soumise",
+    async (status) => {
+      db.sessionFindUnique.mockResolvedValue(
+        makeSubmission({ status, submittedAt: null }),
+      );
+
+      const res = await callCorrect({ part1Score: 60, part2Score: 20, part3Score: 20 });
+
+      expect(res.status).toBe(409);
+      expect(db.sessionUpdateMany).not.toHaveBeenCalled();
+      expect(deps.issueExamAttestation).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuse une correction quand submittedAt est absent même si le statut est PENDING_REVIEW", async () => {
+    db.sessionFindUnique.mockResolvedValue(makeSubmission({ submittedAt: null }));
+
+    const res = await callCorrect({ part1Score: 60, part2Score: 20, part3Score: 20 });
+
+    expect(res.status).toBe(409);
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("refuse une correction concurrente perdue", async () => {
+    db.sessionUpdateMany.mockResolvedValue({ count: 0 } as never);
+
+    const res = await callCorrect({ part1Score: 60, part2Score: 20, part3Score: 20 });
+
+    expect(res.status).toBe(409);
+    expect(deps.issueExamAttestation).not.toHaveBeenCalled();
+  });
   it("refuse GRADED si une partie activée n'est pas notée (première correction)", async () => {
     db.sessionFindUnique.mockResolvedValue(makeSubmission());
 
@@ -107,7 +141,7 @@ describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#
 
     expect(res.status).toBe(400);
     expect(json.error).toMatch(/Partie 2 non corrigée/);
-    expect(db.sessionUpdate).not.toHaveBeenCalled();
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
     expect(deps.issueExamAttestation).not.toHaveBeenCalled();
   });
 
@@ -119,16 +153,12 @@ describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#
 
     expect(res.status).toBe(400);
     expect(json.error).toMatch(/Partie 3 non corrigée/);
-    expect(db.sessionUpdate).not.toHaveBeenCalled();
+    expect(db.sessionUpdateMany).not.toHaveBeenCalled();
     expect(deps.issueExamAttestation).not.toHaveBeenCalled();
   });
 
   it("accepte la correction complète et émet l'attestation", async () => {
     db.sessionFindUnique.mockResolvedValue(makeSubmission());
-    db.sessionUpdate.mockResolvedValue(
-      makeSubmission({ status: "GRADED", scorePart2: 20, scorePart3: 20 }),
-    );
-
     const res = await callCorrect({
       part1Score: 60,
       part2Score: 20,
@@ -139,9 +169,12 @@ describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#
     expect(res.status).toBe(200);
     expect(json.passed).toBe(true);
     expect(json.attestationGenerated).toBe(true);
-    expect(db.sessionUpdate).toHaveBeenCalledWith(
+    expect(db.sessionUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "sub-1" },
+        where: expect.objectContaining({
+          id: "sub-1",
+          status: "PENDING_REVIEW",
+        }),
         data: expect.objectContaining({
           status: "GRADED",
           scorePart2: 20,
@@ -158,9 +191,6 @@ describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#
     db.sessionFindUnique.mockResolvedValue(
       makeSubmission({ internshipScore: 18, finalScore: 60 }),
     );
-    db.sessionUpdate.mockResolvedValue(
-      makeSubmission({ status: "GRADED", scorePart2: 20, scorePart3: 20, internshipScore: 18 }),
-    );
 
     const res = await callCorrect({
       part1Score: 60,
@@ -174,7 +204,7 @@ describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#
     // finalScore = 100/100 = 100 % (internshipScore ignoré dans le calcul)
     expect(json.submission.finalScore).toBe(100);
     // internshipScore reste stocké tel quel (préservé, pas modifié par la correction)
-    expect(db.sessionUpdate).toHaveBeenCalledWith(
+    expect(db.sessionUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           internshipScore: 18,
@@ -192,17 +222,13 @@ describe("POST /api/admin/submissions/[id]/correct — sentinelle parties 2/3 (#
         scorePart3: 20,
       }),
     );
-    db.sessionUpdate.mockResolvedValue(
-      makeSubmission({ status: "GRADED", scorePart2: 20, scorePart3: 20 }),
-    );
-
     // Re-correction : on ne renvoie que part1 — les parties 2/3 gardent leur valeur stockée
     const res = await callCorrect({ part1Score: 55 });
     const json = await res.json();
 
     expect(res.status).toBe(200);
     expect(json.passed).toBe(true);
-    expect(db.sessionUpdate).toHaveBeenCalledWith(
+    expect(db.sessionUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           scorePart2: 20,

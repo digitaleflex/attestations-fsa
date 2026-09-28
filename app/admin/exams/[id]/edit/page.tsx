@@ -5,6 +5,7 @@ import { ExamForm } from "@/components/exams/exam-form";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { appDayKey, toAppWallClock } from "@/lib/exams/schedule-ui";
 
 export default function EditExamPage() {
   const params = useParams();
@@ -19,11 +20,17 @@ export default function EditExamPage() {
           // Transform API response to form data format (preserve every editable field)
           const scheduledAt = (() => {
             if (!data.scheduledAt) return "";
-            const d = new Date(data.scheduledAt);
-            if (Number.isNaN(d.getTime())) return "";
-            const pad = (n: number) => String(n).padStart(2, "0");
-            // Keep full local wall-clock time so edits do not shift the schedule
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            return toAppWallClock(data.scheduledAt) ?? "";
+          })();
+
+          // `opensOn` est stocké en UTC (minuit Porto-Novo = 23:00 UTC la
+          // veille) mais se saisit comme un JOUR : on le relit en clé de
+          // journée Africa/Porto-Novo, sinon l'édition affiche la veille et
+          // décale l'ouverture d'un jour à chaque sauvegarde.
+          const opensOn = (() => {
+            const explicit = appDayKey(data.opensOn);
+            if (explicit) return explicit;
+            return data.scheduledAt ? appDayKey(data.scheduledAt) ?? "" : "";
           })();
 
           const formData = {
@@ -32,6 +39,7 @@ export default function EditExamPage() {
             description: data.description || "",
             status: data.status || "DRAFT",
             scheduledAt,
+            opensOn,
             session: data.session || "",
             duration: data.duration ?? 3600,
             passingScore: data.passingScore ?? 65,

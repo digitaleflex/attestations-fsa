@@ -6,14 +6,14 @@
 //             (STORAGE_ALLOW_LOCAL_IN_PRODUCTION=true + STORAGE_LOCAL_DIR hors public/)
 
 import { resolve, join, sep } from "path";
-import { nanoid } from "nanoid";
 import { LocalStorageDriver } from "./local-driver";
 import { S3StorageDriver } from "./s3-driver";
 import { StorageConfigError, type StorageDriver } from "./types";
-import { resolveSubdirectory, safeExtension, type AllowedMimeType } from "./validation";
+import { resolveSubdirectory, safeExtension } from "./validation";
+import { normalizeReadUrlTtl } from "./keys";
 
 export { StorageConfigError } from "./types";
-export type { StorageDriver } from "./types";
+export type { StorageDriver, SignedUrlOptions } from "./types";
 export {
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE,
@@ -23,13 +23,23 @@ export {
   validateUpload,
 } from "./validation";
 export type { AllowedMimeType, FileValidationResult } from "./validation";
+export {
+  DEFAULT_READ_URL_TTL_SECONDS,
+  IMMUTABLE_PURPOSES,
+  MAX_READ_URL_TTL_SECONDS,
+  PURPOSE_PREFIX,
+  STORAGE_PURPOSES,
+  buildObjectKey,
+  isOfficialObjectKey,
+  isStoragePurpose,
+  keyPrefixForPurpose,
+  looksLikeSignedUrl,
+  normalizeReadUrlTtl,
+  purposeFromKey,
+} from "./keys";
+export type { StoragePurpose } from "./keys";
 
 export type NodeProcessEnv = Record<string, string | undefined>;
-
-/** Construit une clé logique unique et sûre : `<subdir>/<id><ext>`. */
-export function buildObjectKey(mime: AllowedMimeType, id: string = nanoid(12)): string {
-  return `${resolveSubdirectory(mime)}/${id}${safeExtension(mime)}`;
-}
 
 function parseForcePathStyle(value: string | undefined): boolean {
   return value === "true" || value === "1";
@@ -97,7 +107,8 @@ export function createStorage(env: NodeProcessEnv = process.env): StorageDriver 
       secretAccessKey: env.S3_SECRET_ACCESS_KEY,
       forcePathStyle: parseForcePathStyle(env.S3_FORCE_PATH_STYLE),
       publicBaseUrl: env.S3_PUBLIC_BASE_URL,
-      signedUrlTtlSeconds: Number.isFinite(ttl) && ttl > 0 ? ttl : undefined,
+      // Bucket privé : durée d'URL signée courte et bornée (60 s, max 300 s).
+      signedUrlTtlSeconds: normalizeReadUrlTtl(Number.isFinite(ttl) ? ttl : undefined),
     });
   }
 

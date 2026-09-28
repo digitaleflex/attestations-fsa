@@ -11,19 +11,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FileText, Download, Search, Filter, X, QrCode, Eye, 
   Share2, ChevronRight, Clock, Lock, AlertCircle, Send, 
-  CheckCircle, ClipboardList, Loader2, Award, FileSpreadsheet, BarChart3
+  CheckCircle, ClipboardList, Loader2, Award, FileSpreadsheet, BarChart3, RefreshCw
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import dynImport from "next/dynamic";
-import CertificateTemplate from "@/components/CertificateTemplate";
 import { SkeletonCard, SkeletonStats } from "@/components/SkeletonLoader";
-
-// Import dynamique de html2pdf pour éviter les erreurs SSR
-const html2pdf = dynImport(() => import("html2pdf.js"), { ssr: false });
+import {
+  CandidateEmptyState,
+  CandidateErrorState,
+} from "@/components/CandidateStates";
+import {
+  attestationVerificationPath,
+  isOfficialPdfDownloadable,
+  startOfficialPdfDownload,
+} from "@/lib/attestations/client-download";
 import {
   Select,
   SelectContent,
@@ -52,7 +56,7 @@ export default function UserAttestationsPage() {
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["user-attestations"],
     queryFn: async () => {
       const res = await fetch("/api/user/attestations");
@@ -65,48 +69,37 @@ export default function UserAttestationsPage() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // #258 : le PDF est généré, scellé et stocké par le serveur. Le navigateur
+  // ne fait que déclencher le téléchargement du document probant.
   const handleDownload = async (att: any) => {
+    if (!isOfficialPdfDownloadable(att.status)) {
+      toast.error("Ce document n'est pas encore disponible au téléchargement.");
+      return;
+    }
     setDownloading(att.code);
-    toast.info(`Préparation de l'attestation ${att.code}...`);
-
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
-      const element = document.getElementById(`cert-template-${att.id}`);
-
-      if (!element) {
-        toast.error("Erreur technique : Template introuvable");
+      if (!startOfficialPdfDownload(att.code)) {
+        toast.error("Le téléchargement a été bloqué par le navigateur : autorisez les pop-ups pour ce site.");
         return;
       }
-
-      const opt = {
-        margin: 0,
-        filename: `Attestation_FSA_${att.fullName.replace(/\s+/g, '_')}_${att.code}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
-
-      await html2pdf().set(opt).from(element).save();
-      toast.success("✅ Attestation téléchargée !");
-
-      try {
-        await fetch(`/api/user/attestations/${att.id}/claim`, { method: "POST" });
-        queryClient.invalidateQueries({ queryKey: ["user-attestations"] });
-      } catch (e) {
-        console.error("Error claiming:", e);
-      }
+      toast.success("Attestation officielle téléchargée.");
+      await fetch(`/api/user/attestations/${att.id}/claim`, { method: "POST" });
+      queryClient.invalidateQueries({ queryKey: ["user-attestations"] });
     } catch (error) {
-      console.error("PDF Error:", error);
-      toast.error("Erreur lors de la génération du PDF");
+      console.error("Download Error:", error);
+      toast.error("Erreur lors du téléchargement du document officiel");
     } finally {
       setDownloading(null);
     }
   };
 
+  const hasActiveFilters =
+    search.trim() !== "" || statusFilter !== "all" || typeFilter !== "all";
+
   const filteredAttestations = data?.attestations?.filter((att: any) => {
     const matchSearch = att.fullName.toLowerCase().includes(search.toLowerCase()) ||
       att.code.toLowerCase().includes(search.toLowerCase()) ||
-      att.formation?.name.toLowerCase().includes(search.toLowerCase());
+      (att.formation?.name || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || att.status === statusFilter;
     const matchType = typeFilter === "all" || att.type === typeFilter;
     return matchSearch && matchStatus && matchType;
@@ -132,13 +125,60 @@ export default function UserAttestationsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div
+        className="space-y-8"
+        // Zone en cours de mise à jour : annoncée poliment, jamais en
+        // interruption, et marquée occupée le temps du chargement.
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span className="sr-only">Chargement de vos attestations…</span>
         <div className="space-y-4">
            <SkeletonStats />
         </div>
-        <Card className="p-4 bg-white shadow-sm h-16 animate-pulse" />
-        <div className="grid grid-cols-1 gap-4">
+        <Card className="p-4 bg-white shadow-sm h-16 animate-pulse" aria-hidden="true" />
+        <div className="grid grid-cols-1 gap-4" aria-hidden="true">
           {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      </div>
+    );
+  }
+
+  // Échec de chargement : message d'erreur + relance, jamais « zéro document ».
+  if (isError) {
+    return (
+      <div className="space-y-8">
+        <header>
+          <h1 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight">
+            Mes Attestations
+          </h1>
+          <p className="text-slate-600 text-sm font-medium mt-1">
+            Consultez et téléchargez vos documents officiels.
+          </p>
+        </header>
+        <CandidateErrorState
+          title="Impossible de charger vos attestations"
+          description="Vos documents n'ont pas pu être récupérés. Vérifiez votre connexion internet puis relancez le chargement."
+        />
+        {/* La relance est portée par la page : le libellé d'attente (« Nouvelle
+            tentative… ») dépend de `isFetching`, et le bouton doit rester
+            atteignable au clavier juste sous le message d'erreur. */}
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-busy={isFetching}
+            className="min-h-[44px] gap-2 rounded-xl border-rose-200 font-bold text-rose-700 hover:bg-rose-50"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            {isFetching ? "Nouvelle tentative…" : "Réessayer"}
+          </Button>
         </div>
       </div>
     );
@@ -183,12 +223,12 @@ export default function UserAttestationsPage() {
             {/* Filters */}
             <Card className="p-6 bg-white shadow-xl shadow-slate-200/50 rounded-3xl border-none">
               <div className="flex items-center gap-2 mb-4">
-                <Filter className="w-4 h-4 text-slate-500" />
+                <Filter className="w-4 h-4 text-slate-600" aria-hidden="true" />
                 <span className="text-sm font-black uppercase tracking-widest text-slate-700">Filtres</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2 relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" aria-hidden="true" />
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -241,17 +281,31 @@ export default function UserAttestationsPage() {
 
             {/* List */}
             {!filteredAttestations || filteredAttestations.length === 0 ? (
-              <Card className="p-16 bg-white shadow-xl shadow-slate-200/50 border-none rounded-[2.5rem]">
-                <div className="text-center flex flex-col items-center">
-                  <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center mb-6">
-                    <FileText className="w-10 h-10 text-slate-300" />
-                  </div>
-                  <p className="text-xl font-black text-slate-900 mb-2">Aucune attestation trouvée</p>
-                  <p className="text-sm font-medium text-slate-500">
-                    Essayez de modifier vos filtres
-                  </p>
-                </div>
-              </Card>
+              hasActiveFilters ? (
+                <CandidateEmptyState
+                  icon={
+                    <Search className="h-8 w-8 text-slate-500" aria-hidden="true" />
+                  }
+                  title="Aucune attestation ne correspond à ces filtres"
+                  description="Aucune attestation ne correspond à vos filtres actuels. Ajustez la recherche, le statut ou le type sélectionné, ou réinitialisez les filtres pour revoir tous vos documents."
+                  primaryAction={{
+                    label: "Réinitialiser les filtres",
+                    onClick: () => {
+                      setSearch("");
+                      setStatusFilter("all");
+                      setTypeFilter("all");
+                    },
+                  }}
+                />
+              ) : (
+                <CandidateEmptyState
+                  icon={
+                    <FileText className="h-8 w-8 text-slate-500" aria-hidden="true" />
+                  }
+                  title="Vous n'avez pas encore d'attestation"
+                  description="Vos attestations apparaîtront ici dès qu'elles seront émises et validées par la Ferme Saint André."
+                />
+              )
             ) : (
               <div className="grid grid-cols-1 gap-6">
                 {filteredAttestations.map((att: any) => (
@@ -280,19 +334,19 @@ export default function UserAttestationsPage() {
                             </Badge>
                           </div>
                           <p className="text-sm font-semibold text-slate-600 mb-3">
-                            {att.formation?.name || "-"} <span className="text-slate-300 mx-2">•</span>
+                            {att.formation?.name || "-"} <span className="text-slate-500 mx-2" aria-hidden="true">•</span>
                             <span className="text-brand font-bold uppercase tracking-widest text-[10px]">
                               {att.type === "FORMATION" ? "Formation" : att.type === "STAGE" ? "Stage" : "Certification"}
                             </span>
                           </p>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-medium text-slate-500 bg-slate-50 p-3 sm:p-2 sm:bg-transparent rounded-xl sm:rounded-none">
                             <div className="flex items-center gap-2">
-                              <QrCode className="w-4 h-4 text-slate-400" />
+                              <QrCode className="w-4 h-4 text-slate-500" aria-hidden="true" />
                               <span>Code: <span className="font-mono font-bold bg-white sm:bg-slate-100 px-2 py-1 rounded-md shadow-sm sm:shadow-none">{att.isLocked ? "••••-••••-••••" : att.code}</span></span>
                             </div>
-                            <span className="hidden sm:inline text-slate-300">•</span>
+                            <span className="hidden sm:inline text-slate-500" aria-hidden="true">•</span>
                             <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-slate-400" />
+                              <Clock className="w-4 h-4 text-slate-500" aria-hidden="true" />
                               <span>Obtenue le {new Date(att.issuedAt).toLocaleDateString("fr-FR")}</span>
                             </div>
                           </div>
@@ -360,6 +414,14 @@ export default function UserAttestationsPage() {
                               setQrDialogOpen(true);
                             }}
                             title={att.isLocked ? "Verrouillé" : "Partager le QR Code"}
+                            // `title` seul ne donne pas de nom accessible fiable
+                            // (ni au clavier, ni pour beaucoup de lecteurs d'écran) :
+                            // ce bouton ne contient qu'une icône.
+                            aria-label={
+                              att.isLocked
+                                ? `QR code indisponible tant que ${att.code} est verrouillé`
+                                : `Afficher le QR code de vérification de l'attestation ${att.code}`
+                            }
                             disabled={att.isLocked || (att.status !== "VALIDATED" && att.status !== "CLAIMED")}
                           >
                             <QrCode className="w-4 h-4" />
@@ -381,6 +443,15 @@ export default function UserAttestationsPage() {
                             }}
                             disabled={(att.status !== "VALIDATED" && att.status !== "CLAIMED") || downloading === att.code || att.isLocked}
                             title={att.isLocked ? "Verrouillé" : (att.status === "CLAIMED" ? "Télécharger à nouveau" : "Télécharger en PDF")}
+                            // Idem bouton QR : nom accessible explicite, et
+                            // `aria-busy` pendant la génération du PDF pour
+                            // qu'un lecteur d'écran annonce l'attente.
+                            aria-label={
+                              att.isLocked
+                                ? `Téléchargement indisponible tant que ${att.code} est verrouillé`
+                                : `Télécharger l'attestation ${att.code} au format PDF`
+                            }
+                            aria-busy={downloading === att.code}
                           >
                             {downloading === att.code ? (
                               <div className="animate-spin w-4 h-4 border-2 border-brand border-t-transparent rounded-full" />
@@ -442,14 +513,14 @@ export default function UserAttestationsPage() {
             <div className="text-center space-y-6 py-4">
               <div className="flex justify-center p-4 bg-slate-50 rounded-3xl inline-block mx-auto border border-slate-100">
                 <QRCodeSVG
-                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verifier/${selectedAttestation.code}`}
+                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}${attestationVerificationPath(selectedAttestation.code)}`}
                   size={200}
                   level="H"
                   className="rounded-xl"
                 />
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Code de l'attestation</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-2">Code de l'attestation</p>
                 <p className="font-mono text-2xl font-black text-slate-900 bg-slate-100 py-2 px-4 rounded-xl inline-block">{selectedAttestation.code}</p>
               </div>
               <p className="text-sm font-medium text-slate-500 max-w-xs mx-auto">
@@ -487,7 +558,7 @@ export default function UserAttestationsPage() {
                 onChange={(e) => setReportReason(e.target.value)}
               />
             </div>
-            <div className="bg-amber-50/50 p-4 rounded-2xl text-xs font-medium text-amber-700/80 flex gap-3 items-start">
+            <div className="bg-amber-50/50 p-4 rounded-2xl text-xs font-medium text-amber-800 flex gap-3 items-start">
               <Clock className="w-4 h-4 shrink-0 mt-0.5" />
               L'administration recevra votre demande et vous contactera par email sous 48h.
             </div>
@@ -529,30 +600,6 @@ export default function UserAttestationsPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Templates cachés pour la génération PDF (Capture technique) */}
-      <div className="absolute top-0 left-0 opacity-0 pointer-events-none -z-50 overflow-hidden" style={{ width: '1120px' }}>
-        {data?.attestations?.filter((a: any) => (a.status === "VALIDATED" || a.status === "CLAIMED") && !a.isLocked).map((att: any) => (
-          <div key={`capture-${att.id}`}>
-             <CertificateTemplate
-                id={`cert-template-${att.id}`}
-                data={{
-                  fullName: att.fullName,
-                  formationName: att.formation?.name || "Formation Saint André",
-                  code: att.code,
-                  issuedAt: att.issuedAt,
-                  startDate: att.startDate,
-                  endDate: att.endDate,
-                  score: att.type === "FORMATION" ? att.certificationScore : att.stageScore,
-                  hours: att.type === "FORMATION" ? att.certificationHours : att.stageHours,
-                  type: att.type,
-                  gender: att.gender,
-                  status: att.status
-                }}
-              />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

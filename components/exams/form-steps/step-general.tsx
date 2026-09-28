@@ -6,8 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ExamFormData } from "../types";
 import React, { useEffect, useState } from "react";
-import { Calendar, FileText, BookOpen, Info, Target, Shuffle, Eye } from "lucide-react";
+import { Calendar, FileText, BookOpen, Info, Target, Shuffle, Eye, Sunrise } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import {
+  APP_TIMEZONE_LABEL,
+  APP_TIMEZONE_SHORT,
+  formatAppDateTime,
+  formatAppLongDate,
+  fromAppWallClock,
+} from "@/lib/exams/schedule-ui";
 
 type Props = {
   formData: ExamFormData;
@@ -35,6 +42,53 @@ export function StepGeneral({ formData, updateFormData }: Props) {
   const handleStatusChange = (value: string) => {
     updateFormData({ status: value as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SCHEDULED" });
   };
+
+  /**
+   * Relecture de l'instant qui sera réellement stocké.
+   *
+   * `scheduledAt` et `opensOn` sont saisis en heure murale Porto-Novo ; la base
+   * stocke de l'UTC. Afficher les deux côte à côte supprime la seule vraie
+   * source d'erreur de ce formulaire : un admin qui saisit 08:00 en croyant
+   * écrire de l'UTC, et fait commencer l'épreuve une heure trop tôt.
+   */
+  const schedulePreview = (() => {
+    const wallClock = formData.scheduledAt || "";
+    const startInstant = fromAppWallClock(wallClock);
+    const openInstant = formData.opensOn
+      ? fromAppWallClock(`${formData.opensOn}T00:00`)
+      : null;
+
+    if (!wallClock && !formData.opensOn) return "";
+    if (wallClock && !startInstant) return "Date d'épreuve illisible.";
+    if (formData.opensOn && !openInstant) return "Jour d'ouverture illisible.";
+
+    const lines: string[] = [];
+    if (openInstant) {
+      lines.push(
+        `Ouverture : ${formatAppLongDate(openInstant)} 00:00 (${APP_TIMEZONE_LABEL}) = ${openInstant.toISOString()}`,
+      );
+    }
+    if (startInstant) {
+      lines.push(
+        `Début    : ${formatAppDateTime(startInstant)} (${APP_TIMEZONE_SHORT}) = ${startInstant.toISOString()}`,
+      );
+    }
+    if (openInstant && startInstant && startInstant.getTime() < openInstant.getTime()) {
+      lines.push(
+        "⚠ Le début précède l'ouverture : le candidat verra l'épreuve mais ne pourra pas la démarrer.",
+      );
+    }
+    return lines.join("\n");
+  })();
+
+  // Un examen publié dont l'heure est future reste verrouillé côté serveur. Ce
+  // n'est pas bloquant ici (le serveur tranche), mais l'admin doit le savoir.
+  const publishedButLocked =
+    formData.status === "PUBLISHED" &&
+    (() => {
+      const startInstant = fromAppWallClock(formData.scheduledAt || "");
+      return startInstant ? startInstant.getTime() > Date.now() : false;
+    })();
 
 
   return (
@@ -120,40 +174,90 @@ export function StepGeneral({ formData, updateFormData }: Props) {
         <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-5">
           <div className="flex items-center gap-2 mb-1">
             <Calendar className="w-5 h-5 text-brand" />
-            <h3 className="font-extrabold text-slate-800 uppercase tracking-tight text-sm">Programmation & Statut</h3>
+            <h3 className="font-extrabold text-slate-800 uppercase tracking-tight text-sm">Programmation &amp; Statut</h3>
           </div>
+
+          <p className="text-xs leading-relaxed text-slate-500">
+            Toutes les heures de ce formulaire sont saisies en{" "}
+            <strong className="font-bold text-slate-700">{APP_TIMEZONE_LABEL}</strong>,
+            quel que soit le fuseau de votre ordinateur. Les candidats voient
+            la même chose.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">
+              <Label htmlFor="exam-date" className="text-sm font-semibold text-slate-700">
                 Date de l&apos;Examen (JJ/MM/AAAA)
               </Label>
               <DateInput
+                id="exam-date"
                 value={formData.scheduledAt?.split("T")[0] || ""}
                 onChange={(e) => {
                   const date = e.target.value;
                   const time = formData.scheduledAt?.split("T")[1] || "08:00";
-                  updateFormData({ scheduledAt: `${date}T${time}` });
+                  // Le jour d'ouverture suit la date d'épreuve tant que
+                  // l'admin ne l'a pas detached : changer la date d'un examen
+                  // déjà ouvert ne doit pas le refermer ailleurs.
+                  const followsExamDate =
+                    !formData.opensOn ||
+                    formData.opensOn === formData.scheduledAt?.split("T")[0];
+                  updateFormData({
+                    scheduledAt: `${date}T${time}`,
+                    ...(followsExamDate ? { opensOn: date } : {}),
+                  });
                 }}
                 className="h-12 focus:ring-2 focus:ring-brand/20 font-bold"
+                aria-label="Date de l'examen (jour, mois, année)"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">
+              <Label htmlFor="exam-time" className="text-sm font-semibold text-slate-700">
                 Heure (Format 24h)
               </Label>
               <Input
+                id="exam-time"
                 type="time"
                 value={formData.scheduledAt?.split("T")[1] || "08:00"}
                 onChange={(e) => {
                   const time = e.target.value;
-                  const date = formData.scheduledAt?.split("T")[0] || new Date().toISOString().split("T")[0];
+                  const date = formData.scheduledAt?.split("T")[0] || "";
                   updateFormData({ scheduledAt: `${date}T${time}` });
                 }}
                 className="h-12 focus:ring-2 focus:ring-brand/20 font-bold"
+                aria-label="Heure de l'examen (format 24 heures)"
+                aria-describedby="exam-schedule-preview"
               />
             </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="exam-opens-on" className="text-sm font-semibold text-slate-700">
+                Jour d&apos;ouverture au public
+              </Label>
+              <DateInput
+                id="exam-opens-on"
+                value={formData.opensOn || ""}
+                onChange={(e) => updateFormData({ opensOn: e.target.value })}
+                className="h-12 focus:ring-2 focus:ring-brand/20 font-bold"
+                aria-label="Jour d'ouverture au public (jour, mois, année)"
+                aria-describedby="exam-opens-on-help"
+              />
+              <p id="exam-opens-on-help" className="text-[10px] font-medium leading-relaxed text-slate-400">
+                À minuit ce jour-là, l&apos;épreuve devient visible : les
+                candidats voient son titre et ses horaires, mais ni le contenu,
+                ni le barème, ni la durée. Avant l&apos;heure prévue ci-dessus, le
+                démarrage reste refusé.
+              </p>
+            </div>
+
+            {/* Relecture inattaquable : l'admin voit exactement l'instant UTC
+                qui sera stocké, donc il peut vérifier ce que la base recevra. */}
+            <p
+              id="exam-schedule-preview"
+              className="whitespace-pre-line md:col-span-2 rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-600"
+            >
+              {schedulePreview || "Renseignez une date pour voir l'instant stocké."}
+            </p>
 
             <div className="md:col-span-2">
               <div className="space-y-2">
@@ -182,6 +286,23 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                 </p>
               </div>
             )}
+
+            {publishedButLocked && (
+              <div className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="flex items-start gap-2 text-sm font-medium text-amber-900">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    Examen publié mais encore verrouillé : aucun candidat ne
+                    pourra le démarrer avant{" "}
+                    {formatAppDateTime(
+                      fromAppWallClock(formData.scheduledAt),
+                    )}{" "}
+                    ({APP_TIMEZONE_SHORT}). Choisissez « Programmé » si c&apos;est
+                    l&apos;effet recherché.
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -194,11 +315,12 @@ export function StepGeneral({ formData, updateFormData }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">
+              <Label htmlFor="exam-session-month" className="text-sm font-semibold text-slate-700">
                 Session de l&apos;Examen
               </Label>
               <div className="flex gap-2">
                 <select
+                  id="exam-session-month"
                   className="flex-1 h-12 px-3 border border-slate-200 rounded-md focus:ring-2 focus:ring-slate-400/20 outline-none bg-white font-bold"
                   value={formData.session?.split(" ")[0] || ""}
                   onChange={(e) => {
@@ -213,6 +335,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   ))}
                 </select>
                 <Input
+                  id="exam-session-year"
                   type="number"
                   placeholder="Année"
                   className="w-24 h-12 font-bold"
@@ -226,12 +349,14 @@ export function StepGeneral({ formData, updateFormData }: Props) {
               </div>
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label className="text-sm font-semibold text-slate-700">Durée Totale (HH:MM:SS)</Label>
+            <fieldset className="space-y-2 md:col-span-2">
+              <legend className="text-sm font-semibold text-slate-700">Durée Totale (HH:MM:SS)</legend>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Input
+                    id="exam-duration-hours"
                     type="number"
+                     aria-label="Heures de la durée totale"
                     placeholder="HH"
                     min="0"
                     value={Math.floor((formData.duration || 0) / 3600)}
@@ -249,7 +374,9 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                 <span className="text-xl font-bold text-slate-300 mb-4">:</span>
                 <div className="flex-1">
                   <Input
+                    id="exam-duration-minutes"
                     type="number"
+                     aria-label="Minutes de la durée totale"
                     placeholder="MM"
                     min="0"
                     max="59"
@@ -268,7 +395,9 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                 <span className="text-xl font-bold text-slate-300 mb-4">:</span>
                 <div className="flex-1">
                   <Input
+                    id="exam-duration-seconds"
                     type="number"
+                     aria-label="Secondes de la durée totale"
                     placeholder="SS"
                     min="0"
                     max="59"
@@ -285,7 +414,7 @@ export function StepGeneral({ formData, updateFormData }: Props) {
                   <p className="text-[9px] text-center text-slate-400 mt-1 font-bold">SECONDES</p>
                 </div>
               </div>
-            </div>
+            </fieldset>
           </div>
         </div>
 

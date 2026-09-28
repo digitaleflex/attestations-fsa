@@ -2,6 +2,9 @@
   "name": "attestation-fsa",
   "version": "3.0.1",
   "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build --webpack",
@@ -11,6 +14,11 @@
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "data:export-reference": "ts-node --project tsconfig.seed.json scripts/export-reference.ts",
+    "data:integrity": "ts-node --project tsconfig.seed.json scripts/check-data-integrity.ts --dry-run",
+    "data:migration-plan": "ts-node --project tsconfig.seed.json scripts/classify-attestation-migration.ts --dry-run",
+    "backup:manifest": "ts-node --project tsconfig.seed.json scripts/backup-manifest.ts",
+    "backup:verify-restore": "ts-node --project tsconfig.seed.json scripts/verify-backup-restore.ts",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
@@ -18,6 +26,7 @@
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate",
     "test:coverage": "vitest run --coverage",
+    "test:r2-scripts": "bash scripts/tests/test-r2-scripts.sh",
     "verify": "tsc --noEmit && eslint . && vitest run",
     "e2e:db:up": "docker compose -f compose.local.yml up -d postgres-e2e",
     "e2e:db:down": "docker compose -f compose.local.yml stop postgres-e2e",
@@ -98,7 +107,6 @@
   "devDependencies": {
     "@eslint/js": "^9.30.1",
     "@playwright/test": "^1.63.0",
-    "@storybook/addon-a11y": "^9.0.16",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/chart.js": "^2.9.41",
     "@types/node": "^20.19.4",
@@ -108,7 +116,6 @@
     "@types/webpack": "^5.28.5",
     "@vitest/coverage-v8": "^4.1.9",
     "autoprefixer": "^10.4.21",
-    "cross-env": "^7.0.3",
     "dotenv": "^17.2.0",
     "eslint": "^9.30.1",
     "eslint-config-prettier": "^10.1.5",

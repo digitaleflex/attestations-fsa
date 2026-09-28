@@ -1,140 +1,94 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
 import { createAuditLog } from '@/lib/audit';
-import { sealCertificate } from '@/lib/crypto/seal';
-import { customAlphabet } from 'nanoid';
-
-const nanoid = customAlphabet('1234567890abcdef', 5);
+import {
+  StageAttestationError,
+  issueStageAttestation,
+} from '@/lib/stage-attestation';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const adminUser = await getAdminUser(request);
+  if (!adminUser) {
+    return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
+  }
+
+  const { id } = await params; // InternshipRequest ID
+  const ipAddress = request.headers.get("x-forwarded-for") || "unknown";
+
+  let body: unknown;
   try {
-    const adminUser = await getAdminUser(request);
-    if (!adminUser) {
-      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { message: "Corps de requête JSON invalide", code: "VALIDATION_ERROR" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    // #265 — statut ACCEPTED exigé, idempotence et anti-doublon concurrent
+    //        garantis en transaction. #266 — corps validé strictement.
+    const outcome = await issueStageAttestation({ internshipRequestId: id, body });
+
+    // L'issue() ne retourne que des succès ; les refus sont des exceptions.
+    if (!outcome.ok) {
+      return NextResponse.json(
+        { message: "Génération refusée", code: outcome.code },
+        { status: outcome.status },
+      );
     }
-
-    const { id } = await params; // InternshipRequest ID
-    const body = await request.json();
-    const { startDate, endDate, location, instructor, stageScore, stageObservations } = body;
-
-    // 1. Récupérer la demande de stage
-    const internship = await prisma.internshipRequest.findUnique({
-      where: { id },
-      include: { user: true }
-    });
-
-    if (!internship) {
-      return NextResponse.json({ message: "Demande non trouvée" }, { status: 404 });
-    }
-
-    // 2. Trouver ou créer une formation "Stage" pour le domaine
-    // On essaie de trouver une formation qui correspond au "position" (ex: "Pisciculture")
-    let formation = await prisma.formation.findFirst({
-        where: { name: { contains: internship.position, mode: 'insensitive' } }
-    });
-
-    // Si non trouvé, on prend la première ou on en crée une générique
-    if (!formation) {
-        formation = await prisma.formation.findFirst({
-            where: { category: 'STAGE' }
-        });
-        
-        if (!formation) {
-            formation = await prisma.formation.create({
-                data: {
-                    name: `Stage en ${internship.position}`,
-                    category: 'STAGE',
-                    description: 'Stage pratique professionnel'
-                }
-            });
-        }
-    }
-
-    // 3. Récupérer les réglages pour l'identité visuelle
-    const settings = await prisma.settings.findFirst();
-
-    // 4. Générer le code d'attestation unique
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const count = await prisma.attestation.count({
-        where: {
-            issuedAt: {
-                gte: new Date(year, now.getMonth(), 1),
-                lt: new Date(year, now.getMonth() + 1, 1)
-            }
-        }
-    });
-    const seq = String(count + 1).padStart(5, '0');
-    const hash = nanoid();
-    const attestationCode = `FSA-${year}-${month}-${seq}-${hash}`;
-
-    // 5. Créer l'attestation
-    // Scellement HMAC-SHA256 (#155) : empreinte des données gravées.
-    const seal = sealCertificate({
-      code: attestationCode,
-      fullName: internship.fullName,
-      formationName: formation.name,
-      endDate: new Date(endDate),
-    });
-
-    const attestation = await prisma.attestation.create({
-      data: {
-        code: attestationCode,
-        type: 'STAGE',
-        fullName: internship.fullName,
-        birthDate: internship.user?.birthDate || new Date(1995, 0, 1),
-        birthPlace: internship.user?.birthPlace || "Non spécifié",
-        formationId: formation.id,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        location: location || settings?.location || "Abomey-Calavi",
-        instructor: instructor || settings?.instructorName || "Ferme St André",
-        issuingCompany: settings?.institutionName || "Ferme Agro-Piscicole Cité St André",
-        status: 'VALIDATED',
-        stageScore: parseFloat(stageScore || "100"),
-        stageObservations: stageObservations || "Stage terminé avec succès.",
-        userId: internship.userId,
-        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
-      }
-    });
-
-    // 5. Archiver la demande de stage
-    await prisma.internshipRequest.update({
-      where: { id },
-      data: { status: 'ARCHIVED' }
-    });
 
     // 🛡️ Audit Log
     await createAuditLog({
       userId: adminUser.id,
       action: 'INTERNSHIP_ATTESTATION_GENERATED' as any,
       resource: 'INTERNSHIP_ATTESTATION',
-      resourceId: attestation.id,
-      newValue: { 
-          code: attestation.code,
-          internshipRequestId: id,
-          userId: internship.userId,
-          stageScore: parseFloat(stageScore || "100")
+      resourceId: outcome.attestation.id,
+      newValue: {
+        code: outcome.attestation.code,
+        internshipRequestId: id,
+        userId: outcome.userId,
+        stageScore: outcome.stageScore,
       },
-      ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+      ipAddress,
     });
 
     return NextResponse.json({
       message: "Attestation de stage générée avec succès",
-      code: attestation.code,
-      id: attestation.id
+      code: outcome.attestation.code,
+      id: outcome.attestation.id,
+    });
+  } catch (error) {
+    if (error instanceof StageAttestationError) {
+      return NextResponse.json(
+        {
+          message: error.message,
+          code: error.code,
+          ...(error.issues ? { issues: error.issues } : {}),
+        },
+        { status: error.status },
+      );
+    }
+
+    // #266 — aucun détail Prisma n'est renvoyé au client ; le journal serveur
+    //        conserve la trace complète pour le diagnostic.
+    console.error("[INTERNSHIP_ATTESTATION_ERROR]", {
+      route: "admin/internships/[id]/attestation",
+      operation: "issue",
+      internshipRequestId: id,
+      adminUserId: adminUser.id,
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : { name: "Unknown", message: String(error) },
     });
 
-  } catch (error) {
-    console.error("[INTERNSHIP_ATTESTATION_ERROR]", error);
-    return NextResponse.json({ 
-        message: "Erreur lors de la génération de l'attestation",
-        error: error instanceof Error ? error.message : "Inconnue"
-    }, { status: 500 });
+    return NextResponse.json(
+      { message: "Erreur interne lors de la génération de l'attestation", code: "INTERNAL_ERROR" },
+      { status: 500 },
+    );
   }
 }

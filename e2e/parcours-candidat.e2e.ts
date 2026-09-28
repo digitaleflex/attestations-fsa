@@ -14,15 +14,20 @@
  * fichier et le rapport #139). Le chemin API est utilisé ici pour ne pas
  * masquer le défaut UI tout en prouvant le reste de la chaîne.
  *
- * Les tests sont ordonnés (workers: 1) et partagent l'état applicatif de la
- * base E2E : le test 2 produit la session + l'attestation que les tests 3 et 4
- * consomment. Aucune attestation n'est insérée en base par le harnais.
+ * Le parcours métier reste dans un seul test afin qu'un échec d'interface ne
+ * laisse pas une boucle de téléchargement dépendante d'un test précédent. Ce
+ * test ne peut pas être rejoué après une mutation réussie : son retry est
+ * désactivé explicitement. Aucune attestation n'est insérée par le harnais.
  */
 import { test, expect } from "@playwright/test";
 import { loginAsCandidate } from "./support/auth";
 import { getIssuedCertification, getSeededExam } from "./support/database";
 
 test.describe("Parcours candidat de bout en bout (#139)", () => {
+  // Le parcours métier mute la session et l'attestation : un retry ne peut pas
+  // repartir d'un état propre sans rejouer le globalSetup.
+  test.describe.configure({ retries: 0 });
+
   test("1. authentification : le candidat semé atteint son espace", async ({
     page,
   }) => {
@@ -41,7 +46,7 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
     ).toBeVisible();
   });
 
-  test("2. cœur métier : il passe le QCM et obtient un résultat réussi", async ({
+  test("2. parcours complet : réussite, attestation, téléchargement et vérification", async ({
     page,
   }) => {
     const exam = await getSeededExam();
@@ -49,8 +54,9 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
 
     await loginAsCandidate(page);
 
-    // L'examen semé est SCHEDULED avec scheduledAt dans le passé :
-    // `autoOpenDueExams()` doit l'avoir ouvert et il doit être proposé.
+    // L'examen semé est SCHEDULED avec `scheduledAt` dans le passé : il est
+    // ouvert et démarrable (`hasOpened`), sans dépendre d'un basculement de
+    // statut par une route publique.
     await page.goto("/exams");
     await expect(page.getByRole("heading", { name: exam.name })).toBeVisible();
     await expect(
@@ -81,7 +87,7 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
       finalScore: number;
       maxScore: number;
     };
-    expect(submitBody.status).toBe("COMPLETED");
+    expect(submitBody.status).toBe("GRADED");
     expect(submitBody.finalScore).toBe(100);
     expect(submitBody.maxScore).toBe(20);
 
@@ -94,11 +100,7 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
       .locator("div.rounded-2xl")
       .filter({ has: page.getByRole("heading", { name: exam.name }) });
     await expect(resultCard.getByText("100%", { exact: true })).toBeVisible();
-  });
 
-  test("3. certificat : l'attestation est émise par le flux applicatif, puis visible", async ({
-    page,
-  }) => {
     // Oracle base : l'attestation doit exister côté serveur, insérée par
     // `issueExamAttestation` lors de la soumission — jamais par le harnais.
     const certification = await getIssuedCertification();
@@ -109,8 +111,6 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
     expect(certification!.status).toBe("VALIDATED");
     expect(certification!.code).toMatch(/^FSA-\d{4}-M\d{2}-\d{5}-[0-9a-f]{5}$/);
     expect(certification!.sessionId).toBeTruthy();
-
-    await loginAsCandidate(page);
 
     // Détail du résultat (page /results/[id]) accessible depuis la session.
     // `next dev` compile cette route dynamique et son API à la PREMIÈRE visite :
@@ -141,17 +141,11 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
       page.getByText(certification!.code, { exact: true }),
     ).toBeVisible();
     await expect(page.getByText("Validée").first()).toBeVisible();
-  });
 
-  test("4. boucle complète : téléchargement + code accepté par la page publique", async ({
-    page,
-  }) => {
-    const certification = await getIssuedCertification();
-    expect(certification).not.toBeNull();
+    // La boucle de téléchargement et la vérification publique appartiennent au
+    // même test métier : elles réutilisent l'attestation qui vient d'être créée,
+    // sans dépendre d'un test Playwright distinct.
     const code = certification!.code;
-
-    await loginAsCandidate(page);
-    await page.goto("/attestations");
 
     // Aperçu officiel → page /attestations/[id]
     await page.getByRole("link", { name: /Aperçu/ }).click();
@@ -160,11 +154,30 @@ test.describe("Parcours candidat de bout en bout (#139)", () => {
     // mentions « Réf: <code>… » / « CODE: <code> » du document officiel.
     await expect(page.getByText(code, { exact: true })).toBeVisible();
 
-    // Téléchargement PDF généré côté client (html2pdf).
-    const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
-    await page.getByRole("button", { name: /Télécharger \(PDF\)/ }).click();
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toContain(code.slice(-5));
+    // Téléchargement du document officiel (#258) : le PDF n'est plus fabriqué
+    // dans le navigateur. Le bouton déclenche la redirection serveur vers
+    // l'URL signée de courte durée — on vérifie donc le point de téléchargement
+    // contrôlé plutôt que le nom de fichier proposé par le navigateur.
+    const downloadButton = page.getByRole("button", { name: /Télécharger \(PDF\)/ });
+    await expect(downloadButton).toBeEnabled();
+
+    const verifier = await page.request.get(`/api/verifier?code=${encodeURIComponent(code)}`);
+    expect(verifier.status()).toBe(200);
+    const proof = (await verifier.json()) as {
+      attestation?: { proof?: { valid?: boolean; pdf?: { available?: boolean; version?: number; downloadPath?: string } } };
+    };
+    expect(proof.attestation?.proof?.valid).toBe(true);
+    expect(proof.attestation?.proof?.pdf?.available).toBe(true);
+    expect(proof.attestation?.proof?.pdf?.version).toBe(1);
+
+    // Redirection 307 vers l'URL signée : jamais d'URL signée persistée,
+    // jamais de PDF régénéré à la volée.
+    const pdf = await page.request.get(
+      `/api/verifier/pdf?code=${encodeURIComponent(code)}`,
+      { maxRedirects: 0 },
+    );
+    expect(pdf.status()).toBe(307);
+    expect(pdf.headers()["cache-control"]).toBe("private, no-store, max-age=0");
 
     // Boucle complète : le code émis par le flux applicatif est authentifié
     // par la page publique de vérification.

@@ -94,7 +94,8 @@ export function ExamPart3({
           </details>
 
           {/* Zone de rédaction */}
-          <div className="space-y-2">
+          <fieldset className="space-y-2">
+            <legend className="sr-only">Composition de l’étude de cas</legend>
             <Label htmlFor="part3" className="text-sm font-semibold text-slate-700">
               Votre réponse :
             </Label>
@@ -114,7 +115,7 @@ export function ExamPart3({
                 {(answers.part3 || "").length} caractères
               </span>
             </div>
-          </div>
+          </fieldset>
 
           {/* Barre d'actions — sticky en bas sur mobile */}
           <div className="sticky bottom-0 z-10 bg-white border-t border-slate-100 pt-3 pb-4 sm:pb-3 -mx-3 px-3 sm:-mx-6 sm:px-6 flex flex-col sm:flex-row gap-2">

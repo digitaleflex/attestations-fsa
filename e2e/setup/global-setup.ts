@@ -4,9 +4,30 @@
  * Ne démarre pas l'application (c'est le rôle de `webServer` dans
  * `playwright.config.ts`) et n'écrit jamais d'attestation : voir `seed.ts`.
  */
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { createE2ePrismaClient } from "./db";
 import { seedE2eData } from "./seed";
-import { E2E_BASE_URL } from "./env";
+import { E2E_BASE_URL, E2E_STORAGE_DIR } from "./env";
+
+/**
+ * Vide le stockage local des PDF du run précédent (#258).
+ *
+ * Les PDF de test vivent hors du dépôt (voir `E2E_STORAGE_DIR`) : sans ce
+ * reset, chaque run empile des documents orphelins dans le répertoire
+ * temporaire. Le garde-fou refuse toute suppression hors de `os.tmpdir()`.
+ */
+async function resetE2eStorage(): Promise<void> {
+  const target = path.resolve(E2E_STORAGE_DIR);
+  const tmp = path.resolve(os.tmpdir());
+  if (target === tmp || !target.startsWith(tmp + path.sep)) {
+    throw new Error(
+      `[e2e] Refus : E2E_STORAGE_DIR ("${target}") est hors de os.tmpdir() — rien n'est supprimé.`,
+    );
+  }
+  await fs.rm(target, { recursive: true, force: true });
+}
 
 /**
  * Pré-compile les routes les plus utilisées avant les tests.
@@ -37,6 +58,8 @@ async function warmUpRoutes(): Promise<void> {
 }
 
 export default async function globalSetup(): Promise<void> {
+  await resetE2eStorage();
+
   const prisma = createE2ePrismaClient();
   try {
     const summary = await seedE2eData(prisma);

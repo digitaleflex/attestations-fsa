@@ -88,11 +88,13 @@ model User {
   auditLogs             AuditLog[]
   correctionRequests    CorrectionRequest[]
   examSessions          ExamSession[]
+  examEnrollments       ExamEnrollment[]
   internships           InternshipRequest[]
   notifications         Notification[]
   reclamations          Reclamation[]
   sessions              Session[]
   twoFactor             TwoFactor[]
+  storedObjects         StoredObject[]
   exam                  Exam?               @relation(fields: [examId], references: [id])
   formation             Formation?          @relation(fields: [formationId], references: [id])
 
@@ -146,7 +148,13 @@ model Attestation {
   instructor                String
   issuingCompany            String
   status                    AttestationStatus     @default(PENDING)
+  // pdfUrl est conservé pour les anciens documents ; aucune nouvelle URL signée
+  // n'est persistée. Les PDF officiels servies à l'avance sont localisés par pdfKey.
   pdfUrl                    String?
+  pdfKey                    String?
+  pdfHash                   String?
+  pdfVersion                Int?
+  pdfGeneratedAt            DateTime?
   certificationHours        Int?
   certificationMention      CertificationMention?
   certificationObservations String?
@@ -160,17 +168,45 @@ model Attestation {
   // Scellement HMAC-SHA256 (#155) — valeur probante interne.
   sealHash                  String?
   sealedAt                  DateTime?
+  sealVersion               Int?
+  // #299/#301 — Cycle de vie NON destructif.
+  //
+  // Une attestation émise, imprimée et vérifiable par un tiers n'est JAMAIS
+  // supprimée physiquement : la ligne porte l'historique de son retrait, le
+  // PDF, son hash et son sceau restent intacts.
+  //
+  //   deletedAt / deletedById / deleteReason : suppression LOGIQUE. Le motif est
+  //     obligatoire côté API ; l'auteur est conservé pour la traçabilité.
+  //   revokedAt / revokedById / revokeReason : révocation PUBLIQUE horodatée.
+  //     Elle accompagne le soft-delete d'une attestation VALIDATED/CLAIMED et
+  //     l'action admin REVOKE (statut `REVOKED`).
+  //   retrogradedAt / retrogradedById / retrogradeReason : dernière rétrogradation.
+  //
+  // `*ById` est un identifiant TEXT volontairement SANS clé étrangère : la
+  // trace d'audit doit survivre à la suppression du compte auteur.
+  deletedAt                 DateTime?
+  deletedById               String?
+  deleteReason              String?
+  revokedAt                 DateTime?
+  revokedById               String?
+  revokeReason              String?
+  retrogradedAt             DateTime?
+  retrogradedById           String?
+  retrogradeReason          String?
   formation                 Formation             @relation(fields: [formationId], references: [id])
   user                      User?                 @relation(fields: [userId], references: [id])
   correctionRequests        CorrectionRequest[]
   reclamations              Reclamation[]
 
   @@index([userId])
-  @@index([sessionId])
+  @@unique([sessionId])
   @@index([status])
   @@index([userId, status])
   @@index([formationId])
   @@index([issuedAt])
+  // #299/#301 — index de l'inventaire des lignes supprimées logiquement.
+  @@index([deletedAt])
+  @@index([status, deletedAt])
 }
 
 model Settings {
@@ -223,6 +259,9 @@ model Exam {
   passingScore       Int           @default(65)
   randomizeQuestions Boolean       @default(false)
   showResults        Boolean       @default(false)
+  // M9 — jour d'ouverture, minuit en APP_TIMEZONE, stocké en UTC (instant).
+  // NULL = repli historique sur le jour local de `scheduledAt` (cf. lib/exams/time.ts).
+  opensOn            DateTime?
   scheduledAt        DateTime?
   session            String?
   formation          Formation?    @relation(fields: [formationId], references: [id])
@@ -230,6 +269,7 @@ model Exam {
   parts              ExamPart[]
   sessions           ExamSession[]
   users              User[]
+  enrollments        ExamEnrollment[]
 }
 
 model ExamPart {
@@ -291,6 +331,13 @@ model ExamSession {
   updatedAt   DateTime          @updatedAt
   answers     Json?             @default("{}")
   observations String?          // notes de correction (texte riche)
+  // #301 — Une session probante n'est JAMAIS supprimée : la rétrogradation
+  // l'ARCHIVE (statut `ARCHIVED` + horodatage + motif). `answers` reste
+  // lisible, le journal d'examen reste reconstituable. `archivedById` est sans
+  // clé étrangère pour que la trace survive à la suppression du compte admin.
+  archivedAt    DateTime?
+  archivedById  String?
+  archiveReason String?
   reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)
   exam        Exam              @relation(fields: [examId], references: [id])
@@ -302,6 +349,45 @@ model ExamSession {
   @@index([userId, status])
   @@index([submittedAt])
   @@index([gradedAt])
+  @@index([archivedAt])
+}
+
+// Inscription explicite à un examen. L'absence de cette ligne ne vaut jamais
+// éligibilité pour un examen OFFICIAL ; les sessions existantes ne sont pas
+// supprimées lors de la transition.
+//
+// #256 — champs de suivi AJOUTÉS de façon additive (TEXT, jamais d'enum, pour
+// rester compatible avec les clés `TEXT` historiques et avec Prisma sans
+// migration destructive). Toutes les colonnes sont nullable ou portent une
+// valeur par défaut : une ligne créée avant ce lot reste lisible et vaut
+// `status = "ACTIVE"` (pas de backfill nécessaire, pas de perte d'information).
+//   status     : ACTIVE | REVOKED (toute autre valeur est traitée comme
+//                invalide et refusée par lib/exams/enrollment.ts)
+//   source     : origine de l'inscription (ADMIN_ASSIGNMENT, IMPORT, API, ...)
+//   grantedById: compte ayant accordé l'inscription (traçabilité admin)
+//   revokedAt / revokedById / revokeReason : révocation logique, jamais de
+//                DELETE physique (les sessions et le journal restent lisibles)
+model ExamEnrollment {
+  id           String    @id @default(uuid())
+  userId       String
+  examId       String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+  status       String    @default("ACTIVE")
+  source       String    @default("ADMIN_ASSIGNMENT")
+  grantedById  String?
+  note         String?
+  revokedAt    DateTime?
+  revokedById  String?
+  revokeReason String?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam         Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, examId])
+  @@index([examId])
+  @@index([userId])
+  @@index([status])
+  @@index([status, examId])
 }
 
 model InternshipRequest {
@@ -312,7 +398,11 @@ model InternshipRequest {
   university String?
   level      String?
   position   String
+  // cvUrl n'est renseigné que pour les demandes historiques (URL déjà
+  // persistée). Les nouveaux envois ne stockent que la clé stable `cvKey` :
+  // aucune URL signée expirante n'est persistée (#260).
   cvUrl      String?
+  cvKey      String?
   message    String?
   status     InternshipStatus @default(PENDING)
   createdAt  DateTime         @default(now())
@@ -423,12 +513,41 @@ model Reclamation {
   @@index([status, createdAt])
 }
 
+// #260 — Registre des objets stockés (R2/S3/local).
+// Le bucket est privé : la base ne conserve que la clé stable, jamais une URL
+// signée expirante. `ownerUserId` permet de vérifier la propriété avant toute
+// lecture ou suppression ; `purpose` interdit la suppression des PDF officiels.
+model StoredObject {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  ownerUserId String?
+  purpose    String
+  linkedEntityType String?
+  linkedEntityId   String?
+  checksum   String
+  sizeBytes  Int?
+  contentType String?
+  // Fin de conservation souhaitée (RGPD). NULL = conservation indéfinie.
+  retentionUntil DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  owner      User?    @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  @@index([ownerUserId])
+  @@index([purpose, createdAt])
+  @@index([linkedEntityType, linkedEntityId])
+  @@index([retentionUntil])
+}
 
 enum AttestationStatus {
   PENDING
   VALIDATED
   REJECTED
   CLAIMED
+  // #299/#301 — révocation PUBLIQUE : la ligne reste en base, vérifiable et
+  // scellée, mais elle n'est plus opposable. Elle remplace l'usage abusive de
+  // `REJECTED` pour une révocation, qui confondait deux événements distincts.
+  REVOKED
 }
 
 enum AttestationType {

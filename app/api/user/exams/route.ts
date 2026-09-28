@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
-import {
-  autoOpenDueExams,
-  isExamAvailable,
-} from "@/lib/exams/availability";
+import { applyRateLimitByUser } from "@/lib/rate-limit";
+import { isExamAvailable } from "@/lib/exams/availability";
+import { hasOpened, opensOn } from "@/lib/exams/time";
 import {
   round2,
   isCorrected,
@@ -15,7 +14,9 @@ import {
 } from "@/lib/exams/scoring";
 
 /** Mapping d'affichage canonique des statuts de session. */
-function displayStatus(status: string): "COMPLETED" | "SUBMITTED" | "IN_PROGRESS" {
+function displayStatus(
+  status: string,
+): "COMPLETED" | "SUBMITTED" | "IN_PROGRESS" {
   if (isCorrected(status)) return "COMPLETED";
   if (status === "PENDING_REVIEW") return "SUBMITTED";
   return "IN_PROGRESS";
@@ -38,6 +39,12 @@ export async function GET(request: Request) {
 
     const userId = userAuth.id;
 
+    // #256 — la liste des examens du candidat n'était pas limitée : elle
+    // énumère les examens OFFICIAL visibles et leur barème. Même budget que la
+    // lecture d'un examen.
+    const rateLimit = await applyRateLimitByUser(request, userId, "examRead");
+    if (!rateLimit.allowed) return rateLimit.response;
+
     const { searchParams } = new URL(request.url);
     const params = ExamsQuerySchema.safeParse({
       search: searchParams.get("search") || undefined,
@@ -53,75 +60,91 @@ export async function GET(request: Request) {
       );
     }
 
-    // Ouvre paresseusement les examens SCHEDULED arrivés à échéance.
-    await autoOpenDueExams();
+    // #256 m9 — une seule référence temporelle pour toutes les décisions de
+    // visibilité de cette réponse.
+    const now = new Date();
+
+    // #256 m9 — la route publique ne déclenche AUCUNE mutation (lazy-open
+    // retiré) : la bascule SCHEDULED -> PUBLISHED appartient au cron interne.
 
     // Requêtes PARALLÈLES (Gain de temps massif)
-    const [user, availableExams, submissions] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { examId: true },
-      }),
-      prisma.exam.findMany({
-        where: {
-          status: { in: ["SCHEDULED", "PUBLISHED"] },
-          type: params.data.type || undefined,
-          // On pourrait ajouter des filtres ici basés sur params.data
-        },
-        select: {
-          id: true,
-          title: true,
-          name: true,
-          description: true,
-          totalPoints: true,
-          passingScore: true,
-          duration: true,
-          part1Questions: true,
-          part2Questions: true,
-          part3Enabled: true,
-          type: true,
-          status: true,
-          scheduledAt: true,
-        },
-        ...(params.data.limit ? { take: params.data.limit } : {}),
-      }),
-      prisma.examSession.findMany({
-        where: {
-          userId,
-          exam: {
+    const [user, availableExams, enrollments, submissions] =
+      await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true },
+        }),
+        prisma.exam.findMany({
+          where: {
+            status: { in: ["SCHEDULED", "PUBLISHED"] },
             type: params.data.type || undefined,
+            // On pourrait ajouter des filtres ici basés sur params.data
           },
-        },
-        select: {
-          id: true,
-          examId: true,
-          totalScore: true,
-          finalScore: true,
-          submittedAt: true,
-          status: true,
-          answers: true,
-          exam: {
-            select: {
-              title: true,
-              name: true,
-              description: true,
-              totalPoints: true,
-              part1Points: true,
-              part2Points: true,
-              part3Points: true,
-              part1Enabled: true,
-              part2Enabled: true,
-              part3Enabled: true,
-              passingScore: true,
-              duration: true,
-              part1Questions: true,
-              part2Questions: true,
-              type: true,
+          select: {
+            id: true,
+            title: true,
+            name: true,
+            description: true,
+            totalPoints: true,
+            passingScore: true,
+            duration: true,
+            part1Questions: true,
+            part2Questions: true,
+            part3Enabled: true,
+            type: true,
+            status: true,
+            scheduledAt: true,
+            opensOn: true,
+          },
+          ...(params.data.limit ? { take: params.data.limit } : {}),
+        }),
+        prisma.examEnrollment.findMany({
+          // #256 : seules les inscriptions ACTIVES ouvrent un OFFICIAL ; une
+          // inscription révoquée est conservée en base (traçabilité) mais ne
+          // doit plus rendre l'examen lisible dans la liste du candidat.
+          where: { userId, status: "ACTIVE" },
+          select: { examId: true },
+        }),
+        prisma.examSession.findMany({
+          where: {
+            userId,
+            exam: {
+              type: params.data.type || undefined,
             },
           },
-        },
-      }),
-    ]);
+          select: {
+            id: true,
+            examId: true,
+            totalScore: true,
+            finalScore: true,
+            submittedAt: true,
+            status: true,
+            answers: true,
+            exam: {
+              select: {
+                title: true,
+                name: true,
+                description: true,
+                totalPoints: true,
+                part1Points: true,
+                part2Points: true,
+                part3Points: true,
+                part1Enabled: true,
+                part2Enabled: true,
+                part3Enabled: true,
+                passingScore: true,
+                duration: true,
+                part1Questions: true,
+                part2Questions: true,
+                type: true,
+                status: true,
+                scheduledAt: true,
+                opensOn: true,
+              },
+            },
+          },
+        }),
+      ]);
 
     if (!user) {
       return NextResponse.json(
@@ -138,18 +161,24 @@ export async function GET(request: Request) {
     // 1. Ajouter les examens complétés
     const completedExams = submissions.map((sub) => {
       const exam = sub.exam;
+      // #256 m9 — avant le jour J, aucun contenu d'examen (description,
+      // barème, durée, volume de questions) ne sort de cette route, même si
+      // une session existe. Seuls le nom et la date d'ouverture sont annoncés.
+      const opened = hasOpened(exam, now);
       const qCount =
         exam.part1Questions + exam.part2Questions + (exam.part3Enabled ? 1 : 0);
 
       // Récupérer le barème personnalisé s'il existe
       const customBareme =
         sub.answers && typeof sub.answers === "object"
-          ? (sub.answers as { _customBareme?: { totalMax?: number } })._customBareme
+          ? (sub.answers as { _customBareme?: { totalMax?: number } })
+              ._customBareme
           : null;
 
       const maxScore = customBareme?.totalMax ?? resolveExamMax(exam);
       const isDone = isCorrected(sub.status);
-      const hasFinalScore = typeof sub.finalScore === "number" && sub.finalScore > 0;
+      const hasFinalScore =
+        typeof sub.finalScore === "number" && sub.finalScore > 0;
       const finalScore = isDone
         ? hasFinalScore
           ? round2(sub.finalScore)
@@ -161,50 +190,65 @@ export async function GET(request: Request) {
         id: sub.examId,
         submissionId: sub.id,
         examName: exam.title || exam.name,
-        examDescription: exam.description,
+        examDescription: opened ? exam.description : null,
         status: displayStatus(sub.status),
         score: sub.totalScore,
-        maxScore: maxScore,
+        maxScore: opened ? maxScore : null,
         finalScore,
-        passingScore,
-        passed: isDone && finalScore !== null && isPassed(finalScore, passingScore),
+        passingScore: opened ? (exam.passingScore ?? 65) : null,
+        passed:
+          isDone && finalScore !== null && isPassed(finalScore, passingScore),
         startedAt: sub.submittedAt,
         completedAt: sub.submittedAt,
-        duration: `${Math.round(exam.duration / 60)} minutes`,
-        questionCount: qCount,
+        duration: opened ? `${Math.round(exam.duration / 60)} minutes` : null,
+        questionCount: opened ? qCount : null,
         type: exam.type,
         isAvailable: false,
+        locked: !opened,
+        opensAt: (opensOn(exam) ?? null)?.toISOString() ?? null,
       };
     });
+
+    const enrolledExamIds = new Set(
+      enrollments.map((enrollment: { examId: string }) => enrollment.examId),
+    );
 
     // 2. Ajouter les examens disponibles (non encore soumis)
     const availableResult = availableExams
       .filter((exam: { id: string }) => !submittedExamIds.has(exam.id))
       .filter(
-        (exam: any) =>
-          !user.examId || user.examId === exam.id || exam.type === "MOCK",
+        (exam: any) => exam.type === "MOCK" || enrolledExamIds.has(exam.id),
       )
-      .map((exam: any) => ({
-        id: exam.id,
-        examName: exam.title || exam.name,
-        examDescription: exam.description,
-        status: "AVAILABLE",
-        score: 0,
-        maxScore: exam.totalPoints || 100,
-        finalScore: null,
-        passingScore: exam.passingScore ?? 65,
-        passed: false,
-        startedAt: null,
-        completedAt: null,
-        scheduledAt: exam.scheduledAt,
-        isAvailable: isExamAvailable(exam),
-        duration: `${Math.round(exam.duration / 60)} minutes`,
-        questionCount:
-          exam.part1Questions +
-          exam.part2Questions +
-          (exam.part3Enabled ? 1 : 0),
-        type: exam.type,
-      }));
+      .map((exam: any) => {
+        // #256 m9 — annonce seule tant que le jour J n'est pas atteint : ni
+        // description, ni barème, ni durée, ni volume de questions. Le front
+        // affiche déjà « Bientôt disponible » via `isAvailable: false`.
+        const opened = hasOpened(exam, now);
+        return {
+          id: exam.id,
+          examName: exam.title || exam.name,
+          examDescription: opened ? exam.description : null,
+          status: "AVAILABLE",
+          score: 0,
+          maxScore: opened ? exam.totalPoints || 100 : null,
+          finalScore: null,
+          passingScore: opened ? (exam.passingScore ?? 65) : null,
+          passed: false,
+          startedAt: null,
+          completedAt: null,
+          scheduledAt: exam.scheduledAt,
+          opensAt: (opensOn(exam) ?? null)?.toISOString() ?? null,
+          isAvailable: isExamAvailable(exam, now),
+          locked: !opened,
+          duration: opened ? `${Math.round(exam.duration / 60)} minutes` : null,
+          questionCount: opened
+            ? exam.part1Questions +
+              exam.part2Questions +
+              (exam.part3Enabled ? 1 : 0)
+            : null,
+          type: exam.type,
+        };
+      });
 
     const examsResult = [...completedExams, ...availableResult];
 

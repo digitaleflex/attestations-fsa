@@ -5,10 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
   Loader2, 
+  RotateCcw,
   Download, 
   Edit, 
   ArrowLeft, 
@@ -44,7 +44,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { SoftDeleteAttestationDialog } from "@/components/admin/attestations/SoftDeleteAttestationDialog";
+import {
+  LifecycleReasonField,
+  LIFECYCLE_REASON_MIN_LENGTH,
+} from "@/components/admin/attestations/LifecycleReasonField";
 import OfficialDocumentComponent from "@/components/OfficialDocument";
+import {
+  attestationVerificationPath,
+  isOfficialPdfDownloadable,
+  startOfficialPdfDownload,
+} from "@/lib/attestations/client-download";
 
 /**
  * Page de détails de l'attestation - FSA Admin
@@ -72,6 +82,7 @@ type AttestationData = {
   status: string;
   issuedAt: string;
   userId: string;
+  pdfVersion?: number | null;
 };
 
 function DateLocale({ date, options }: { date: string | Date; options?: Intl.DateTimeFormatOptions }) {
@@ -89,10 +100,10 @@ export default function AttestationDetailsPage() {
   const id = params?.id as string;
   const router = useRouter();
   const [data, setData] = useState<AttestationData | null>(null);
-  const [isPrinting, setIsPrinting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeDoc, setActiveDoc] = useState<"ATTESTATION">("ATTESTATION");
 
@@ -108,15 +119,26 @@ export default function AttestationDetailsPage() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(null);
     apiFetch(`/api/attestations/${id}`, {}, false)
       .then(async (attData: any) => {
         setData(attData);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [id]);
+      .catch((e: any) => {
+        // Un échec réseau ne doit pas ressembler à un document absent : on
+        // conserve le message pour proposer une relance.
+        setLoadError(e?.message || "Impossible de charger cette attestation");
+        setLoading(false);
+      });
+  }, [id, reloadKey]);
 
-  const [actionReason, setActionReason] = useState("");
+  // Un motif par action : les deux dialogues de cycle de vie ne partagent plus
+  // le même champ, sinon un motif de révocation pouvait être envoyé tel quel
+  // dans une rétrogradation.
+  const [revokeReason, setRevokeReason] = useState("");
+  const [retrogradeReason, setRetrogradeReason] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   const fetchAuditLogs = async () => {
@@ -132,39 +154,61 @@ export default function AttestationDetailsPage() {
     if (id) fetchAuditLogs();
   }, [id]);
 
-  const handleAdminAction = async (action: "REVOKE" | "RETROGRADE") => {
-    if (!actionReason || actionReason.trim().length < 5) {
-      return toast.error("Veuillez saisir un motif d'au moins 5 caractères.");
+  const handleAdminAction = async (action: "REVOKE" | "RETROGRADE", reason: string) => {
+    const trimmed = reason.trim();
+    if (trimmed.length < LIFECYCLE_REASON_MIN_LENGTH) {
+      return toast.error(`Veuillez saisir un motif d'au moins ${LIFECYCLE_REASON_MIN_LENGTH} caractères.`);
     }
 
     setActionLoading(true);
+    setActionError(null);
     try {
       const res = await fetch(`/api/admin/attestations/${id}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, reason: actionReason }),
+        body: JSON.stringify({ action, reason: trimmed }),
       });
-      
+
       if (!res.ok) {
-        const err = await res.json();
+        const err = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+        // Une ligne supprimée logiquement est figée : le dire clairement plutôt
+        // que de laisser un « Une erreur est survenue » sans issue.
+        if (err.code === "ATTESTATION_ALREADY_SOFT_DELETED") {
+          setActionError(
+            "Cette attestation est supprimée logiquement : elle est figée, plus aucune action de cycle de vie n'est possible.",
+          );
+          return;
+        }
+        if (err.code === "MOTIF_REQUIS") {
+          setActionError(
+            `Le serveur a refusé l'action : un motif d'au moins ${LIFECYCLE_REASON_MIN_LENGTH} caractères est obligatoire.`,
+          );
+          return;
+        }
         throw new Error(err.error || "Une erreur est survenue");
       }
 
-      if (action === 'RETROGRADE') {
-        toast.success("✅ Candidat rétrogradé. L'attestation est maintenant 'En attente' et l'examen réinitialisé.");
+      if (action === "RETROGRADE") {
+        toast.success("Candidat rétrogradé. L'attestation repasse « En attente » et la session d'examen est archivée.");
         // Rafraîchir les données locales au lieu de rediriger
         apiFetch(`/api/attestations/${id}`, {}, false).then(setData as any);
         fetchAuditLogs();
+        setRetrogradeReason("");
         return;
       }
 
       const updated = await res.json();
       setData(updated.attestation);
-      setActionReason(""); // Reset motif
+      setRevokeReason(""); // Reset motif
       fetchAuditLogs(); // Rafraîchir l'historique
-      toast.success(action === 'REVOKE' ? "🚫 Attestation révoquée !" : "🔄 Candidat rétrogradé !");
+      toast.success("Attestation révoquée : elle reste visible publiquement, marquée « révoquée ».");
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'action");
+      const message =
+        err?.message && err.message !== "Une erreur est survenue"
+          ? err.message
+          : "L'action n'a pas abouti. L'attestation est inchangée. Réessayez.";
+      setActionError(message);
+      toast.error(message);
     } finally {
       setActionLoading(false);
     }
@@ -186,79 +230,36 @@ export default function AttestationDetailsPage() {
     }
   };
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await apiFetch(`/api/attestations/${id}`, { method: "DELETE" });
-      toast.success("🗑️ Attestation supprimée avec succès");
-      router.push("/admin/attestations");
-    } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la suppression");
-      setIsDeleting(false);
-    }
+  // Le dialogue partagé exécute lui-même la suppression logique (motif
+  // obligatoire) : cette page se limite au retour vers la liste.
+  const handleDeleted = () => {
+    setShowDeleteDialog(false);
+    router.push("/admin/attestations");
   };
 
+  // #258 : le PDF est généré et scellé par le serveur. L'administration
+  // télécharge le document probant existant, elle ne le régénère pas.
   const handleDownloadAttestation = async () => {
     if (!data) return;
-    const fileName = `${data.code.slice(-5)}_${data.fullName.replace(/\s+/g, "_")}.pdf`;
-
-    toast.promise(
-      (async () => {
-        try {
-          setIsPrinting(true);
-          await new Promise((resolve) => setTimeout(resolve, 600));
-
-          const html2pdf = (await import("html2pdf.js")).default;
-          const element = document.getElementById("minimalist-preview-card");
-
-          if (!element) {
-            throw new Error("Aperçu du diplôme non trouvé");
-          }
-
-          const opt = {
-            margin: 0,
-            filename: fileName,
-            image: { type: "jpeg", quality: 0.98 },
-            html2canvas: {
-              scale: 2,
-              useCORS: true,
-              letterRendering: true,
-              width: 1120,
-              windowWidth: 1120,
-            },
-            jsPDF: {
-              unit: "mm",
-              format: "a4",
-              orientation: "landscape",
-            },
-          };
-
-          await html2pdf().set(opt).from(element).save();
-
-          await fetch("/api/admin/audit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "ATTESTATION_EXPORTED",
-              resource: "ATTESTATION",
-              resourceId: id,
-              userId: data.userId,
-              details: { fileName, docType: "ATTESTATION" },
-            }),
-          });
-        } catch (error: any) {
-          console.error("PDF Generation Error (Admin):", error);
-          throw error;
-        } finally {
-          setIsPrinting(false);
-        }
-      })(),
-      {
-        loading: "Génération du diplôme officiel...",
-        success: "Téléchargement réussi !",
-        error: (err) => `Erreur : ${err.message || "Problème technique"}`,
-      }
-    );
+    if (!startOfficialPdfDownload(data.code)) {
+      toast.error("Le téléchargement a été bloqué par le navigateur : autorisez les pop-ups pour ce site.");
+      return;
+    }
+    try {
+      await fetch("/api/admin/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ATTESTATION_EXPORTED",
+          resource: "ATTESTATION",
+          resourceId: id,
+          userId: data.userId,
+          details: { docType: "ATTESTATION", source: "SERVER_PDF", pdfVersion: data.pdfVersion ?? null },
+        }),
+      });
+    } catch (error) {
+      console.error("Audit download (Admin):", error);
+    }
   };
 
   const handleTransmitTranscript = async () => {
@@ -300,8 +301,14 @@ export default function AttestationDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin w-8 h-8 text-slate-400" />
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-3"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <Loader2 aria-hidden="true" className="animate-spin w-8 h-8 text-slate-500" />
+        <p className="text-sm font-medium text-slate-600">Chargement de l'attestation…</p>
       </div>
     );
   }
@@ -310,13 +317,25 @@ export default function AttestationDetailsPage() {
     return (
       <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="max-w-4xl mx-auto">
-          <Alert variant="destructive">
-            <AlertTitle>Attestation non trouvée</AlertTitle>
-            <AlertDescription>Cette attestation n'existe pas ou a été supprimée.</AlertDescription>
+          <Alert variant={loadError ? "default" : "destructive"}>
+            <AlertTitle>{loadError ? "Chargement impossible" : "Attestation non trouvée"}</AlertTitle>
+            <AlertDescription>
+              {loadError
+                ? `${loadError} Vérifiez votre connexion puis réessayez.`
+                : "Cette attestation n'existe pas ou a été supprimée."}
+            </AlertDescription>
           </Alert>
-          <Link href="/admin/attestations">
-            <Button className="mt-4">← Retour à la liste</Button>
-          </Link>
+          <div className="flex flex-wrap gap-3 mt-4">
+            {loadError && (
+              <Button onClick={() => setReloadKey((k) => k + 1)} className="gap-2">
+                <RotateCcw aria-hidden="true" className="w-4 h-4" />
+                Réessayer
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link href="/admin/attestations">← Retour à la liste</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -342,7 +361,11 @@ export default function AttestationDetailsPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "VALIDATED": return "Validée";
-      case "REJECTED": return "Révoquée";
+      // `REVOKED` (révocation publique) et `REJECTED` (rejet de dossier) sont
+      // deux états distincts côté serveur : ne pas les confondre en un seul
+      // mot affiché à l'opérateur.
+      case "REVOKED": return "Révoquée";
+      case "REJECTED": return "Rejetée";
       default: return "En attente";
     }
   };
@@ -374,7 +397,13 @@ export default function AttestationDetailsPage() {
                   Modifier
                 </Button>
               </Link>
-              <Button onClick={() => handleDownloadAttestation()} variant="outline" className="gap-2 bg-brand/10 text-brand-dark border-brand/30 w-full sm:w-auto">
+              <Button
+                onClick={() => handleDownloadAttestation()}
+                disabled={!isOfficialPdfDownloadable(data.status)}
+                variant="outline"
+                className="gap-2 bg-brand/10 text-brand-dark border-brand/30 w-full sm:w-auto"
+                title={isOfficialPdfDownloadable(data.status) ? "Télécharger le PDF serveur scellé" : "Aucun PDF serveur disponible pour ce statut"}
+              >
                 <Download className="w-4 h-4" />
                 Télécharger PDF
               </Button>
@@ -398,7 +427,7 @@ export default function AttestationDetailsPage() {
             </div>
             <Badge className={getStatusBadgeColor(data.status)}>
               {data.status === "VALIDATED" ? <CheckCircle className="w-3 h-3 mr-1" /> :
-               data.status === "REJECTED" ? <XCircle className="w-3 h-3 mr-1" /> :
+               data.status === "REJECTED" || data.status === "REVOKED" ? <XCircle className="w-3 h-3 mr-1" /> :
                <Clock className="w-3 h-3 mr-1" />}
               {getStatusLabel(data.status)}
             </Badge>
@@ -430,11 +459,9 @@ export default function AttestationDetailsPage() {
 
             {/* Corps minimaliste */}
             <div className="p-8 md:p-12 bg-white flex justify-center items-center min-h-[500px]">
-                <OfficialDocumentComponent 
-                    id="minimalist-preview-card"
-                    isPrinting={isPrinting}
+                <OfficialDocumentComponent
+                    id="official-preview-card"
                     data={{
-                        id: data.id,
                         code: data.code,
                         fullName: data.fullName,
                         formationName: data.formation?.name || "Formation Professionnelle",
@@ -458,8 +485,8 @@ export default function AttestationDetailsPage() {
                 <h3 className="font-semibold text-slate-800">QR Code de vérification</h3>
               </div>
               <div className="flex justify-center">
-                <QRCodeSVG 
-                  value={`${window.location.origin}/verifier/${data.code}`}
+                <QRCodeSVG
+                  value={`${window.location.origin}${attestationVerificationPath(data.code)}`}
                   size={180}
                   level="H"
                 />
@@ -512,92 +539,109 @@ export default function AttestationDetailsPage() {
               <div className="space-y-3">
                 <div className="h-px bg-slate-100 my-4" />
                 <div className="flex flex-col gap-3">
-                    {data.status !== "REJECTED" && (
-                        <AlertDialog>
+                    {/* Révocation — le document reste visible publiquement. */}
+                    {data.status !== "REJECTED" && data.status !== "REVOKED" && (
+                        <AlertDialog onOpenChange={(open) => { if (open) setActionError(null); }}>
                           <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              className="w-full gap-2 border-amber-300 text-amber-600 hover:bg-amber-50"
+                            <Button
+                              variant="outline"
+                              className="w-full gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
                               disabled={actionLoading}
                             >
-                              <XCircle className="w-4 h-4" />
-                              Révoquer l'attestation
+                              <XCircle className="w-4 h-4" aria-hidden="true" />
+                              Révoquer l&apos;attestation
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-white border-2 border-amber-100 shadow-2xl">
+                          <AlertDialogContent className="bg-white border-2 border-amber-100 shadow-2xl rounded-3xl sm:max-w-xl">
                              <AlertDialogHeader>
                                <AlertDialogTitle className="flex items-center gap-2 text-amber-600 font-bold text-xl">
-                                 ⚠️ Annuler cette attestation ?
+                                 <XCircle className="w-6 h-6" aria-hidden="true" />
+                                 Révoquer cette attestation ?
                                </AlertDialogTitle>
-                               <AlertDialogDescription className="text-slate-600 mt-2 text-base">
-                                 Cela marquera ce certificat comme <span className="font-bold underline">REJETÉ</span>. 
-                                 Le candidat ne pourra plus l'utiliser officiellement.<br/><br/>
-                                 <strong className="text-slate-900">Motif de la révocation obligatoire :</strong>
+                               <AlertDialogDescription className="text-slate-600 mt-2 text-sm leading-relaxed font-medium">
+                                 Le document <span className="font-bold text-slate-900">reste visible et
+                                 vérifiable</span> publiquement, mais il est marqué
+                                 <span className="font-bold text-amber-700"> «&nbsp;révoquée&nbsp;»</span>{" "}
+                                 (statut, date, auteur, motif). Pour la retirer du vérificateur
+                                 public, utilisez la suppression logique, plus bas.
                                </AlertDialogDescription>
                              </AlertDialogHeader>
                              <div className="py-4">
-                                <Input 
-                                    placeholder="Ex: Erreur de saisie noms, Inaptitude détectée..." 
-                                    value={actionReason}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActionReason(e.target.value)}
-                                    className="border-amber-100 focus-visible:ring-amber-500"
-                                />
+                               <LifecycleReasonField
+                                 id="attestation-revoke-reason"
+                                 label="Motif de la révocation (obligatoire)"
+                                 tone="amber"
+                                 value={revokeReason}
+                                 onChange={setRevokeReason}
+                                 serverError={actionError}
+                                 placeholder="Ex : erreur de saisie du nom à la source, attestation non délivrée."
+                               />
                              </div>
-                             <AlertDialogFooter className="mt-4 gap-3">
-                               <AlertDialogCancel className="border-slate-200">Annuler</AlertDialogCancel>
-                               <AlertDialogAction 
-                                 onClick={() => handleAdminAction('REVOKE')} 
-                                 disabled={actionReason.length < 5}
-                                 className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-200"
+                             <AlertDialogFooter className="mt-2 gap-3">
+                               <AlertDialogCancel className="border-slate-200 font-bold rounded-xl min-h-[44px]">
+                                 Annuler
+                               </AlertDialogCancel>
+                               <AlertDialogAction
+                                 onClick={() => handleAdminAction("REVOKE", revokeReason)}
+                                 disabled={revokeReason.trim().length < LIFECYCLE_REASON_MIN_LENGTH || actionLoading}
+                                 aria-busy={actionLoading}
+                                 className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-200 font-bold rounded-xl min-h-[44px]"
                                >
-                                 Confirmer la Révocation
+                                 Confirmer la révocation
                                </AlertDialogAction>
                              </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
                     )}
 
-                    <AlertDialog>
+                    {/* Rétrogradation — la session est archivée, jamais supprimée. */}
+                    <AlertDialog onOpenChange={(open) => { if (open) setActionError(null); }}>
                       <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full gap-2 border-rose-300 text-rose-700 hover:bg-rose-50"
                           disabled={actionLoading}
                         >
-                          <ArrowLeft className="w-4 h-4 rotate-90" />
-                          Rétrograder le Candidat
+                          <ArrowLeft className="w-4 h-4 rotate-90" aria-hidden="true" />
+                          Rétrograder le candidat
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-white border-2 border-rose-100 shadow-2xl rounded-3xl">
+                      <AlertDialogContent className="bg-white border-2 border-rose-100 shadow-2xl rounded-3xl sm:max-w-xl">
                          <AlertDialogHeader>
                            <AlertDialogTitle className="flex items-center gap-3 text-rose-600 font-bold text-xl">
-                             <ArrowLeft className="w-6 h-6 rotate-90" />
-                             Rétrograder et Repasser l'examen ?
+                             <ArrowLeft className="w-6 h-6 rotate-90" aria-hidden="true" />
+                             Rétrograder le candidat ?
                            </AlertDialogTitle>
-                           <AlertDialogDescription className="text-slate-600 mt-2 text-base leading-relaxed">
-                             ⚠️ <span className="font-bold text-slate-900">Action Irréversible !!</span><br/><br/>
-                             1. L'attestation sera <span className="text-rose-600 font-bold">supprimée définitivement</span>.<br/>
-                             2. Les scores actuels seront <span className="text-rose-600 font-bold">effacés</span>.<br/>
-                             3. Le candidat devra <span className="text-rose-600 font-bold">repasser intégralement son examen</span>.<br/><br/>
-                             <strong className="text-slate-900">Motif de la rétrogradation :</strong>
+                           <AlertDialogDescription className="text-slate-600 mt-2 text-sm leading-relaxed font-medium">
+                             L&apos;attestation repasse <span className="font-bold text-slate-900">«&nbsp;En
+                             attente&nbsp;»</span> et la session d&apos;examen est
+                             <span className="font-bold text-slate-900"> archivée</span> — jamais
+                             supprimée : le sceau et le PDF restent lisibles. Les scores sont remis à
+                             zéro et le candidat doit repasser l&apos;examen.
                            </AlertDialogDescription>
                          </AlertDialogHeader>
                          <div className="py-4">
-                            <Input 
-                                placeholder="Ex: Tricherie prouvée, Incohérence des notes..." 
-                                value={actionReason}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActionReason(e.target.value)}
-                                className="border-rose-200 focus-visible:ring-rose-500"
-                            />
+                           <LifecycleReasonField
+                             id="attestation-retrograde-reason"
+                             label="Motif de la rétrogradation (obligatoire)"
+                             tone="rose"
+                             value={retrogradeReason}
+                             onChange={setRetrogradeReason}
+                             serverError={actionError}
+                             placeholder="Ex : scores incohérents avec la copie, examen à repasser."
+                           />
                          </div>
-                         <AlertDialogFooter className="mt-4 gap-3">
-                           <AlertDialogCancel className="border-slate-200">Abandonner</AlertDialogCancel>
-                           <AlertDialogAction 
-                             onClick={() => handleAdminAction('RETROGRADE')} 
-                             disabled={actionReason.length < 5}
-                             className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+                         <AlertDialogFooter className="mt-2 gap-3">
+                           <AlertDialogCancel className="border-slate-200 font-bold rounded-xl min-h-[44px]">
+                             Annuler
+                           </AlertDialogCancel>
+                           <AlertDialogAction
+                             onClick={() => handleAdminAction("RETROGRADE", retrogradeReason)}
+                             disabled={retrogradeReason.trim().length < LIFECYCLE_REASON_MIN_LENGTH || actionLoading}
+                             aria-busy={actionLoading}
+                             className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 font-bold rounded-xl min-h-[44px]"
                            >
-                             Rétrograder Maintenant
+                             Rétrograder le candidat
                            </AlertDialogAction>
                          </AlertDialogFooter>
                       </AlertDialogContent>
@@ -614,15 +658,16 @@ export default function AttestationDetailsPage() {
                       {auditLogs.map((log) => (
                         <div key={log.id} className="relative pl-4 border-l-2 border-slate-200 py-1">
                           <p className="text-xs font-bold text-slate-700">
-                             {log.action === 'ATTESTATION_REVOKED' ? '🚫 RÉVOCATION' : 
-                              log.action === 'USER_RETROGRADED' ? '🔄 RÉTROGRADATION' : 
-                              log.action === 'ATTESTATION_VALIDATED' ? '✅ VALIDATION' : '📝 ACTION'}
+                             {log.action === 'ATTESTATION_REVOKED' ? 'Révocation' :
+                              log.action === 'ATTESTATION_DELETED' ? 'Suppression logique' :
+                              log.action === 'USER_RETROGRADED' ? 'Rétrogradation' :
+                              log.action === 'ATTESTATION_VALIDATED' ? 'Validation' : 'Action'}
                           </p>
                           <p className="text-[11px] text-slate-500">
                             par {log.user?.name || log.user?.email} • <DateLocale date={log.timestamp} options={{ hour: '2-digit', minute: '2-digit' }} />
                           </p>
                           {log.newValue?.reason && (
-                            <p className="text-[11px] mt-1 italic text-slate-600 font-medium">" {log.newValue.reason} "</p>
+                            <p className="text-[11px] mt-1 italic text-slate-600 font-medium">« {log.newValue.reason} »</p>
                           )}
                         </div>
                       ))}
@@ -650,60 +695,34 @@ export default function AttestationDetailsPage() {
                     </Button>
                   </>
                 )}
-                    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          className="w-full gap-2"
-                          disabled={actionLoading || isDeleting}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Supprimer
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
-                            <Trash2 className="w-6 h-6" />
-                            Confirmer la suppression
-                          </AlertDialogTitle>
-                          <AlertDialogDescription className="text-slate-600 mt-2 text-base leading-relaxed">
-                            Cette action est <span className="font-bold text-slate-900 underline decoration-rose-200">définitive</span>. 
-                            L'attestation <strong>{data.code}</strong> sera effacée définitivement de la base de données.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter className="mt-8 gap-3">
-                          <AlertDialogCancel 
-                            disabled={isDeleting}
-                            className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                          >
-                            Annuler
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleDelete();
-                            }}
-                            className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
-                            disabled={isDeleting}
-                          >
-                            {isDeleting ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Suppression en cours...
-                                </>
-                            ) : (
-                                "Supprimer l'attestation"
-                            )}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {/* Suppression LOGIQUE : motif obligatoire, attestation retirée
+                        du vérificateur, preuve et audit conservés. */}
+                    <div className="space-y-1.5">
+                      <Button
+                        variant="destructive"
+                        onClick={() => setShowDeleteDialog(true)}
+                        disabled={actionLoading}
+                        className="w-full gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
+                        Supprimer (logique)
+                      </Button>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Retire l&apos;attestation du vérificateur public. Le PDF, le sceau et
+                        l&apos;audit sont conservés. Un motif est obligatoire.
+                      </p>
+                    </div>
               </div>
             </Card>
           </div>
         </div>
       </div>
+      <SoftDeleteAttestationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        attestation={{ id, code: data.code, fullName: data.fullName, status: data.status }}
+        onDeleted={handleDeleted}
+      />
     </div>
   );
 }

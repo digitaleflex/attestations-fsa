@@ -15,6 +15,7 @@ export type AuditAction =
   | "EXAM_UPDATED"
   | "EXAM_DELETED"
   | "EXAM_STARTED"
+  | "EXAM_AUTO_OPENED"
   | "CORRECTION_APPROVED"
   | "CORRECTION_REJECTED"
   | "ATTESTATION_REVOKED"
@@ -29,6 +30,14 @@ export type AuditAction =
   | "INTERNSHIP_ATTESTATION_GENERATED"
   | "ACCOUNT_BLOCKED"
   | "ACCOUNT_UNBLOCKED"
+  // #291 — Effacement de compte traçable. L'action est portée par le journal
+  // d'audit et non par la seule disparition d'une ligne `User` : l'anonymisation
+  // laisse volontairement la ligne `User` en place (clé étrangère de référence
+  // par `ExamSession`, `AuditLog`, `CorrectionRequest` et `Reclamation`, toutes
+  // en `ON DELETE RESTRICT`), c'est donc le journal qui constitue la preuve de
+  // l'effacement. `newValue` décrit l'avant/après et l'identité du compte
+  // concerné ; `userId` reste l'ADMIN qui a procédé, jamais le compte effacé.
+  | "ACCOUNT_ANONYMIZED"
   | "ADMIN_UPDATE_PROFILE";
 
 /**

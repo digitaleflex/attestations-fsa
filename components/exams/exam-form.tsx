@@ -17,6 +17,11 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ExamFormData, DEFAULT_PARTS, Part } from "./types";
+import {
+  APP_TIMEZONE_SHORT,
+  formatAppDateTime,
+  fromAppWallClock,
+} from "@/lib/exams/schedule-ui";
 import { StepGeneral } from "./form-steps/step-general";
 import { StepPartBuilder } from "./form-steps/step-part-builder";
 import { StepSummary } from "./form-steps/step-summary";
@@ -25,12 +30,20 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [stepError, setStepError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [formData, setFormData] = useState<ExamFormData>({
     title: initialData?.title || "",
     description: initialData?.description || "",
     status: initialData?.status || "DRAFT",
     scheduledAt: initialData?.scheduledAt || "",
+    // Repli : le jour d'ouverture suit la date d'épreuve tant que l'admin ne
+    // l'a pas choisi. Le serveur fait de même pour les examens existants dont
+    // `opensOn` est nul.
+    opensOn:
+      initialData?.opensOn ||
+      initialData?.scheduledAt?.split("T")[0] ||
+      "",
     session: initialData?.session || "",
     duration: initialData?.duration ?? 3600,
     passingScore: initialData?.passingScore ?? 65,
@@ -84,16 +97,96 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
     }
   }, [formData, initialData]);
 
-  // A SCHEDULED exam must carry a scheduled date/time
-  const scheduleInvalid = formData.status === "SCHEDULED" && !formData.scheduledAt;
-  const scheduleErrorMessage =
-    "La date et l'heure de programmation sont requises pour un examen programmé.";
+  // Un examen programmé porte deux dates : son ouverture (jour J) et son heure
+  // de démarrage. Les deux sont obligatoires, et le démarrage ne peut pas
+  // précéder l'ouverture — sinon le candidat verrait une épreuve qu'il ne peut
+  // pas ouvrir, sans explication.
+  const scheduleError = (() => {
+    if (formData.status !== "SCHEDULED") return null;
+    if (!formData.scheduledAt) {
+      return "La date et l'heure de programmation sont requises pour un examen programmé.";
+    }
+    if (!formData.opensOn) {
+      return "Le jour d'ouverture est requis pour un examen programmé.";
+    }
+    const startInstant = fromAppWallClock(formData.scheduledAt);
+    const openInstant = fromAppWallClock(`${formData.opensOn}T00:00`);
+    if (!startInstant || !openInstant) {
+      return "La date d'ouverture ou l'heure de programmation est illisible.";
+    }
+    if (startInstant.getTime() < openInstant.getTime()) {
+      return `L'heure de démarrage doit être postérieure à l'ouverture (${formatAppDateTime(
+        openInstant,
+      )}, ${APP_TIMEZONE_SHORT}).`;
+    }
+    return null;
+  })();
+  const scheduleInvalid = scheduleError !== null;
+  const scheduleErrorMessage = scheduleError ?? "";
 
-  const handleNext = () => {
-    if (step === 0 && scheduleInvalid) {
-      toast.error(scheduleErrorMessage);
+  const validateStep = (stepToValidate: number): string | null => {
+    if (stepToValidate === 0) {
+      if (!formData.title.trim()) return "Le titre de l'examen est requis.";
+      if (!formData.formationId) return "Sélectionnez une formation.";
+      if (!formData.duration || formData.duration <= 0) return "La durée totale doit être supérieure à zéro.";
+      if (scheduleInvalid) return scheduleErrorMessage;
+    }
+
+    if (stepToValidate >= 1 && stepToValidate <= 3) {
+      const part = formData.parts[stepToValidate - 1];
+      if (!part) return "Cette partie est introuvable.";
+      if (part.duration <= 0) return `La durée de « ${part.title} » doit être supérieure à zéro.`;
+      if (part.questions.length === 0) return `Ajoutez au moins une question à « ${part.title} ».`;
+      if (part.questions.some((question) => !question.text.trim() || question.points <= 0)) {
+        return `Renseignez le texte et les points de chaque question de « ${part.title} ».`;
+      }
+      if (part.questions.some((question) => question.type !== "OPEN" && (
+        !question.options?.length || question.options.some((option) => !option.text.trim()) ||
+        !question.options.some((option) => option.isCorrect)
+      ))) {
+        return `Renseignez les options et la bonne réponse de « ${part.title} ».`;
+      }
+      if (part.type === "CASE_STUDY" && !part.scenario?.trim()) {
+        return `Renseignez le scénario de « ${part.title} ».`;
+      }
+    }
+    return null;
+  };
+
+  const canNavigateTo = (target: number) => {
+    if (target < 0 || target >= steps.length || target > step + 1) return false;
+    if (target <= step) return true;
+    for (let index = 0; index < step; index++) {
+      if (validateStep(index)) return false;
+    }
+    return !validateStep(step);
+  };
+
+  const navigateToStep = (target: number) => {
+    if (target === step) {
+      setStepError(null);
       return;
     }
+    const error = target > step ? validateStep(step) : null;
+    if (error) {
+      setStepError(error);
+      toast.error(error);
+      return;
+    }
+    if (canNavigateTo(target)) {
+      setStepError(null);
+      setStep(target);
+    }
+  };
+
+  const handleNext = () => {
+    const error = validateStep(step);
+    if (error) {
+      setStepError(error);
+      toast.error(error);
+      return;
+    }
+    setStepError(null);
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
   const handlePrev = () => setStep((s) => Math.max(s - 1, 0));
@@ -109,10 +202,14 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   };
 
   const handleSubmit = async () => {
-    if (scheduleInvalid) {
-      toast.error(scheduleErrorMessage);
-      setStep(0);
-      return;
+    for (let index = 0; index < 4; index++) {
+      const error = validateStep(index);
+      if (error) {
+        setStepError(error);
+        toast.error(error);
+        setStep(index);
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -158,8 +255,15 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
           type: formData.type || "OFFICIAL",
           // #126 — convertir en ISO UTC côté navigateur : le serveur stocke
           // l'instant exact, plus d'interprétation dans le fuseau du serveur.
+          // Heures saisies en Africa/Porto-Novo, envoyées en UTC : c'est le
+          // navigateur qui décide du décalage, jamais la machine du serveur.
           scheduledAt: formData.scheduledAt
-            ? new Date(formData.scheduledAt).toISOString()
+            ? fromAppWallClock(formData.scheduledAt)?.toISOString()
+            : undefined,
+          // Minuit du jour d'ouverture, interprété dans le fuseau de
+          // l'application — pas le minuit UTC, qui serait la veille.
+          opensOn: formData.opensOn
+            ? fromAppWallClock(`${formData.opensOn}T00:00`)?.toISOString()
             : undefined,
           formationId: formData.formationId,
           session: formData.session,
@@ -188,16 +292,22 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       {/* Stepper */}
-      <div className="flex items-center justify-between px-4 overflow-x-auto">
+      <nav aria-label="Étapes de construction de l'examen" className="overflow-x-auto">
+        <ol className="flex min-w-max items-center justify-between px-4">
         {steps.map((s, i) => {
           const Icon = s.icon;
           const isActive = step === i;
           const isDone = step > i;
           return (
             <React.Fragment key={s.label}>
-              <div
-                className="flex flex-col items-center gap-2 group cursor-pointer"
-                onClick={() => setStep(i)}
+              <button
+                type="button"
+                className="flex flex-col items-center gap-2 group cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                onClick={() => navigateToStep(i)}
+                disabled={i > step && !canNavigateTo(i)}
+                aria-current={isActive ? "step" : undefined}
+                aria-describedby={stepError && isActive ? "exam-step-error" : undefined}
+                aria-label={`Étape ${i + 1} sur ${steps.length} : ${s.label}`}
               >
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
@@ -225,7 +335,7 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
                 >
                   {s.label}
                 </span>
-              </div>
+              </button>
               {i < steps.length - 1 && (
                 <div
                   className={`flex-1 h-[2px] mx-1 sm:mx-4 transition-colors duration-300 ${step > i ? "bg-emerald-500" : "bg-slate-200"}`}
@@ -234,7 +344,14 @@ export function ExamForm({ initialData }: { initialData?: Partial<ExamFormData> 
             </React.Fragment>
           );
         })}
-      </div>
+        </ol>
+      </nav>
+
+      {stepError && (
+        <p id="exam-step-error" role="alert" className="text-sm font-semibold text-rose-600">
+          {stepError}
+        </p>
+      )}
 
       {/* 🛡️ AUTO-SAVE INDICATOR */}
       {!initialData && (

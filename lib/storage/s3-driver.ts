@@ -4,7 +4,7 @@
 // lorsque ce driver est effectivement sélectionné (le dev local reste léger).
 
 import type { S3Client } from "@aws-sdk/client-s3";
-import { StorageConfigError, assertSafeKey, type StorageDriver } from "./types";
+import { StorageConfigError, assertSafeKey, type SignedUrlOptions, type StorageDriver } from "./types";
 
 export interface S3StorageDriverOptions {
   bucket: string;
@@ -15,16 +15,17 @@ export interface S3StorageDriverOptions {
   /** Requis par MinIO / certains S3-compatibles (bucket dans le path). */
   forcePathStyle?: boolean;
   /**
-   * Si défini, `getSignedUrl` retourne `<publicBaseUrl>/<key>` (bucket
-   * public-read) au lieu d'une URL signée expirante. À réserver aux objets
-   * réellement publics (logos), jamais aux CV/scans nominatifs.
+   * Si défini, `getSignedUrl` peut retourner `<publicBaseUrl>/<key>` pour les
+   * seuls objets marqués publics (bucket privé par défaut). Jamais pour un
+   * CV, une image ou un PDF nominatif.
    */
   publicBaseUrl?: string;
-  /** Durée de vie des URL signées. Défaut : 7 jours. */
+  /** Durée de vie des URL signées. Défaut : 60 s, plafond 300 s. */
   signedUrlTtlSeconds?: number;
 }
 
-const DEFAULT_SIGNED_URL_TTL_SECONDS = 7 * 24 * 60 * 60;
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 60;
+const MAX_SIGNED_URL_TTL_SECONDS = 300;
 
 export class S3StorageDriver implements StorageDriver {
   private readonly options: S3StorageDriverOptions;
@@ -69,23 +70,34 @@ export class S3StorageDriver implements StorageDriver {
     );
   }
 
-  async getSignedUrl(key: string, expiresInSeconds?: number): Promise<string> {
+  async getSignedUrl(
+    key: string,
+    expiresInSeconds?: number,
+    options?: SignedUrlOptions
+  ): Promise<string> {
     const safeKey = assertSafeKey(key);
-    if (this.options.publicBaseUrl) {
+    if (this.options.publicBaseUrl && options?.allowPublicBaseUrl === true) {
       const base = this.options.publicBaseUrl.replace(/\/+$/, "");
       return `${base}/${safeKey}`;
     }
     const { GetObjectCommand } = await import("@aws-sdk/client-s3");
     const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
     const client = await this.getClient();
+    const ttl = this.resolveTtl(expiresInSeconds);
     return getSignedUrl(
       client,
       new GetObjectCommand({ Bucket: this.options.bucket, Key: safeKey }),
-      {
-        expiresIn:
-          expiresInSeconds ?? this.options.signedUrlTtlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
-      }
+      { expiresIn: ttl }
     );
+  }
+
+  /** Bornage défensif : jamais d'URL signée longue durée sur un bucket privé. */
+  private resolveTtl(expiresInSeconds?: number): number {
+    const requested = expiresInSeconds ?? this.options.signedUrlTtlSeconds;
+    if (requested == null || !Number.isFinite(requested) || requested <= 0) {
+      return DEFAULT_SIGNED_URL_TTL_SECONDS;
+    }
+    return Math.min(Math.floor(requested), MAX_SIGNED_URL_TTL_SECONDS);
   }
 
   async delete(key: string): Promise<void> {

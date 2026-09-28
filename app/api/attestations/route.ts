@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
 import { getAdminUser } from '@/lib/auth';
-import { sealCertificate } from '@/lib/crypto/seal';
+import { getSealSecret, reportSealDisabledIfProduction, sealCertificate } from '@/lib/crypto/seal';
 import { z } from 'zod';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
@@ -106,9 +106,27 @@ export async function POST(request: Request) {
     }
     const {
       fullName, email, gender, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type,
-      stageHours, stageScore, stageObservations,
-      certificationMention, certificationScore, certificationHours, certificationObservations
+      stageHours, stageScore, stageObservations
     } = parse.data
+
+    // Les certifications officielles ne peuvent être arbitraires : elles sont
+    // exclusivement émises par le hub d'examen lié à une session GRADED.
+    if (type === 'CERTIFICATION') {
+      return NextResponse.json({
+        message: 'Une certification doit être émise depuis une session OFFICIAL soumise et GRADED.',
+      }, { status: 422 });
+    }
+
+    // #288 — Garde duco : le scellement est OBLIGATOIRE, y compris en dev.
+    // Sans clé, on refuse l'émission AVANT toute écriture : l'écriture
+    // conditionnelle du sceau créait une ligne non scellée en silence.
+    // Même refus dur que le hub d'émission des certifications
+    // (`lib/attestations/issue.ts:150-153`) ; statut aligné sur la mutation
+    // de cycle de vie (`app/api/attestations/[id]/route.ts:231`).
+    if (!getSealSecret()) {
+      reportSealDisabledIfProduction();
+      return NextResponse.json({ message: 'Émission bloquée : clé de scellement indisponible.' }, { status: 503 });
+    }
 
     // Chercher ou créer la formation par son nom
     let formationRecord = await prisma.formation.findFirst({ where: { name: formation } })
@@ -164,11 +182,6 @@ export async function POST(request: Request) {
       attestationData.stageHours = stageHours;
       attestationData.stageScore = stageScore;
       attestationData.stageObservations = stageObservations;
-    } else if (type === 'CERTIFICATION') {
-      attestationData.certificationMention = certificationMention;
-      attestationData.certificationScore = certificationScore;
-      attestationData.certificationHours = certificationHours;
-      attestationData.certificationObservations = certificationObservations;
     }
 
     // Scellement HMAC-SHA256 (#155) : empreinte des données gravées.
@@ -176,16 +189,24 @@ export async function POST(request: Request) {
       code,
       fullName,
       formationName: formationRecord.name,
-      certificationScore: type === 'CERTIFICATION' ? certificationScore ?? null : null,
-      certificationMention: type === 'CERTIFICATION' ? certificationMention ?? null : null,
+      certificationScore: null,
+      certificationMention: null,
       endDate: new Date(endDate),
     });
+
+    // Défense en profondeur : si le sceau reste nul malgré la garde d'entrée,
+    // on n'écrit pas de ligne sans preuve (cf. `lib/attestations/issue.ts:264`).
+    if (!seal) {
+      return NextResponse.json({ message: 'Émission bloquée : clé de scellement indisponible.' }, { status: 503 });
+    }
 
     // Création de l'attestation
     await prisma.attestation.create({
       data: {
         ...attestationData,
-        ...(seal ? { sealHash: seal.sealHash, sealedAt: seal.sealedAt } : {}),
+        sealHash: seal.sealHash,
+        sealedAt: seal.sealedAt,
+        sealVersion: seal.sealVersion,
       } as import('@prisma/client').Prisma.AttestationCreateInput
     })
     console.log('[POST /api/attestations] Success');

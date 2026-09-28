@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getAdminUser, getCurrentUser } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
-import { isExamAvailable } from "@/lib/exams/availability";
+import { hasOpened, lockedPayload } from "@/lib/exams/time";
+import {
+  checkExamEligibility,
+  enrollmentForbiddenResponse,
+} from "@/lib/exams/eligibility";
+import { applyRateLimitByUser } from "@/lib/rate-limit";
 
 /**
  * POST /api/exams/[id]/start
@@ -18,6 +23,18 @@ export async function POST(
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
+    // #256 — le démarrage était le seul point d'entrée du flux examen sans
+    // limite : une boucle de reconquête ne créait qu'une session (upsert) mais
+    // saturait l'API et l'audit. Borné par IP ET par utilisateur.
+    const rateLimit = await applyRateLimitByUser(
+      request,
+      user.id,
+      "examStart",
+    );
+    if (!rateLimit.allowed) return rateLimit.response;
+
+    const adminUser = await getAdminUser(request);
+
     const { id: examId } = await params;
 
     // 1. Vérifier si l'examen existe et est publié
@@ -29,23 +46,38 @@ export async function POST(
         duration: true,
         type: true,
         scheduledAt: true,
+        opensOn: true,
       },
     });
 
-    if (!exam || !isExamAvailable(exam)) {
+    // #256 m9 — distinction explicite : 404 si l'examen n'existe pas, 423 s'il
+    // existe mais n'est pas encore ouvert (jour J non atteint ou statut non
+    // publiable). Avant ce lot, les deux cas répondaient 404.
+    const now = new Date();
+    if (!exam) {
       return NextResponse.json(
-        { error: "Examen non disponible" },
+        { error: "Examen non trouvé" },
         { status: 404 },
       );
     }
 
-    // Ouvre l'examen paresseusement s'il est planifié et arrivé à échéance.
-    if (exam.status === "SCHEDULED") {
-      await prisma.exam.update({
-        where: { id: examId },
-        data: { status: "PUBLISHED" },
-      });
+    if (!hasOpened(exam, now)) {
+      return NextResponse.json(lockedPayload(exam, now), { status: 423 });
     }
+
+    const eligibility = await checkExamEligibility({
+      userId: user.id,
+      examId: exam.id,
+      examType: exam.type,
+      isAdmin: adminUser !== null,
+    });
+    if (!eligibility.eligible) {
+      return enrollmentForbiddenResponse(eligibility);
+    }
+
+    // #256 m9 — plus de lazy-open ici : `start` ne bascule PLUS le statut d'un
+    // examen. L'ouverture appartient au cron interne ; la disponibilité, elle,
+    // n'exige pas le statut PUBLISHED (un SCHEDULED échu reste lançable).
 
     // 1.5 Vérifier si l'utilisateur est restreint à un examen spécifique
     const userRecord = await prisma.user.findUnique({
@@ -53,7 +85,7 @@ export async function POST(
       select: { examId: true },
     });
 
-    if (userRecord?.examId && userRecord.examId !== examId) {
+    if (!adminUser && userRecord?.examId && userRecord.examId !== examId) {
       return NextResponse.json(
         {
           error:

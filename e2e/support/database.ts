@@ -12,6 +12,7 @@ import { withE2eDb } from "../setup/db";
 import {
   E2E_EXAM_NAME,
   E2E_LOCKED_EXAM_NAME,
+  E2E_UNENROLLED_EXAM_NAME,
   E2E_UI_EXAM_NAME,
 } from "../setup/seed";
 import { CANDIDATE_EMAIL } from "../setup/env";
@@ -115,6 +116,21 @@ export async function getUiExam(): Promise<SeededExam> {
         };
       }),
     };
+  });
+}
+
+export async function getUnenrolledOfficialExam(): Promise<LockedExam> {
+  return withE2eDb(async (prisma) => {
+    const exam = await prisma.exam.findFirst({
+      where: { name: E2E_UNENROLLED_EXAM_NAME, type: "OFFICIAL" },
+      select: { id: true, name: true },
+    });
+    if (!exam) {
+      throw new Error(
+        `[e2e] Examen sans enrollment "${E2E_UNENROLLED_EXAM_NAME}" introuvable.`,
+      );
+    }
+    return exam;
   });
 }
 

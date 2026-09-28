@@ -25,8 +25,11 @@ test.describe("Parcours admin de bout en bout (#140)", () => {
     await expect(
       page.getByRole("heading", { name: "Bonjour Admin," }),
     ).toBeVisible();
+    // Sous-titre réel de `app/admin/dashboard/page.tsx` (l'ancien libellé
+    // « Bienvenue sur la console de gestion… » a disparu du design system :
+    // l'assertion doit suivre l'interface livrée, pas un texte périmé).
     await expect(
-      page.getByText("Bienvenue sur la console de gestion des attestations et des examens."),
+      page.getByText("Vue d'ensemble des attestations, examens et inscriptions."),
     ).toBeVisible();
   });
 

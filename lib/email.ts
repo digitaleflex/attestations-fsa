@@ -453,7 +453,17 @@ export const emailService = {
           </html>
         `,
       });
-      console.log(`[EMAIL_SERVICE] ✅ OTP code sent to ${to}: ${otp}`);
+      // #V0-SEC — le code OTP n'est JAMAIS journalisé en production : un OTP
+      // en clair dans les logs = canal de prise de contrôle de compte direct
+      // (les logs sont archivés, indexés, lus par des tiers). Pas de
+      // masquage partiel non plus : un masque réversible ne protège rien.
+      // Le log de succès reste, sans le code — même forme que les envois
+      // « FSA Login OTP » et « Magic link » plus bas. Hors production, le code
+      // reste lisible (confort de dev, pas besoin d'une boîte mail).
+      console.log(`[EMAIL_SERVICE] ✅ OTP code sent to ${to}`);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[EMAIL_SERVICE] 🔑 OTP (dev) pour ${to} : ${otp}`);
+      }
       return { success: true };
     } catch (error) {
       console.error("[EMAIL_ERROR] Password Reset OTP:", error);
@@ -587,7 +597,13 @@ export const emailService = {
           </html>
         `,
       });
-      console.log(`[EMAIL_SERVICE] ✅ Verification OTP sent to ${to}: ${otp}`);
+      // #V0-SEC — même règle que `sendPasswordResetOTP` : jamais d'OTP en
+      // clair dans les logs de production (voir le commentaire détaillé
+      // là-bas). Succès journalisé sans le code, code visible hors prod.
+      console.log(`[EMAIL_SERVICE] ✅ Verification OTP sent to ${to}`);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[EMAIL_SERVICE] 🔑 OTP (dev) pour ${to} : ${otp}`);
+      }
       return { success: true };
     } catch (error) {
       console.error("[EMAIL_ERROR] Verification OTP:", error);

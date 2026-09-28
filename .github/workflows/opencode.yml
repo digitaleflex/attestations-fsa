@@ -24,6 +24,8 @@
 #   - share: false : aucun contenu de session envoyé à opencode.ai (données utilisateurs).
 #   - L'agent "ci" ne peut pas toucher .env*, prisma/migrations/**, secrets,
 #     ni faire git push/commit (voir opencode.json).
+#   - L'action GitHub officielle ne publie pas de tag stable vérifiable connu dans
+#     ce dépôt ; conserver @latest jusqu'à pouvoir la remplacer par un SHA immuable.
 # =====================================================================
 name: opencode
 

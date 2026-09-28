@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default tseslint.config(
   { 
@@ -15,9 +16,12 @@ export default tseslint.config(
       // Rapport de couverture : fichiers GÉNÉRÉS (sinon le gate linter du
       // bruit : 2 warnings sur coverage/lcov-report/*.js après un run --coverage).
       "coverage/",
-      // Copie locale du repo (worktree kilo, 5 Mo) + sauvegardes : code
-      // dupliqué, déjà ignoré par git via .git/info/exclude. Linter une copie
-      // gaspille du temps et peut remonter des faux positifs.
+      // Copies locales du repo (worktrees) + sauvegardes : code dupliqué,
+      // déjà ignoré par git via .git/info/exclude. Linter une copie gaspille
+      // du temps et peut remonter des faux positifs. Sans ".worktrees/**",
+      // `eslint .` parcourt les 22 worktrees et n'aboutit jamais en local,
+      // alors que la CI est verte (les worktrees n'y sont pas).
+      ".worktrees/",
       ".kilo/",
       "Backup/",
     ]
@@ -70,6 +74,38 @@ export default tseslint.config(
       '@typescript-eslint/passing-generics-to-types': 'off',
       '@typescript-eslint/ts-object-type': 'off',
       '@typescript-eslint/basic-types': 'off',
+    },
+  },
+  // Garde-fou a11y du DESIGN SYSTEM (#P2).
+  //
+  // `jsx-a11y` est déjà en devDependencies mais n'était jamais branché : les
+  // régressions d'accessibilité n'étaient donc attrapées par AUCUN lint, seulement
+  // à la relecture. On l'active sur le périmètre dont cette vague a la charge —
+  // `components/ui/**` et les coquilles (layouts) qui définissent les points
+  // d'anneau (`main`, navigation) — et PAS sur `app/admin/**` ni sur les flux
+  // examen : y brancher le plugin ferait échouer `pnpm lint` sur des violations
+  // préexistantes, hors périmètre de cette vague.
+  //
+  // `no-autofocus` est laissé actif : un `autoFocus` au montage vole le focus
+  // avant que l'utilisateur n'ait choisi où il est.
+  {
+    files: ["components/ui/**/*.{ts,tsx}"],
+    plugins: { "jsx-a11y": jsxA11y },
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      "jsx-a11y/no-autofocus": "error",
+    },
+  },
+  {
+    files: [
+      "app/(public)/layout.tsx",
+      "app/(user)/layout.tsx",
+      "components/PublicHeader.tsx",
+    ],
+    plugins: { "jsx-a11y": jsxA11y },
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      "jsx-a11y/no-autofocus": "error",
     },
   }
 );

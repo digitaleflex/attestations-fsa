@@ -9,6 +9,8 @@ import {
   applyRateLimit,
   applyRateLimitByUser,
   checkInMemoryLimit,
+  memoryFallbackLimits,
+  rateLimits,
   __resetInMemoryRateLimitsForTests,
 } from "@/lib/rate-limit";
 
@@ -85,5 +87,67 @@ describe("rate-limit fallback mémoire", () => {
       "login",
     );
     expect(blocked.allowed).toBe(false);
+  });
+});
+
+// #256 — budgets des points d'entrée sensibles du flux examen.
+describe("rate-limit du flux examen (#256)", () => {
+  beforeEach(() => {
+    __resetInMemoryRateLimitsForTests();
+  });
+
+  it("déclare un budget pour chaque point d'entrée du flux", () => {
+    for (const key of ["examRead", "examStart", "examDraft"] as const) {
+      expect(rateLimits).toHaveProperty(key);
+      expect(memoryFallbackLimits[key]).toBeDefined();
+    }
+  });
+
+  it("calibre examDraft au-dessus du rythme nominal du client (15 s)", () => {
+    // 1h / 15 s = 240 appels légitimes : la limite doit rester au-dessus.
+    const { max, windowMs } = memoryFallbackLimits.examDraft;
+    expect(max).toBeGreaterThanOrEqual((windowMs / 1000 / 15) * 1.2);
+  });
+
+  it("bloque la lecture d'un examen au-delà du budget (mémoire)", async () => {
+    for (let i = 0; i < memoryFallbackLimits.examRead.max; i++) {
+      const ok = await applyRateLimit(makeRequest("5.5.5.5"), "examRead");
+      expect(ok.allowed).toBe(true);
+    }
+    const blocked = await applyRateLimit(makeRequest("5.5.5.5"), "examRead");
+    expect(blocked.allowed).toBe(false);
+    if (!blocked.allowed) expect(blocked.response.status).toBe(429);
+  });
+
+  it("bloque le démarrage d'examen par utilisateur même en changeant d'IP", async () => {
+    const userId = "user-exam-start";
+    const max = memoryFallbackLimits.examStart.max;
+    for (let i = 0; i < max; i++) {
+      const ok = await applyRateLimitByUser(
+        makeRequest(`172.16.0.${i}`),
+        userId,
+        "examStart",
+      );
+      expect(ok.allowed).toBe(true);
+    }
+    const blocked = await applyRateLimitByUser(
+      makeRequest("172.16.0.250"),
+      userId,
+      "examStart",
+    );
+    expect(blocked.allowed).toBe(false);
+  });
+
+  it("isole les budgets : une boucle de lecture ne bloque pas le brouillon", async () => {
+    const max = memoryFallbackLimits.examRead.max;
+    for (let i = 0; i <= max; i++) {
+      await applyRateLimit(makeRequest("6.6.6.6"), "examRead");
+    }
+    const draft = await applyRateLimitByUser(
+      makeRequest("6.6.6.6"),
+      "user-brouillon",
+      "examDraft",
+    );
+    expect(draft.allowed).toBe(true);
   });
 });

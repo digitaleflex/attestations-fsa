@@ -50,6 +50,20 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    services:
+      postgres-e2e:
+        image: postgres:17-alpine
+        ports:
+          - "5434:5432"
+        env:
+          POSTGRES_USER: attestation_fsa_user
+          POSTGRES_PASSWORD: attestation_fsa_password
+          POSTGRES_DB: attestation_fsa_e2e
+        options: >-
+          --health-cmd "pg_isready -U attestation_fsa_user -d attestation_fsa_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode-go/deepseek-v4.1-flash' }}
       OPENCODE_AGENT: ${{ vars.OPENCODE_AGENT || 'ci' }}
@@ -57,6 +71,12 @@ jobs:
       # lib/auth.ts a un fallback dev ; lib/prisma.ts est lazy (pas de DB requise).
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       AUTH_SECRET: ci-only-dummy-secret-not-used-in-prod
+      E2E_DATABASE_URL: postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e
+      BETTER_AUTH_SECRET: e2e-local-only-not-a-real-secret
+      BETTER_AUTH_URL: http://localhost:3100
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+      UPSTASH_REDIS_REST_URL: ""
+      UPSTASH_REDIS_REST_TOKEN: ""
       NODE_ENV: test
       GH_TOKEN: ${{ github.token }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -87,7 +107,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: Installer les dépendances
@@ -121,19 +141,31 @@ jobs:
           OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_JSON }}
         run: |
           set -o pipefail
-          opencode run \
-            --pure \
-            --agent "$OPENCODE_AGENT" \
-            --model "$OPENCODE_MODEL" \
-            -f issue.md \
-            "Résous l'issue GitHub #${ISSUE_NUMBER} (contenu dans issue.md) dans ce repo.
+          # opencode-ai@1.18.32 déclare `-f/--file` comme option ARRAY (yargs) :
+          # placée AVANT le message, elle avale le prompt et l'agent échoue avec
+          # « File not found: Résous l'issue... » (le prompt est pris pour un fichier).
+          # On construit donc le prompt à part (heredoc) et on le passe en argument
+          # positionnel principal, avec `-f issue.md` en DERNIER argument.
+          # Heredoc quoté (aucune expansion parasite des backticks/$ du prompt),
+          # puis substitution explicite du numéro d'issue.
+          PROMPT=$(cat <<'PROMPT_EOF'
+          Résous l'issue GitHub #__ISSUE_NUMBER__ (contenu dans issue.md, déjà attaché en pièce jointe) dans ce repo.
 
           Règles impératives :
           1. Ne touche JAMAIS à : .env*, prisma/migrations/**, fichiers de secrets/clés, .github/workflows/**.
           2. Écris ou adapte les tests pour couvrir ton changement.
-          3. Lance \`pnpm verify\` et corrige jusqu'à ce que tout passe (tsc + eslint + vitest).
+          3. Lance `pnpm verify` et corrige jusqu'à ce que tout passe (tsc + eslint + vitest).
           4. Ne fais AUCUN git push, gh pr create, ni commit : le workflow s'en charge après le gate.
-          5. Termine par un résumé en français : changements, fichiers touchés, tests, points d'attention." \
+          5. Termine par un résumé en français : changements, fichiers touchés, tests, points d'attention.
+          PROMPT_EOF
+          )
+          PROMPT="${PROMPT/__ISSUE_NUMBER__/$ISSUE_NUMBER}"
+          opencode run \
+            --pure \
+            --agent "$OPENCODE_AGENT" \
+            --model "$OPENCODE_MODEL" \
+            "$PROMPT" \
+            -f issue.md \
             2>&1 | tee agent-output.txt
 
       - name: Vérifier qu'il y a des changements
@@ -153,6 +185,24 @@ jobs:
       - name: Gate de vérification (pnpm verify)
         if: steps.changes.outputs.no_changes == 'false'
         run: pnpm verify
+
+      - name: Valider le build
+        if: steps.changes.outputs.no_changes == 'false'
+        run: pnpm build
+
+      - name: Préparer la base E2E
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          pnpm e2e:db:migrate
+          pnpm e2e:seed
+
+      - name: Installer le navigateur Playwright
+        if: steps.changes.outputs.no_changes == 'false'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Gate E2E
+        if: steps.changes.outputs.no_changes == 'false'
+        run: pnpm test:e2e
 
       - name: Créer la branche, committer et ouvrir la PR
         if: steps.changes.outputs.no_changes == 'false'
