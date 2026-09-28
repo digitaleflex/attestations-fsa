@@ -46,45 +46,6 @@ function mentionLabel(mention: string | null | undefined): string {
   return mention ? map[mention] ?? mention : "-";
 }
 
-// ── QR Code ──────────────────────────────────────────────────────────────────
-
-/**
- * Génère un QR code en tant que bitmap PBM (Portable Bitmap) noir et blanc.
- * Retourne un buffer PBM prêt à être intégré dans le PDF.
- */
-async function generateQrPbm(data: string, size: number = 150): Promise<Buffer> {
-  const QRCode = await import("qrcode");
-  // Génère le QR comme un tableau 2D de modules (true = noir)
-  const matrix = QRCode.create(data, { errorCorrectionLevel: "M" });
-  const modules = matrix.modules;
-  const moduleCount = modules.size;
-
-  // Crée une image bitmap en mémoire (1 bit par pixel)
-  const pixelSize = Math.max(1, Math.floor(size / moduleCount));
-  const imgWidth = moduleCount * pixelSize;
-  const imgHeight = moduleCount * pixelSize;
-
-  // PBM format: P4 header + binary pixel data
-  const header = `P4\n${imgWidth} ${imgHeight}\n`;
-  const rowBytes = Math.ceil(imgWidth / 8);
-  const pixels = Buffer.alloc(rowBytes * imgHeight);
-
-  for (let y = 0; y < imgHeight; y++) {
-    for (let x = 0; x < imgWidth; x++) {
-      const moduleX = Math.floor(x / pixelSize);
-      const moduleY = Math.floor(y / pixelSize);
-      const isBlack = modules.get(moduleY, moduleX);
-      if (isBlack) {
-        const byteIndex = y * rowBytes + Math.floor(x / 8);
-        const bitIndex = 7 - (x % 8);
-        pixels[byteIndex] |= 1 << bitIndex;
-      }
-    }
-  }
-
-  return Buffer.concat([Buffer.from(header, "ascii"), pixels]);
-}
-
 // ── Assemblage PDF ───────────────────────────────────────────────────────────
 
 interface PdfObject {
@@ -141,7 +102,6 @@ function assemblePdf(objects: PdfObject[]): Buffer {
 // ── Générateur principal ─────────────────────────────────────────────────────
 
 async function buildPdf(input: CanonicalPdfGeneratorInput): Promise<Buffer> {
-  const qrBuffer = await generateQrPbm(input.verificationUrl, 120);
   const sealHash = createHash("sha256")
     .update(JSON.stringify(input))
     .digest("hex")
@@ -166,6 +126,8 @@ async function buildPdf(input: CanonicalPdfGeneratorInput): Promise<Buffer> {
     `Emettu le : ${isoDate(input.issuedAt)}`,
     `Sceau v${input.sealVersion} : ${sealHash}`,
     "",
+    // #305 — QR désactivé en attendant le domaine définitif.
+    // L'URL de vérification reste dans le texte pour consultation manuelle.
     `Verification : ${input.verificationUrl}`,
   ].filter(Boolean) as string[];
 
@@ -179,19 +141,7 @@ async function buildPdf(input: CanonicalPdfGeneratorInput): Promise<Buffer> {
       "ET",
     ].join("\n") + "\n";
 
-  // ── Objets PDF ──
-  // 1: Catalog
-  // 2: Pages
-  // 3: Page (texte)
-  // 4: Font Helvetica
-  // 5: Text content stream
-  // 6: QR image (PBM bitmap)
-  // 7: Page (QR)
-  // 8: QR content stream
-  // 9: Info dict
-
-  const qrContent = `q 120 0 0 120 420 680 cm /Im1 Do Q\n`;
-
+  // ── Objets PDF (1 page, sans QR) ──
   const objects: PdfObject[] = [
     { id: 1, body: "<< /Type /Catalog /Pages 2 0 R >>" },
     { id: 2, body: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>" },
@@ -199,8 +149,7 @@ async function buildPdf(input: CanonicalPdfGeneratorInput): Promise<Buffer> {
       id: 3,
       body:
         "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
-        "/Resources << /Font << /F1 4 0 R >> /XObject << /Im1 6 0 R >> >> " +
-        "/Contents [5 0 R 8 0 R] >>",
+        "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
     },
     {
       id: 4,
@@ -213,22 +162,6 @@ async function buildPdf(input: CanonicalPdfGeneratorInput): Promise<Buffer> {
     },
     {
       id: 6,
-      body: `<< /Type /XObject /Subtype /Image /Width ${Math.ceil(120)} /Height ${Math.ceil(120)} /ColorSpace /DeviceGray /BitsPerComponent 1 /Filter /ASCIIHexDecode >>`,
-      stream: qrBuffer,
-    },
-    {
-      id: 7,
-      body:
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
-        "/Resources << /XObject << /Im1 6 0 R >> >> /Contents 8 0 R >>",
-    },
-    {
-      id: 8,
-      body: `<< /Length ${qrContent.length} >>`,
-      stream: Buffer.from(qrContent, "latin1"),
-    },
-    {
-      id: 9,
       body: `<< /Producer (FSA Attestations PDF Generator v1) /Title (Attestation ${pdfStr(input.code)}) /CreationDate (${new Date().toISOString()}) >>`,
     },
   ];
