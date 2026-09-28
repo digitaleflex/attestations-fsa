@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 // `lib/rate-limit` est volontairement autonome (ni Prisma, ni Better Auth) :
 // il est chargé par le proxy. L'identité client vient de là, pas de
 // `lib/api-auth` (qui tirerait `lib/auth` dans le bundle du proxy).
@@ -81,6 +82,22 @@ function unauthorizedApiResponse() {
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // #290 — Nonce CSP unique par requête.
+  // Généré ici et passé en header pour que les Server Components puissent
+  // l'injecter dans les balises <script> et <style> inline.
+  const nonce = randomUUID().replace(/-/g, "");
+  const cspHeader = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `style-src 'self' 'unsafe-inline'`,
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://api.resend.com https://*.upstash.io wss:",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+
   // 0. Rate limit des endpoints d'authentification (#287).
   // Bloc autonome et strictement local : il ne touche ni à la classification
   // des routes, ni à la logique de session/compte qui suit.
@@ -93,7 +110,7 @@ export default async function proxy(request: NextRequest) {
     if (!rateLimit.allowed) return rateLimit.response;
   }
 
-  // 1. Ignorer les routes internes et publiques
+  // 1. Ignorer les routes internes et publiques (pas de CSP renforcé)
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
@@ -109,12 +126,19 @@ export default async function proxy(request: NextRequest) {
   // Création d'un header personnalisé pour passer le pathname aux Server Components
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
+  requestHeaders.set("x-nonce", nonce);
 
-  // Si c'est une route publique, on passe
+  /** Ajoute le CSP + nonce à toute réponse sortante. */
+  function withCsp(response: NextResponse): NextResponse {
+    response.headers.set("Content-Security-Policy", cspHeader);
+    return response;
+  }
+
+  // Si c'est une route publique, on passe avec CSP
   if (!isAdminRoute && !isUserRoute) {
-    return NextResponse.next({
+    return withCsp(NextResponse.next({
       request: { headers: requestHeaders },
-    });
+    }));
   }
 
   // 2. Vérification optimiste renforcée (0ms latency, pas de DB)
@@ -132,14 +156,14 @@ export default async function proxy(request: NextRequest) {
       pathname === "/admin/register" ||
       pathname === "/admin/signup"
     ) {
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
     }
 
     if (!hasSessionCookie) {
       if (isApiRoute) return unauthorizedApiResponse();
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+      return withCsp(NextResponse.redirect(loginUrl));
     }
   }
 
@@ -149,14 +173,14 @@ export default async function proxy(request: NextRequest) {
       if (isApiRoute) return unauthorizedApiResponse();
       const loginUrl = new URL("/auth", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+      return withCsp(NextResponse.redirect(loginUrl));
     }
   }
 
   // On laisse passer vers le Layout/Page qui fera la validation DB sécurisée
-  return NextResponse.next({
+  return withCsp(NextResponse.next({
     request: { headers: requestHeaders },
-  });
+  }));
 }
 
 export const config = {
