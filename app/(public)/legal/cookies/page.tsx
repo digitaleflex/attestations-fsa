@@ -93,33 +93,28 @@ export default function CookiesPage() {
 
           <h3 className="font-bold text-slate-800 mt-6 mb-2">2.2 Cookies de préférences</h3>
           <p>
-            Ces cookies mémorisent vos choix (langue, thème d'affichage) pour améliorer votre
+            Ces cookies mémorisent vos choix d'interface pour améliorer votre
             expérience lors de vos prochaines visites.
-          </p>
-
-          <h3 className="font-bold text-slate-800 mt-4 mb-2">2.3 Cookies d'analyse et de performance</h3>
-          <p>
-            Ces cookies nous permettent de mesurer l'audience du site, d'analyser les parcours
-            utilisateurs et d'identifier les axes d'amélioration.
           </p>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-50">
-                  <th className="text-left p-3 border border-slate-200 font-bold">Service</th>
+                  <th className="text-left p-3 border border-slate-200 font-bold">Nom</th>
                   <th className="text-left p-3 border border-slate-200 font-bold">Finalité</th>
                   <th className="text-left p-3 border border-slate-200 font-bold">Durée</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-3 border border-slate-200 font-mono text-xs">[Analytics]</td>
-                  <td className="p-3 border border-slate-200">Statistiques de fréquentation</td>
-                  <td className="p-3 border border-slate-200">13 mois</td>
+                  <td className="p-3 border border-slate-200 font-mono text-xs">sidebar_state</td>
+                  <td className="p-3 border border-slate-200">Mémoriser l'état ouvert/fermé de la barre latérale</td>
+                  <td className="p-3 border border-slate-200">7 jours</td>
                 </tr>
               </tbody>
             </table>
           </div>
+
         </section>
 
         {/* 3 */}
@@ -148,10 +143,9 @@ export default function CookiesPage() {
         <section>
           <h2 className="text-xl font-bold text-slate-900 mb-3">4. Cookies tiers</h2>
           <p>
-            Certains cookies peuvent être déposés par des services tiers intégrés à notre
-            Plateforme (services d'analyse, réseaux sociaux). Nous n'avons aucun contrôle sur
-            l'utilisation de ces cookies par ces tiers. Nous vous invitons à consulter leurs
-            politiques de confidentialité respectives.
+            La Plateforme ne dépose actuellement aucun cookie tiers (analytics, réseaux sociaux).
+            Si des services tiers venaient à être intégrés à l'avenir, cette politique serait
+            mise à jour en conséquence.
           </p>
         </section>
 
@@ -159,10 +153,13 @@ export default function CookiesPage() {
         <section>
           <h2 className="text-xl font-bold text-slate-900 mb-3">5. Durée de conservation</h2>
           <p>
-            Les cookies déposés sur votre appareil sont conservés pour une durée maximale de
-            <strong> 13 mois</strong> à compter de leur dépôt. Votre consentement est recueilli
-            pour cette même durée.
+            Les cookies déposés sur votre appareil sont conservés pour les durées suivantes :
           </p>
+          <ul className="mt-3 space-y-1 ml-6 list-disc">
+            <li><strong>Cookies de session</strong> (authentification, 2FA) : 30 jours maximum</li>
+            <li><strong>Cookie de préférence</strong> (barre latérale) : 7 jours</li>
+            <li><strong>Cookie 2FA temporaire</strong> : 10 minutes</li>
+          </ul>
         </section>
 
         {/* 6 */}

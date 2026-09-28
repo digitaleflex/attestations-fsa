@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { emailService } from "@/lib/email";
+import { sanitizeInput } from "@/lib/sanitization";
 
 export async function POST(req: Request) {
   try {
@@ -28,11 +29,11 @@ export async function POST(req: Request) {
 
     await prisma.contact.create({
       data: {
-        name: nom,
-        email,
-        phone: telephone,
+        name: sanitizeInput(nom),
+        email: sanitizeInput(email),
+        phone: sanitizeInput(telephone),
         subject: `Inscription formation: ${formation.name}`,
-        message: message || `Inscription à la formation: ${formation.name} (ID: ${formationId})`,
+        message: message ? sanitizeInput(message) : `Inscription à la formation: ${formation.name} (ID: ${formationId})`,
         category: "FORMATION_INSCRIPTION",
       },
     });

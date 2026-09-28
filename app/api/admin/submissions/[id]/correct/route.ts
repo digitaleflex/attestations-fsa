@@ -7,6 +7,7 @@ import { handleApiError, ApiErrorImpl } from '@/lib/error-handler';
 import { emailService } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
+import { sanitizeInput } from '@/lib/sanitization';
 import {
   calculateCanonicalScore,
   createScoringSnapshot,
@@ -212,7 +213,7 @@ export async function POST(
         finalScore,
         internshipScore,
         status: 'GRADED',
-        observations: observations ?? null,
+        observations: observations ? sanitizeInput(observations) : null,
       },
     });
 

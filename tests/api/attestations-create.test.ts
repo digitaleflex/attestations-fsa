@@ -9,6 +9,7 @@ const db = vi.hoisted(() => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $queryRaw: async () => [{ nextval: BigInt(1) }],
     formation: { findFirst: db.formationFindFirst, create: db.formationCreate },
     attestation: {
       count: db.attestationCount,

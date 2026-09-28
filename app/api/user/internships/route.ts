@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { sanitizeInput } from "@/lib/sanitization";
 
 // Schéma de validation pour une candidature
 const InternshipApplicationSchema = z.object({
@@ -130,11 +131,11 @@ export async function POST(request: Request) {
         fullName: user.name || "Candidat Anonyme",
         email: user.email || "",
         phone: user.phone || "",
-        university,
-        level,
-        position,
+        university: university ? sanitizeInput(university) : university,
+        level: level ? sanitizeInput(level) : level,
+        position: sanitizeInput(position),
         cvUrl: cvUrl || null,
-        message,
+        message: message ? sanitizeInput(message) : message,
         status: "PENDING",
       },
     });

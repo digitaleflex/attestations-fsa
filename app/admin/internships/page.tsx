@@ -68,7 +68,8 @@ export default function AdminInternshipsPage() {
     endDate: '',
     instructor: 'Formateur Ferme St André',
     location: 'Abomey-Calavi',
-    observations: 'Stage effectué avec succès.'
+    stageScore: '',
+    stageObservations: 'Stage effectué avec succès.'
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -129,10 +130,13 @@ export default function AdminInternshipsPage() {
 
     setIsGenerating(true);
     try {
+      const { stageScore, ...rest } = attestForm;
+      const body: Record<string, unknown> = { ...rest };
+      if (stageScore !== '') body.stageScore = Number(stageScore);
       const res = await fetch(`/api/admin/internships/${attestModal.id}/attestation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(attestForm)
+        body: JSON.stringify(body)
       });
       if (res.ok) {
         const data = await res.json();
@@ -158,7 +162,7 @@ export default function AdminInternshipsPage() {
     <div className="p-4 sm:p-8 space-y-6">        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Gestion des Stages</h1>
-          <p className="text-slate-500">Gérez les demandes de stage entrants ({`{total}`}).</p>
+          <p className="text-slate-500">Gérez les demandes de stage entrants ({total}).</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -406,11 +410,24 @@ export default function AdminInternshipsPage() {
                   </div>
 
                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase">Score (0-100)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        placeholder="Ex: 85"
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                        value={attestForm.stageScore}
+                        onChange={(e) => setAttestForm({...attestForm, stageScore: e.target.value})}
+                      />
+                  </div>
+
+                  <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase">Observations</label>
                       <textarea
                         className="w-full p-2 border border-slate-200 rounded-lg text-sm min-h-[80px]"
-                        value={attestForm.observations}
-                        onChange={(e) => setAttestForm({...attestForm, observations: e.target.value})}
+                        value={attestForm.stageObservations}
+                        onChange={(e) => setAttestForm({...attestForm, stageObservations: e.target.value})}
                       />
                   </div>
               </div>

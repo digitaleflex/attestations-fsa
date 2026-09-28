@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { customAlphabet } from 'nanoid'
 import { getAdminUser } from '@/lib/auth';
 import { getSealSecret, reportSealDisabledIfProduction, sealCertificate } from '@/lib/crypto/seal';
+import { sanitizeInput } from '@/lib/sanitization';
 import { z } from 'zod';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
@@ -140,20 +141,11 @@ export async function POST(request: Request) {
     const year = now.getFullYear()
     const month = `M${String(now.getMonth() + 1).padStart(2, '0')}`
 
-    // Compter les attestations du mois pour la séquence
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-
-    const count = await prisma.attestation.count({
-      where: {
-        issuedAt: {
-          gte: startOfMonth,
-          lte: endOfMonth
-        }
-      }
-    })
-
-    const seq = String(count + 1).padStart(5, '0')
+    // #316 — nextval() est atomique et évite les P2002 en concurrence.
+    const [{ nextval }] = await prisma.$queryRaw<{ nextval: bigint }[]>`
+      SELECT nextval('attestation_code_seq') AS nextval
+    `;
+    const seq = String(Number(nextval)).padStart(5, '0')
     const hash = nanoid()
     const code = `FSA-${year}-${month}-${seq}-${hash}`
 
@@ -162,17 +154,17 @@ export async function POST(request: Request) {
     // Préparation des données
     const attestationData: Record<string, unknown> = {
       code,
-      fullName,
+      fullName: sanitizeInput(fullName),
       email: email ? email.trim().toLowerCase() : null,
       gender,
       birthDate: new Date(birthDate),
-      birthPlace,
+      birthPlace: sanitizeInput(birthPlace),
       formationId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      location,
-      instructor,
-      issuingCompany,
+      location: sanitizeInput(location),
+      instructor: sanitizeInput(instructor),
+      issuingCompany: sanitizeInput(issuingCompany),
       type,
       status: 'PENDING',
     };
@@ -181,17 +173,33 @@ export async function POST(request: Request) {
     if (type === 'STAGE') {
       attestationData.stageHours = stageHours;
       attestationData.stageScore = stageScore;
-      attestationData.stageObservations = stageObservations;
+      attestationData.stageObservations = stageObservations ? sanitizeInput(stageObservations) : stageObservations;
     }
 
     // Scellement HMAC-SHA256 (#155) : empreinte des données gravées.
+    // #300 — bascule v2 : le snapshot inclut désormais tous les champs.
     const seal = sealCertificate({
       code,
       fullName,
+      type,
+      status: 'PENDING',
+      formationId,
       formationName: formationRecord.name,
-      certificationScore: null,
-      certificationMention: null,
+      email: email || null,
+      gender: gender ?? null,
+      birthDate: birthDate ? new Date(birthDate) : null,
+      birthPlace: birthPlace || null,
+      startDate: new Date(startDate),
       endDate: new Date(endDate),
+      location,
+      instructor,
+      issuingCompany,
+      certificationScore: type === 'CERTIFICATION' ? certificationScore ?? null : null,
+      certificationMention: type === 'CERTIFICATION' ? certificationMention ?? null : null,
+      stageHours: type === 'STAGE' ? stageHours ?? null : null,
+      stageScore: type === 'STAGE' ? stageScore ?? null : null,
+      stageObservations: type === 'STAGE' ? stageObservations ?? null : null,
+      sealVersion: 2,
     });
 
     // Défense en profondeur : si le sceau reste nul malgré la garde d'entrée,

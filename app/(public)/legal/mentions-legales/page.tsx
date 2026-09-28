@@ -28,10 +28,8 @@ export default function MentionsLegalesPage() {
           <h2 className="text-xl font-bold text-slate-900 mb-3">1. Éditeur du site</h2>
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
             <p><strong>Raison sociale :</strong> Ferme Agro-piscicole Saint André</p>
-            <p><strong>Forme juridique :</strong> <em>[à préciser]</em></p>
             <p><strong>Siège social :</strong> Abomey-Calavi, Bénin</p>
             <p><strong>Téléphone :</strong> +229 01 91 07 60 93</p>
-            <p><strong>Directeur de publication :</strong> <em>[à préciser]</em></p>
           </div>
         </section>
 
@@ -39,9 +37,8 @@ export default function MentionsLegalesPage() {
         <section>
           <h2 className="text-xl font-bold text-slate-900 mb-3">2. Hébergement</h2>
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <p><strong>Hébergeur :</strong> <em>[Nom de l'hébergeur]</em></p>
-            <p><strong>Siège social :</strong> <em>[Adresse de l'hébergeur]</em></p>
-            <p><strong>Site web :</strong> <em>[URL de l'hébergeur]</em></p>
+            <p><strong>Hébergeur :</strong> Serveur privé virtuel (VPS) autogéré</p>
+            <p><strong>Site web :</strong> <a href="https://hashcode.cloud" className="text-brand underline hover:text-brand-dark" target="_blank" rel="noopener noreferrer">https://hashcode.cloud</a></p>
           </div>
         </section>
 
@@ -109,7 +106,29 @@ export default function MentionsLegalesPage() {
 
         {/* 8 */}
         <section>
-          <h2 className="text-xl font-bold text-slate-900 mb-3">8. Droit applicable</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-3">8. Sous-traitants</h2>
+          <p>
+            La Plateforme recourt aux sous-traitants suivants pour son fonctionnement :
+          </p>
+          <ul className="mt-3 space-y-2 ml-6 list-disc">
+            <li>
+              <strong>Traefik / VPS</strong> — routage HTTP(S) et certificats TLS (Let's Encrypt)
+            </li>
+            <li>
+              <strong>Resend</strong> — envoi d'e-mails transactionnels (notifications, OTP, réinitialisation de mot de passe)
+            </li>
+            <li>
+              <strong>Upstash</strong> — base Redis serverless, utilisée pour le rate limiting
+            </li>
+            <li>
+              <strong>Cloudflare R2</strong> — stockage objet S3-compatible (certificats, preuves, documents téléversés)
+            </li>
+          </ul>
+        </section>
+
+        {/* 9 */}
+        <section>
+          <h2 className="text-xl font-bold text-slate-900 mb-3">9. Droit applicable</h2>
           <p>
             Les présentes mentions légales sont soumises au droit en vigueur au <strong>Bénin</strong>.
           </p>

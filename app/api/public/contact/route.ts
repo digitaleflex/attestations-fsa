@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { applyRateLimit } from '@/lib/rate-limit';
+import { sanitizeInput } from '@/lib/sanitization';
 
 const ContactSchema = z.object({
   name: z.string().min(2, 'Nom trop court'),
@@ -34,7 +35,11 @@ export async function POST(request: Request) {
 
     const contact = await prisma.contact.create({
       data: {
-        ...rest,
+        name: sanitizeInput(rest.name),
+        email: sanitizeInput(rest.email),
+        phone: rest.phone ? sanitizeInput(rest.phone) : rest.phone,
+        subject: rest.subject ? sanitizeInput(rest.subject) : rest.subject,
+        message: sanitizeInput(rest.message),
         category,
       },
     });

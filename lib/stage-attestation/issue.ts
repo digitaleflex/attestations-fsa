@@ -14,6 +14,7 @@
 import { Prisma } from "@prisma/client";
 import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/prisma";
+import { sanitizeInput } from "@/lib/sanitization";
 import { getSealSecret, reportSealDisabledIfProduction, sealCertificate } from "@/lib/crypto/seal";
 import {
   STAGE_LIMITS,
@@ -295,11 +296,27 @@ export async function issueStageAttestation({
             );
           }
 
+          // #300 — bascule v2 : le snapshot inclut désormais tous les champs.
           const seal = sealCertificate({
             code,
             fullName: internship.fullName,
+            type: "STAGE",
+            status: "VALIDATED",
+            formationId: formation.id,
             formationName: formation.name,
+            email: internship.email ?? null,
+            gender: internship.user?.gender ?? null,
+            birthDate,
+            birthPlace,
+            startDate: new Date(input.startDate),
             endDate: new Date(input.endDate),
+            location,
+            instructor,
+            issuingCompany,
+            stageScore: input.stageScore ?? null,
+            stageObservations: input.stageObservations ?? null,
+            userId: internship.userId,
+            sealVersion: 2,
           });
           // Défense en profondeur (cf. `lib/attestations/issue.ts:264`).
           if (!seal) {
@@ -328,13 +345,9 @@ export async function issueStageAttestation({
               // Aucune valeur par défaut inventée : sans saisie admin, la note
               // et les observations restent absentes du document.
               stageScore: input.stageScore ?? null,
-              stageObservations: input.stageObservations ?? null,
+              stageObservations: input.stageObservations ? sanitizeInput(input.stageObservations) : null,
               userId: internship.userId,
-              // Sceau obligatoire : les trois champs sont écrits sans condition,
-              // comme dans le hub d'émission (`lib/attestations/issue.ts:293-295`).
-              // `sealVersion` suit la version du snapshot ci-dessus (v1 tant que
-              // la bascule v2 — #300 — n'a pas eu lieu), donc la vérification
-              // publique reste cohérente.
+              // #300 — sceau v2 appliqué sur toutes les voies.
               sealHash: seal.sealHash,
               sealedAt: seal.sealedAt,
               sealVersion: seal.sealVersion,

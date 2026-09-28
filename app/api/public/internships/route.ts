@@ -92,6 +92,11 @@ export async function POST(request: NextRequest) {
     const { fullName, email, phone, university, level, position, message } = parseResult.data;
     const sanitizedEmail = sanitizeInput(email).toLowerCase();
     const sanitizedName = sanitizeInput(fullName);
+    const sanitizedPhone = sanitizeInput(phone);
+    const sanitizedPosition = sanitizeInput(position);
+    const sanitizedMessage = sanitizeInput(message);
+    const sanitizedUniversity = university ? sanitizeInput(university) : university;
+    const sanitizedLevel = level ? sanitizeInput(level) : level;
 
     const storage = getStorage();
     // #260 : préfixe dédié `stages/`, clé stable persistée, URL signée
@@ -104,14 +109,14 @@ export async function POST(request: NextRequest) {
       data: {
         fullName: sanitizedName,
         email: sanitizedEmail,
-        phone,
-        university,
-        level,
-        position,
+        phone: sanitizedPhone,
+        university: sanitizedUniversity,
+        level: sanitizedLevel,
+        position: sanitizedPosition,
         // Aucune URL signée persistée : seule la clé stable l'est.
         cvUrl: null,
         cvKey: key,
-        message,
+        message: sanitizedMessage,
         status: "PENDING"
       }
     });
@@ -136,7 +141,7 @@ export async function POST(request: NextRequest) {
     await notifyAllAdmins({
       type: 'GENERAL',
       title: '📋 Nouvelle demande de stage',
-      message: `${sanitizedName} a postulé pour le poste "${position}".`,
+      message: `${sanitizedName} a postulé pour le poste "${sanitizedPosition}".`,
       link: '/admin/internships',
       metadata: { internshipRequestId: internshipRequest.id, email: sanitizedEmail },
     });

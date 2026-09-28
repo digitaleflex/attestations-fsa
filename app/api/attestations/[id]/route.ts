@@ -4,6 +4,7 @@ import { getCurrentUser, getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
 import { createNotification, notifyAllAdmins } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
+import { sanitizeInput } from '@/lib/sanitization';
 import {
   ATTESTATION_ALREADY_SOFT_DELETED,
   ATTESTATION_PHYSICAL_DELETE_REFUSED,
@@ -138,6 +139,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Entrée invalide", details: parse.error.errors }, { status: 400 });
     }
     const data = parse.data;
+
+    // Sanitize all text fields before storing
+    const TEXT_FIELDS = ['fullName', 'birthPlace', 'location', 'instructor', 'issuingCompany', 'formation', 'stageObservations', 'certificationObservations'] as const;
+    for (const field of TEXT_FIELDS) {
+      if (typeof data[field as keyof typeof data] === 'string') {
+        (data as Record<string, unknown>)[field] = sanitizeInput(data[field as keyof typeof data] as string);
+      }
+    }
 
     // Validation dates
     if (data.startDate && data.endDate && new Date(data.startDate) > new Date(data.endDate)) {

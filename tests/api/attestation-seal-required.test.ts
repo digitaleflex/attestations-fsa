@@ -178,7 +178,8 @@ describe("#288 POST /api/attestations — le sceau est obligatoire", () => {
     };
     expect(createArgs.data.sealHash).toMatch(/^[0-9a-f]{64}$/);
     expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
-    expect(createArgs.data.sealVersion).toBe(1);
+    // #300 — sceau v2 appliqué sur toutes les voies.
+    expect(createArgs.data.sealVersion).toBe(2);
   });
 });
 
@@ -225,7 +226,8 @@ describe("#288 issueStageAttestation — le sceau est obligatoire", () => {
     expect(createArgs.data.type).toBe("STAGE");
     expect(createArgs.data.sealHash).toMatch(/^[0-9a-f]{64}$/);
     expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
-    expect(createArgs.data.sealVersion).toBe(1);
+    // #300 — sceau v2 appliqué sur toutes les voies.
+    expect(createArgs.data.sealVersion).toBe(2);
     expect(db.internshipUpdateMany).toHaveBeenCalledTimes(1);
   });
 });
