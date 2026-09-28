@@ -72,6 +72,22 @@ export async function requireUser(
   }
 }
 
+// ============================================================================
+// #287 — Identité client fiable (IP + seau utilisateur)
+// ============================================================================
+// L'implémentation vit dans `lib/rate-limit` : ce module est chargé par le
+// proxy (`proxy.ts`), qui ne doit surtout pas embarquer `lib/auth` (Prisma,
+// Better Auth). On la réexporte ici pour les handlers de route, qui utilisent
+// déjà ce fichier.
+export {
+  getClientIdentity,
+  getClientIp,
+  getSessionBucket,
+  getTrustedProxyHops,
+  hashIdentifier,
+  type ClientIdentity,
+} from "@/lib/rate-limit";
+
 /**
  * Vérifie la session puis le rôle admin explicitement (défense en profondeur).
  * Utile quand on a déjà l'utilisateur mais qu'on veut re-vérifier le rôle.

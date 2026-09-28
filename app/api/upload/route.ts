@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
+import { applyByteQuotaByUser, applyRateLimit } from "@/lib/rate-limit";
 import {
   DEFAULT_READ_URL_TTL_SECONDS,
   buildObjectKey,
@@ -48,6 +49,12 @@ function resolvePurpose(raw: string): (typeof UPLOADABLE_PURPOSES)[number] {
 
 export async function POST(request: NextRequest) {
   try {
+    // #287 — Quota d'upload. Il est appliqué AVANT l'authentification (dimension
+    // IP) pour qu'un attaquant sans session ne puisse pas marteler la route
+    // avec des 401 à l'infini. Compteur distribué (Redis), fail-closed.
+    const uploadQuota = await applyRateLimit(request, "upload");
+    if (!uploadQuota.allowed) return uploadQuota.response;
+
     // Auth check
     const user = await getCurrentUser(request);
     const admin = await getAdminUser(request);
@@ -71,6 +78,18 @@ export async function POST(request: NextRequest) {
     if (!validation.ok) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+
+    // Quota de DÉBIT : le nombre d'envoi ne suffit pas à borner le volume
+    // poussé sur le bucket (200 fichiers de 5 Mo passent sous un quota de
+    // 200 requêtes). On compte les octets réellement reçus, par IP ET par
+    // utilisateur, pour ne pas être contourné en changeant d'adresse.
+    const bandwidth = await applyByteQuotaByUser(
+      request,
+      user?.id ?? admin?.id ?? "anonymous",
+      bytes.length,
+      "uploadBytes",
+    );
+    if (!bandwidth.allowed) return bandwidth.response;
 
     // Idempotence : une clé déjà enregistrée par le même propriétaire renvoie
     // l'objet existant au lieu d'écrire un doublon.

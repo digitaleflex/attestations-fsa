@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Card } from "@/components/ui/card";
@@ -18,16 +18,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { SoftDeleteAttestationDialog } from "@/components/admin/attestations/SoftDeleteAttestationDialog";
 
 type Attestation = {
   id: string;
@@ -36,6 +27,8 @@ type Attestation = {
   formation: { name: string };
   type: string;
   status: string;
+  /** Renseigné par l'API : ligne retirée du vérificateur, preuve conservée. */
+  deletedAt?: string | null;
   issuedAt: string;
   userId?: string;
   user?: Record<string, never>;
@@ -64,8 +57,9 @@ export default function AdminAttestationsPage() {
     const vw = searchParams.get("view");
     return vw === "list" ? "list" : "grid";
   });
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // Cible de la suppression logique en cours de confirmation (le motif est
+  // demandé par le dialogue, jamais ici).
+  const [deleteTarget, setDeleteTarget] = useState<Attestation | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const debouncedSearch = useDebounce(search, 500);
   
@@ -152,20 +146,12 @@ export default function AdminAttestationsPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      await apiFetch(`/api/attestations/${deleteId}`, { method: "DELETE" });
-      setAttestations((prev) => prev.filter((a) => a.id !== deleteId));
-      toast.success("Attestation supprimée");
-    } catch {
-      // Error handled by apiFetch
-    } finally {
-      setIsDeleting(false);
-      setDeleteId(null);
-    }
-  };
+  // Le dialogue partagé exécute le DELETE (avec motif obligatoire) ; la page
+  // se contente de retirer la ligne de l'affichage courant.
+  const handleDeleted = useCallback((result: { id: string }) => {
+    setAttestations((prev) => prev.filter((a) => a.id !== result.id));
+    setDeleteTarget(null);
+  }, []);
 
   const handleExport = () => {
     window.open("/api/admin/attestations/export", "_blank");
@@ -194,7 +180,8 @@ export default function AdminAttestationsPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "VALIDATED": return "Validée";
-      case "REJECTED": return "Révoquée";
+      case "REVOKED": return "Révoquée";
+      case "REJECTED": return "Rejetée";
       default: return "En attente";
     }
   };
@@ -306,7 +293,7 @@ export default function AdminAttestationsPage() {
                   <option value="">Tous les statuts</option>
                   <option value="PENDING">En attente</option>
                   <option value="VALIDATED">Validée</option>
-                  <option value="REJECTED">Révoquée</option>
+                  <option value="REJECTED">Rejetée</option>
                 </select>
               </div>
               <div>
@@ -396,6 +383,9 @@ export default function AdminAttestationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredAttestations.map((a) => {
               const TypeIcon = getTypeIcon(a.type);
+              // Une ligne déjà supprimée logiquement est figée côté serveur (409) :
+              // on le dit dans la ligne plutôt que de laisser confirmer un refus acquitté.
+              const isSoftDeleted = Boolean(a.deletedAt);
               return (
                 <Card key={a.id} className="p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200">
                   <div className="flex items-start justify-between mb-3">
@@ -408,9 +398,16 @@ export default function AdminAttestationsPage() {
                         <p className="font-bold text-slate-800 truncate max-w-[150px]">{a.formation?.name || "-"}</p>
                       </div>
                     </div>
-                    <Badge className={getStatusBadgeColor(a.status)}>
-                      {getStatusLabel(a.status)}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge className={getStatusBadgeColor(a.status)}>
+                        {getStatusLabel(a.status)}
+                      </Badge>
+                      {isSoftDeleted ? (
+                        <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700 text-[10px]">
+                          Supprimée (logique)
+                        </Badge>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div className="space-y-2 mb-4">
@@ -454,8 +451,14 @@ export default function AdminAttestationsPage() {
                     </Link>
                     <Button
                       variant="outline"
-                      onClick={() => setDeleteId(a.id)}
-                      aria-label={`Supprimer l'attestation de ${a.fullName}`}
+                      onClick={() => setDeleteTarget(a)}
+                      disabled={isSoftDeleted}
+                      aria-label={
+                        isSoftDeleted
+                          ? `Attestation de ${a.fullName} déjà supprimée logiquement`
+                          : `Supprimer logiquement l'attestation de ${a.fullName}`
+                      }
+                      title={isSoftDeleted ? "Déjà supprimée logiquement" : "Suppression logique (motif obligatoire)"}
                       className="h-11 w-11 p-0 text-rose-400 hover:text-rose-600 hover:bg-rose-50 border-transparent hover:border-rose-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
                     >
                       <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -470,6 +473,9 @@ export default function AdminAttestationsPage() {
             <div className="divide-y divide-slate-50">
               {filteredAttestations.map((a) => {
                 const TypeIcon = getTypeIcon(a.type);
+                // Une ligne déjà supprimée logiquement est figée côté serveur (409) :
+                // on le dit dans la ligne plutôt que de laisser confirmer un refus acquitté.
+                const isSoftDeleted = Boolean(a.deletedAt);
                 return (
                   <div key={a.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 transition-colors group">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -486,9 +492,16 @@ export default function AdminAttestationsPage() {
                     
                     <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 md:gap-6">
                       <div className="flex items-center gap-3">
-                        <Badge className={cn("text-[10px] font-black px-2.5 py-0.5 uppercase tracking-tighter", getStatusBadgeColor(a.status))}>
-                          {getStatusLabel(a.status)}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={cn("text-[10px] font-black px-2.5 py-0.5 uppercase tracking-tighter", getStatusBadgeColor(a.status))}>
+                            {getStatusLabel(a.status)}
+                          </Badge>
+                          {isSoftDeleted ? (
+                            <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700 text-[10px] uppercase tracking-tighter">
+                              Supprimée
+                            </Badge>
+                          ) : null}
+                        </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono bg-slate-100 px-2 py-1 rounded-md text-slate-500">
                           <span>{a.code.slice(-10)}</span>
                         </div>
@@ -508,8 +521,14 @@ export default function AdminAttestationsPage() {
                           </Link>
                           <Button
                             variant="ghost"
-                            onClick={() => setDeleteId(a.id)}
-                            aria-label={`Supprimer l'attestation de ${a.fullName}`}
+                            onClick={() => setDeleteTarget(a)}
+                            disabled={isSoftDeleted}
+                            aria-label={
+                              isSoftDeleted
+                                ? `Attestation de ${a.fullName} déjà supprimée logiquement`
+                                : `Supprimer logiquement l'attestation de ${a.fullName}`
+                            }
+                            title={isSoftDeleted ? "Déjà supprimée logiquement" : "Suppression logique (motif obligatoire)"}
                             className="text-slate-500 hover:text-rose-600 h-11 w-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
                           >
                             <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -525,38 +544,12 @@ export default function AdminAttestationsPage() {
         )}
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open: boolean) => !open && setDeleteId(null)}>
-        <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl rounded-3xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-rose-600 font-bold text-xl">
-              <Trash2 className="w-6 h-6" aria-hidden="true" />
-              Supprimer cette attestation ?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed font-medium">
-              Cette action est <span className="font-bold text-slate-900 border-b-2 border-rose-500">irréversible</span>.
-              L&apos;attestation sera définitivement supprimée et ne pourra plus être vérifiée.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel
-              disabled={isDeleting}
-              className="border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl min-h-[44px]"
-            >
-              Annuler
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e: React.MouseEvent) => {
-                e.preventDefault();
-                handleDelete();
-              }}
-              className="bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-200 font-bold rounded-xl min-h-[44px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Suppression..." : "Supprimer définitivement"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <SoftDeleteAttestationDialog
+        open={!!deleteTarget}
+        onOpenChange={(open: boolean) => !open && setDeleteTarget(null)}
+        attestation={deleteTarget}
+        onDeleted={handleDeleted}
+      />
 
       {/* Removed duplicated template rendering */}
     </div>

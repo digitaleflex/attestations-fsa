@@ -33,12 +33,13 @@ pnpm add dompurify
 # Validation environment variables
 pnpm add envalid
 
-# Utility pour CSRF
-pnpm add csrf
-
 # Pour tests de sécurité
 pnpm add -D @types/dompurify
 ```
+
+> **Pas de dépendance CSRF.** La protection contre les requêtes cross-site repose
+> uniquement sur l'en-tête `Origin` et sur l'allowlist `trustedOrigins` de Better
+> Auth (voir §2.2). Aucun jeton, aucune bibliothèque de jeton : ne pas en ajouter.
 
 ### 1.2 Fichier `.env` à Mettre à Jour
 
@@ -71,16 +72,19 @@ NODE_ENV="production"
 
 ### 2.1 Étape 1 : Unifier l'Authentification
 
-**Fichier :** `app/api/auth/login/route.ts`
+**Fichier :** `app/api/auth/login/route.ts` — **n'existe plus**
 
-**Action :** Supprimer ce fichier et migrer vers Better Auth
+**Action :** *Supprimer ce fichier et migrer vers Better Auth* — **déjà fait**.
+La route a bien existé, puis a été supprimée au profit de Better Auth. Il n'y a
+donc plus de dualité d'auth à corriger, et rien à supprimer aujourd'hui.
 
 ```typescript
-// ❌ À SUPPRIMER - Ce fichier crée la dualité d'auth
+// ❌ Fichier absent — conservé pour situer ce qui a été supprimé
 // app/api/auth/login/route.ts
 ```
 
-**Remplacement :** Utiliser uniquement `/api/auth/[...all]/route.ts`
+**Remplacement :** Utiliser uniquement `/api/auth/[...all]/route.ts` — c'est ce
+qui est en place.
 
 **Migration des cookies custom vers Better Auth :**
 
@@ -89,6 +93,8 @@ NODE_ENV="production"
 const authConfig: BetterAuthOptions = {
   secret: process.env.AUTH_SECRET!,
   database: { adapter },
+  // ✅ Protection CSRF réelle : allowlist d'origines (aucun jeton)
+  trustedOrigins: resolveTrustedOrigins(),
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 12,  // ✅ Renforcé (était 8)
@@ -115,23 +121,40 @@ const authConfig: BetterAuthOptions = {
     nextCookies()  // ✅ Gère automatiquement les cookies sécurisés
   ],
   advanced: {
-    // ✅ Protection CSRF intégrée
-    csrf: {
-      enabled: true,
-      cookieName: 'csrf_token',
-    }
+    // `disableCSRFCheck` / `disableOriginCheck` doivent rester à `undefined` :
+    // les poser désactiverait le contrôle d'origine décrit en §2.2.
+    cookiePrefix: 'better-auth',
+    useSecureCookies: process.env.NODE_ENV === 'production'
   }
 }
 ```
 
+`resolveTrustedOrigins()` est défini dans `lib/auth.ts` : il assemble l'allowlist
+depuis `APP_URL` / `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` /
+`BETTER_AUTH_TRUSTED_ORIGINS` / `AUTH_TRUSTED_ORIGINS`, refuse tout joker et toute
+origine `http://` en production (voir `docs/security/01-mesures-securite.md`,
+§6, et `tests/security/trusted-origins.test.ts`).
+
 ---
 
-### 2.2 Étape 2 : Créer le Middleware Next.js
+### 2.2 Étape 2 : Le Middleware Next.js
 
-**Fichier :** `middleware.ts` (à créer à la racine)
+**Fichier :** `proxy.ts` (à la racine) — **pas `middleware.ts`**
+
+> **Périmé dans les versions précédentes de ce guide.** L'instruction
+> d'origine était « Créer le Middleware Next.js — `middleware.ts` (à créer à la
+> racine) ». Le dépôt n'a **jamais eu de `middleware.ts`** : le rôle de
+> middleware edge est tenu par **`proxy.ts`**, à la racine, qui existe et
+> exporte un gestionnaire par défaut. `proxy.ts` n'est donc pas à créer, il est
+> à maintenir. Le bloc ci-dessous est le squelette historique : la version
+> réelle (`proxy.ts`) s'en écarte sur les points suivants — rate limiting
+> `/api/auth/*` par IP et par seau de session, `matcher` élargi aux extensions
+> (`css`, `js`, `ico`), routes utilisateur réellement servies
+> (`/attestations`, `/results`, `/exams`, …) — et le contrôle d'origine décrit
+> au §2.5 y reste **absent**, délibérément.
 
 ```typescript
-// middleware.ts
+// proxy.ts
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -140,7 +163,7 @@ const ADMIN_ROUTES = ['/admin', '/api/admin']
 const USER_ROUTES = ['/dashboard', '/api/user']
 const PUBLIC_ROUTES = ['/api/public', '/api/verifier', '/api/signalement']
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const response = NextResponse.next()
 
@@ -181,34 +204,35 @@ export function middleware(request: NextRequest) {
   )
 
   // ============================================
-  // 2. PROTECTION CSRF (US-SEC-01)
+  // 2. AUCUN CONTRÔLE D'ORIGINE ICI (US-SEC-01)
   // ============================================
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
-    // Skip pour les routes publiques
-    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
-    
-    if (!isPublicRoute) {
-      const csrfToken = request.cookies.get('csrf_token')?.value
-      const headerToken = request.headers.get('x-csrf-token')
-      
-      if (!csrfToken || !headerToken || csrfToken !== headerToken) {
-        return new NextResponse(
-          JSON.stringify({ error: 'Token CSRF invalide ou manquant' }),
-          { 
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        )
-      }
-    }
-  }
+  //
+  // Aucun contrôle ici, et c'est délibéré : la protection CSRF du dépôt
+  // n'est PAS un jeton. Elle est assurée plus loin, par le gestionnaire
+  // Better Auth de `/api/auth/[...all]`, qui compare l'en-tête `Origin` à
+  // l'allowlist `trustedOrigins` (§2.1). Le contrôle y est appliqué par le
+  // routeur de Better Auth à toutes les routes `/api/auth/*`, méthodes
+  // mutantes uniquement, et seulement si la requête porte des cookies.
+  //
+  // Conséquence à connaître : les routes applicatives hors `/api/auth`
+  // (`/api/user`, `/api/admin`, …) ne sont PAS soumises à ce contrôle
+  // d'origine, ce dernier n'ayant lieu que dans le gestionnaire Better Auth.
+  // Elles n'ont que `SameSite=Lax` sur le cookie de session et la validation
+  // de session par `lib/api-auth`. Ne pas réintroduire ici un jeton anti-CSRF
+  // (`csrf_token` / `x-csrf-token`) : ce couple n'a JAMAIS été en place — le
+  // cookie n'a jamais été posé, l'en-tête n'a jamais été validé côté serveur —
+  // et il n'est pas prévu de l'ajouter.
 
   // ============================================
   // 3. VÉRIFICATION AUTHENTIFICATION
   // ============================================
-  const sessionCookie = request.cookies.get('better-auth.session_token')
+  // `session_data` n'est posé que si `session.cookieCache.enabled` est vrai ;
+  // le dépôt ne l'active pas, d'où le repli sur la session en base.
+  const sessionCookie =
+    request.cookies.get('__Secure-better-auth.session_token') ??
+    request.cookies.get('better-auth.session_token')
   const roleCookie = request.cookies.get('better-auth.session_data')
-  
+
   // Routes admin
   if (ADMIN_ROUTES.some(route => pathname.startsWith(route))) {
     if (!sessionCookie) {
@@ -275,7 +299,22 @@ export const config = {
 
 ### 2.3 Étape 3 : Implémenter Rate Limiting
 
-**Fichier :** `lib/rate-limit.ts` (à créer)
+**Fichier :** `lib/rate-limit.ts` — *existe, déjà câblé — à maintenir*
+
+> **Déjà en place.** `lib/rate-limit.ts` existe et n'a pas à être créé : il est
+> **déjà câblé** dans `proxy.ts` (§2.2), qui appelle `applyRateLimitByUser()`
+> avec le seau `getSessionBucket()` et le type de limite `authEndpoint` pour
+> `/api/auth/*`, ainsi que dans une vingtaine de routes API
+> (`applyRateLimit`, `applyRateLimitByUser`, `applyByteQuotaByUser` — dont
+> `/api/signalement`, `/api/user/send-verification`, `/api/upload`). L'action
+> reste **à maintenir** en tant que référence. Le bloc ci-dessous est le
+> squelette historique : la version réelle s'en écarte sur la construction du
+> client Redis (`getRedis()` / `isRedisReady()` de `lib/redis`, et non un
+> `new Redis()` local), sur l'identité comptée (`getClientIdentity()` : IP lue
+> depuis la droite de `x-forwarded-for` selon `TRUSTED_PROXY_HOPS`, et seau
+> utilisateur haché), et sur l'indisponibilité de Redis — filet mémoire pour
+> les limites tolérantes, refus en `503` pour les limites *fail-closed* de
+> `isFailClosedLimitType()`.
 
 ```typescript
 // lib/rate-limit.ts
@@ -417,7 +456,7 @@ const authConfig: BetterAuthOptions = {
     cookiePrefix: 'better-auth',
     cookieOptions: {
       secure: process.env.NODE_ENV === 'production',  // ✅ HTTPS uniquement
-      sameSite: 'lax',  // ✅ Protection CSRF
+      sameSite: 'lax',  // ✅ Réduit la portée cross-site du cookie de session
       path: '/',
       httpOnly: true,  // ✅ Non accessible via JS
     },
@@ -429,82 +468,40 @@ const authConfig: BetterAuthOptions = {
 
 ---
 
-### 2.5 Étape 5 : Générer Token CSRF
+### 2.5 Étape 5 : Protection CSRF — contrôle de l'origine
 
-**Fichier :** `lib/csrf.ts` (à créer)
+Il n'y a **pas** de jeton anti-CSRF dans ce dépôt, et il n'y en aura pas. La
+protection est un **contrôle d'origine**, entièrement pris en charge par Better
+Auth à partir de l'allowlist `trustedOrigins` (§2.1). Rien à créer côté
+application : ni `lib/csrf.ts`, ni route `/api/csrf-token`, ni en-tête
+`x-csrf-token` côté client.
 
-```typescript
-// lib/csrf.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { randomBytes } from 'crypto'
+**Ce que Better Auth vérifie effectivement :**
 
-// Générer un token CSRF
-export function generateCSRFToken(): string {
-  return randomBytes(32).toString('hex')
-}
+| Point | Comportement réel |
+| --- | --- |
+| Routes couvertes | Toutes les routes `/api/auth/*` servies par `app/api/auth/[...all]/route.ts` |
+| Méthodes | Mutations uniquement : `GET` / `HEAD` / `OPTIONS` sortent avant le contrôle |
+| Condition | La requête doit porter un en-tête `Cookie` ; une requête sans cookie n'est pas bloquée |
+| Origine testée | En-tête `Origin`, à défaut `Referer` |
+| Issue | `403` si l'origine est absente ou vaut `null`, `403` si elle n'est pas dans l'allowlist |
+| En plus | `callbackURL`, `redirectTo`, `errorCallbackURL` et `newUserCallbackURL` sont validés contre la même allowlist |
 
-// Valider un token CSRF
-export function validateCSRFToken(token: string): boolean {
-  return /^[a-f0-9]{64}$/.test(token)
-}
+**Ce qui n'est pas couvert — à savoir avant d'écrire « protégé » quelque part :**
 
-// Middleware helper pour ajouter token CSRF
-export async function addCSRFTokenToResponse(response: NextResponse) {
-  const token = generateCSRFToken()
-  
-  response.cookies.set('csrf_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-    maxAge: 60 * 60 * 24,  // 1 jour
-  })
-  
-  return response
-}
+- Les routes applicatives hors `/api/auth` (`/api/user`, `/api/admin`, …) ne
+  passent par aucun contrôle d'origine. Elles reposent sur `SameSite=Lax` du
+  cookie de session, sur la validation de session de `lib/api-auth` et sur le
+  rate limiting.
+- `SameSite=Lax` n'interdit pas les requêtes same-site depuis un sous-domaine
+  compromis, ni une requête `GET` émise par un site tiers dans un contexte
+  de navigation de premier niveau.
+- `disableOriginCheck` / `disableCSRFCheck` désactivent le contrôle. Ne pas les
+  poser dans `advanced` (`lib/auth.ts` ne les pose pas).
 
-// Hook pour récupérer token CSRF côté client
-export async function getCSRFToken(): Promise<string | undefined> {
-  const cookieStore = await cookies()
-  return cookieStore.get('csrf_token')?.value
-}
-```
-
-**Utilisation côté client :**
-
-```typescript
-// components/forms/secure-form.tsx
-'use client'
-
-import { useEffect, useState } from 'react'
-
-export function SecureForm() {
-  const [csrfToken, setCsrfToken] = useState('')
-
-  useEffect(() => {
-    // Récupérer token depuis cookie (via API si httpOnly)
-    fetch('/api/csrf-token').then(r => r.json()).then(d => {
-      setCsrfToken(d.token)
-    })
-  }, [])
-
-  const handleSubmit = async (data: any) => {
-    await fetch('/api/endpoint', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-csrf-token': csrfToken,  // ✅ Token dans header
-      },
-      body: JSON.stringify(data),
-    })
-  }
-
-  return (
-    // ... formulaire
-  )
-}
-```
+**Test de non-régression :** `tests/security/trusted-origins.test.ts` couvre
+`parseTrustedOrigin` et `resolveTrustedOrigins`. Un contrôle d'origine
+supplémentaire exigerait d'abord un test du comportement HTTP correspondant.
 
 ---
 
@@ -512,7 +509,20 @@ export function SecureForm() {
 
 ### 3.1 Validation Upload de Fichiers
 
-**Fichier :** `app/api/admin/submissions/[id]/scans/route.ts`
+> **Chemin du plan caduc.** `app/api/admin/submissions/[id]/scans/route.ts`
+> **n'a jamais été créé** et n'est pas prévu : il n'y a pas de modèle `Scan` ni
+> d'upload de scans dans le dépôt. Sous `app/api/admin/submissions/[id]/` il n'y
+> que `route.ts` et `correct/route.ts`.
+>
+> **Ce qui est réellement en place :** l'upload de fichiers passe par
+> `app/api/upload/route.ts`, qui délègue la validation à `validateUpload()` dans
+> `lib/storage/validation.ts` (type MIME, taille, signature), et le stockage à
+> `lib/storage` (bucket privé S3/R2/MinIO en production, local en
+> développement). La lecture et la suppression d'un objet exigent la propriété
+> via `requireOwnedObject()` (`lib/storage/registry.ts`). Le bloc ci-dessous
+> reste le squelette historique du plan ; il ne décrit aucun code du dépôt.
+
+**Fichier :** `app/api/admin/submissions/[id]/scans/route.ts` — *n'existe pas*
 
 **Remplacer par :**
 
@@ -651,7 +661,17 @@ export async function POST(
 
 ### 3.2 Password Reset Flow
 
-**Fichier :** `app/api/user/password-reset/request/route.ts` (à créer)
+> **Obsolète : ces deux routes ne sont pas prévues.** Le flux de réinitialisation
+> est entièrement pris en charge par Better Auth, servi par
+> `app/api/auth/[...all]/route.ts`. Les pages `app/(public)/forgot-password/page.tsx`
+> et `app/(public)/reset-password/page.tsx` appellent Better Auth côté client
+> (`forgetPassword()`, `authClient.emailOtp.requestPasswordReset()`,
+> `authClient.emailOtp.resetPassword()`). Il n'y a donc **rien à créer** ici : le
+> bloc ci-dessous est le squelette historique du plan et ne décrit aucun code du
+> dépôt. Le rate limiting de `/api/auth/*` (dont ces routes) est posé dans
+> `proxy.ts`.
+
+**Fichier :** ~~`app/api/user/password-reset/request/route.ts` (à créer)~~ — *obsolète, ne pas créer*
 
 ```typescript
 // app/api/user/password-reset/request/route.ts
@@ -735,7 +755,7 @@ export async function POST(request: Request) {
 }
 ```
 
-**Fichier :** `app/api/user/password-reset/confirm/route.ts` (à créer)
+**Fichier :** ~~`app/api/user/password-reset/confirm/route.ts` (à créer)~~ — *obsolète, ne pas créer*
 
 ```typescript
 // app/api/user/password-reset/confirm/route.ts
@@ -824,7 +844,16 @@ export async function POST(request: Request) {
 
 ### 3.3 Email Verification
 
-**Fichier :** `app/api/user/send-verification/route.ts` (à créer)
+**Fichier :** `app/api/user/send-verification/route.ts` — *existe, déjà en place — à maintenir*
+
+> **Déjà en place.** La route existe et n'a pas à être créée : elle est
+> **déjà en place** et va au-delà du bloc ci-dessous — elle applique le rate
+> limiting `emailVerification` (§2.3), lève des `ApiErrorImpl` (§3.6) au lieu
+> de renvoyer des `NextResponse` à la main, et délègue l'envoi à
+> `emailService.sendVerificationEmail()` (`lib/email`) au lieu d'instancier
+> `Resend` localement. Le jeton, l'expiration 24 h et la purge des anciens
+> tokens sont ceux décrits ci-dessous. L'action est **à maintenir** ; seule
+> l'instanciation directe de `Resend` est caduc.
 
 ```typescript
 // app/api/user/send-verification/route.ts
@@ -904,7 +933,15 @@ export async function POST(request: Request) {
 }
 ```
 
-**Fichier :** `app/api/user/verify-email/route.ts` (à créer)
+**Fichier :** `app/api/user/verify-email/route.ts` — *existe, déjà en place — à maintenir*
+
+> **Déjà en place.** La route existe et n'a pas à être créée : elle est
+> **déjà en place** et va au-delà du bloc ci-dessous — elle sanitize le jeton
+> reçu (`sanitizeInput()`, §3.5), passe ses erreurs par `handleApiError()`
+> (§3.6), et distingue les causes d'échec (`missing-token`, `invalid-token`,
+> `user-not-found`, `already-verified`) au lieu d'un unique `server-error`.
+> L'usage unique du jeton (suppression après vérification) est en place.
+> L'action est **à maintenir**.
 
 ```typescript
 // app/api/user/verify-email/route.ts
@@ -965,7 +1002,15 @@ export async function GET(request: Request) {
 
 ### 3.4 Protection IDOR Systématique
 
-**Fichier :** `lib/authorization.ts` (à créer)
+> **`lib/authorization.ts` n'a jamais été créé et n'est pas prévu.** Les
+> contrôles de rôle et de session des routes API sont dans `lib/api-auth.ts` :
+> `requireAdmin()`, `requireUser()` et `assertAdminRole()` (défense en
+> profondeur). L'accès à un fichier stocké passe par `requireOwnedObject()`
+> (`lib/storage/registry.ts`). Le reste du contrôle d'ownership est fait route
+> par route, sur le `userId` de la ressource. Le bloc ci-dessous est le squelette
+> historique du plan ; il ne décrit aucun code du dépôt.
+
+**Fichier :** `lib/authorization.ts` (à créer) — *n'existe pas*
 
 ```typescript
 // lib/authorization.ts
@@ -1054,7 +1099,31 @@ export async function GET(
 
 ### 3.5 Sanitization des Entrées
 
-**Fichier :** `lib/sanitization.ts` (à créer)
+**Fichier :** `lib/sanitization.ts` — *existe ; `sanitizeInput` déjà branché, `sanitizeHTML` non branché*
+
+> **Partiellement en place — distinguer le module de son usage.** Le module
+> `lib/sanitization.ts` **existe** et n'a pas à être créé : `sanitizeInput()`,
+> `sanitizeObject()`, `sanitizeField()`, `CRITICAL_FIELDS`,
+> `createSanitizedSchema()`, `sanitizeHTML()`, `containsDangerousHTML()`,
+> `HTMLEncode` et `sanitizeFilename()` y sont définis, et couverts par
+> `tests/lib/sanitization.test.ts`. L'exemple d'usage décrit ci-dessous est
+> lui aussi **déjà en place** : `app/api/signalement/route.ts` sanitize bien
+> `motif`, `message`, `email` et `code` par `sanitizeInput()`, tout comme
+> `/api/user/verify-email`, `/api/user/claim-code`, `/api/verifier`,
+> `/api/users`, `/api/auth/fsa-login` et `/api/public/internships`.
+>
+> **Ce qui reste réellement à faire n'est donc pas le module, mais le
+> branchement.** `sanitizeHTML()` — la variante qui conserve une liste de
+> balises autorisées — **n'est appelée nulle part** hors de sa définition et de
+> son test unitaire : c'est le reliquat réel de cette section, et le point
+> ouvert `EVIL-INJ-02` de `docs/user-stories-map.md:142` (« `sanitizeHTML`
+> existe mais n'est pas branché sur les champs concernés »). Il en va de même
+> des autres exports du module, jamais appelés hors tests. Le bloc ci-dessous
+> est le squelette historique : la version réelle **n'utilise ni DOMPurify ni
+> JSDOM** — `sanitizeInput()` est une expression régulière de suppression de
+> balises, choix assumé pour ne pas embarquer JSDOM sur Vercel. L'action est
+> **à maintenir** pour le module et l'exemple, et **reste à faire** pour le
+> branchement de `sanitizeHTML()`.
 
 ```typescript
 // lib/sanitization.ts
@@ -1140,7 +1209,19 @@ export async function POST(req: Request) {
 
 ### 3.6 Gestion des Erreurs
 
-**Fichier :** `lib/error-handler.ts` (à créer)
+**Fichier :** `lib/error-handler.ts` — *existe, déjà en place — à maintenir*
+
+> **Déjà en place.** Le module existe et n'a pas à être créé : il est
+> **déjà en place**, et l'exemple d'utilisation ci-dessous est celui que
+> suivent les routes API. La version réelle s'en écarte sur quatre points :
+> `ErrorTypes` associe à chaque type un **statut HTTP** et non un simple
+> code ; les routes **lèvent** des `ApiErrorImpl` plutôt que de renvoyer des
+> `NextResponse` à la main, ce qui laisse `handleApiError()` renvoyer le
+> statut de l'erreur métier ; les seules erreurs `5xx` sont **remontées à
+> Sentry** (`captureServerError()`, #151) ; et `formatValidationError()` est
+> fourni pour les erreurs Zod. L'action est **à maintenir**. Il n'y a pas
+> d'entrée `CSRF` dans `ErrorTypes`, et il ne doit pas y en avoir une : voir
+> `lib/error-handler.ts:24-25` et le §4.1.
 
 ```typescript
 // lib/error-handler.ts
@@ -1227,7 +1308,22 @@ export async function POST(request: Request) {
 
 ### 4.1 Security Logger
 
-**Fichier :** `lib/security-logger.ts` (à créer)
+> **Non réalisé.** Le fichier `lib/security-logger.ts` **n'a jamais été créé**, et
+> le modèle `SecurityLog` correspondant **n'existe pas** dans
+> `prisma/schema.prisma` : l'entrée « Ajouter au schema Prisma » ci-dessous est
+> donc elle aussi caduc. Aucun journal d'événements de sécurité n'est écrit par
+> le dépôt ; les seuls journaux persistés sont le journal d'audit (§4.2) et les
+> logs applicatifs. Rien n'est donc prévu ici à ce jour.
+>
+> Aucune entrée `CSRF_VIOLATION` n'est conservée ci-dessous, pour la même
+> raison que dans `lib/error-handler.ts` : il n'existe aucun contrôle de jeton
+> anti-CSRF dans ce dépôt, et un type d'événement pour une protection
+> inexistante laisserait croire à un contrôle qui n'a pas lieu d'être. La
+> protection réelle est le contrôle d'origine `trustedOrigins` sur
+> `/api/auth/*` (§2.5), que Better Auth rejette lui-même en `403` — il ne
+> remonte pas dans un logger d'application.
+
+**Fichier :** `lib/security-logger.ts` (à créer) — *n'existe pas*
 
 ```typescript
 // lib/security-logger.ts
@@ -1248,7 +1344,6 @@ export type SecurityEventType =
   | 'FILE_UPLOAD'
   | 'DATA_EXPORT'
   | 'RATE_LIMIT_EXCEEDED'
-  | 'CSRF_VIOLATION'
   | 'SUSPICIOUS_ACTIVITY'
 
 export interface SecurityEvent {
@@ -1314,7 +1409,6 @@ function getEventSeverity(eventType: SecurityEventType): 'LOW' | 'MEDIUM' | 'HIG
     FILE_UPLOAD: 'MEDIUM',
     DATA_EXPORT: 'HIGH',
     RATE_LIMIT_EXCEEDED: 'MEDIUM',
-    CSRF_VIOLATION: 'CRITICAL',
     SUSPICIOUS_ACTIVITY: 'HIGH',
   }
 
@@ -1353,7 +1447,17 @@ model SecurityLog {
 
 Similaire au security logger mais focalisé sur les actions métier.
 
-**Fichier :** `lib/audit-logger.ts` (à créer)
+> **Chemin du plan caduc.** `lib/audit-logger.ts` **n'a jamais été créé et n'est
+> pas prévu** : il ne ferait que dupliquer ce qui existe.
+>
+> **Ce qui est réellement en place :** `lib/audit.ts` expose `createAuditLog()`
+> et le type `AuditAction`, et écrit dans le modèle `AuditLog` de
+> `prisma/schema.prisma` (avec champs `oldValue` / `newValue` et conservation
+> des lignes en cas de suppression d'un utilisateur, voir #291). La lecture
+> côté admin se fait par `app/api/admin/logs/route.ts`. Le bloc ci-dessous reste
+> le squelette historique du plan ; il ne décrit aucun code du dépôt.
+
+**Fichier :** `lib/audit-logger.ts` (à créer) — *n'existe pas*
 
 ```typescript
 // lib/audit-logger.ts
@@ -1411,10 +1515,10 @@ export function getChangedFields(oldObj: any, newObj: any): Record<string, { old
 ### P0 - Critique
 
 - [ ] Dual auth supprimé (Better Auth uniquement)
-- [ ] Middleware créé avec headers sécurité
+- [ ] Headers de sécurité posés (ils sont dans la fonction `headers()` de `next.config.mjs`, lignes 116-130 — **pas** dans `proxy.ts`, qui ne pose aucun header de sécurité)
 - [ ] Cookies httpOnly + secure + sameSite
 - [ ] Rate limiting implémenté
-- [ ] CSRF tokens fonctionnels
+- [ ] Allowlist `trustedOrigins` résolue et sans joker (voir §2.5)
 - [ ] Tests de pénétration basiques passés
 
 ### P1 - Élevé
@@ -1440,7 +1544,14 @@ export function getChangedFields(oldObj: any, newObj: any): Record<string, { old
 
 ### 6.1 Tests Automatisés
 
-**Fichier :** `tests/security/auth.test.ts`
+> **Chemin du plan caduc.** `tests/security/auth.test.ts` **n'existe pas** et n'est
+> pas prévu. Les tests de sécurité présents dans `tests/security/` sont
+> `trusted-origins.test.ts` (allowlist `trustedOrigins` et parsing des origines),
+> `account-status.test.ts` et `admin-user-status.test.ts`. Le bloc ci-dessous
+> reste le squelette historique du plan : il cible `/api/auth/login`, route
+> supprimée, et suppose un serveur de test qui n'est pas en place.
+
+**Fichier :** `tests/security/auth.test.ts` — *n'existe pas*
 
 ```typescript
 // tests/security/auth.test.ts
@@ -1491,7 +1602,7 @@ describe('Authentication Security', () => {
 ### 6.2 Checklist Tests Manuels
 
 - [ ] Tester XSS sur tous les formulaires
-- [ ] Tester CSRF avec site externe
+- [ ] Tester le contrôle d'origine (§2.5) : depuis un site tiers, une requête de mutation vers `/api/auth/*` (ex. `POST /api/auth/sign-in/email`) **déjà porteuse d'un cookie** et avec un en-tête `Origin` hors allowlist doit être refusée en `403`
 - [ ] Tester IDOR en changeant IDs dans URLs
 - [ ] Tester upload avec fichiers malveillants
 - [ ] Tester rate limiting avec scripts

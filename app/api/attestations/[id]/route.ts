@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser, getAdminUser } from '@/lib/auth';
 import { z } from 'zod';
-import { createNotification } from '@/lib/notifications';
+import { createNotification, notifyAllAdmins } from '@/lib/notifications';
 import { createAuditLog } from '@/lib/audit';
+import {
+  ATTESTATION_ALREADY_SOFT_DELETED,
+  ATTESTATION_PHYSICAL_DELETE_REFUSED,
+  PHYSICAL_DELETE_REFUSED_MESSAGE,
+  notificationAudience,
+  parseLifecycleReason,
+  softDeletePlan,
+} from '@/lib/attestations/lifecycle';
+import { Prisma } from '@prisma/client';
 import {
   CERTIFICATE_SEAL_VERSION,
   sealCertificate,
@@ -282,6 +291,18 @@ export async function PATCH(
   }
 }
 
+// #299 — La suppression physique d'une attestation émise est INTERDIE.
+//
+// Une attestation validée ou récupérée porte un code imprimé, un PDF serveur,
+// son hash et son sceau : la retirer de la base rendrait un document vérifié
+// caduc en silence, et le tiers qui l'a vérifié n'en saurait rien. Le DELETE
+// est donc une suppression LOGIQUE :
+//   - un MOTIF est obligatoire (400 `MOTIF_REQUIS` sans motif exploitable) ;
+//   - `deletedAt` + `deletedById` + `deleteReason` sont écrits ;
+//   - si l'attestation était VALIDATED/CLAIMED, elle est PUBLIQUEMENT RÉVOQUÉE
+//     (statut REVOKED + `revokedAt` + auteur + motif) ;
+//   - PDF, hash, sceau, code et audit sont intacts ;
+//   - une demande explicite de purge physique est refusée (409).
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -294,28 +315,137 @@ export async function DELETE(
   }
 
   try {
-    const old = await prisma.attestation.findUnique({ where: { id } });
-    await prisma.attestation.delete({ where: { id } });
+    let body: Record<string, unknown> = {};
+    try {
+      const parsedBody = (await request.json()) as unknown;
+      if (parsedBody && typeof parsedBody === "object") {
+        body = parsedBody as Record<string, unknown>;
+      }
+    } catch {
+      // Corps vide ou non JSON : traité comme une absence de motif (400).
+      body = {};
+    }
 
-    if (adminUser && old) {
+    // Purge physique : refus explicite, aucune écriture.
+    if (body.purge === true || body.physical === true) {
+      return NextResponse.json(
+        {
+          error: PHYSICAL_DELETE_REFUSED_MESSAGE,
+          code: ATTESTATION_PHYSICAL_DELETE_REFUSED,
+          hint: 'Utilisez DELETE { "reason": "..." } : suppression logique avec motif.',
+        },
+        { status: 409 },
+      );
+    }
+
+    const parsed = parseLifecycleReason(body.reason);
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { error: parsed.message, code: 'MOTIF_REQUIS' },
+        { status: 400 },
+      );
+    }
+
+    const old = await prisma.attestation.findUnique({
+      where: { id },
+      include: { formation: { select: { name: true } } },
+    });
+    if (!old) {
+      return NextResponse.json({ message: 'Attestation non trouvée' }, { status: 404 });
+    }
+
+    if (old.deletedAt) {
+      return NextResponse.json(
+        {
+          error: 'Cette attestation est déjà supprimée logiquement.',
+          code: ATTESTATION_ALREADY_SOFT_DELETED,
+          deletedAt: old.deletedAt,
+        },
+        { status: 409 },
+      );
+    }
+
+    const plan = softDeletePlan(old, {
+      reason: parsed.reason,
+      actorId: adminUser.id,
+      now: new Date(),
+    });
+
+    const updated = await prisma.attestation.update({
+      where: { id },
+      data: plan.data as Prisma.AttestationUncheckedUpdateInput,
+    });
+
+    const ipAddress = request.headers.get("x-forwarded-for") || "unknown";
+    const formationName = old.formation?.name ?? "la formation";
+
+    // Audit : le soft-delete est TOUJOURS journalisé, même pour un historique
+    // anonyme, et il porte la nature de l'opération (`softDelete: true`).
+    await createAuditLog({
+      userId: adminUser.id,
+      action: 'ATTESTATION_DELETED',
+      resource: 'ATTESTATION',
+      resourceId: id,
+      oldValue: { status: plan.previousStatus, deletedAt: null, revokedAt: old.revokedAt },
+      newValue: {
+        adminId: adminUser.id,
+        adminName: adminUser.name,
+        reason: parsed.reason,
+        softDelete: true,
+        deletedCode: old.code,
+        physicalDelete: false,
+      },
+      ipAddress,
+    });
+
+    if (plan.revoked) {
       await createAuditLog({
         userId: adminUser.id,
-        action: 'ATTESTATION_DELETED',
+        action: 'ATTESTATION_REVOKED',
         resource: 'ATTESTATION',
         resourceId: id,
-        oldValue: old,
-        newValue: { 
-          adminId: adminUser.id, 
+        oldValue: { status: plan.previousStatus },
+        newValue: {
+          adminId: adminUser.id,
           adminName: adminUser.name,
-          deletedCode: old.code 
+          reason: parsed.reason,
+          revokedBySoftDelete: true,
         },
-        ipAddress: request.headers.get("x-forwarded-for") || "unknown"
+        ipAddress,
       });
     }
 
-    return NextResponse.json({ message: 'Attestation supprimée' });
+    // Notification : le titulaire s'il existe, sinon les administrateurs —
+    // une attestation historique anonyme ne doit jamais être retirée en silence.
+    const audience = notificationAudience(old);
+    if (audience.kind === "user") {
+      await createNotification({
+        userId: audience.userId,
+        type: 'ATTESTATION_REJECTED',
+        title: plan.revoked ? 'Attestation révoquée ❌' : 'Attestation retirée',
+        message: plan.revoked
+          ? `Votre attestation "${old.code}" pour "${formationName}" a été révoquée par l'administration. Motif : ${parsed.reason}`
+          : `Votre attestation "${old.code}" pour "${formationName}" a été retirée par l'administration. Motif : ${parsed.reason}`,
+        link: '/results',
+      });
+    } else {
+      await notifyAllAdmins({
+        type: 'ATTESTATION_REJECTED',
+        title: 'Attestation historique retirée',
+        message: `L'attestation ${old.code} (${old.fullName}, ${formationName}) a été supprimée logiquement${plan.revoked ? ' et révoquée' : ''}. Aucun compte candidat associé — suivi requis. Motif : ${parsed.reason}`,
+        link: `/admin/attestations/${id}`,
+      });
+    }
+
+    return NextResponse.json({
+      message: 'Attestation supprimée logiquement',
+      softDeleted: true,
+      physicalDelete: false,
+      revoked: plan.revoked,
+      attestation: updated,
+    });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ message: "Erreur lors de la suppression" }, { status: 500 });
+    return NextResponse.json({ message: "Erreur lors de la suppression logique" }, { status: 500 });
   }
 }

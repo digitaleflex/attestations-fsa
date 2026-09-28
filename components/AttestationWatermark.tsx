@@ -1,11 +1,17 @@
 // components/AttestationWatermark.tsx
-// Invisible watermark component for anti-forgery protection
+// Filigrane de l'attestation : motif discret + empreinte lisible.
 import { useEffect, useState } from 'react';
 
 interface WatermarkProps {
-  attestationId: string;
-  userId: string;
+  /**
+   * Code FSA — SEULE ancre de l'empreinte (#281).
+   *
+   * Il ne s'agit plus d'un identifiant interne : le filigrane est rendu dans
+   * le DOM et lisible par n'importe quel tiers, il ne peut donc pas
+   * transporter ce que `/api/verifier` refuse de publier.
+   */
   code: string;
+  /** Instant d'émission (ISO) — donnée publique, affichée sur le document. */
   generatedAt: string;
   invisible?: boolean; // If true, watermark is hidden but detectable
 }
@@ -25,6 +31,26 @@ function generateFingerprint(data: string): string {
 }
 
 /**
+ * #281 — Chaîne d'empreinte.
+ *
+ * Elle ne dépend QUE de données déjà publiques et affichées sur le document :
+ * le code FSA (unique et figé) et l'instant d'émission. Aucun identifiant
+ * interne (cuid `id`, `userId`, `sessionId`…) n'y entre plus : ces valeurs
+ * vivaient auparavant dans le DOM public alors que la réponse du vérificateur
+ * ne les publie pas.
+ *
+ * La chaîne est FIGÉE : `verifyWatermark` la reconstruit à l'identique.
+ */
+export function fingerprintSource(code: string, generatedAt: string): string {
+  return `${code}-${generatedAt}`;
+}
+
+/** Empreinte affichée publiquement (`FP:`) et posée en `data-fp`. */
+export function computeFingerprint(code: string, generatedAt: string): string {
+  return generateFingerprint(fingerprintSource(code, generatedAt));
+}
+
+/**
  * Watermark component for attestation anti-forgery
  * Adds multiple layers of security:
  * 1. Visible watermark (subtle, semi-transparent)
@@ -32,19 +58,26 @@ function generateFingerprint(data: string): string {
  * 3. Verification hash (can be validated server-side)
  */
 export function AttestationWatermark({
-  attestationId,
-  userId,
   code,
   generatedAt,
   invisible = false,
 }: WatermarkProps) {
+  const normalizedCode = typeof code === "string" ? code.trim() : "";
   const [fingerprint, setFingerprint] = useState('');
 
   useEffect(() => {
-    // Generate unique fingerprint
-    const data = `${attestationId}-${userId}-${code}-${generatedAt}`;
-    setFingerprint(generateFingerprint(data));
-  }, [attestationId, userId, code, generatedAt]);
+    // Sans code FSA il n'existe aucune ancre publique. On n'affiche alors
+    // AUCUNE empreinte : dériver un `FP:` d'une chaîne vide (ou d'un
+    // identifiant interne) afficherait une valeur sans signification, pire
+    // qu'une absence de filigrane. `generateFingerprint("")` valant "0",
+    // la garde est indispensable — sans elle, un code vide s'afficherait
+    // comme une empreinte légitime.
+    if (!normalizedCode) {
+      setFingerprint('');
+      return;
+    }
+    setFingerprint(computeFingerprint(normalizedCode, generatedAt));
+  }, [normalizedCode, generatedAt]);
 
   if (!fingerprint) return null;
 
@@ -75,10 +108,10 @@ export function AttestationWatermark({
           Réf: {code} | FP: {fingerprint}
         </div>
 
-        {/* Hidden verification pixels (nearly invisible) */}
+        {/* Hidden verification pixels (nearly invisible) — données publiques
+            uniquement : l'empreinte et son ancre, le code FSA. */}
         <div className="absolute top-0 left-0 w-1 h-1 opacity-0" data-fp={fingerprint} />
-        <div className="absolute top-0 right-0 w-1 h-1 opacity-0" data-aid={attestationId} />
-        <div className="absolute bottom-0 left-0 w-1 h-1 opacity-0" data-uid={userId} />
+        <div className="absolute top-0 right-0 w-1 h-1 opacity-0" data-code={normalizedCode} />
       </div>
     );
   }
@@ -91,9 +124,7 @@ export function AttestationWatermark({
       aria-hidden="true"
       data-watermark="true"
       data-fingerprint={fingerprint}
-      data-attestation-id={attestationId}
-      data-user-id={userId}
-      data-code={code}
+      data-code={normalizedCode}
       data-generated={generatedAt}
     >
       {/* Encoded as nearly invisible single pixels */}
@@ -107,17 +138,17 @@ export function AttestationWatermark({
 /**
  * Verify if a document has a valid watermark
  * This can be used server-side to validate PDFs
+ *
+ * #281 — même chaîne que le composant : `code` + `generatedAt`, aucun
+ * identifiant interne. La reconstruction passe par `computeFingerprint` pour
+ * que les deux côtés ne puissent pas diverger.
  */
 export function verifyWatermark(data: {
   fingerprint?: string;
-  attestationId: string;
-  userId: string;
   code: string;
   generatedAt: string;
 }): { valid: boolean; reason?: string } {
-  const expectedFingerprint = generateFingerprint(
-    `${data.attestationId}-${data.userId}-${data.code}-${data.generatedAt}`
-  );
+  const expectedFingerprint = computeFingerprint(data.code.trim(), data.generatedAt);
 
   if (!data.fingerprint) {
     return { valid: false, reason: 'No fingerprint found' };

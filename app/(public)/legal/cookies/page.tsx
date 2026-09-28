@@ -50,19 +50,24 @@ export default function CookiesPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-3 border border-slate-200 font-mono text-xs">session token</td>
-                  <td className="p-3 border border-slate-200">Maintenir votre session de connexion</td>
-                  <td className="p-3 border border-slate-200">Durée de la session</td>
+                  <td className="p-3 border border-slate-200 font-mono text-xs">better-auth.session_token</td>
+                  <td className="p-3 border border-slate-200">Maintenir votre session de connexion et authentifier vos accès</td>
+                  <td className="p-3 border border-slate-200">30 jours</td>
                 </tr>
                 <tr className="bg-slate-50">
-                  <td className="p-3 border border-slate-200 font-mono text-xs">auth cookie</td>
-                  <td className="p-3 border border-slate-200">Authentification sécurisée</td>
+                  <td className="p-3 border border-slate-200 font-mono text-xs">__Secure-better-auth.session_token</td>
+                  <td className="p-3 border border-slate-200">Même cookie de session, sous son nom préfixé « __Secure- » lorsque la Plateforme est servie en HTTPS</td>
                   <td className="p-3 border border-slate-200">30 jours</td>
                 </tr>
                 <tr>
-                  <td className="p-3 border border-slate-200 font-mono text-xs">csrf token</td>
-                  <td className="p-3 border border-slate-200">Protection contre les attaques CSRF</td>
-                  <td className="p-3 border border-slate-200">Durée de la session</td>
+                  <td className="p-3 border border-slate-200 font-mono text-xs">better-auth.two_factor</td>
+                  <td className="p-3 border border-slate-200">Authentification à deux facteurs : conserver la vérification en cours</td>
+                  <td className="p-3 border border-slate-200">10 minutes</td>
+                </tr>
+                <tr className="bg-slate-50">
+                  <td className="p-3 border border-slate-200 font-mono text-xs">better-auth.trust_device</td>
+                  <td className="p-3 border border-slate-200">Mémoriser un appareil de confiance pour la double authentification</td>
+                  <td className="p-3 border border-slate-200">30 jours</td>
                 </tr>
               </tbody>
             </table>
@@ -70,6 +75,20 @@ export default function CookiesPage() {
           <p className="mt-2 text-sm text-slate-500 italic">
             Ces cookies ne nécessitent pas votre consentement car ils sont strictement nécessaires
             au fonctionnement du service.
+          </p>
+          <p className="mt-4">
+            <strong>Protection contre les requêtes envoyées depuis un site tiers.</strong> La
+            Plateforme ne dépose aucun cookie anti-CSRF et n'émet aucun jeton anti-CSRF. La
+            protection repose sur le contrôle de l'en-tête « Origin » : le service
+            d'authentification compare l'origine de la requête à une liste blanche d'origines de
+            confiance (« trustedOrigins ») et refuse la requête lorsque cette origine n'y figure
+            pas. Ce contrôle porte sur les requêtes modifiant des données (POST, PUT, PATCH,
+            DELETE) adressées au service d'authentification (« /api/auth »), et seulement lorsqu'un
+            navigateur joint déjà des cookies à la requête. Les autres pages de la Plateforme ne
+            sont pas soumises à ce contrôle d'origine : elles reposent sur l'attribut
+            « SameSite=Lax » du cookie de session, qui empêche le navigateur d'y joindre des
+            cookies lors d'une requête initiée depuis un autre site, à l'exception d'une navigation
+            vers la Plateforme elle-même.
           </p>
 
           <h3 className="font-bold text-slate-800 mt-6 mb-2">2.2 Cookies de préférences</h3>

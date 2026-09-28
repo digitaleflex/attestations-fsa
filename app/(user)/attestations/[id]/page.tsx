@@ -259,7 +259,6 @@ export default function AttestationPreviewPage() {
                      id={`attestation-preview-${att.id}`}
                      hideStepper
                      data={{
-                        id: att.id,
                         code: att.code,
                         fullName: att.fullName,
                         formationName: att.formation?.name || "Formation Saint André",

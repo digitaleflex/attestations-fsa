@@ -102,14 +102,16 @@ describe("POST /api/attestations — scellement #155 (correctif B)", () => {
     expect(createArgs.data.sealedAt).toBeInstanceOf(Date);
   });
 
-  it("crée l'attestation sans throw même sans clé (non bloquant)", async () => {
+  // #288 — l'ancien comportement « pas de clé => attestation créée non
+  // scellée, sans erreur » était un trou de preuve. L'émission est désormais
+  // refusée en dur, AVANT toute écriture.
+  it("refuse l'émission sans clé de scellement (aucune ligne non scellée) (#288)", async () => {
     delete process.env.CERT_SEAL_SECRET;
     const res = await callPost({ ...CERT_BODY, type: "STAGE" });
-    expect(res.status).toBe(201);
-
-    const createArgs = db.attestationCreate.mock.calls[0][0] as {
-      data: { sealHash?: string };
-    };
-    expect(createArgs.data.sealHash).toBeUndefined();
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toMatchObject({
+      message: expect.stringContaining("clé de scellement indisponible"),
+    });
+    expect(db.attestationCreate).not.toHaveBeenCalled();
   });
 });

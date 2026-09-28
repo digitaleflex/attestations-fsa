@@ -134,7 +134,7 @@ Une evil story représente une menace distincte et l’exigence de maîtrise cor
 - **EVIL-AUT-03** : existence d’un secret de session fallback en développement et risque de l’utiliser en production.
 - **EVIL-AUT-04** : `trustedOrigins` contient des jokers trop larges (`*.vercel.app`, tunnels et réseau local).
 - **EVIL-INJ-06** : `next/image` autorise des hôtes `**` et `http`, ouvrant un risque SSRF.
-- **EVIL-AUT-05** : le CSRF repose principalement sur `SameSite`, alors que la page publique promet un jeton CSRF.
+- **EVIL-AUT-05** *(partiel — suivi #285)* : le contrôle d’origine `trustedOrigins` ne couvre que `/api/auth/*` (méthodes de mutation, requêtes déjà porteuses de cookies) ; les autres routes applicatives (`/api/user`, `/api/admin`, …) ne reposent que sur `SameSite=Lax`. Aucun jeton anti-CSRF n’existe et il n’y en aura pas. Le cadrage antérieur — « la page publique promet un jeton CSRF » — est caduc : la page cookies a été alignée et ne promet plus de jeton.
 - **EVIL-ACC-06** : absence de RBAC et de super admin ; tous les admins ont les mêmes pouvoirs.
 - **EVIL-FIL-03** : `/api/upload` n’a pas de rate limit.
 - **EVIL-AUT-02** : certains flux auth limitent uniquement par IP, et l’en-tête `x-forwarded-for` doit être fiable.

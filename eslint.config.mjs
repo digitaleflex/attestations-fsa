@@ -16,9 +16,12 @@ export default tseslint.config(
       // Rapport de couverture : fichiers GÉNÉRÉS (sinon le gate linter du
       // bruit : 2 warnings sur coverage/lcov-report/*.js après un run --coverage).
       "coverage/",
-      // Copie locale du repo (worktree kilo, 5 Mo) + sauvegardes : code
-      // dupliqué, déjà ignoré par git via .git/info/exclude. Linter une copie
-      // gaspille du temps et peut remonter des faux positifs.
+      // Copies locales du repo (worktrees) + sauvegardes : code dupliqué,
+      // déjà ignoré par git via .git/info/exclude. Linter une copie gaspille
+      // du temps et peut remonter des faux positifs. Sans ".worktrees/**",
+      // `eslint .` parcourt les 22 worktrees et n'aboutit jamais en local,
+      // alors que la CI est verte (les worktrees n'y sont pas).
+      ".worktrees/",
       ".kilo/",
       "Backup/",
     ]

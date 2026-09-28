@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAdminUser } from '@/lib/auth';
+import { handleApiError } from '@/lib/error-handler';
 import { z } from 'zod';
 
 // Schéma de validation pour la modification d'une formation
@@ -39,8 +40,14 @@ export async function PATCH(
     });
     return NextResponse.json(formation);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erreur lors de la modification de la formation';
-    return NextResponse.json({ error: message }, { status: 500 });
+    // #321 — l'erreur Prisma de l'update ne part plus au client (contrainte,
+    //        nom de colonne, valeur). Détail journalisé + Sentry ; générique
+    //        en production, message lisible en développement.
+    return handleApiError(error, {
+      route: '/api/formations/[id]',
+      operation: 'update_formation',
+      userId: adminUser.id ?? undefined,
+    });
   }
 }
 
@@ -58,8 +65,13 @@ export async function DELETE(
     await prisma.formation.delete({ where: { id } });
     return NextResponse.json({ message: 'Formation supprimée' });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erreur lors de la suppression de la formation';
-    return NextResponse.json({ error: message }, { status: 500 });
+    // #321 — idem PATCH : la violation de clé étrangère / la contrainte
+    //        Prisma ne sont plus exposées au client.
+    return handleApiError(error, {
+      route: '/api/formations/[id]',
+      operation: 'delete_formation',
+      userId: adminUser.id ?? undefined,
+    });
   }
 }
 
@@ -80,7 +92,11 @@ export async function GET(
     }
     return NextResponse.json(formation);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erreur lors de la récupération de la formation';
-    return NextResponse.json({ error: message }, { status: 500 });
+    // #321 — idem : la lecture ne renvoie plus son erreur technique au client.
+    return handleApiError(error, {
+      route: '/api/formations/[id]',
+      operation: 'get_formation',
+      userId: adminUser.id ?? undefined,
+    });
   }
 }

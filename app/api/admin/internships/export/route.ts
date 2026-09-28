@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
+import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
-import * as XLSX from "xlsx";
+import { handleApiError } from "@/lib/error-handler";
+import { applyRateLimit } from "@/lib/rate-limit";
+import {
+  buildPagination,
+  internshipExportQuerySchema,
+} from "@/lib/internships/schemas";
+import { auditInternshipExport } from "@/lib/internships/mutation";
 
 export async function GET(request: NextRequest) {
   const adminUser = await getAdminUser(request);
@@ -9,15 +17,41 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  const rateLimit = await applyRateLimit(request, "api");
+  if (!rateLimit.allowed && rateLimit.response) {
+    return rateLimit.response;
+  }
+
   try {
+    // #267 — l'export est paginé comme la liste : `?page=&pageSize=&status=`.
+    // Un export « sans limite » d'un export massif n'est plus possible.
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
+    const query = internshipExportQuerySchema.parse({
+      page: searchParams.get("page") ?? undefined,
+      pageSize: searchParams.get("pageSize") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+    });
 
-    const where: Record<string, string> = status && status !== "ALL" ? { status } : {};
+    const where = query.status ? { status: query.status } : {};
 
-    const requests = await prisma.internshipRequest.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
+    const [requests, total] = await Promise.all([
+      prisma.internshipRequest.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: query.pageSize,
+        skip: (query.page - 1) * query.pageSize,
+      }),
+      prisma.internshipRequest.count({ where }),
+    ]);
+
+    // 🛡️ Audit : un export de données personnelles est une action traçable.
+    await auditInternshipExport({
+      adminUser,
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      status: query.status,
+      ipAddress: request.headers.get("x-forwarded-for") || "unknown",
     });
 
     // Prepare data for Excel
@@ -59,6 +93,8 @@ export async function GET(request: NextRequest) {
     // Generate buffer
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
+    const pagination = buildPagination(query, total);
+
     return new NextResponse(buffer, {
       headers: {
         "Content-Type":
@@ -66,13 +102,34 @@ export async function GET(request: NextRequest) {
         "Content-Disposition": `attachment; filename="stages-${
           new Date().toISOString().split("T")[0]
         }.xlsx"`,
+        // #267 — l'UI affiche « page X / Y (N demandes) » à partir de ces
+        // en-têtes, sans avoir à re-parser le fichier.
+        "X-Total-Count": String(pagination.total),
+        "X-Page": String(pagination.page),
+        "X-Page-Size": String(pagination.pageSize),
+        "X-Total-Pages": String(pagination.totalPages),
       },
     });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: "Paramètres invalides",
+          code: "INVALID_QUERY",
+          details: error.errors.map((e) => ({
+            field: e.path.join(".") || "unknown",
+            message: e.message,
+          })),
+        },
+        { status: 400 },
+      );
+    }
     console.error("[INTERNSHIP_EXPORT_ERROR]", error);
-    return NextResponse.json(
-      { error: "Erreur lors de l'export" },
-      { status: 500 }
-    );
+    return handleApiError(error, {
+      route: "/api/admin/internships/export",
+      operation: "GET",
+      userId: adminUser?.id,
+      ip: request.headers.get("x-forwarded-for") || undefined,
+    });
   }
 }
