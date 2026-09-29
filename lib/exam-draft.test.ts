@@ -38,7 +38,7 @@ describe("saveDraft", () => {
     expect(result).toBe(true);
     expect(mockRedis.set).toHaveBeenCalledWith(
       "exam:draft:exam-1:user-1",
-      mockDraft,
+      JSON.stringify(mockDraft),
       { ex: 86_400 }
     );
   });
@@ -65,7 +65,7 @@ describe("loadDraft", () => {
 
   it("retourne le brouillon existant", async () => {
     mockIsReady.mockReturnValue(true);
-    mockRedis.get.mockResolvedValue(mockDraft);
+    mockRedis.get.mockResolvedValue(JSON.stringify(mockDraft));
     const result = await loadDraft("exam-1", "user-1");
     expect(result).toEqual(mockDraft);
   });

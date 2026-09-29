@@ -66,7 +66,7 @@ export async function saveDraft(
   if (!isValidExamDraft(draft) || !isRedisReady()) return false;
   try {
     const redis = getRedis()!;
-    await redis.set(draftKey(examId, userId), draft, { ex: DRAFT_TTL });
+    await redis.set(draftKey(examId, userId), JSON.stringify(draft), { ex: DRAFT_TTL });
     return true;
   } catch (error) {
     console.error("[DRAFT SAVE ERROR]", error);
@@ -81,7 +81,8 @@ export async function loadDraft(
   if (!isRedisReady()) return null;
   try {
     const redis = getRedis()!;
-    const draft = await redis.get<ExamDraft>(draftKey(examId, userId));
+    const raw = await redis.get(draftKey(examId, userId));
+    const draft = raw ? JSON.parse(raw) as ExamDraft : null;
     return isValidExamDraft(draft) ? draft : null;
   } catch (error) {
     console.error("[DRAFT LOAD ERROR]", error);

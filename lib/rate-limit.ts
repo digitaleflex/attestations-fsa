@@ -1,8 +1,11 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { getRedis, isRedisReady, reportRedisUnavailable } from "@/lib/redis";
 import { NextResponse } from "next/server";
+import type { Redis } from "@upstash/redis";
 
-const redis = getRedis();
+// Cast vers le type Upstash Redis : notre interface RedisClient est compatible
+// en runtime, mais les génériques de @upstash/ratelimit exigent le type natif.
+const redis = getRedis() as unknown as Redis | null;
 const ratelimitEnabled = isRedisReady();
 
 // ============================================================================

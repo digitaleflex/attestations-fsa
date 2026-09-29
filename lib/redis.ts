@@ -13,12 +13,16 @@ import { captureServerError } from "@/lib/observability/sentry-capture";
 // ── Interface minimale compatible ────────────────────────────────────────────
 
 export interface RedisClient {
-  get(key: string): Promise<string | null>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get(key: string): Promise<any>;
   set(key: string, value: string, ...args: unknown[]): Promise<unknown>;
   del(key: string): Promise<unknown>;
   ping(): Promise<string>;
   eval(script: string, keys: string[], args: unknown[]): Promise<unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  evalsha(sha: string, keys: string[], args: unknown[]): Promise<any>;
   incr(key: string): Promise<number>;
+  incrby(key: string, increment: number): Promise<number>;
   expire(key: string, seconds: number): Promise<unknown>;
   ttl(key: string): Promise<number>;
 }
@@ -28,7 +32,10 @@ export interface RedisClient {
 function createUpstashClient(url: string, token: string): RedisClient {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Redis } = require("@upstash/redis") as typeof import("@upstash/redis");
-  return new Redis({ url, token });
+  // Cast nécessaire : @upstash/ratelimit attend le type Redis natif,
+  // pas notre interface simplifiée.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Redis({ url, token }) as any;
 }
 
 // ── Client ioredis natif ─────────────────────────────────────────────────────
@@ -50,12 +57,16 @@ function createNativeClient(): RedisClient {
   // Adapter ioredis vers l'interface RedisClient
   return {
     get: (key: string) => client.get(key),
-    set: (key: string, value: string, ...args: unknown[]) => client.set(key, value, ...(args as string[])),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    set: (key: string, value: string, ...args: unknown[]) => client.set(key, value, ...(args as any[])),
     del: (key: string) => client.del(key),
     ping: () => client.ping(),
     eval: (script: string, keys: string[], args: unknown[]) =>
       client.eval(script, keys.length, ...keys, ...(args as string[])),
+    evalsha: (sha: string, keys: string[], args: unknown[]) =>
+      client.evalsha(sha, keys.length, ...keys, ...(args as string[])),
     incr: (key: string) => client.incr(key),
+    incrby: (key: string, increment: number) => client.incrby(key, increment),
     expire: (key: string, seconds: number) => client.expire(key, seconds),
     ttl: (key: string) => client.ttl(key),
   };
