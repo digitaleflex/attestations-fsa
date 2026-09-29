@@ -1,22 +1,89 @@
-import { Redis } from "@upstash/redis";
 import { captureServerError } from "@/lib/observability/sentry-capture";
 
-let redis: Redis | null = null;
+/**
+ * Client Redis unifié.
+ *
+ * - Si UPSTASH_REDIS_REST_URL est défini → client HTTP Upstash (cloud)
+ * - Sinon → client ioredis natif (Redis local sur le VPS)
+ *
+ * Les deux exposent la même API minimale (get/set/del/ping/eval)
+ * utilisée par @upstash/ratelimit et le rate-limit applicatif.
+ */
+
+// ── Interface minimale compatible ────────────────────────────────────────────
+
+export interface RedisClient {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, ...args: unknown[]): Promise<unknown>;
+  del(key: string): Promise<unknown>;
+  ping(): Promise<string>;
+  eval(script: string, keys: string[], args: unknown[]): Promise<unknown>;
+  incr(key: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<unknown>;
+  ttl(key: string): Promise<number>;
+}
+
+// ── Client Upstash HTTP ──────────────────────────────────────────────────────
+
+function createUpstashClient(url: string, token: string): RedisClient {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Redis } = require("@upstash/redis") as typeof import("@upstash/redis");
+  return new Redis({ url, token });
+}
+
+// ── Client ioredis natif ─────────────────────────────────────────────────────
+
+function createNativeClient(): RedisClient {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Redis = require("ioredis") as typeof import("ioredis").default;
+  const client = new Redis({
+    host: process.env.REDIS_HOST || "127.0.0.1",
+    port: Number(process.env.REDIS_PORT) || 6379,
+    password: process.env.REDIS_PASSWORD || undefined,
+    maxRetriesPerRequest: 3,
+    retryStrategy(times: number) {
+      if (times > 3) return null;
+      return Math.min(times * 200, 1000);
+    },
+  });
+
+  // Adapter ioredis vers l'interface RedisClient
+  return {
+    get: (key: string) => client.get(key),
+    set: (key: string, value: string, ...args: unknown[]) => client.set(key, value, ...(args as string[])),
+    del: (key: string) => client.del(key),
+    ping: () => client.ping(),
+    eval: (script: string, keys: string[], args: unknown[]) =>
+      client.eval(script, keys.length, ...keys, ...(args as string[])),
+    incr: (key: string) => client.incr(key),
+    expire: (key: string, seconds: number) => client.expire(key, seconds),
+    ttl: (key: string) => client.ttl(key),
+  };
+}
+
+// ── Initialisation ───────────────────────────────────────────────────────────
+
+let redis: RedisClient | null = null;
 let redisReady = false;
 
 try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
+  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+
+  if (upstashUrl && upstashToken) {
+    // Mode Upstash HTTP (cloud)
+    redis = createUpstashClient(upstashUrl, upstashToken);
+    redisReady = true;
+  } else if (process.env.REDIS_HOST || process.env.NODE_ENV === "production") {
+    // Mode Redis natif (VPS local)
+    redis = createNativeClient();
     redisReady = true;
   }
 } catch (error) {
   console.error("[REDIS INIT ERROR]", error);
 }
 
-export function getRedis(): Redis | null {
+export function getRedis(): RedisClient | null {
   return redis;
 }
 
@@ -27,11 +94,6 @@ export function isRedisReady(): boolean {
 // ============================================================================
 // #310 — Alerte structurée quand Redis est indisponible
 // ============================================================================
-// Les endpoints sensibles (auth, claim, upload) sont désormais fail-closed :
-// une panne Redis y provoque un 503. Sans alerte, cette panne serait
-// INDÉTECTABLE (aucun 5xx côté métier, seulement des refus). On émet donc un
-// log JSON exploitable + une remontée Sentry, le tout THROTTLÉ à une fois par
-// minute pour ne pas noyer les logs pendant une panne prolongée.
 
 const REPORT_THROTTLE_MS = 60_000;
 let lastUnavailableReportAt = 0;
@@ -46,7 +108,6 @@ export function reportRedisUnavailable(scope: string, error?: unknown): void {
     code: "REDIS_UNAVAILABLE",
     scope,
     configured: redis !== null,
-    // Les endpoints sensibles refusent le trafic : l'incident est visible.
     impact: "rate-limit fail-closed sur auth/claim/upload",
     timestamp: new Date(now).toISOString(),
   };
