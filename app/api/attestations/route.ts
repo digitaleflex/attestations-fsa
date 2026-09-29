@@ -194,8 +194,9 @@ export async function POST(request: Request) {
       location,
       instructor,
       issuingCompany,
-      certificationScore: type === 'CERTIFICATION' ? certificationScore ?? null : null,
-      certificationMention: type === 'CERTIFICATION' ? certificationMention ?? null : null,
+      // Les champs certification sont toujours inclus (null si non applicable).
+      certificationScore: 'certificationScore' in parse.data ? (parse.data as any).certificationScore ?? null : null,
+      certificationMention: 'certificationMention' in parse.data ? (parse.data as any).certificationMention ?? null : null,
       stageHours: type === 'STAGE' ? stageHours ?? null : null,
       stageScore: type === 'STAGE' ? stageScore ?? null : null,
       stageObservations: type === 'STAGE' ? stageObservations ?? null : null,
