@@ -328,11 +328,27 @@ traversent alors le réseau en clair.
    ```
 
 3. **Remote `rclone`** (le bucket doit déjà exister, hors du dépôt) :
+
+   **Option recommandée — Backblaze B2 :**
    ```bash
-   rclone config            # assistant interactif ; stocker le secret dans
-                            # ~/.config/rclone/rclone.conf (chmod 600), JAMAIS dans le dépôt
-   rclone lsd spaces:       # doit lister le bucket → le réseau et les identifiants marchent
+   # 1. Créer un bucket sur backblaze.com → B2 Cloud Storage → Create Bucket
+   #    Nom : fsa-backups | Files are Private
+   # 2. Créer une Application Key (keyID + applicationKey)
+   # 3. Configurer rclone :
+   rclone config
+   # → n (nouveau remote) → name: b2-fsa → Storage: Backblaze B2
+   # → account: <keyID> → key: <applicationKey> → endpoint: (vide)
+   rclone lsd b2-fsa:       # doit lister le bucket
    ```
+
+   **Alternative — DigitalOcean Spaces :**
+   ```bash
+   rclone config
+   # → n → name: spaces → Storage: DigitalOcean Spaces
+   # → access_key_id / secret_access_key → region: ams3
+   rclone lsd spaces:
+   ```
+
    ⚠️ Choisir un bucket **d'un autre compte fournisseur** que le VPS : une sauvegarde
    copiée chez le même fournisseur, sur le même compte, ne protège pas de la perte du compte.
 
@@ -341,7 +357,7 @@ traversent alors le réseau en clair.
    ```bash
    install -d -m 700 ~/.config/attestations-fsa
    cat > ~/.config/attestations-fsa/backup.env <<'EOF'
-   BACKUP_REMOTE="<remote rclone, ex. spaces:fsa-backups>"
+   BACKUP_REMOTE="<remote rclone, ex. b2-fsa:fsa-backups>"
    BACKUP_AGE_RECIPIENT="age1..."
    # Rend le deploy CI fail-closed : la session SSH de deploy.yml n'exporte pas NODE_ENV,
    # mais elle charge ce fichier (set -a). Voir la limite ci-dessous.

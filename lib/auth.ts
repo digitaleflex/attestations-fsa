@@ -64,7 +64,7 @@ import {
 //       → origine(s) de l'application (exactes).
 //   BETTER_AUTH_TRUSTED_ORIGINS / AUTH_TRUSTED_ORIGINS
 //       → liste d'origines supplémentaires séparées par des virgules
-//         (ex. « https://hashcode.cloud/verifier »).
+//         (ex. « https://attestations.fermestandre.com/verifier »).
 //   BETTER_AUTH_TRUST_ORIGINS_ALLOW_WILDCARDS="true"
 //       → échappatoire EXPLICITE en production, à réserver au cas d'un
 //         déploiement multi-tenant sur un domaine à jokers. Refusée par défaut.
@@ -99,7 +99,7 @@ function getKnownProductionOrigins(): string[] {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (appUrl && appUrl.startsWith("https://")) return [appUrl];
   // Fallback si la variable est absente (dev/tests)
-  return ["https://hashcode.cloud"];
+  return ["https://attestations.fermestandre.com"];
 }
 
 export type TrustedOriginsEnv = {
