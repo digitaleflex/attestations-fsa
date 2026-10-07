@@ -37,8 +37,9 @@ export default function MentionsLegalesPage() {
         <section>
           <h2 className="text-xl font-bold text-slate-900 mb-3">2. Hébergement</h2>
           <div className="mt-4 p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <p><strong>Hébergeur :</strong> Serveur privé virtuel (VPS) autogéré</p>
-            <p><strong>Site web :</strong> <a href="https://hashcode.cloud" className="text-brand underline hover:text-brand-dark" target="_blank" rel="noopener noreferrer">https://hashcode.cloud</a></p>
+            <p><strong>Hébergeur :</strong> Hashcode Cloud — Serveur privé virtuel (VPS) autogéré</p>
+            <p><strong>Adresse :</strong> Abomey-Calavi, Bénin</p>
+            <p><strong>Contact :</strong> <a href="https://hashcode.cloud" className="text-brand underline hover:text-brand-dark" target="_blank" rel="noopener noreferrer">https://hashcode.cloud</a></p>
           </div>
         </section>
 

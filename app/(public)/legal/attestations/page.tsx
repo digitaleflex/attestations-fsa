@@ -72,8 +72,8 @@ export default function AttestationsPage() {
           <h2 className="text-xl font-bold text-slate-900 mb-3">4. Délivrance</h2>
           <h3 className="font-bold text-slate-800 mt-4 mb-2">4.1 Délai</h3>
           <p>
-            L'attestation est générée <strong>automatiquement et instantanément</strong> après
-            la réussite de l'examen. Elle est disponible dans l'espace personnel du candidat.
+            L'attestation est générée <strong>après validation de votre dossier</strong> par
+            l'administration. Elle est disponible dans l'espace personnel du candidat.
           </p>
 
           <h3 className="font-bold text-slate-800 mt-4 mb-2">4.2 Contenu</h3>
@@ -133,8 +133,8 @@ export default function AttestationsPage() {
         <section>
           <h2 className="text-xl font-bold text-slate-900 mb-3">6. Validité</h2>
           <p>
-            Les attestations sont délivrées <strong>sans limite de durée</strong>. Elles constituent
-            une preuve de certification permanente et restent vérifiables indéfiniment.
+            Les attestations restent <strong>vérifiables tant que l'attestation n'est pas révoquée</strong>.
+            La FSA se réserve le droit de révoquer une attestation dans les conditions prévues à la section 8.
           </p>
           <p className="mt-2">
             La FSA se réserve le droit de révoquer une attestation en cas de :

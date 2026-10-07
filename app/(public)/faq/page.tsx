@@ -17,11 +17,11 @@ const faqs = [
   },
   {
     question: "Comment vérifier l'authenticité d'une attestation ?",
-    answer: "Rendez-vous sur la page de vérification et saisissez le code unique présent sur le document. Le système confirmera instantanément sa validité avec les informations associées.",
+    answer: "Rendez-vous sur la page de vérification et saisissez le code unique présent sur le document. Le système confirmera sa validité avec les informations associées.",
   },
   {
     question: "Combien de temps faut-il pour recevoir mon attestation ?",
-    answer: "Une fois votre examen réussi, votre attestation est générée automatiquement et disponible dans votre espace personnel. Elle est vérifiable immédiatement grâce à son code unique.",
+    answer: "Une fois votre examen réussi, votre attestation est générée après validation de votre dossier et disponible dans votre espace personnel. Elle est vérifiable grâce à son code unique.",
   },
   {
     question: "Que faire si mon code est indiqué comme invalide ?",
