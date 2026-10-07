@@ -2,19 +2,22 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 const db = vi.hoisted(() => ({
   formationFindFirst: vi.fn(),
+  formationFindMany: vi.fn(),
   formationCreate: vi.fn(),
   attestationCount: vi.fn(),
   attestationCreate: vi.fn(),
+  auditLogCreate: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     $queryRaw: async () => [{ nextval: BigInt(1) }],
-    formation: { findFirst: db.formationFindFirst, create: db.formationCreate },
+    formation: { findFirst: db.formationFindFirst, findMany: db.formationFindMany, create: db.formationCreate },
     attestation: {
       count: db.attestationCount,
       create: db.attestationCreate,
     },
+    auditLog: { create: db.auditLogCreate },
   },
 }));
 
@@ -115,5 +118,86 @@ describe("POST /api/attestations — scellement #155 (correctif B)", () => {
       message: expect.stringContaining("clé de scellement indisponible"),
     });
     expect(db.attestationCreate).not.toHaveBeenCalled();
+  });
+});
+
+// #319 — Une formation inconnue ne peut plus être créée vide.
+describe("POST /api/attestations — formation #319", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    db.formationFindFirst.mockResolvedValue(null as never);
+    db.formationFindMany.mockResolvedValue([] as never);
+    db.attestationCount.mockResolvedValue(0);
+    db.attestationCreate.mockResolvedValue({
+      id: "att-1",
+      code: "FSA-2026-M09-00001-abcde",
+    } as never);
+    db.auditLogCreate.mockResolvedValue(undefined as never);
+  });
+
+  afterEach(() => {
+    delete process.env.CERT_SEAL_SECRET;
+  });
+
+  it("400 si formation inconnue sans catégorie ni description", async () => {
+    process.env.CERT_SEAL_SECRET = "attestations-test-secret-0123456789abcdef";
+    const res = await callPost({ ...CERT_BODY, type: "STAGE", stageHours: 120, formation: "Inconnue" });
+    expect(res.status).toBe(400);
+    expect(db.formationCreate).not.toHaveBeenCalled();
+    expect(db.attestationCreate).not.toHaveBeenCalled();
+  });
+
+  it("400 si formation inconnue avec catégorie mais sans description", async () => {
+    process.env.CERT_SEAL_SECRET = "attestations-test-secret-0123456789abcdef";
+    const res = await callPost({ ...CERT_BODY, type: "STAGE", stageHours: 120, formation: "Inconnue", category: "Tech" });
+    expect(res.status).toBe(400);
+    expect(db.formationCreate).not.toHaveBeenCalled();
+  });
+
+  it("crée la formation avec catégorie + description et journalise", async () => {
+    process.env.CERT_SEAL_SECRET = "attestations-test-secret-0123456789abcdef";
+    db.formationCreate.mockResolvedValue({ id: "formation-new", name: "Inconnue" } as never);
+    const res = await callPost({
+      ...CERT_BODY,
+      type: "STAGE",
+      stageHours: 120,
+      formation: "Inconnue",
+      category: "Tech",
+      description: "Formation technique",
+    });
+    expect(res.status).toBe(201);
+    expect(db.formationCreate).toHaveBeenCalledWith({
+      data: {
+        name: "Inconnue",
+        category: "Tech",
+        description: "Formation technique",
+        skills: [],
+      },
+    });
+    expect(db.auditLogCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "RESOURCE_CREATED",
+          resource: "FORMATION",
+        }),
+      }),
+    );
+  });
+
+  it("déduplique une formation existante (normalisation accents/casse)", async () => {
+    process.env.CERT_SEAL_SECRET = "attestations-test-secret-0123456789abcdef";
+    db.formationFindMany.mockResolvedValue([
+      { id: "formation-1", name: "Pisciculture" },
+    ] as never);
+    const res = await callPost({
+      ...CERT_BODY,
+      type: "STAGE",
+      stageHours: 120,
+      formation: "  PISCICULTURE  ",
+    });
+    expect(res.status).toBe(201);
+    expect(db.formationCreate).not.toHaveBeenCalled();
+    expect(db.attestationCreate).toHaveBeenCalled();
   });
 });

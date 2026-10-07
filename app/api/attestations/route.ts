@@ -4,6 +4,7 @@ import { customAlphabet } from 'nanoid'
 import { getAdminUser } from '@/lib/auth';
 import { getSealSecret, reportSealDisabledIfProduction, sealCertificate } from '@/lib/crypto/seal';
 import { sanitizeInput } from '@/lib/sanitization';
+import { createAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const nanoid = customAlphabet('1234567890abcdef', 5)
@@ -33,6 +34,10 @@ const AttestationSchema = z.object({
   certificationScore: z.number().min(0).max(100).optional(),
   certificationHours: z.number().min(1).max(2000).optional(),
   certificationObservations: z.string().max(1000).optional(),
+
+  // #319 — Une formation doit être référencée ou créée avec catégorie + description.
+  category: z.string().min(1, 'La catégorie est requise pour une nouvelle formation.').optional(),
+  description: z.string().min(1, 'La description est requise pour une nouvelle formation.').optional(),
 });
 
 export async function GET(request: Request) {
@@ -162,10 +167,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Émission bloquée : clé de scellement indisponible.' }, { status: 503 });
     }
 
-    // Chercher ou créer la formation par son nom
-    let formationRecord = await prisma.formation.findFirst({ where: { name: formation } })
+    // #319 — Déduplication par normalisation (casse + accents) et création
+    // contrôlée : une formation inconnue ne peut plus être créée vide
+    // (category '', skills []). Elle doit être référencée (existante) ou
+    // créée avec catégorie + description.
+    const normalize = (s: string) =>
+      s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const normalizedName = normalize(formation);
+
+    let formationRecord = await prisma.formation.findFirst({
+      where: { name: { contains: formation, mode: 'insensitive' } },
+    });
+    // Recherche exacte normalisée si la recherche insensitive ne suffit pas
     if (!formationRecord) {
-      formationRecord = await prisma.formation.create({ data: { name: formation, category: '', skills: [] } })
+      const allFormations = await prisma.formation.findMany();
+      formationRecord = allFormations.find((f) => normalize(f.name) === normalizedName) ?? null;
+    }
+
+    if (!formationRecord) {
+      // Formation inconnue : exiger catégorie + description
+      if (!parse.data.category || !parse.data.description) {
+        return NextResponse.json(
+          { message: 'Formation inconnue : catégorie et description requises pour la création.' },
+          { status: 400 }
+        );
+      }
+      formationRecord = await prisma.formation.create({
+        data: {
+          name: formation,
+          category: parse.data.category,
+          description: parse.data.description,
+          skills: [],
+        },
+      });
+      // Journaliser la création de la formation
+      await createAuditLog({
+        userId: adminUser.id,
+        action: 'RESOURCE_CREATED',
+        resource: 'FORMATION',
+        resourceId: formationRecord.id,
+        newValue: { name: formationRecord.name, category: parse.data.category },
+      });
     }
     const formationId = formationRecord.id
 
