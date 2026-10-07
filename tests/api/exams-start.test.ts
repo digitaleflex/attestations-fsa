@@ -189,6 +189,21 @@ describe("POST /api/exams/[id]/start", () => {
     expect(body.error).toContain("déjà soumis");
   });
 
+  // #318 — Une session expirée ne peut pas être reprise.
+  it("rejette une session EXPIRED", async () => {
+    db.sessionFindFirst.mockResolvedValue({
+      id: "session-1",
+      status: "EXPIRED",
+      startedAt: new Date(Date.now() - 3600_000),
+      expiresAt: new Date(Date.now() - 60_000),
+    } as never);
+    const res = await callStart();
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("expirée");
+    expect(db.sessionUpsert).not.toHaveBeenCalled();
+  });
+
   it("crée une session via upsert (anti-race #121)", async () => {
     db.sessionFindFirst.mockResolvedValue(null as never);
     db.sessionUpsert.mockResolvedValue({

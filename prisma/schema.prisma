@@ -316,6 +316,8 @@ model ExamSession {
   id          String            @id @default(uuid())
   examId      String
   userId      String
+  // Statuts : PENDING, IN_PROGRESS, PENDING_REVIEW, GRADED, COMPLETED,
+  // ARCHIVED (rétrogradation #301), EXPIRED (purge #318).
   status      String            @default("PENDING")
   scorePart1      Float @default(0) // raw Part 1 auto-grade (QCM)
   scorePart2      Float? // raw Part 2 admin-grade — null = partie non corrigée
@@ -338,6 +340,11 @@ model ExamSession {
   archivedAt    DateTime?
   archivedById  String?
   archiveReason String?
+  // #318 — Expiration des sessions d'examen. `expiresAt` est posé à la
+  // création (startedAt + durée de l'examen) ; le cron `lib/exams/cron-expire.ts`
+  // bascule les sessions IN_PROGRESS dont l'échéance est atteinte vers le
+  // statut EXPIRED. NULL = session héritée non expirable (repli historique).
+  expiresAt     DateTime?
   reclamations Reclamation[]
   type        ExamType          @default(OFFICIAL)
   exam        Exam              @relation(fields: [examId], references: [id])
@@ -350,6 +357,7 @@ model ExamSession {
   @@index([submittedAt])
   @@index([gradedAt])
   @@index([archivedAt])
+  @@index([expiresAt])
 }
 
 // Inscription explicite à un examen. L'absence de cette ligne ne vaut jamais
