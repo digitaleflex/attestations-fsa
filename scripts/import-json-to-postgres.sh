@@ -98,7 +98,7 @@ const pool = new Pool({
 const client = await pool.connect();
 
 const tableOrder = [
-  { table: "User", data: dump.tables.users, fields: ["id","name","email","emailVerified","image","role","createdAt","updatedAt","banned","banReason","banExpires","address","birthDate","birthPlace","phone","attestationCode","attestationStatus","enrolledAt","examId","examScheduledAt","formationId","gender","blockedReason","lastBlockedAt","resetPasswordRequired","status"] },
+  { table: "User", data: dump.tables.users, fields: ["id","name","email","emailVerified","image","role","createdAt","updatedAt","banned","banReason","banExpires","address","birthDate","birthPlace","phone","examId","examScheduledAt","formationId","gender","resetPasswordRequired","status"] },
   { table: "Account", data: dump.tables.accounts, fields: ["id","userId","scope","accessToken","accessTokenExpiresAt","accountId","createdAt","idToken","providerId","refreshToken","refreshTokenExpiresAt","updatedAt"] },
   { table: "Session", data: dump.tables.sessions, fields: ["id","userId","createdAt","expiresAt","ipAddress","updatedAt","userAgent","impersonatedBy"] },
   { table: "Verification", data: dump.tables.verifications, fields: ["id","identifier","value","expiresAt","createdAt","updatedAt"] },

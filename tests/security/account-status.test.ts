@@ -58,7 +58,7 @@ describe("#304 — bannissement (isAccountAllowed)", () => {
 
   it("refuse un compte BLOCKED", () => {
     const decision = evaluateAccountAccess(
-      { status: "BLOCKED", blockedReason: "Fraude" },
+      { status: "BLOCKED", banReason: "Fraude" },
       NOW,
     );
 

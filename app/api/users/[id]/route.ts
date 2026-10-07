@@ -32,7 +32,7 @@ const UpdateUserSchema = z.object({
     .nullable()
     .optional(),
   resetPasswordRequired: z.boolean().optional(),
-  blockedReason: z.string().optional(),
+  banReason: z.string().optional(),
   // Affectation à un examen (null = retirer l'affectation)
   examId: z
     .string()
@@ -90,8 +90,6 @@ export async function GET(
         phone: true,
         address: true,
         status: true,
-        lastBlockedAt: true,
-        blockedReason: true,
         examId: true,
         examScheduledAt: true,
         exam: {
@@ -264,9 +262,8 @@ export async function PATCH(
     if (data.status) {
       updateData.status = data.status;
       if (isBlockingStatus) {
-        updateData.lastBlockedAt = new Date();
         updateData.banned = true;
-        updateData.banReason = data.blockedReason ?? "Compte suspendu par l'administration";
+        updateData.banReason = data.banReason ?? "Compte suspendu par l'administration";
         updateData.banExpires =
           data.suspendedUntil != null ? new Date(data.suspendedUntil) : null;
       } else {
@@ -274,11 +271,9 @@ export async function PATCH(
         updateData.banned = false;
         updateData.banReason = null;
         updateData.banExpires = null;
-        updateData.lastBlockedAt = null;
       }
     }
     if (data.resetPasswordRequired !== undefined) updateData.resetPasswordRequired = data.resetPasswordRequired;
-    if (data.blockedReason !== undefined) updateData.blockedReason = data.blockedReason;
     if (touchesExam) {
       if (resolvedExamId !== undefined) updateData.examId = resolvedExamId;
       if (resolvedScheduledAt !== undefined) {

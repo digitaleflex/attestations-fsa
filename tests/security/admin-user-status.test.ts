@@ -86,7 +86,7 @@ beforeEach(() => {
 
 describe("#304 — PATCH /api/users/[id] : blocage effectif", () => {
   it("bannit le compte ET révoque ses sessions", async () => {
-    const res = await patch({ status: "BLOCKED", blockedReason: "Fraude" });
+    const res = await patch({ status: "BLOCKED", banReason: "Fraude" });
 
     expect(res.status).toBe(200);
     expect(db.userUpdate).toHaveBeenCalledWith(

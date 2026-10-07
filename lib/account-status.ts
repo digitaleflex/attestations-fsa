@@ -43,7 +43,6 @@ export type AccountRecord = {
   banned?: boolean | null;
   banReason?: string | null;
   banExpires?: Date | string | null;
-  blockedReason?: string | null;
 };
 
 export type AccountAccessDecision = {
@@ -67,7 +66,6 @@ const ACCOUNT_SELECT = {
   banned: true,
   banReason: true,
   banExpires: true,
-  blockedReason: true,
 } as const;
 
 /**
@@ -150,7 +148,7 @@ export function evaluateAccountAccess(
   const status = normalizeStatus(user.status);
   const banExpires = toDate(user.banExpires);
   const expired = banExpires !== null && banExpires.getTime() <= now.getTime();
-  const detail = user.blockedReason || user.banReason || null;
+  const detail = user.banReason || null;
   const base = { status, banExpires, expired, detail, user };
 
   // Suspension expirée : le compte redevient actif (et sera purgé en base).

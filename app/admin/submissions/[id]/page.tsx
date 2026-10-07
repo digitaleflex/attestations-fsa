@@ -88,7 +88,6 @@ interface CorrectResponse {
   success?: boolean;
   passed?: boolean;
   attestationGenerated?: boolean;
-  attestationCode?: string;
   attestationError?: string;
   error?: string;
 }
@@ -192,7 +191,7 @@ export default function AdminSubmissionDetailPage() {
 
       if (data.attestationGenerated) {
         toast.success(
-          `Correction enregistrée. Attestation générée${data.attestationCode ? ` (${data.attestationCode})` : ""}.`
+          "Correction enregistrée. Attestation générée."
         );
       } else if (data.attestationError) {
         toast.warning(`Correction enregistrée, mais attestation non générée : ${data.attestationError}`);

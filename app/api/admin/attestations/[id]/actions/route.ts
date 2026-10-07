@@ -160,7 +160,7 @@ export async function POST(
       action: LIFECYCLE_AUDIT_ACTIONS.RETROGRADE,
       resource: 'ATTESTATION',
       resourceId: id,
-      oldValue: { attestationCode: attestation.code, status: attestation.status },
+      oldValue: { status: attestation.status },
       newValue: {
         adminId: adminUser?.id,
         action: 'RESET_EXAM_STATUS',

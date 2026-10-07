@@ -135,15 +135,13 @@ const tables = [
       "birthDate",
       "birthPlace",
       "phone",
-      "attestationCode",
-      "attestationStatus",
+
       "enrolledAt",
       "examId",
       "examScheduledAt",
       "formationId",
       "gender",
-      "blockedReason",
-      "lastBlockedAt",
+
       "resetPasswordRequired",
       "status",
     ],

@@ -19,8 +19,6 @@ export interface User {
   address: string | null;
   birthDate: Date | string | null;
   birthPlace: string | null;
-  attestationCode: string | null;
-  attestationStatus: string;
   formationId: string | null;
   examId?: string | null;
   examScheduledAt?: Date | string | null;

@@ -54,7 +54,6 @@ type CorrectResponse = {
   };
   passed: boolean;
   attestationGenerated: boolean;
-  attestationCode?: string;
   attestationError?: string;
 };
 

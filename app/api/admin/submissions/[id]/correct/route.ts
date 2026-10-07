@@ -221,13 +221,11 @@ export async function POST(
     // Appelée pour tout examen OFFICIAL — issueExamAttestation gère la
     // re-correction (upsert score/mention) et la révocation (REJECTED si !passed).
     let attestationGenerated = false;
-    let attestationCode: string | undefined;
     let attestationError: string | undefined;
 
     if (exam.type === 'OFFICIAL') {
       const attestation = await issueExamAttestation(id);
       attestationGenerated = attestation.created;
-      attestationCode = attestation.code;
       attestationError = attestation.error;
     }
 
@@ -280,7 +278,6 @@ export async function POST(
       },
       passed,
       attestationGenerated,
-      attestationCode,
       attestationError,
     });
   } catch (error: unknown) {
