@@ -427,3 +427,116 @@ changement de code), (b) ajouter l'export dans `deploy.yml:105-106` et dans le c
 >
 > Emplacement de la décision : `docs/decisions-bloquantes.md` (#159) + issue #306, vague 6 du
 > `docs/ROADMAP.md`. Premier exercice à dater et à consigner dans ce document (§ 5.3).
+
+---
+
+## 6. Observabilité
+
+### 6.1 Sentry — remontée d'erreurs
+
+Le code Sentry est en place (`lib/observability/sentry-config.ts`) mais **100 % optionnel** :
+sans DSN, `buildSentryOptions` renvoie `null` et le SDK est un no-op total — aucune erreur
+n'est remontée, aucun alerting n'est possible.
+
+#### 6.1.1 Renseigner le DSN
+
+1. Créer un projet sur https://sentry.io (plan gratuit : 5 000 erreurs/mois).
+2. Dans le projet : **Settings → Client Keys (DSN)** → copier le DSN public.
+3. Sur le VPS, éditer `.env.production` (jamais committer — fichier gitignoré) :
+   ```bash
+   cd /home/audest/attestations-fsa
+   nano .env.production
+   # Renseigner les deux variables en fin de fichier :
+   #   SENTRY_DSN=https://<clé>@<org>.ingest.sentry.io/<projet>
+   #   NEXT_PUBLIC_SENTRY_DSN=<même valeur>
+   ```
+4. Recréer le conteneur pour appliquer :
+   ```bash
+   docker compose --env-file .env.production -f compose.prod.yml up -d --force-recreate fsa-app
+   ```
+   ⚠️ `NEXT_PUBLIC_SENTRY_DSN` est **baké au build** (`compose.prod.yml:18`) : un simple
+   `restart` ne suffit pas, il faut `--force-recreate` (ou `--build` si l'image n'a pas changé).
+5. Vérifier : déclencher une erreur volontaire (ex. route inexistante en prod) puis confirmer
+   dans le dashboard Sentry que l'événement apparaît.
+
+`TODO(humain) : une fois le DSN renseigné, copier ici la date d'activation et l'URL du projet
+Sentry (pas la clé — juste l'URL organisation/projet).`
+
+#### 6.1.2 Variables Sentry dans compose.prod.yml
+
+Déjà en place (`compose.prod.yml:64-70`) :
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `SENTRY_DSN` | DSN serveur (Node.js) | vide = désactivé |
+| `SENTRY_ENVIRONMENT` | tag d'environnement | `production` |
+| `SENTRY_RELEASE` | tag de release (SHA git) | vide |
+| `SENTRY_TRACES_SAMPLE_RATE` | échantillonnage perf (0–1) | `0` (erreurs seules) |
+
+`SENTRY_AUTH_TOKEN` (secret de build) n'est **pas** dans le conteneur — il n'a rien à faire au runtime.
+
+### 6.2 Uptime externe — détection de panne
+
+Aucun monitoring externe n'est configuré : si le VPS tombe, personne n'est alerté. Le healthcheck
+Docker (`compose.prod.yml:94-103`, sur `/api/ready`) ne fait que redémarrer le conteneur — il ne
+prévient personne.
+
+#### 6.2.1 Configurer Better Stack (recommandé)
+
+1. Créer un compte sur https://betterstack.com (plan gratuit : 50 monitors, 1 min d'intervalle).
+2. **Uptime → Add Monitor** :
+   - URL : `https://attestations.fermestandre.com/api/ready`
+   - Intervalle : 60 s
+   - Alertes : email + webhook (Slack/Discord si utilisé)
+3. Tester : arrêter `fsa-app` sur le VPS → l'alerte doit partir en < 2 min.
+
+#### 6.2.2 Alternative : UptimeRobot
+
+1. Créer un compte sur https://uptimerobot.com (plan gratuit : 50 monitors, 5 min d'intervalle).
+2. **Add New Monitor** :
+   - URL : `https://attestations.fermestandre.com/api/ready`
+   - Intervalle : 5 min (minimum en gratuit)
+   - Alertes : email, webhook, ou intégration Slack
+
+#### 6.2.3 Pourquoi `/api/ready` et pas `/api/health`
+
+- `/api/health` = liveness (le process répond, sans dépendance) — utile pour le healthcheck Docker.
+- `/api/ready` = readiness (la base est joignable) — reflète l'état réel du service pour un
+  monitoring externe. Un process qui répond mais dont la base est KO est en panne fonctionnelle.
+
+`TODO(humain) : une fois le monitor créé, copier ici l'URL du dashboard (pas les clés API).`
+
+### 6.3 Cycle « erreur → alerte reçue »
+
+```
+Erreur en prod
+  │
+  ├─ Côté client (navigateur)
+  │    └─ NEXT_PUBLIC_SENTRY_DSN (baké au build)
+  │         └─ SDK Sentry navigateur → envoie l'événement à Sentry.io
+  │
+  └─ Côté serveur (Node.js)
+       └─ SENTRY_DSN (runtime)
+            └─ SDK Sentry serveur → envoie l'événement à Sentry.io
+                 │
+                 └─ Sentry.io
+                      ├─ Règle d'alerte (ex. "nouvelle erreur" ou "seuil > N/min")
+                      │    └─ Email / Slack / webhook → astreinte
+                      │
+                      └─ Dashboard → tri, assignation, résolution
+```
+
+**Conditions pour que le cycle fonctionne** :
+1. `SENTRY_DSN` renseigné dans `.env.production` (§ 6.1.1) — sans lui, rien ne remonte.
+2. `NEXT_PUBLIC_SENTRY_DSN` renseigné **et** rebuild effectué — sans lui, les erreurs navigateur
+   sont muettes.
+3. Une règle d'alerte configurée dans le dashboard Sentry (par défaut : alerte sur toute
+   nouvelle erreur, envoyée par email).
+4. Un monitor uptime externe (§ 6.2) — Sentry ne détecte pas les pannes serveur (process mort =
+   personne pour envoyer l'erreur).
+
+**En cas d'alerte** :
+1. Lire l'événement Sentry : stack trace, utilisateur impacté, release fautif.
+2. Si le déploiement est récent → rollback (§ 2.1 ou § 2.2).
+3. Sinon → diagnostiquer via les logs : `docker compose --env-file .env.production -f compose.prod.yml logs --tail 200 fsa-app`.
+4. Résoudre, déployer le correctif, fermer l'événement Sentry.
