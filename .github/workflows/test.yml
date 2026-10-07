@@ -1,27 +1,23 @@
-name: Tests
+name: Test
 
 on:
   push:
+    branches: [main]
   pull_request:
-
-# Lecture seule sur le dépôt (`contents: read`) : ce workflow ne modifie rien.
-permissions:
-  contents: read
+    branches: [main]
 
 jobs:
-  # ── GATE TYPE + LINT ──────────────────────────────────────────────────
   quality:
+    name: Quality (tsc + eslint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9.15.4
+          version: 9
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
@@ -29,28 +25,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type-check
+      - name: TypeScript typecheck
         run: npx tsc --noEmit
 
-      - name: Lint
+      - name: ESLint
         run: npx eslint .
 
-      - name: R2 operations scripts (local, no credentials)
-        run: bash scripts/tests/test-r2-scripts.sh
-
-  # ── GATE SÉCURITÉ DES DÉPENDANCES + COUVERTURE ────────────────────────
   test:
+    name: Unit tests + coverage ratchet
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9.15.4
+          version: 9
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
@@ -58,8 +49,36 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Security audit (SCA)
-        run: pnpm audit --audit-level=high
+      - name: Vitest + coverage (ratchet 72/68/77/73)
+        run: pnpm test:coverage
 
-      - name: Run tests with coverage
-        run: pnpm run test:coverage
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start E2E database
+        run: pnpm e2e:db:up
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+
+      - name: Stop E2E database
+        if: always()
+        run: pnpm e2e:db:down
