@@ -315,7 +315,7 @@ export async function PATCH(
     return NextResponse.json(exam);
   } catch (error) {
     // #321 — plus de `details: error.message` : les violations de contrainte de
-    //        l'update n'atteignent plus le client. Journal serveur + Sentry,
+    //        l'update n'atteignent plus le client. Journal serveur,
     //        générique en production, lisible en développement.
     return handleApiError(error, {
       route: "/api/admin/exams/[id]",

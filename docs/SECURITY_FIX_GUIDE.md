@@ -1217,8 +1217,8 @@ export async function POST(req: Request) {
 > `ErrorTypes` associe à chaque type un **statut HTTP** et non un simple
 > code ; les routes **lèvent** des `ApiErrorImpl` plutôt que de renvoyer des
 > `NextResponse` à la main, ce qui laisse `handleApiError()` renvoyer le
-> statut de l'erreur métier ; les seules erreurs `5xx` sont **remontées à
-> Sentry** (`captureServerError()`, #151) ; et `formatValidationError()` est
+> statut de l'erreur métier ; les erreurs `5xx` sont **journalisées côté
+> serveur** (plus de remontée tierce : #151 abandonné) ; et `formatValidationError()` est
 > fourni pour les erreurs Zod. L'action est **à maintenir**. Il n'y a pas
 > d'entrée `CSRF` dans `ErrorTypes`, et il ne doit pas y en avoir une : voir
 > `lib/error-handler.ts:24-25` et le §4.1.

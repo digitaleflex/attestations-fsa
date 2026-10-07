@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     // #321 — `details: error.message` exposait au public le message Prisma
     //        (schéma `Contact`, colonnes, contraintes). Même mécanisme que
     //        GET/DELETE ci-dessous : générique en production, lisible en
-    //        développement, détail journalisé et remonté à Sentry.
+    //        développement, détail journalisé côté serveur.
     return handleApiError(error, {
       route: '/api/signalement',
       operation: 'create_report',

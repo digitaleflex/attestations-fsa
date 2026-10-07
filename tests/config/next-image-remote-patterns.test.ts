@@ -33,7 +33,7 @@ async function loadConfig(env: Record<string, string | undefined> = {}) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
-  // Sentry est optionnel : aucun DSN requis pour lire la config.
+  // Aucun DSN tiers requis pour lire la config.
   const mod = (await import("../../next.config.mjs")) as { default: ImportedConfig };
   return mod.default;
 }

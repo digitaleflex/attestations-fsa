@@ -126,7 +126,7 @@ L'incident fondateur (« clé crue perdue, faux « données altérées » ») n'
 
 ### 3.3 Le contrôle au démarrage — moment, algorithme, comportement
 
-**Moment** : `instrumentation.ts:10` (`register()`) — le hook Next.js existant, déjà chargé au démarrage serveur (il y initialise Sentry, l. 10-17). C'est le seul point d'entrée garanti avant la première requête, sans toucher aux nœuds critiques interdits.
+**Moment** : `instrumentation.ts:10` (`register()`) — le hook Next.js existant, déjà chargé au démarrage serveur. C'est le seul point d'entrée garanti avant la première requête, sans toucher aux nœuds critiques interdits.
 
 **Algorithme** (prose, pas code) :
 1. Lire la ligne manifeste. Absente → base pré-manifeste : l'initialiser (mode compat), alerte `info`, pas d'échec.
@@ -139,7 +139,7 @@ L'incident fondateur (« clé crue perdue, faux « données altérées » ») n'
 2. **Le healthcheck Docker ne regarde pas `/api/ready`** : il sonde `/api/health` (`compose.prod.yml:68-77`), liveness sans dépendance (`app/api/health/route.ts:6-11`). Donc un 503 sur `/api/ready` **alerte sans bloquer le déploiement** — le canal de signal est déjà câblé pour exactement ce comportement.
 3. **La granularité du refus est déjà gérée par le métier** : une clé de scellement incohérente fait échouer *la vérification des certificats concernés* (fail-closed au bon endroit), pas le site. Le manifeste ne fait qu'ajouter le *diagnostic juste* à un échec qui existe déjà.
 
-**Effets concrets d'une incohérence** : log `error` structuré (pattern existant), bloc `coherence` dans `/api/ready` (→ 503), capture Sentry si DSN présent (`instrumentation.ts`), bannière admin (phase ultérieure, UI — hors périmètre #160, donc différé).
+**Effets concrets d'une incohérence** : log `error` structuré (pattern existant), bloc `coherence` dans `/api/ready` (→ 503), bannière admin (phase ultérieure, UI — hors périmètre #160, donc différé).
 
 ### 3.4 Articulation avec #237 (Ed25519) — exigée par le commanditaire
 
@@ -328,7 +328,7 @@ Contrainte respectée : chaque phase ≤ 3 j d'agent, aucune ne touche au parcou
 - `prisma/migrations/<date>_system_manifest/` : DDL additif (nouvelle table, zéro colonne modifiée) ;
 - `lib/coherence/manifest.ts` **(nouveau)** : lecture/écriture de la ligne, calcul des compteurs, comparaison exigences↔environnement (empreinte scellement selon la convention #236 — `sha256(clé)` tronqué 12 hex ; présence clé de signature ; plancher schéma) ;
 - `lib/coherence/check.ts` **(nouveau)** : agrégation `ok | degraded | incoherent`, détail par contrôle, **jamais de secret en sortie** ;
-- `instrumentation.ts` : appel du contrôle dans `register()` (après l'init Sentry existant, l. 10-17), log `error` si incohérent ;
+- `instrumentation.ts` : appel du contrôle dans `register()`, log `error` si incohérent ;
 - `app/api/ready/route.ts` : bloc `coherence` (booléens + empreintes, statut 503 si `degraded`/`incoherent`) — **sans casser le contrat existant** (`SELECT 1` → `status: "ready"`) ni le futur bloc #236 (coordination : la PR #236 ajoute `sealFingerprint*` — mêmes champs, source = manifeste) ;
 - `app/api/admin/coherence/route.ts` **(nouveau)** : rapport complet, protégé `getAdminUser` ;
 - `scripts/coherence-check.ts` **(nouveau)** : `--snapshot` / `--check` / `--compare`, code retour non nul si incohérent ;

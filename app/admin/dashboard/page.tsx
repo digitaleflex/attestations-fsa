@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { captureServerError } from "@/lib/observability/sentry-capture";
 
 /** Un compteur, avec la trace de son éventuel échec. */
 type Counter = { value: number | null; failed: boolean };
@@ -13,7 +12,7 @@ type Counter = { value: number | null; failed: boolean };
 /**
  * Un compteur qui ne fait pas tomber la page (#84).
  *
- * Le détail de l'échec part dans le journal serveur et chez Sentry — il n'est
+ * Le détail de l'échec part dans le journal serveur — il n'est
  * jamais renvoyé au navigateur. L'écran admin affiche `null` (un tiret), pas un
  * message technique, pas un nom de table.
  */
@@ -25,10 +24,6 @@ async function countSafely(
     return { value: await run(), failed: false };
   } catch (error) {
     console.error(`[admin/dashboard] Compteur en échec : ${operation}`, error);
-    captureServerError(error, {
-      route: "/admin/dashboard",
-      operation: `dashboard:${operation}`,
-    });
     return { value: null, failed: true };
   }
 }

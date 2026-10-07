@@ -130,7 +130,7 @@ Niveaux :
 | SEC-09 | CSRF aligné avec documentation | Système | Partielle | SEC-02 | #285 |
 | SEC-10 | Export/effacement RGPD | Candidat | Absente | OPS-07 | #291 |
 | OPS-01 | Liveness `/api/health` | Opérateur | Livrée | — | tests health |
-| OPS-08 | Sentry avec scrub PII | Opérateur | Livrée | — | tests scrub |
+| OPS-08 | Remontée d'erreurs tierce avec scrub PII | Opérateur | Abandonnée (décision : suppression) | — | — |
 | OPS-13 | Logs structurés et corrélation | Opérateur | Absente | ADM-04 | #321 |
 | OPS-15 | Audit intégrité et normalisation notes | Opérateur | Livrée | — | scripts data |
 | QLT-03 | Seuil de couverture bloquant | Opérateur | Livrée | QLT-01 | `vitest.config` |

@@ -61,13 +61,6 @@ services:
       # être présent sur le disque et rester invisible du conteneur, et toute
       # émission CERTIFICATION échoue (OfficialPdfUnavailableError).
       ATTESTATION_PDF_GENERATOR_MODULE: ${ATTESTATION_PDF_GENERATOR_MODULE}
-      # #151 — Observabilité Sentry. SENTRY_DSN est OBLIGATOIRE en production
-      # (sans elle : no-op total, aucune remontée d'erreur). SENTRY_AUTH_TOKEN
-      # est, lui, un secret de BUILD : il n'a rien à faire dans le conteneur.
-      SENTRY_DSN: ${SENTRY_DSN:-}
-      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
-      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
-      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
       # Stockage objet : valeurs provenant de l'environnement de production.
       STORAGE_DRIVER: ${STORAGE_DRIVER}
       S3_BUCKET: ${S3_BUCKET}

@@ -76,8 +76,8 @@ const ExamSchema = z.object({
 
 // POST /api/admin/exams - create a new exam
 export async function POST(request: Request) {
-  // Déclaré hors du `try` pour être joignable depuis le contexte Sentry du
-  // handler d'erreur (#321).
+  // Déclaré hors du `try` pour être joignable depuis le contexte
+  // du handler d'erreur (#321).
   let adminUserId: string | undefined;
   try {
     const adminUser = await getAdminUser(request);
@@ -260,7 +260,7 @@ export async function POST(request: Request) {
     );
     } catch (error: unknown) {
     // #321 — le champ `details` portait le message Prisma brut (contraintes,
-    //        colonnes, valeurs) jusqu'au client. Détail journalisé + Sentry ;
+    //        colonnes, valeurs) jusqu'au client. Détail journalisé côté serveur ;
     //        générique en production, lisible en développement.
     return handleApiError(error, {
       route: "/api/admin/exams",

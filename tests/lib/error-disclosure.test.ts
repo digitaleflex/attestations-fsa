@@ -10,7 +10,7 @@
  *  1. Les erreurs TECHNIQUES (ici une violation de contrainte Prisma) ne
  *     doivent PAS atteindre le client en production — ni le message, ni le nom
  *     de table/modèle, ni le nom de colonne, ni la valeur en cause. Elles
- *     doivent être remontées à Sentry et journalisées côté serveur.
+ *     doivent être journalisées côté serveur.
  *  2. Les erreurs MÉTIER doivent continuer de PARLER au client. Un masque
  *     aveugle casserait le formulaire d'administration : « motif obligatoire »,
  *     « attestation supprimée logiquement », 404, 401… doivent rester lisibles,
@@ -47,7 +47,6 @@ const deps = vi.hoisted(() => ({
   createNotification: vi.fn(),
   notifyAllAdmins: vi.fn(),
   createAuditLog: vi.fn(),
-  captureServerError: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({ getAdminUser: deps.getAdminUser }));
@@ -56,14 +55,6 @@ vi.mock("@/lib/notifications", () => ({
   notifyAllAdmins: deps.notifyAllAdmins,
 }));
 vi.mock("@/lib/audit", () => ({ createAuditLog: deps.createAuditLog }));
-
-// Sentry est mocké pour prouver que le détail part bien chez Sentry — et pour
-// ne pas charger le SDK. Sans DSN, `captureServerError` est un no-op strict
-// (`lib/observability/sentry-capture.ts`) : le test ne dépend donc d'aucune
-// variable d'environnement de la machine.
-vi.mock("@/lib/observability/sentry-capture", () => ({
-  captureServerError: deps.captureServerError,
-}));
 
 import { POST } from "@/app/api/admin/attestations/[id]/actions/route";
 import { ApiErrorImpl, handleApiError } from "@/lib/error-handler";
@@ -186,24 +177,20 @@ describe("#321 — fuite d'erreur technique en production", () => {
     }
   });
 
-  it("le détail de l'erreur part chez Sentry en production", async () => {
+  it("le détail de l'erreur est journalisé côté serveur avec son contexte", async () => {
     vi.stubEnv("NODE_ENV", "production");
 
     await callActions({ action: "REVOKE", reason: "Fraude avérée" });
 
-    expect(deps.captureServerError).toHaveBeenCalledTimes(1);
-    const [captured, context] = deps.captureServerError.mock.calls[0] as [
-      Error,
-      Record<string, unknown>,
-    ];
-    // Sentry reçoit bien l'erreur NON dégradée…
-    expect(captured.message).toContain("Unique constraint failed");
-    // …accompagnée du contexte qui permet de retrouver l'action fautive.
-    expect(context).toMatchObject({
-      route: "/api/admin/attestations/[id]/actions",
-      operation: "lifecycle:REVOKE",
-      status: 500,
-    });
+    // Le journal serveur porte l'erreur NON dégradée et le contexte qui permet
+    // de retrouver l'action fautive (la réponse, elle, reste générique).
+    const journal = consoleError.mock.calls
+      .map((args: unknown[]) => args.map((a) => String(a)).join(" "))
+      .join("\n");
+    expect(journal).toContain("[API ERROR SEV-1]");
+    expect(journal).toContain("Unique constraint failed");
+    expect(journal).toContain("/api/admin/attestations/[id]/actions");
+    expect(journal).toContain("lifecycle:REVOKE");
   });
 
   it("le détail complet est journalisé côté serveur, jamais renvoyé", async () => {
@@ -288,6 +275,5 @@ describe("#321 — les erreurs MÉTIER continuent de parler au client", () => {
       error: "Cet examen a déjà une session.",
       code: "CONFLICT",
     });
-    expect(deps.captureServerError).not.toHaveBeenCalled();
   });
 });

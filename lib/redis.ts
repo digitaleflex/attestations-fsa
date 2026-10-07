@@ -1,5 +1,3 @@
-import { captureServerError } from "@/lib/observability/sentry-capture";
-
 /**
  * Client Redis unifié.
  *
@@ -124,10 +122,6 @@ export function reportRedisUnavailable(scope: string, error?: unknown): void {
   };
 
   console.error("[REDIS_UNAVAILABLE]", JSON.stringify(payload));
-  captureServerError(
-    error instanceof Error ? error : new Error(`Redis indisponible (${scope})`),
-    payload,
-  );
 }
 
 /** Réinitialise le throttling d'alerte (réservé aux tests). */

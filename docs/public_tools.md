@@ -22,4 +22,4 @@ This subset of tools plays a direct role in the **user experience (UX)** and **i
 
 ## 5. User Privacy & Monitoring
 *   **Plausible**: Public-facing because it respects their privacy (GDPR friendly) unlike traditional trackers.
-*   **Sentry / LogRocket**: Ensuring the public user doesn't face crashes (silent but critical).
+*   **LogRocket**: Session replay and frontend monitoring (silent but critical).

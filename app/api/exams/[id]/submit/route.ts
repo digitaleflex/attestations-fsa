@@ -381,7 +381,7 @@ export async function POST(
     //        (noms de tables, colonnes, contraintes). Toutes les erreurs MÉTIER
     //        de cette route sont renvoyées plus haut en 4xx explicites (401, 400,
     //        404, 409, 423) : rien de utile n'est perdu. Ici il ne reste que de
-    //        la technique, qui part en journal serveur + Sentry.
+    //        la technique, qui part en journal serveur.
     return handleApiError(error, {
       route: '/api/exams/[id]/submit',
       operation: 'submit_exam',

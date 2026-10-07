@@ -41,7 +41,7 @@ export async function PATCH(
     return NextResponse.json(formation);
   } catch (error: unknown) {
     // #321 — l'erreur Prisma de l'update ne part plus au client (contrainte,
-    //        nom de colonne, valeur). Détail journalisé + Sentry ; générique
+    //        nom de colonne, valeur). Détail journalisé côté serveur ; générique
     //        en production, message lisible en développement.
     return handleApiError(error, {
       route: '/api/formations/[id]',

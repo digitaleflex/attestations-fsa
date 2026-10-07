@@ -46,7 +46,7 @@ export async function POST(
   }
 
   // #321 — étiquette d'action déclarée hors du `try` : le handler d'erreur a
-  // besoin de savoir QUELLE action a échoué pour le diagnostic Sentry.
+  // besoin de savoir QUELLE action a échoué pour le diagnostic serveur.
   let actionLabel = 'inconnue';
 
   try {
@@ -194,7 +194,7 @@ export async function POST(
     // #321 — le message brut n'est PLUS renvoyé au client. Un message Prisma
     //        expose des noms de tables, des colonnes, des contraintes et
     //        parfois des valeurs. `handleApiError` journalise le détail complet
-    //        (message + stack) côté serveur, le remonte à Sentry, et ne laisse
+    //        (message + stack) côté serveur, et ne laisse
     //        le message lisible qu'en développement — en production le client
     //        reçoit un message générique. Les erreurs MÉTIER ne passent pas
     //        par ici : elles sont renvoyées explicitement plus haut.

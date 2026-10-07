@@ -54,8 +54,7 @@ This list proposes 50 essential tools with robust APIs, selected from the broade
 ## 8. Analytics & Monitoring
 36. **PostHog**: All-in-one product analytics (open source).
 37. **Plausible**: Privacy-friendly google analytics alternative.
-38. **Sentry**: Error tracking and performance monitoring.
-39. **LogRocket**: Session replay and frontend monitoring.
+38. **LogRocket**: Session replay and frontend monitoring.
 40. **Vercel Analytics**: Built-in performance metrics for Next.js.
 
 ## 9. Search & Discovery

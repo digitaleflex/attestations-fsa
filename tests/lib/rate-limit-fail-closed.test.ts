@@ -21,10 +21,6 @@ vi.mock("@/lib/redis", () => ({
   reportRedisUnavailable: redisDeps.reportRedisUnavailable,
 }));
 
-vi.mock("@/lib/observability/sentry-capture", () => ({
-  captureServerError: vi.fn(),
-}));
-
 vi.mock("@upstash/ratelimit", () => {
   // Limiteur Redis simulé : l'instance "Upstash" existe mais `limit()` échoue
   // (panne réseau / timeout / quota épuisé côté Upstash).

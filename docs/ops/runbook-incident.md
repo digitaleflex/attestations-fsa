@@ -399,9 +399,9 @@ Un faux négatif massif (certificats valides rejetés) touche l'image de la FSA 
 ## Incident 8 — Observabilité aveugle (P2, aggravant les autres)
 
 ### Réalité vérifiée
-- **Pas de Sentry intégré** : aucune dépendance `@sentry/*` dans `package.json`, aucun fichier
-  `instrumentation.*` ni `sentry.*` ; les variables `SENTRY_*` de `.env.example:46-50` sont
-  **commentées**.
+- **Pas de remontée d'erreur tierce** : aucune dépendance de tracking
+  d'erreurs dans `package.json`, aucun fichier d'instrumentation ni de
+  configuration d'observabilité ; aucune variable dédiée dans `.env.example`.
 - Pas de monitoring uptime détectable dans le dépôt.
 - Historique des logs borné : 10 Mo × 3 fichiers par conteneur (`compose.prod.yml:70-74`).
 
@@ -423,11 +423,11 @@ Un faux négatif massif (certificats valides rejetés) touche l'image de la FSA 
 
 ### Ce qu'il ne faut SURTOUT PAS faire
 - ❌ Redémarrer un conteneur « pour voir les logs repartir » sans capture préalable.
-- ❌ Ajouter un DSN Sentry « au débotté » sur le VPS sans passer par la procédure de rotation
+- ❌ Ajouter un DSN d'observabilité « au débotté » sur le VPS sans passer par la procédure de rotation
   (un secret de plus = un secret à gérer).
 
 ### Escalade / Dette
-`TODO(humain): décider et financer l'observabilité (Sentry ? uptime monitor ?), désigner le
+`TODO(humain): décider et financer l'observabilité (SaaS d'erreurs ? uptime monitor ?), désigner le
 propriétaire, et transformer ce chapitre en runbook d'intégration.`
 
 ---

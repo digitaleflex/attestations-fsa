@@ -727,7 +727,7 @@ function resolveRedisUnavailable(
     };
   }
 
-  // Endpoint sensible : on refuse, et on alerte (log JSON + Sentry, throttlé).
+  // Endpoint sensible : on refuse, et on alerte (log JSON, throttlé).
   reportRedisUnavailable(`${limitType}:${reason}`, error);
   console.error(
     `[RATE LIMIT] Fail-closed (${limitType}, ${reason}) — requête refusée, Redis indisponible`,

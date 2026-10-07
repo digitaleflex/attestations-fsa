@@ -1148,7 +1148,7 @@ answers: answers || {}  // Stocké dans Json field
 | SAST | SonarQube, Semgrep | Analyse statique |
 | DAST | OWASP ZAP, Burp Suite | Tests dynamiques |
 | SCA | Dependabot, Snyk | Vulnérabilités dépendances |
-| Monitoring | Sentry, Datadog | Détection incidents |
+| Monitoring | Datadog | Détection incidents |
 | Rate Limiting | Upstash Redis | Protection DDoS |
 
 ### 9.3 Métriques de Suivi
