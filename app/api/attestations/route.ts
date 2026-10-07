@@ -107,8 +107,41 @@ export async function POST(request: Request) {
     }
     const {
       fullName, email, gender, birthDate, birthPlace, formation, startDate, endDate, location, instructor, issuingCompany, type,
-      stageHours, stageScore, stageObservations
+      stageHours, stageScore, stageObservations,
+      certificationScore, certificationMention, certificationHours
     } = parse.data
+
+    // #322 — Refuser les champs non persistés. `certificationHoursExempted`
+    // n'existe pas dans le schéma Prisma : accepter ce champ permettrait à
+    // un client de croire qu'une exemption est enregistrée alors qu'elle
+    // serait silencieusement ignorée.
+    if (body && typeof body === 'object' && 'certificationHoursExempted' in body) {
+      return NextResponse.json(
+        { message: 'Champ non persisté: certificationHoursExempted' },
+        { status: 400 }
+      )
+    }
+
+    // #322 — Invariants par type à la création : une CERTIFICATION requiert
+    // score + mention + heures ; un STAGE requiert les heures.
+    if (type === 'CERTIFICATION') {
+      const missing: string[] = [];
+      if (certificationScore === undefined) missing.push('certificationScore');
+      if (certificationMention === undefined) missing.push('certificationMention');
+      if (certificationHours === undefined) missing.push('certificationHours');
+      if (missing.length > 0) {
+        return NextResponse.json(
+          { message: `Champs requis pour CERTIFICATION: ${missing.join(', ')}` },
+          { status: 400 }
+        )
+      }
+    }
+    if (type === 'STAGE' && stageHours === undefined) {
+      return NextResponse.json(
+        { message: 'Champ requis pour STAGE: stageHours' },
+        { status: 400 }
+      )
+    }
 
     // Les certifications officielles ne peuvent être arbitraires : elles sont
     // exclusivement émises par le hub d'examen lié à une session GRADED.

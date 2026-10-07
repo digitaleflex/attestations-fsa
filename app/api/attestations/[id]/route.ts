@@ -46,7 +46,6 @@ const AttestationUpdateSchema = z.object({
   certificationMention: z.enum(['PASSABLE', 'ASSEZ_BIEN', 'BIEN', 'TRES_BIEN', 'EXCELLENCE']).optional(),
   certificationScore: z.number().min(0).max(100).optional(),
   certificationHours: z.number().min(1).max(2000).optional(),
-  certificationHoursExempted: z.number().optional(),
   certificationObservations: z.string().max(1000).optional(),
 });
 
@@ -140,6 +139,17 @@ export async function PATCH(
     }
     const data = parse.data;
 
+    // #322 — Refuser les champs non persistés. `certificationHoursExempted`
+    // n'existe pas dans le schéma Prisma : accepter ce champ permettrait à
+    // un client de croire qu'une exemption est enregistrée alors qu'elle
+    // serait silencieusement ignorée.
+    if (body && typeof body === 'object' && 'certificationHoursExempted' in body) {
+      return NextResponse.json(
+        { error: "Champ non persisté", field: "certificationHoursExempted", message: "Le champ certificationHoursExempted n'est pas accepté." },
+        { status: 400 }
+      );
+    }
+
     // Sanitize all text fields before storing
     const TEXT_FIELDS = ['fullName', 'birthPlace', 'location', 'instructor', 'issuingCompany', 'formation', 'stageObservations', 'certificationObservations'] as const;
     for (const field of TEXT_FIELDS) {
@@ -151,6 +161,40 @@ export async function PATCH(
     // Validation dates
     if (data.startDate && data.endDate && new Date(data.startDate) > new Date(data.endDate)) {
       return NextResponse.json({ field: 'endDate', message: "La date de fin doit être postérieure à la date de début." }, { status: 400 });
+    }
+
+    // #322 — Invariants par type : une attestation CERTIFICATION ne peut être
+    // validée sans score, mention ni heures ; une attestation STAGE ne peut
+    // l'être sans heures. On détermine le type APRÈS application du patch
+    // (nouveau type si fourni, sinon type existant en base).
+    const oldAttestation = await prisma.attestation.findUnique({
+      where: { id },
+      include: { formation: { select: { name: true } } },
+    });
+    if (!oldAttestation) {
+      return NextResponse.json({ message: "Attestation non trouvée" }, { status: 404 });
+    }
+    const effectiveType = data.type ?? oldAttestation.type;
+
+    if (effectiveType === 'CERTIFICATION') {
+      const missing: string[] = [];
+      if (data.certificationScore === undefined && oldAttestation.certificationScore == null) missing.push('certificationScore');
+      if (data.certificationMention === undefined && oldAttestation.certificationMention == null) missing.push('certificationMention');
+      if (data.certificationHours === undefined && oldAttestation.certificationHours == null) missing.push('certificationHours');
+      if (missing.length > 0) {
+        return NextResponse.json(
+          { error: "Champs requis pour CERTIFICATION", fields: missing, message: `Une attestation CERTIFICATION requiert : ${missing.join(', ')}.` },
+          { status: 400 }
+        );
+      }
+    }
+    if (effectiveType === 'STAGE') {
+      if (data.stageHours === undefined && oldAttestation.stageHours == null) {
+        return NextResponse.json(
+          { error: "Champ requis pour STAGE", fields: ['stageHours'], message: "Une attestation STAGE requiert stageHours." },
+          { status: 400 }
+        );
+      }
     }
 
     // Gestion formation
@@ -180,14 +224,6 @@ export async function PATCH(
     if (updateData.birthDate) updateData.birthDate = new Date(updateData.birthDate as string);
     if (updateData.startDate) updateData.startDate = new Date(updateData.startDate as string);
     if (updateData.endDate) updateData.endDate = new Date(updateData.endDate as string);
-
-    const oldAttestation = await prisma.attestation.findUnique({
-      where: { id },
-      include: { formation: { select: { name: true } } },
-    });
-    if (!oldAttestation) {
-      return NextResponse.json({ message: "Attestation non trouvée" }, { status: 404 });
-    }
 
     // Une mutation autorisée d'une attestation officielle doit produire un
     // nouveau PDF et un nouveau sceau. On échoue avant l'update si le serveur

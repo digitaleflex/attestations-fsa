@@ -48,6 +48,7 @@ const CERT_BODY = {
   type: "CERTIFICATION",
   certificationScore: 88,
   certificationMention: "TRES_BIEN",
+  certificationHours: 120,
 };
 
 beforeEach(() => {
@@ -108,7 +109,7 @@ describe("POST /api/attestations — scellement #155 (correctif B)", () => {
   // refusée en dur, AVANT toute écriture.
   it("refuse l'émission sans clé de scellement (aucune ligne non scellée) (#288)", async () => {
     delete process.env.CERT_SEAL_SECRET;
-    const res = await callPost({ ...CERT_BODY, type: "STAGE" });
+    const res = await callPost({ ...CERT_BODY, type: "STAGE", stageHours: 120 });
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toMatchObject({
       message: expect.stringContaining("clé de scellement indisponible"),

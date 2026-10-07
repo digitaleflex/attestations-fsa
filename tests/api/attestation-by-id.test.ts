@@ -223,6 +223,75 @@ describe("PATCH /api/attestations/[id]", () => {
     const res = await callPatch({ status: "REJECTED" });
     expect(res.status).toBe(500);
   });
+
+  // #322 — Une attestation CERTIFICATION ne peut être validée sans score,
+  // mention ni heures ; une STAGE ne peut l'être sans heures.
+  it("400 si validation d'une CERTIFICATION sans certificationScore", async () => {
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    db.attestationFindUnique.mockResolvedValue(
+      makeAttestation({ type: "CERTIFICATION", certificationScore: null, certificationMention: null, certificationHours: null }) as never,
+    );
+    const res = await callPatch({ status: "VALIDATED" });
+    expect(res.status).toBe(400);
+    expect(db.attestationUpdate).not.toHaveBeenCalled();
+  });
+
+  it("400 si validation d'une CERTIFICATION sans certificationMention", async () => {
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    db.attestationFindUnique.mockResolvedValue(
+      makeAttestation({ type: "CERTIFICATION", certificationScore: 80, certificationMention: null, certificationHours: 120 }) as never,
+    );
+    const res = await callPatch({ status: "VALIDATED" });
+    expect(res.status).toBe(400);
+    expect(db.attestationUpdate).not.toHaveBeenCalled();
+  });
+
+  it("400 si validation d'une CERTIFICATION sans certificationHours", async () => {
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    db.attestationFindUnique.mockResolvedValue(
+      makeAttestation({ type: "CERTIFICATION", certificationScore: 80, certificationMention: "BIEN", certificationHours: null }) as never,
+    );
+    const res = await callPatch({ status: "VALIDATED" });
+    expect(res.status).toBe(400);
+    expect(db.attestationUpdate).not.toHaveBeenCalled();
+  });
+
+  it("400 si validation d'une STAGE sans stageHours", async () => {
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    db.attestationFindUnique.mockResolvedValue(
+      makeAttestation({ type: "STAGE", stageHours: null }) as never,
+    );
+    const res = await callPatch({ status: "VALIDATED" });
+    expect(res.status).toBe(400);
+    expect(db.attestationUpdate).not.toHaveBeenCalled();
+  });
+
+  it("400 si certificationHoursExempted est fourni (champ non persisté)", async () => {
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    const res = await callPatch({ certificationHoursExempted: 10 });
+    expect(res.status).toBe(400);
+    expect(db.attestationUpdate).not.toHaveBeenCalled();
+  });
+
+  it("200 si validation d'une CERTIFICATION avec tous les champs requis", async () => {
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    db.attestationFindUnique.mockResolvedValue(
+      makeAttestation({ type: "CERTIFICATION", certificationScore: 80, certificationMention: "BIEN", certificationHours: 120 }) as never,
+    );
+    const res = await callPatch({ status: "VALIDATED" });
+    expect(res.status).toBe(200);
+    expect(db.attestationUpdate).toHaveBeenCalled();
+  });
+
+  it("200 si validation d'une STAGE avec stageHours", async () => {
+    deps.getAdminUser.mockResolvedValue({ id: "admin-1" } as never);
+    db.attestationFindUnique.mockResolvedValue(
+      makeAttestation({ type: "STAGE", stageHours: 120 }) as never,
+    );
+    const res = await callPatch({ status: "VALIDATED" });
+    expect(res.status).toBe(200);
+    expect(db.attestationUpdate).toHaveBeenCalled();
+  });
 });
 
 describe("DELETE /api/attestations/[id]", () => {
