@@ -5,8 +5,26 @@ import { Footer } from "@/components/Footer";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Ferme Agro-piscicole Saint André — Portail officiel',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://fsa.eurin.tech"),
+  title: {
+    default: 'Ferme Agro-piscicole Saint André — Portail officiel',
+    template: '%s | FSA',
+  },
   description: 'Spécialistes en Pisciculture, Agriculture et Élevage au Bénin. Formations certifiantes de haut niveau et programmes de stages pratiques immersifs.',
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    siteName: 'Ferme Agro-piscicole Saint André',
+    title: 'Ferme Agro-piscicole Saint André — Portail officiel',
+    description: 'Spécialistes en Pisciculture, Agriculture et Élevage au Bénin. Formations certifiantes de haut niveau et programmes de stages pratiques immersifs.',
+    images: [{ url: '/logo-fsa.png' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Ferme Agro-piscicole Saint André — Portail officiel',
+    description: 'Spécialistes en Pisciculture, Agriculture et Élevage au Bénin. Formations certifiantes de haut niveau et programmes de stages pratiques immersifs.',
+    images: ['/logo-fsa.png'],
+  },
 }
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
