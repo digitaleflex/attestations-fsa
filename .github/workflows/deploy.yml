@@ -18,6 +18,11 @@ on:
         required: false
         default: "false"
         type: boolean
+      skip_staging:
+        description: "Skip staging deployment (emergency only)"
+        required: false
+        default: "false"
+        type: boolean
 
 # Sérialise les déploiements : deux push rapprochés sur main ne doivent JAMAIS
 # construire en parallèle sur le même VPS. Incident du 2026-09-17 : 4 builds
@@ -31,12 +36,149 @@ concurrency:
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: digitaleflex/attestations-fsa
 
 jobs:
-  deploy:
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. BUILD & PUSH — Construit l'image et la pousse vers GHCR
+  # ─────────────────────────────────────────────────────────────────────────
+  build-and-push:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      image_digest: ${{ steps.build-push.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_PUSHER_KEY=${{ vars.NEXT_PUBLIC_PUSHER_KEY }}
+            NEXT_PUBLIC_PUSHER_CLUSTER=${{ vars.NEXT_PUBLIC_PUSHER_CLUSTER }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. DEPLOY STAGING — Déploie sur staging + migrations Prisma
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy-staging:
+    needs: build-and-push
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != 'true' ||
+      github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Deploy to Staging (Docker)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          command_timeout: 20m
+          script: |
+            set -e
+
+            echo "==> 🐳 Starting Staging deployment..."
+            cd /home/audest/attestations-fsa
+
+            echo "==> Pulling latest code..."
+            git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+            # ── 0. Libérer de l'espace disque ──
+            echo "==> Espace disque AVANT nettoyage :"
+            df -h / | tail -1
+            echo "==> Purge des images inutilisées et du cache de build..."
+            docker image prune -af || true
+            docker builder prune -af || true
+            echo "==> Espace disque APRÈS nettoyage :"
+            df -h / | tail -1
+
+            # ── 1. Démarrer la base staging ──
+            echo "==> Starting PostgreSQL (staging)..."
+            docker compose --env-file .env.staging -f compose.staging.yml up -d fsa-postgres-staging
+
+            echo "==> Waiting for PostgreSQL (staging) to be ready..."
+            for i in $(seq 1 30); do
+              if docker exec attestations-fsa-postgres-staging \
+                pg_isready -U attestation_fsa_staging_user -d attestation_fsa_staging >/dev/null 2>&1; then
+                break
+              fi
+              sleep 2
+            done
+
+            # ── 2. Migrations Prisma sur staging ──
+            echo "==> Applying Prisma migrations (staging)..."
+            docker compose --env-file .env.staging -f compose.staging.yml --profile tools run --rm prisma-staging
+
+            # ── 3. Déploiement de l'app staging ──
+            echo "==> Deploying staging app..."
+            docker compose --env-file .env.staging -f compose.staging.yml up -d --wait
+
+            echo "==> Container status:"
+            docker compose --env-file .env.staging -f compose.staging.yml ps
+
+            echo "==> HTTP smoke test (staging)..."
+            docker compose --env-file .env.staging -f compose.staging.yml \
+              exec -T fsa-app-staging wget --no-verbose --tries=1 --spider \
+              "http://127.0.0.1:3000/api/ready" >/dev/null
+
+            echo "==> ✅ Staging deployment complete!"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 3. DEPLOY PROD — Déploie sur prod + migrations Prisma (si staging OK)
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy-prod:
+    needs: [build-and-push, deploy-staging]
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging == 'true') ||
+      (github.event_name == 'workflow_run' && needs.deploy-staging.result == 'success')
     runs-on: ubuntu-latest
     environment: production
 
@@ -46,37 +188,24 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Deploy to VPS (Docker)
+      - name: Deploy to Production (Docker)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
-          # Le défaut est de 10 minutes, insuffisant pour un build Docker complet.
-          # Mesuré lors de l'incident du 2026-09-17 : 601 s (10 min pile) atteintes
-          # pendant l'export de l'image, build tué, conteneurs déjà arrêtés.
           command_timeout: 30m
           script: |
             set -e
 
-            echo "==> 🐳 Starting Docker deployment..."
+            echo "==> 🐳 Starting Production deployment..."
             cd /home/audest/attestations-fsa
 
             echo "==> Pulling latest code..."
             git pull origin $(git rev-parse --abbrev-ref HEAD)
 
             # ── 0. Libérer de l'espace disque (AVANT tout le reste) ──
-            # Le pipeline ne purgeait RIEN : chaque déploiement laissait une
-            # image applicative et son cache de build, sans rétention. Sur un
-            # VPS à disque réduit, ça finit par saturer.
-            # Incident du 2026-09-18 : `ENOSPC: no space left on device` pendant
-            # `pnpm build` -> build impossible. Le correctif « pas de down avant
-            # up » a évité la panne complète (l'ancien conteneur a continué de
-            # servir), mais l'application a brièvement perdu la capacité
-            # d'écrire tant que le disque était plein.
-            # `-f` : sans confirmation interactive. L'image du conteneur EN
-            # COURS n'est jamais supprimée (prune ne touche qu'aux inutilisées).
             echo "==> Espace disque AVANT nettoyage :"
             df -h / | tail -1
             echo "==> Purge des images inutilisées et du cache de build..."
@@ -105,11 +234,11 @@ jobs:
             BACKUP_DIR=/home/audest/backups/attestation-fsa \
               bash scripts/vps-pre-deploy-backup.sh
 
-            # ── 3. SCHÉMA : migrations Prisma (source de vérité) ──
+            # ── 2. SCHÉMA : migrations Prisma (source de vérité) ──
             echo "==> Applying Prisma migrations (schema)..."
             docker compose --env-file .env.production -f compose.prod.yml --profile tools run --rm prisma migrate deploy
 
-            # ── 4. DONNÉES : injection one-shot du dump SI la base est vide ──
+            # ── 3. DONNÉES : injection one-shot du dump SI la base est vide ──
             if [ "$SKIP_DB" != "true" ]; then
               USER_COUNT=$(docker exec attestations-fsa-postgres-prod \
                 psql -U attestation_fsa_user -d attestation_fsa -t -c \
@@ -131,26 +260,64 @@ jobs:
               echo "==> Skipping data seed (skip_db=true)"
             fi
 
-            # ── 5. Build & déploiement de l'app ──
-            # Volontairement AUCUN `down` préalable : `up -d --build` construit
-            # d'abord, PUIS recrée le conteneur. L'ancien continue donc de servir
-            # pendant toute la durée du build et seules quelques secondes sont
-            # perdues à la bascule. Si le build échoue, l'ancien conteneur survit
-            # et la production reste en ligne.
-            # Un `down` avant garantissait au contraire plusieurs minutes
-            # d'indisponibilité et, en cas d'échec ou d'interruption, laissait la
-            # production à terre (incident du 2026-09-17).
-            echo "==> Building & starting (attente du healthcheck via --wait)..."
-            docker compose --env-file .env.production -f compose.prod.yml up -d --build --wait
+            # ── 4. Déploiement de l'app (image GHCR, pas de build local) ──
+            echo "==> Deploying app from GHCR image..."
+            IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}" \
+              docker compose --env-file .env.production -f compose.prod.yml up -d --wait
 
             echo "==> Container status:"
             docker compose --env-file .env.production -f compose.prod.yml ps
 
             echo "==> HTTP smoke test..."
-            # Test depuis le conteneur via son endpoint interne : aucun secret
-            # n'est exposé dans les logs et le routage Traefik n'est pas requis.
             docker compose --env-file .env.production -f compose.prod.yml \
               exec -T fsa-app wget --no-verbose --tries=1 --spider \
-              "http://127.0.0.1:3000/api/health" >/dev/null
+              "http://127.0.0.1:3000/api/ready" >/dev/null
 
-            echo "==> ✅ Deployment complete!"
+            echo "==> ✅ Production deployment complete!"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 4. ROLLBACK — Si healthcheck prod échoue, revenir au tag précédent
+  # ─────────────────────────────────────────────────────────────────────────
+  rollback:
+    needs: deploy-prod
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Rollback to previous image
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          command_timeout: 10m
+          script: |
+            set -e
+
+            echo "==> ⚠️  Production healthcheck failed — initiating rollback..."
+            cd /home/audest/attestations-fsa
+
+            # Récupérer le tag précédent (l'avant-dernière image)
+            PREVIOUS_TAG=$(docker images --format '{{.Tag}}' \
+              ghcr.io/digitaleflex/attestations-fsa | grep -v '${{ needs.build-and-push.outputs.image_tag }}' | head -1)
+
+            if [ -z "$PREVIOUS_TAG" ]; then
+              echo "==> ❌ No previous image found for rollback!"
+              exit 1
+            fi
+
+            echo "==> Rolling back to image tag: $PREVIOUS_TAG"
+            IMAGE_TAG="$PREVIOUS_TAG" \
+              docker compose --env-file .env.production -f compose.prod.yml up -d --wait
+
+            echo "==> Container status after rollback:"
+            docker compose --env-file .env.production -f compose.prod.yml ps
+
+            echo "==> HTTP smoke test after rollback..."
+            docker compose --env-file .env.production -f compose.prod.yml \
+              exec -T fsa-app wget --no-verbose --tries=1 --spider \
+              "http://127.0.0.1:3000/api/ready" >/dev/null
+
+            echo "==> ✅ Rollback complete!"

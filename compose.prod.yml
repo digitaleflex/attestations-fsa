@@ -7,15 +7,7 @@
 # =================================================================
 services:
   fsa-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-        NEXT_PUBLIC_PUSHER_KEY: ${NEXT_PUBLIC_PUSHER_KEY}
-        NEXT_PUBLIC_PUSHER_CLUSTER: ${NEXT_PUBLIC_PUSHER_CLUSTER}
-        # #151 — DSN navigateur Sentry (optionnel, vide = désactivé).
-        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+    image: ghcr.io/digitaleflex/attestations-fsa:${IMAGE_TAG:-latest}
     container_name: attestations-fsa-prod
     hostname: fsa-app
     # Persistance des fichiers uploadés. Sans ces volumes, ils vivent dans la
@@ -103,7 +95,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/ready || exit 1",
         ]
       interval: 30s
       timeout: 10s
@@ -167,9 +159,7 @@ services:
   # Migrator one-shot : applique les migrations Prisma puis s'arrête.
   # Usage : docker compose -f compose.prod.yml --profile tools run --rm prisma migrate deploy
   prisma:
-    build:
-      context: .
-      dockerfile: Dockerfile.prisma
+    image: ghcr.io/digitaleflex/attestations-fsa:${IMAGE_TAG:-latest}
     container_name: attestations-fsa-prisma-prod
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-attestation_fsa_user}:${POSTGRES_PASSWORD}@fsa-postgres:5432/${POSTGRES_DB:-attestation_fsa}?sslmode=disable

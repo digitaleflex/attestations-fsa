@@ -1,0 +1,166 @@
+# =================================================================
+# STAGING — FSA Attestations (VPS + Traefik)
+# Environnement de pré-production : isole les migrations et le déploiement
+# avant passage en production. Même structure que compose.prod.yml.
+# Secrets distincts : .env.staging (ne JAMAIS réutiliser .env.production)
+# 2e Postgres sur port 5434 pour coexister avec la prod sur le même VPS.
+# =================================================================
+services:
+  fsa-app-staging:
+    image: ghcr.io/digitaleflex/attestations-fsa:staging
+    container_name: attestations-fsa-staging
+    hostname: fsa-app-staging
+    volumes:
+      - fsa-uploads-public-staging:/app/public/uploads
+      - fsa-uploads-private-staging:/app/private/uploads
+    expose:
+      - "3000"
+    # Port publié pour accès direct sans Traefik (staging uniquement)
+    ports:
+      - "${STAGING_PORT:-3001}:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-proxy}"
+      - "traefik.http.routers.fsa-app-staging.rule=Host(`${STAGING_HOST:-staging.hashcode.cloud}`)"
+      - "traefik.http.routers.fsa-app-staging.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.fsa-app-staging.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.fsa-app-staging.loadbalancer.server.port=3000"
+    environment:
+      DATABASE_URL: postgresql://${STAGING_POSTGRES_USER:-attestation_fsa_staging_user}:${STAGING_POSTGRES_PASSWORD}@fsa-postgres-staging:5432/${STAGING_POSTGRES_DB:-attestation_fsa_staging}?sslmode=disable
+      AUTH_SECRET: ${STAGING_AUTH_SECRET}
+      BETTER_AUTH_SECRET: ${STAGING_BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${STAGING_BETTER_AUTH_URL}
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: ${STAGING_NEXT_PUBLIC_APP_URL}
+      RESEND_API_KEY: ${STAGING_RESEND_API_KEY}
+      RESEND_DOMAIN: ${STAGING_RESEND_DOMAIN}
+      EMAIL_FROM: "${STAGING_EMAIL_FROM:-FSA Staging <noreply@fermestandre.com>}"
+      PUSHER_APP_ID: ${STAGING_PUSHER_APP_ID}
+      PUSHER_KEY: ${STAGING_PUSHER_KEY}
+      PUSHER_SECRET: ${STAGING_PUSHER_SECRET}
+      PUSHER_CLUSTER: ${STAGING_PUSHER_CLUSTER}
+      NEXT_PUBLIC_PUSHER_KEY: ${STAGING_NEXT_PUBLIC_PUSHER_KEY}
+      NEXT_PUBLIC_PUSHER_CLUSTER: ${STAGING_NEXT_PUBLIC_PUSHER_CLUSTER}
+      UPSTASH_REDIS_REST_URL: ${STAGING_UPSTASH_REDIS_REST_URL}
+      UPSTASH_REDIS_REST_TOKEN: ${STAGING_UPSTASH_REDIS_REST_TOKEN}
+      CERT_SEAL_SECRET: ${STAGING_CERT_SEAL_SECRET}
+      ADMIN_USER_IDS: ${STAGING_ADMIN_USER_IDS}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Porto-Novo}
+      ATTESTATION_PDF_GENERATOR_MODULE: ${ATTESTATION_PDF_GENERATOR_MODULE}
+      SENTRY_DSN: ${STAGING_SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${STAGING_SENTRY_ENVIRONMENT:-staging}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
+      STORAGE_DRIVER: ${STAGING_STORAGE_DRIVER}
+      S3_BUCKET: ${STAGING_S3_BUCKET}
+      S3_REGION: ${STAGING_S3_REGION}
+      S3_ENDPOINT: ${STAGING_S3_ENDPOINT}
+      S3_ACCESS_KEY_ID: ${STAGING_S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${STAGING_S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: ${STAGING_S3_FORCE_PATH_STYLE}
+      STORAGE_SIGNED_URL_TTL_SECONDS: ${STORAGE_SIGNED_URL_TTL_SECONDS}
+      CRON_SECRET: ${STAGING_CRON_SECRET}
+      CRON_AUDIT_USER_ID: ${STAGING_CRON_AUDIT_USER_ID:-}
+    restart: unless-stopped
+    depends_on:
+      fsa-postgres-staging:
+        condition: service_healthy
+    networks:
+      - proxy
+      - backend-staging
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/ready || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 512
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  fsa-postgres-staging:
+    image: postgres:17-alpine
+    container_name: attestations-fsa-postgres-staging
+    hostname: fsa-db-staging
+    environment:
+      POSTGRES_USER: ${STAGING_POSTGRES_USER:-attestation_fsa_staging_user}
+      POSTGRES_PASSWORD: ${STAGING_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${STAGING_POSTGRES_DB:-attestation_fsa_staging}
+    volumes:
+      - fsa-postgres-staging-data:/var/lib/postgresql/data
+    # Port 5434 pour coexister avec la prod (5432) sur le même VPS
+    ports:
+      - "${STAGING_POSTGRES_PORT:-5434}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${STAGING_POSTGRES_USER:-attestation_fsa_staging_user} -d ${STAGING_POSTGRES_DB:-attestation_fsa_staging}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-staging
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    shm_size: 256mb
+    stop_grace_period: 60s
+    security_opt:
+      - no-new-privileges:true
+
+  # Migrator one-shot pour staging
+  prisma-staging:
+    image: ghcr.io/digitaleflex/attestations-fsa:staging
+    container_name: attestations-fsa-prisma-staging
+    environment:
+      DATABASE_URL: postgresql://${STAGING_POSTGRES_USER:-attestation_fsa_staging_user}:${STAGING_POSTGRES_PASSWORD}@fsa-postgres-staging:5432/${STAGING_POSTGRES_DB:-attestation_fsa_staging}?sslmode=disable
+    depends_on:
+      fsa-postgres-staging:
+        condition: service_healthy
+    networks:
+      - backend-staging
+    profiles:
+      - tools
+    restart: "no"
+    command: ["prisma", "migrate", "deploy"]
+
+networks:
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-proxy}
+  backend-staging:
+    driver: bridge
+    name: attestations-fsa-backend-staging
+
+volumes:
+  fsa-postgres-staging-data:
+    driver: local
+    name: attestations-fsa-postgres-staging-data
+  fsa-uploads-public-staging:
+    driver: local
+    name: attestations-fsa-uploads-public-staging
+  fsa-uploads-private-staging:
+    driver: local
+    name: attestations-fsa-uploads-private-staging
