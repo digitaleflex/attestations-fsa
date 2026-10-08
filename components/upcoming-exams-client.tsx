@@ -47,7 +47,7 @@ const statusPresentation: Record<
   CLOSED: {
     label: "Session close",
     description: "Cette session n’est plus accessible.",
-    className: "border-slate-200 bg-slate-100 text-slate-600",
+    className: "border-brand-line bg-brand-line/40 text-brand-muted",
   },
 };
 
@@ -68,9 +68,9 @@ export default function UpcomingExamsClient({ initialExams }: UpcomingExamsClien
   if (initialExams.length === 0) {
     return (
       <section className="w-full max-w-7xl px-5 py-16 sm:px-6 md:py-24">
-        <div className="mx-auto max-w-2xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-12 md:rounded-[2.5rem]">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-50">
-            <GraduationCap className="h-9 w-9 text-slate-400" aria-hidden="true" />
+        <div className="mx-auto max-w-2xl overflow-hidden rounded-[2rem] border border-brand-line bg-white p-7 text-center shadow-sm sm:p-12 md:rounded-[2.5rem]">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-line/40">
+            <GraduationCap className="h-9 w-9 text-brand-muted" aria-hidden="true" />
           </div>
           <p className="mt-7 text-xs font-black uppercase tracking-[0.2em] text-brand">
             Examens publics
@@ -78,7 +78,7 @@ export default function UpcomingExamsClient({ initialExams }: UpcomingExamsClien
           <h1 className="mt-3 text-3xl font-black tracking-tight text-brand-ink sm:text-4xl">
             Aucune session à afficher
           </h1>
-          <p className="mx-auto mt-4 max-w-lg text-sm font-medium leading-relaxed text-slate-600 sm:text-base">
+          <p className="mx-auto mt-4 max-w-lg text-sm font-medium leading-relaxed text-brand-muted sm:text-base">
             Les sessions ouvertes ou programmées apparaîtront ici dès leur
             publication.
           </p>
@@ -103,7 +103,7 @@ export default function UpcomingExamsClient({ initialExams }: UpcomingExamsClien
         <h1 className="mt-6 text-4xl font-black tracking-tight text-brand-ink sm:text-5xl md:text-6xl">
           Sessions d’examen
         </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-600 md:text-lg">
+        <p className="mx-auto mt-5 max-w-2xl text-base font-medium leading-relaxed text-brand-muted md:text-lg">
           Consultez les informations pratiques avant de vous connecter. Une
           session annoncée comme à venir n’est pas encore accessible.
         </p>
@@ -118,7 +118,7 @@ export default function UpcomingExamsClient({ initialExams }: UpcomingExamsClien
             >
               {statusPresentation[state].label}
             </Badge>
-            <p className="mt-0 text-xs font-medium leading-relaxed text-slate-500 sm:mt-3">
+            <p className="mt-0 text-xs font-medium leading-relaxed text-brand-muted sm:mt-3">
               {statusPresentation[state].description}
             </p>
           </div>
@@ -169,7 +169,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
       className="group relative h-full"
     >
       <div className="absolute -inset-1 rounded-[2.5rem] bg-gradient-to-br from-brand/15 to-brand-accent/10 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
-      <div className="relative flex h-full flex-col rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-500 hover:-translate-y-1 hover:border-brand/30 hover:shadow-xl hover:shadow-brand/5 sm:p-7">
+      <div className="relative flex h-full flex-col rounded-[2rem] border border-brand-line bg-white p-6 shadow-sm transition duration-500 hover:-translate-y-1 hover:border-brand/30 hover:shadow-xl hover:shadow-brand/5 sm:p-7">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Badge
             variant="outline"
@@ -177,7 +177,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
           >
             {presentation.label}
           </Badge>
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-brand-muted">
             <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
             {formattedDuration}
           </span>
@@ -187,12 +187,12 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
           {exam.name || exam.title}
         </h2>
         {exam.description && (
-          <p className="mt-3 line-clamp-3 text-sm font-medium leading-relaxed text-slate-600">
+          <p className="mt-3 line-clamp-3 text-sm font-medium leading-relaxed text-brand-muted">
             {exam.description}
           </p>
         )}
 
-        <div className="mt-6 flex items-start gap-3 rounded-2xl bg-slate-50 p-3.5 text-sm font-bold leading-relaxed text-slate-600">
+        <div className="mt-6 flex items-start gap-3 rounded-2xl bg-brand-line/40 p-3.5 text-sm font-bold leading-relaxed text-brand-muted">
           <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
           <span className="capitalize">{formattedDate}</span>
         </div>
@@ -201,8 +201,8 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
           {state === "UPCOMING" ? (
             <CountdownDisplay targetDate={String(exam.scheduledAt)} />
           ) : (
-            <div className="flex items-start gap-3 rounded-2xl border border-slate-100 p-3.5 text-xs font-semibold leading-relaxed text-slate-600">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+            <div className="flex items-start gap-3 rounded-2xl border border-brand-line p-3.5 text-xs font-semibold leading-relaxed text-brand-muted">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-muted" aria-hidden="true" />
               <span>{presentation.description}</span>
             </div>
           )}
@@ -211,7 +211,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
         <div className="mt-auto pt-6">
           {state === "OPEN" ? (
             <div className="space-y-3">
-              <p className="rounded-2xl border border-brand/15 bg-brand/5 px-4 py-3 text-xs font-semibold leading-relaxed text-slate-600">
+              <p className="rounded-2xl border border-brand/15 bg-brand/5 px-4 py-3 text-xs font-semibold leading-relaxed text-brand-muted">
                 Session ouverte — connectez-vous avec votre compte candidat
                 pour passer l’examen.
               </p>
@@ -224,7 +224,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
               </Button>
             </div>
           ) : (
-            <div className="flex min-h-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-center text-xs font-black uppercase tracking-wide text-slate-500">
+            <div className="flex min-h-14 items-center justify-center rounded-2xl border border-brand-line bg-brand-line/40 px-4 text-center text-xs font-black uppercase tracking-wide text-brand-muted">
               {state === "UPCOMING" ? "Disponible à l’ouverture" : "Accès terminé"}
             </div>
           )}
@@ -269,7 +269,7 @@ function CountdownDisplay({ targetDate }: { targetDate: string }) {
 
   return (
     <div aria-label="Temps restant avant l’ouverture">
-      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-brand-muted">
         Ouverture dans
       </p>
       <div className="grid grid-cols-3 gap-2">
@@ -278,11 +278,11 @@ function CountdownDisplay({ targetDate }: { targetDate: string }) {
           [timeLeft.hours, "heures"],
           [timeLeft.minutes, "minutes"],
         ].map(([value, unit]) => (
-          <div key={unit} className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-2.5 text-center">
+          <div key={unit} className="rounded-xl border border-brand-line bg-brand-line/40 px-2 py-2.5 text-center">
             <span className="block text-lg font-black leading-none text-brand-ink">
               {String(value).padStart(2, "0")}
             </span>
-            <span className="mt-1 block text-[9px] font-black uppercase tracking-widest text-slate-400">
+            <span className="mt-1 block text-[9px] font-black uppercase tracking-widest text-brand-muted">
               {unit}
             </span>
           </div>

@@ -15,7 +15,7 @@ import {
 export const metadata: Metadata = {
   title: "Formations et examens FSA",
   description:
-    "Découvrez les formations et les sessions d’examen de la Ferme Cité St André, puis straighten les modalités avant de candidater.",
+    "Découvrez les formations et les sessions d’examen de la Ferme Cité St André, puis envoyez une demande de préinscription.",
 };
 
 const steps = [
@@ -35,7 +35,7 @@ const steps = [
     description:
       "Repérez la date et la durée de l’examen, et vérifiez si la session est ouverte ou encore à venir.",
     href: "/examens",
-    linkLabel: "Voir les examens",
+    linkLabel: "Voir les sessions",
   },
   {
     number: "03",
@@ -72,7 +72,7 @@ const reassurance = [
 export default function Home() {
   return (
     <div className="relative flex w-full flex-1 flex-col items-center overflow-hidden bg-white pb-24">
-      <section className="relative flex min-h-[78svh] w-full items-center justify-center overflow-hidden px-5 py-20 sm:px-6 md:py-28 lg:min-h-[720px]">
+      <section className="relative flex min-h-[60svh] w-full items-center justify-center overflow-hidden px-5 py-14 sm:px-6 md:py-20 lg:min-h-[560px]">
         <div className="absolute left-1/2 top-8 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-brand/10 blur-[100px] sm:h-[700px] sm:w-[700px]" />
         <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-brand-accent/15 blur-3xl" />
         <div className="absolute -right-24 top-12 h-72 w-72 rounded-full bg-brand/10 blur-3xl" />
@@ -97,33 +97,57 @@ export default function Home() {
 
               <div className="mt-9 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center lg:justify-start">
                 <Link
-                  href="/examens"
+                  href="/formations"
                   className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-brand px-7 py-4 text-sm font-black text-white shadow-xl shadow-brand/20 transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-[0.98]"
                 >
-                  Découvrir les examens
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  <GraduationCap className="h-5 w-5" aria-hidden="true" />
+                  Explorer les formations
                 </Link>
                 <Link
-                  href="/formations"
+                  href="/examens"
                   className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border-2 border-brand-line bg-white px-7 py-4 text-sm font-black text-brand-ink transition hover:-translate-y-0.5 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-[0.98]"
                 >
-                  <GraduationCap className="h-5 w-5" aria-hidden="true" />
-                  Voir les formations
+                  <CalendarDays className="h-5 w-5" aria-hidden="true" />
+                  Voir les sessions d’examen
                 </Link>
               </div>
 
-              <p className="mt-5 text-xs font-semibold leading-relaxed text-slate-500 sm:text-sm">
-                Une préinscription de formation déclenche votre demande. Elle reste
-                à confirmer avec l’équipe FSA.
+              <p className="mt-5 text-xs font-semibold leading-relaxed text-brand-muted sm:text-sm">
+                La préinscription à une formation envoie une demande à
+                l’équipe FSA : elle ne vaut pas inscription définitive.
               </p>
+
+              <nav
+                aria-label="Accès rapides"
+                className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-bold text-brand-muted lg:justify-start"
+              >
+                <Link
+                  href="/verifier"
+                  className="underline-offset-4 transition hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                >
+                  Vérifier une attestation
+                </Link>
+                <Link
+                  href="/demande-stage"
+                  className="underline-offset-4 transition hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                >
+                  Demande de stage
+                </Link>
+                <Link
+                  href="/contact"
+                  className="underline-offset-4 transition hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                >
+                  Contact
+                </Link>
+              </nav>
             </div>
 
             <div className="relative mx-auto w-full max-w-md lg:max-w-none">
               <div className="absolute -inset-4 rotate-2 rounded-[2.5rem] bg-brand/5 sm:-inset-6" />
               <div className="relative overflow-hidden rounded-[2rem] border border-brand-line bg-white p-6 shadow-[0_30px_80px_rgba(9,31,27,0.12)] sm:rounded-[2.5rem] sm:p-8">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-5">
+                <div className="flex items-center justify-between border-b border-brand-line pb-5">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-muted">
                       Aperçu du parcours
                     </p>
                     <p className="mt-1 text-lg font-black text-brand-ink">
@@ -135,7 +159,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <ol className="divide-y divide-slate-100">
+                <ol className="divide-y divide-brand-line">
                   {[
                     ["Formation", "Programme et compétences"],
                     ["Session", "Date, durée et statut"],
@@ -145,12 +169,12 @@ export default function Home() {
                       key={label}
                       className="flex items-center gap-4 py-5 sm:gap-5"
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-black text-white">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-ink text-xs font-black text-white">
                         {index + 1}
                       </span>
                       <div className="min-w-0">
                         <p className="text-sm font-black text-brand-ink">{label}</p>
-                        <p className="mt-0.5 text-xs font-medium text-slate-500 sm:text-sm">
+                        <p className="mt-0.5 text-xs font-medium text-brand-muted sm:text-sm">
                           {detail}
                         </p>
                       </div>
@@ -168,7 +192,7 @@ export default function Home() {
       </section>
 
       <section
-        className="w-full bg-slate-50/80 px-5 py-20 sm:px-6 md:py-28"
+        className="w-full bg-brand-line/30 px-5 py-20 sm:px-6 md:py-28"
         aria-labelledby="parcours-title"
       >
         <div className="mx-auto max-w-6xl">
@@ -182,7 +206,7 @@ export default function Home() {
             >
               Vous savez quoi faire à chaque étape.
             </h2>
-            <p className="mt-5 text-base font-medium leading-relaxed text-slate-600 md:text-lg">
+            <p className="mt-5 text-base font-medium leading-relaxed text-brand-muted md:text-lg">
               Les informations publiques vous aident à choisir. La connexion
               intervient uniquement au moment d’accéder à votre espace candidat.
             </p>
@@ -192,20 +216,20 @@ export default function Home() {
             {steps.map((step) => (
               <li
                 key={step.number}
-                className="group flex h-full flex-col rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-xl hover:shadow-brand/5 sm:p-8"
+                className="group flex h-full flex-col rounded-[2rem] border border-brand-line bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-xl hover:shadow-brand/5 sm:p-8"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand transition group-hover:bg-brand group-hover:text-white">
                     <step.icon className="h-5 w-5" aria-hidden="true" />
                   </div>
-                  <span className="text-xs font-black tracking-[0.2em] text-slate-300">
+                  <span className="text-xs font-black tracking-[0.2em] text-brand-muted/60">
                     {step.number}
                   </span>
                 </div>
                 <h3 className="mt-8 text-xl font-black text-brand-ink">
                   {step.title}
                 </h3>
-                <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600">
+                <p className="mt-3 text-sm font-medium leading-relaxed text-brand-muted">
                   {step.description}
                 </p>
                 <Link

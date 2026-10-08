@@ -51,7 +51,7 @@ const faqs = [
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen bg-[#fafbfc] selection:bg-amber-100 selection:text-amber-900 pb-24 overflow-x-hidden">
+    <div className="min-h-screen bg-white selection:bg-amber-100 selection:text-amber-900 pb-24 overflow-x-hidden">
       {/* Decorative Glows */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-amber-100/20 rounded-full blur-[120px]" />
@@ -66,11 +66,11 @@ export default function FAQPage() {
           </Badge>
           
           <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl font-[900] text-slate-900 tracking-tight leading-[0.95]">
+            <h1 className="text-5xl md:text-7xl font-[900] text-brand-ink tracking-tight leading-[0.95]">
                Des questions ? <br />
                On a les <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600">réponses.</span>
             </h1>
-            <p className="text-lg md:text-xl text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-brand-muted font-medium max-w-2xl mx-auto leading-relaxed">
               Tout ce que vous devez savoir sur la plateforme FSA, les examens et la vérification des attestations.
             </p>
           </div>
@@ -80,17 +80,17 @@ export default function FAQPage() {
           {faqs.map((faq, i) => (
             <div 
               key={i} 
-              className="group p-8 md:p-10 rounded-[2.5rem] bg-white border border-slate-50 shadow-[0_20px_50px_rgba(0,0,0,0.03)] hover:shadow-[0_40px_80px_rgba(0,0,0,0.08)] transition-all duration-500"
+              className="group p-8 md:p-10 rounded-[2.5rem] bg-white border border-brand-line shadow-[0_20px_50px_rgba(0,0,0,0.03)] hover:shadow-[0_40px_80px_rgba(0,0,0,0.08)] transition-all duration-500"
             >
               <div className="flex gap-6">
                 <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-500">
                     <HelpCircle className="w-6 h-6" />
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-xl md:text-2xl font-[900] text-slate-900 group-hover:text-amber-700 transition-colors">
+                  <h3 className="text-xl md:text-2xl font-[900] text-brand-ink group-hover:text-amber-700 transition-colors">
                     {faq.question}
                   </h3>
-                  <p className="text-slate-500 font-medium text-base md:text-lg leading-relaxed">
+                  <p className="text-brand-muted font-medium text-base md:text-lg leading-relaxed">
                     {faq.answer}
                   </p>
                 </div>
@@ -100,12 +100,12 @@ export default function FAQPage() {
         </div>
 
         {/* CTA Support */}
-        <div className="mt-24 p-10 md:p-16 rounded-[3rem] bg-slate-900 text-white relative overflow-hidden shadow-2xl">
+        <div className="mt-24 p-10 md:p-16 rounded-[3rem] bg-brand-ink text-white relative overflow-hidden shadow-2xl">
            <div className="absolute top-0 right-0 w-1/3 h-full bg-amber-500/10 skew-x-12 transform translate-x-1/2" />
            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
               <div className="space-y-6 max-w-xl text-center md:text-left">
                 <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">Vous ne trouvez pas votre réponse ?</h2>
-                <p className="text-slate-400 font-medium text-lg leading-relaxed">
+                <p className="text-white/70 font-medium text-lg leading-relaxed">
                   Notre équipe de conseillers techniques est disponible pour vous accompagner dans vos démarches.
                 </p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-4">

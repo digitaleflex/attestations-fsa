@@ -221,7 +221,7 @@ function ResetPasswordForm() {
                     setOtp("");
                     setStep("email");
                   }}
-                  className="h-12 w-full rounded-xl border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="h-12 w-full rounded-xl border-brand-line text-sm font-semibold text-brand-ink hover:bg-brand-line/30"
                 >
                   <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
                   Recommencer la demande
@@ -236,7 +236,7 @@ function ResetPasswordForm() {
                 <div className="relative">
                   <Mail
                     aria-hidden="true"
-                    className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-muted"
                   />
                   <Input
                     id="email"
@@ -353,7 +353,7 @@ function ResetPasswordForm() {
                     setStep("email");
                   }}
                   disabled={loading}
-                  className="inline-flex min-h-[44px] items-center gap-2 px-2 text-sm text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+                  className="inline-flex min-h-[44px] items-center gap-2 px-2 text-sm text-brand-muted transition-colors hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
                 >
                   <ArrowLeft aria-hidden="true" className="h-4 w-4" />
                   Modifier l'adresse e-mail
@@ -382,7 +382,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="flex min-h-screen items-center justify-center bg-white">
           <Loader2
             className="h-10 w-10 animate-spin text-brand"
             aria-label="Chargement..."
