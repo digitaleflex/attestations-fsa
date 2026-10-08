@@ -75,6 +75,9 @@ jobs:
       - name: Migrate E2E database
         run: pnpm e2e:db:migrate
 
+      - name: Seed E2E database
+        run: pnpm e2e:seed
+
       - name: Run E2E tests
         run: pnpm test:e2e
 
