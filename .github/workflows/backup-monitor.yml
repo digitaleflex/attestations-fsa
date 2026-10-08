@@ -32,7 +32,7 @@ jobs:
       MAX_AGE_HOURS: "30"
       APP_URL: https://attestations.fermestandre.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install awscli + jq
         run: |
