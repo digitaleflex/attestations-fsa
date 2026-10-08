@@ -602,7 +602,7 @@ function AuthContent() {
                 className="space-y-6 relative z-10"
               >
                 {/* Sélecteur de méthode */}
-                <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100/80 rounded-2xl border border-slate-100">
+                <div role="tablist" aria-label="Méthode de connexion" className="grid grid-cols-2 gap-1 p-1 bg-slate-100/80 rounded-2xl border border-slate-100">
                   {(
                     [
                       { id: "password", label: "Mot de passe", icon: Lock },
@@ -612,6 +612,9 @@ function AuthContent() {
                     <button
                       key={id}
                       type="button"
+                      role="tab"
+                      id={`auth-tab-${id}`}
+                      aria-selected={tab === id}
                       onClick={() => switchTab(id)}
                       className={`relative z-10 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors duration-300 ${
                         tab === id
@@ -666,10 +669,14 @@ function AuthContent() {
                           }`}
                           autoComplete="email"
                           disabled={loading}
+                          aria-invalid={Boolean(fieldErrors.email)}
+                          aria-describedby={
+                            fieldErrors.email ? "auth-email-error" : undefined
+                          }
                         />
                       </div>
                       {fieldErrors.email && (
-                        <p className="text-red-500 text-xs font-semibold mt-1 pl-2">
+                        <p id="auth-email-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 pl-2">
                           {fieldErrors.email}
                         </p>
                       )}
@@ -710,6 +717,10 @@ function AuthContent() {
                           }`}
                           autoComplete="current-password"
                           disabled={loading}
+                          aria-invalid={Boolean(fieldErrors.password)}
+                          aria-describedby={
+                            fieldErrors.password ? "auth-password-error" : undefined
+                          }
                         />
                         <button
                           type="button"
@@ -731,7 +742,7 @@ function AuthContent() {
                         </button>
                       </div>
                       {fieldErrors.password && (
-                        <p className="text-red-500 text-xs font-semibold mt-1 pl-2">
+                        <p id="auth-password-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 pl-2">
                           {fieldErrors.password}
                         </p>
                       )}
@@ -782,10 +793,14 @@ function AuthContent() {
                           }`}
                           autoComplete="off"
                           disabled={loading}
+                          aria-invalid={Boolean(fieldErrors.fsaCode)}
+                          aria-describedby={
+                            fieldErrors.fsaCode ? "auth-fsacode-error" : undefined
+                          }
                         />
                       </div>
                       {fieldErrors.fsaCode && (
-                        <p className="text-red-500 text-xs font-semibold mt-1 pl-2">
+                        <p id="auth-fsacode-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 pl-2">
                           {fieldErrors.fsaCode}
                         </p>
                       )}
@@ -861,10 +876,14 @@ function AuthContent() {
                         }`}
                         autoComplete="one-time-code"
                         disabled={loading}
+                        aria-invalid={Boolean(fieldErrors.otp)}
+                        aria-describedby={
+                          fieldErrors.otp ? "auth-email-otp-error" : undefined
+                        }
                       />
                     </div>
                     {fieldErrors.otp && (
-                      <p className="text-red-500 text-xs font-semibold mt-1 text-center">
+                      <p id="auth-email-otp-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 text-center">
                         {fieldErrors.otp}
                       </p>
                     )}
@@ -957,10 +976,14 @@ function AuthContent() {
                         }`}
                         autoComplete="one-time-code"
                         disabled={loading}
+                        aria-invalid={Boolean(fieldErrors.otp)}
+                        aria-describedby={
+                          fieldErrors.otp ? "auth-otp-error" : undefined
+                        }
                       />
                     </div>
                     {fieldErrors.otp && (
-                      <p className="text-red-500 text-xs font-semibold mt-1 text-center">
+                      <p id="auth-otp-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 text-center">
                         {fieldErrors.otp}
                       </p>
                     )}

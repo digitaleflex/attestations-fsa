@@ -86,9 +86,20 @@ export default function FormationsClient({ initialFormations }: FormationsClient
 
   const categories = ["Toutes", ...Array.from(new Set(initialFormations.map(f => f.category)))];
 
+  // Normalisation accents/casse : le champ promet la recherche par compétence.
+  const normalizeSearch = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "");
+  const normalizedSearch = normalizeSearch(searchTerm.trim());
+
   const filteredFormations = initialFormations.filter(f => {
-    const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         f.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      normalizedSearch === "" ||
+      [f.name, f.description, ...(f.skills ?? [])].some((field) =>
+        normalizeSearch(field).includes(normalizedSearch),
+      );
     const matchesCategory = activeCategory === "Toutes" || f.category === activeCategory;
     return matchesSearch && matchesCategory;
   });

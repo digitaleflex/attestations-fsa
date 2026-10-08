@@ -134,6 +134,19 @@ export default function UpcomingExamsClient({ initialExams }: UpcomingExamsClien
   );
 }
 
+function formatExamDuration(durationSeconds: number): string {
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 60) {
+    return "< 1 min";
+  }
+  const totalMinutes = Math.round(durationSeconds / 60);
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours} h` : `${hours} h ${String(minutes).padStart(2, "0")}`;
+}
+
 function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
   const state = getPublicExamState(exam);
   const presentation = statusPresentation[state];
@@ -145,10 +158,7 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const formattedDuration =
-    exam.duration > 0 && exam.duration < 60
-      ? "< 1 min"
-      : `${Math.round(exam.duration / 60)} min`;
+  const formattedDuration = formatExamDuration(exam.duration);
 
   return (
     <MotionArticle
@@ -200,13 +210,19 @@ function ExamCard({ exam, index }: { exam: ScheduledExam; index: number }) {
 
         <div className="mt-auto pt-6">
           {state === "OPEN" ? (
-            <Button asChild className="h-14 min-h-14 w-full gap-2 rounded-2xl font-black">
-              <Link href="/auth">
-                <Lock className="h-4 w-4" aria-hidden="true" />
-                Se connecter pour passer l’examen
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </Button>
+            <div className="space-y-3">
+              <p className="rounded-2xl border border-brand/15 bg-brand/5 px-4 py-3 text-xs font-semibold leading-relaxed text-slate-600">
+                Session ouverte — connectez-vous avec votre compte candidat
+                pour passer l’examen.
+              </p>
+              <Button asChild className="h-14 min-h-14 w-full gap-2 rounded-2xl font-black">
+                <Link href="/auth">
+                  <Lock className="h-4 w-4" aria-hidden="true" />
+                  Se connecter pour passer l’examen
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            </div>
           ) : (
             <div className="flex min-h-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-center text-xs font-black uppercase tracking-wide text-slate-500">
               {state === "UPCOMING" ? "Disponible à l’ouverture" : "Accès terminé"}

@@ -1,4 +1,5 @@
 import "./globals.css";
+import "../components/documents/print.css";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import * as React from "react";

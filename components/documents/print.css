@@ -1,0 +1,47 @@
+/* Styles d'impression des documents officiels (#141/#62).
+ *
+ * Importé par le layout racine (`app/layout.tsx`) : Next.js n'autorise les
+ * feuilles globales que depuis un layout — pas depuis les composants
+ * `OfficialDocument` / `CertificateTemplate` eux-mêmes.
+ *
+ * Les documents sont au ratio paysage (≈ 1122×794, soit √2 comme A4
+ * paysage) : la page est déclarée en A4 paysage et les largeurs fixes
+ * (1122 px / 1120 px en ligne) sont ramenées à 100 % pour qu'aucun bord ne
+ * déborde. Le stepper `.no-pdf` (déjà exclu du flux écran large) est masqué.
+ */
+
+@page {
+  size: A4 landscape;
+  margin: 8mm;
+}
+
+@media print {
+  .no-pdf {
+    display: none !important;
+  }
+
+  #official-document-content,
+  #certificate-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  #certificate-content {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  #official-document-content img,
+  #certificate-content img,
+  #official-document-content svg,
+  #certificate-content svg {
+    max-width: 100%;
+  }
+}
