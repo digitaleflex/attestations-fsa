@@ -1,0 +1,100 @@
+name: Backup monitor (R2 + readiness)
+
+# Surveillance quotidienne des sauvegardes R2 et de la readiness prod (#295).
+# Canal de notification sans SaaS externe : une issue GitHub `backup-alert`
+# (créée une fois, commentée ensuite tant qu'elle reste ouverte).
+#
+# Secrets GitHub requis (à créer côté humain, jamais dans le dépôt) :
+#   R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+# Optionnels : R2_ENDPOINT (défaut https://<account>.r2.cloudflarestorage.com),
+#   BACKUP_DIR via vars (défaut du script : /home/audest/backups/attestation-fsa).
+
+on:
+  schedule:
+    # Quotidien 05:00 UTC (~06:00 Africa/Porto-Novo).
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  checks:
+    name: R2 checks + /api/ready
+    runs-on: ubuntu-latest
+    env:
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_PROFILE: default
+      BACKUP_DIR: ${{ vars.BACKUP_DIR }}
+      MAX_AGE_HOURS: "30"
+      APP_URL: https://attestations.fermestandre.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install awscli + jq
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq awscli jq
+
+      - name: Configure AWS profile for R2
+        run: |
+          mkdir -p ~/.aws
+          cat > ~/.aws/credentials <<EOF
+          [default]
+          aws_access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          EOF
+          chmod 600 ~/.aws/credentials
+
+      - name: Check R2 backup freshness
+        id: freshness
+        run: bash scripts/check-r2-backup-freshness.sh
+        continue-on-error: true
+
+      - name: Check R2 versioning
+        id: versioning
+        run: bash scripts/check-r2-versioning.sh
+        continue-on-error: true
+
+      - name: Aggregate R2 alerts
+        id: alerts
+        run: bash scripts/check-r2-alerts.sh
+        continue-on-error: true
+
+      - name: Check /api/ready
+        id: ready
+        run: curl -f --max-time 30 "$APP_URL/api/ready"
+        continue-on-error: true
+
+      - name: Fail job if any check failed
+        if: steps.freshness.outcome == 'failure' || steps.versioning.outcome == 'failure' || steps.alerts.outcome == 'failure' || steps.ready.outcome == 'failure'
+        run: |
+          echo "Au moins un controle a echoue — voir les etapes ci-dessus." >&2
+          exit 1
+
+  notify:
+    name: Open backup-alert issue
+    needs: checks
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create or comment backup-alert issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE="$(date -u +%Y-%m-%d)"
+          TITLE="[backup-alert] Echec monitoring sauvegardes $DATE"
+          BODY="Alerte backup-monitoring du $DATE (UTC) : au moins un controle a echoue (fraicheur/versioning R2 ou /api/ready). Run : $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Runbook : docs/ops/backup-monitoring.md."
+          gh label create backup-alert --color B60205 --description "Alerte automatique du monitoring sauvegardes/R2" 2>/dev/null || true
+          OPEN_COUNT="$(gh issue list --label backup-alert --state open --json number --jq 'length')"
+          if [ "$OPEN_COUNT" -gt 0 ]; then
+            NUM="$(gh issue list --label backup-alert --state open --json number --jq '.[0].number')"
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --label backup-alert --body "$BODY"
+          fi
