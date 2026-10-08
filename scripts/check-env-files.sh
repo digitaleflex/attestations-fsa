@@ -44,4 +44,16 @@ if [[ "$FOUND" -eq 0 ]]; then
   echo "Aucun fichier .env non autorisé détecté"
 fi
 
+# ── Garde permissions (issue #21) ─────────────────────────────────────
+# Les fichiers de secrets locaux ne doivent être lisibles que par leur
+# propriétaire. Non bloquant pour la CI : avertissement + chmod 600.
+for f in .env.production .env.local .env; do
+  if [ -f "$f" ]; then
+    if [ -n "$(find "$f" -perm /077 2>/dev/null)" ]; then
+      echo "Avertissement: $f est lisible par d'autres (groupe/autres) — chmod 600 appliqué"
+      chmod 600 "$f"
+    fi
+  fi
+done
+
 exit $FOUND

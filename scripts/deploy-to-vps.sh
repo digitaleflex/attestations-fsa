@@ -137,11 +137,25 @@ if [ "$APP_ONLY" = false ]; then
   ok "Dump transféré"
 
   log "Transfert scripts & configs..."
-  for f in scripts/vps-setup-postgres.sh scripts/vps-restore-dump.sh scripts/vps-pre-deploy-backup.sh compose.prod.yml Dockerfile .env.production; do
+  for f in scripts/vps-setup-postgres.sh scripts/vps-restore-dump.sh scripts/vps-pre-deploy-backup.sh compose.prod.yml Dockerfile; do
     [ -f "$f" ] && $SCP_CMD "$f" "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/" 2>/dev/null || true
   done
   $SSH_CMD "chmod +x ${VPS_APP_DIR}/scripts/*.sh 2>/dev/null || true"
   ok "Fichiers transférés"
+
+  # ── Injection sécurisée de .env.production (issue #21) ───────────────
+  # Plus de SCP pour les secrets : le contenu transite uniquement dans le
+  # flux chiffré de la session SSH existante (stdin), sans fichier
+  # intermédiaire sur disque, et est écrit avec chmod 600 immédiat côté VPS.
+  # Ne JAMAIS activer xtrace ici : le contenu fuirait dans les logs.
+  log "Injection sécurisée de .env.production via SSH..."
+  if [ -f .env.production ]; then
+    set +x 2>/dev/null || true
+    $SSH_CMD "cat > ${VPS_APP_DIR}/.env.production && chmod 600 ${VPS_APP_DIR}/.env.production" < .env.production
+    ok ".env.production injecté (chmod 600, hors SCP)"
+  else
+    warn ".env.production local absent — injection sautée (le VPS garde sa version)"
+  fi
 else
   step "Phase 2/5 — Transfert (SKIP)"
 fi

@@ -180,7 +180,7 @@ docker compose --env-file .env.production -f compose.prod.yml up -d fsa-app
 ## 4. Rotation de secrets
 
 ⚠️ Citez des **noms** de variables, jamais des valeurs. Génération d'un secret :
-`openssl rand -base64 32` (motif : `.env.example:14`, `deploy-to-vps.sh:161-162`).
+`openssl rand -base64 32` (motif : `.env.example:14`, `deploy-to-vps.sh:175-176`).
 
 ### 4.1 Où vivent les secrets (cartographie réelle)
 
@@ -195,6 +195,10 @@ docker compose --env-file .env.production -f compose.prod.yml up -d fsa-app
 
 1. Créer le nouveau secret **chez le fournisseur** (ou le générer).
 2. Mettre à jour `.env.production` sur le VPS (éditer, ne pas committer).
+   Depuis un poste opérateur, préférer l'injection via la session SSH chiffrée
+   (`deploy-to-vps.sh:146-158` : stdin vers `cat > … && chmod 600`, jamais de
+   SCP, jamais de `set -x` autour) plutôt qu'un transfert de fichier.
+   Vérifier côté VPS : `stat -c %a .env.production` doit répondre `600`.
 3. **Redémarrer les services qui lisent ces variables** — elles sont lues au démarrage du
    process (`lib/auth.ts:29`, `lib/redis.ts:7`, `lib/email.ts:7-23`) :
    ```bash
@@ -204,6 +208,8 @@ docker compose --env-file .env.production -f compose.prod.yml up -d fsa-app
    (`--force-recreate` : gabarit — les commandes compose de base viennent de `deploy.yml:89-92`.)
 4. Vérifier (`/api/health`, `/api/ready`, un envoi OTP de test).
 5. **Révoquer l'ancien secret** chez le fournisseur seulement après vérification.
+6. **Dater** : consigner la rotation dans le journal (§ 4.5) — date, secret(s),
+   responsable, vérification. Sans cette ligne, la rotation n'a pas eu lieu.
 
 Cas particulier **`NEXT_PUBLIC_*`** (`NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PUSHER_KEY`,
 `NEXT_PUBLIC_PUSHER_CLUSTER`) : valeurs **bakées au build** (`Dockerfile:21-27`, passées en
@@ -228,6 +234,19 @@ Cas particulier **`NEXT_PUBLIC_*`** (`NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PUSHER_
 `TODO(humain): définir une politique (durée max, gilets de sauvetage, rotation post-départ
 d'une personne ayant accès au VPS).` En attendant : rotation systématique en cas de doute
 (runbook Incident 3).
+
+### 4.5 Journal de rotation (traçabilité)
+
+La rotation réelle est une **action humaine** : aucun outil du dépôt ne tourne les
+secrets tout seul, et **aucune rotation n'est consignée à ce jour** — le tableau
+ci-dessous est vide en connaissance de cause, pas par oubli.
+
+| Date | Secret(s) | Responsable | Vérification (§ 4.2 étapes 4-5) |
+|---|---|---|---|
+| — (aucune rotation consignée à ce jour) | — | — | — |
+
+Règle : chaque rotation exécutée selon la séquence § 4.2 ajoute une ligne ici,
+en citant des noms de variables, jamais des valeurs.
 
 ---
 
