@@ -67,10 +67,12 @@ describe("OfficialDocument — résumé mobile sans casser le PDF A4", () => {
 
   it("remonte les contrastes des textes secondaires (WCAG AA)", () => {
     // #94a3b8 (2,5:1 sur blanc) et #64748b sur #f8fafc (4,6:1) sont trop justes
-    // pour des libellés de 9-10 px.
+    // pour des libellés de 9-10 px. Depuis #62 les hex en dur sont remplacés
+    // par les tokens de marque : `brand-muted` (#666666 = 5,74:1 sur blanc)
+    // satisfait WCAG AA (4,5:1) pour du texte courant.
     expect(OFFICIAL_DOCUMENT).not.toMatch(/"#94a3b8"|'#94a3b8'/);
-    expect(OFFICIAL_DOCUMENT).toMatch(/const MUTED = "#475569"/);
-    expect(OFFICIAL_DOCUMENT).toMatch(/const MUTED_ON_WHITE = "#64748b"/);
+    expect(OFFICIAL_DOCUMENT).toMatch(/const MUTED = "var\(--color-brand-muted\)"/);
+    expect(OFFICIAL_DOCUMENT).toMatch(/const MUTED_ON_WHITE = "var\(--color-brand-muted\)"/);
     // Bordures de fiches : #f1f5f9 est invisible sur le fond #f8fafc.
     expect(OFFICIAL_DOCUMENT).not.toContain("borderColor: '#f1f5f9'");
   });

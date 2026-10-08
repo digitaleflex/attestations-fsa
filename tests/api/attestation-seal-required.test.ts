@@ -80,6 +80,9 @@ const STAGE_BODY = {
   instructor: "M. X",
   issuingCompany: "FSA",
   type: "STAGE",
+  // #322 — un STAGE requiert stageHours (invariant voulu) : sans ces heures
+  // le POST répond 400 avant même la garde de scellement.
+  stageHours: 120,
   stageScore: 15,
 };
 

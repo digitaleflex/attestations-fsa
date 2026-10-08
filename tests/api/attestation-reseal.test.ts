@@ -81,6 +81,9 @@ function official(overrides: Record<string, unknown> = {}) {
     issuingCompany: "FSA",
     certificationScore: 88,
     certificationMention: "TRES_BIEN",
+    // #322 — une CERTIFICATION requiert score + mention + heures : sans ces
+    // heures le PATCH répond 400 avant même le rescellement.
+    certificationHours: 120,
     stageScore: 90,
     pdfKey: `attestations/${CODE}/v1.pdf`,
     pdfHash: "a".repeat(64),

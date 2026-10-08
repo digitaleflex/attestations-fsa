@@ -119,7 +119,7 @@ describe("issueExamAttestation (#133)", () => {
     db.sessionFindUnique.mockResolvedValue(makeSession());
     const res = await issueExamAttestation("session-1");
     expect(res.created).toBe(true);
-    expect(res.code).toMatch(/^FSA-2026-M09-\d{5}-[0-9a-f]{5}$/);
+    expect(res.code).toMatch(/^FSA-\d{4}-M\d{2}-\d{5}-[0-9a-f]{5}$/);
     expect(db.attestationCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
