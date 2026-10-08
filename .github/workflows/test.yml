@@ -51,6 +51,8 @@ jobs:
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
+    env:
+      E2E_DATABASE_URL: postgresql://attestation_fsa_user:attestation_fsa_password@localhost:5434/attestation_fsa_e2e
     steps:
       - uses: actions/checkout@v4
 
@@ -69,6 +71,9 @@ jobs:
 
       - name: Start E2E database
         run: pnpm e2e:db:up
+
+      - name: Migrate E2E database
+        run: pnpm e2e:db:migrate
 
       - name: Run E2E tests
         run: pnpm test:e2e
