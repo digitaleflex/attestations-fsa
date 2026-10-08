@@ -149,21 +149,21 @@ Une system story représente une propriété technique distincte du système.
 |---|---:|---:|---:|---:|
 | CI/CD et livraison | 9 | 1 | 0 | 10 |
 | Base de données, migrations et concurrence | 8 | 0 | 0 | 8 |
-| Disponibilité et résilience | 5 | 1 | 1 | 7 |
+| Disponibilité et résilience | 6 | 1 | 0 | 7 |
 | Sauvegarde, R2 et stockage | 8 | 0 | 0 | 8 |
-| Observabilité, audit et traçabilité | 7 | 2 | 2 | 11 |
+| Observabilité, audit et traçabilité | 8 | 3 | 0 | 11 |
 | Qualité, tests et E2E | 6 | 1 | 0 | 7 |
 | Sécurité et secrets | 4 | 0 | 1 | 5 |
 | Performance et capacité | 2 | 0 | 0 | 2 |
 | Accessibilité technique et documentation | 2 | 1 | 0 | 3 |
-| **Total** | **51** | **6** | **4** | **61** |
+| **Total** | **53** | **7** | **1** | **61** |
 
 ### Écarts prioritaires
 
-- **SYS-REL-02** : créer `/api/ready` avec vérification DB/cache, distincte de `/api/health`.
-- **SYS-OBS-04** : créer la page admin `/admin/logs` et la rétention des audit logs.
-- **SYS-CICD-10** : rollback applicatif par tag/image SHA.
-- **SYS-CICD-11** : alertes planifiées sur fraîcheur R2, versioning et readiness.
+- **SYS-REL-02** — **implémentée** : `/api/ready` vérifie PostgreSQL + Redis optionnel (`app/api/ready/route.ts:9-38`, 200/503 `:40-45`), healthchecks Compose basculés dessus (`compose.prod.yml:87-91`, `compose.staging.yml:67-71`). Couverture OPS-02 confirmée (était « à faire » dans `functionalities-inventory.md`).
+- **SYS-OBS-04** — **partielle** : purge/rétention livrée côté code (job `lib/jobs/retention-purge.ts`, audit `RETENTION_PURGED`) mais **page `/admin/logs` toujours absente** (vérifié : aucun `app/admin/logs/page.tsx`) et `take: 200` en dur (`app/api/admin/logs/route.ts:25`). Reste la page filtrable/paginée/scrubée (vague 6).
+- **SYS-CICD-10** — **partielle (code livré, action humaine restante : exécution à constater)** : job `rollback` dans `.github/workflows/deploy.yml:280-320` (images GHCR taguées par SHA, staging bloque la prod `:176-180`). Couverture OPS-10 confirmée comme partielle.
+- **SYS-CICD-11** — **implémentée côté code (actions humaines restantes : secrets R2 + uptime externe)** : `.github/workflows/backup-monitor.yml:12-100` (cron `0 5 * * *`, fraîcheur + versioning R2 + `/api/ready`, alerte issue `backup-alert`), runbook `docs/ops/backup-monitoring.md`. Couverture OPS-11 confirmée : le backup-monitor couvre fraîcheur/versioning/readiness ; **restent** les secrets GitHub R2 (`docs/ops/backup-monitoring.md:15-16`) et le monitor uptime externe (`docs/ops/procedures.md:477`), tous deux `TODO(humain)`.
 
 ## Total consolidé
 
@@ -171,10 +171,10 @@ Une system story représente une propriété technique distincte du système.
 |---|---:|---:|---:|---:|
 | User stories | 118 | 11 | 6 | 135 |
 | Evil stories | 26 | 12 | 8 | 46 |
-| System stories | 51 | 6 | 4 | 61 |
-| **Total** | **195** | **29** | **18** | **242** |
+| System stories | 53 | 7 | 1 | 61 |
+| **Total** | **197** | **30** | **16** | **242** |
 
-**Couverture globale claire : 80,6 % implémentée, 12 % partielle, 7,4 % à créer.**
+**Couverture globale claire : 81,4 % implémentée, 12,4 % partielle, 6,6 % à créer.**
 
 ## Plan de remédiation et index des issues
 

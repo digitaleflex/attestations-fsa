@@ -45,12 +45,12 @@ Légende : **FAIT** (code + tests dans le dépôt) · **PARTIEL** (reliquat rée
 | 281 | **FAIT** | Whitelist stricte **sans spread** sur `app/api/verifier/route.ts` ; `tests/api/verifier-public-whitelist.test.ts` (12 tests) ; **reliquat traité depuis** : le `id` (cuid interne) retiré de la réponse publique, empreinte `FP:` rattachée au `code` FSA |
 | 282 | **FAIT** | `lib/auth.ts:30-34` throw au chargement si `NODE_ENV=production` sans secret ; à confirmer que le build Next n'évalue pas ce throw au build-time |
 | 283 | **FAIT** | Résolution + **throw au démarrage** sur origine `http://` en production (`lib/auth.ts`) ; `tests/security/trusted-origins.test.ts` (18 tests) ; **reliquat traité depuis** : l'origine en clair retirée de l'allowlist de production |
-| 284 | **FAIT** | `next.config.mjs:51-77` + `tests/config/next-image-remote-patterns.test.ts` ; **mais** `img-src` CSP = `'self' data: blob: https:` (`:126`) annule l'allowlist côté navigateur |
+| 284 | **FAIT** | `next.config.mjs:51-77` + `tests/config/next-image-remote-patterns.test.ts` ; reliquat `img-src` **résorbé** : CSP statique retirée de `next.config.mjs:112-131`, gérée dynamiquement dans `proxy.ts:88-95` (nonce par requête, `img-src 'self' data: blob:`, `connect-src` restreint, `d40a77e`) |
 | 285 | **FAIT** | Page cookies et `docs/SECURITY_FIX_GUIDE.md` **alignés sur le contrôle d'origine réel** (`trustedOrigins` + `SameSite=Lax`) ; la page ne promet plus de jeton. Le reliquat documentaire est résorbé ; il ne reste que la refonte CSP #290 (vague 4) |
 | 287 | **FAIT (P0)** | Quotas, identité XFF, quota d'octets ; reliquat : pas de dimension « device », `getClientIdentity` ne lit que `x-forwarded-for` |
 | 288 | **FAIT** | Garde `getSealSecret()` + rejet dur **503** sur les 2 voies qui contournaient le sceau, **aucune écriture en base** : `app/api/attestations/route.ts:120-130,197-207`, `lib/stage-attestation/issue.ts:284-303,334-341` ; `tests/api/attestation-seal-required.test.ts` (11 tests) |
 | 289 | PARTIEL | 7 exports orphelins de `lib/sanitization.ts`, 0 appel applicatif ; risque réel = champs riches (`InternshipRequest.observations`) sans allowlist HTML, aucun DOMPurify |
-| 290 | PARTIEL | CSP statique en chaîne, zéro nonce ; `'unsafe-inline' 'unsafe-eval'`, jokers `img-src`/`connect-src`, directives manquantes, refonte nécessaire pour injecter un nonce |
+| 290 | **FAIT (code)** | Nonce par requête (`proxy.ts:88-95`, `x-nonce` aux Server Components `:129-131`) : `script-src 'self' 'nonce-…' 'strict-dynamic'`, `img-src 'self' data: blob:`, `connect-src` restreint (Resend + Upstash), CSP statique retirée de `next.config.mjs:112-131` ; livré par `d40a77e`. Assumé : `style-src 'unsafe-inline'` conservé (Tailwind/CSS-in-JS) |
 | 303 | **FAIT** | Quota **fail-closed** sur `claimCode` (10/15 min, IP + utilisateur, `lib/rate-limit.ts:320-333,413,447-448`) ; `endsWith` supprimé au profit d'une **égalité stricte** (plus de recherche sur ≤ 5 hex) ; réponses indifférenciées ; `tests/api/user-claim-code.test.ts` (23 tests) |
 | 310 | **FAIT (P0)** | Fail-closed `:417,434,632` → 503, quota distribué Upstash ; reliquat : store mémoire sans purge planifiée (→ #320) |
 
@@ -67,52 +67,52 @@ Légende : **FAIT** (code + tests dans le dépôt) · **PARTIEL** (reliquat rée
 | # | Verdict | Reliquat en une ligne |
 |---|---|---|
 | 9 | **FERMER** | Résiduel couvert par #307 (module) + #308 (clé) + #141 (tests) |
-| 141 | PARTIEL | Flux couvert (`parcours-candidat.e2e.ts:49`, `verification-publique.e2e.ts`, `pdf.test.ts`) ; **bloqué par #307** — l'E2E ne valide jamais le PDF officiel réel ni son QR gravé |
+| 141 | PARTIEL | Flux couvert (`parcours-candidat.e2e.ts:167-179`, `verification-publique.e2e.ts`, `pdf.test.ts`) ; module #307 désormais livré (vague infra) → **reste l'E2E sur le PDF officiel réel et son QR gravé** |
 | 299 | **FAIT** | `app/api/attestations/[id]/route.ts:330-438` + `lib/attestations/lifecycle.ts:108-127` + migration `20260929` — soft delete et révocation matérialisés |
-| 300 | PARTIEL | v2 appliqué sur 3 chemins, **2 voies restées en v1** : `app/api/attestations/route.ts:177-184`, `lib/stage-attestation/issue.ts:284-290` ; retrofit via `lib/attestations/migration.ts:205`, corpus 40 verrouillé en v1 |
+| 300 | **FAIT** | Sceau v2 appliqué sur **toutes** les voies : `app/api/attestations/route.ts:278,291-293` + `lib/stage-attestation/issue.ts:319,351-353` (`sealVersion: 2`) ; livré par `aba91c6` |
 | 301 | **FAIT** | `app/api/admin/attestations/[id]/actions/route.ts:90-183` + `lib/attestations/lifecycle.ts:161-189` ; verrou par `tests/lib/attestations/legacy-corpus-40.test.ts` |
-| 302 | NC | À établir (interdire les PII fictives dans les documents officiels) |
-| 307 | **ABSENT (le module)** | Contrat complet et testé `lib/attestations/pdf.ts:20-28,49-68,98,101` mais **module absent du dépôt** (seule implémentation = `e2e/fixtures/pdf-generator.mjs:124`) → `lib/attestations/issue.ts:251` lève `OfficialPdfUnavailableError`, **toute émission CERTIFICATION échoue en prod** |
+| 302 | **FAIT** | `lib/attestations/issue.ts:156` — un document officiel ne porte plus de PII fictives (émission refusée si nom/naissance manquants) ; livré par `6e343d3` |
+| 307 | **FAIT (code) — action humaine restante : preuve d'émission en prod** | Module versionné dans le dépôt `lib/attestations/pdf-generator/index.ts` (246 L, QR vers `/verifier?code=…`, `f73f3b4`) et **câblé** : `compose.prod.yml:63`, `.env.production:74,80`, `.env.example:157` → `OfficialPdfUnavailableError` ne peut plus survenir à config déployée. **Reste** : constater une émission `CERTIFICATION` réussie sur la prod déployée |
 | 308 | **ABSENT** | Aucun `sealKeyId`/`SigningKey` (grep = 0) ; `tests/api/ready.test.ts:64-69` prouve qu'une rotation invalide tous les sceaux ; **migration additive** |
 | 309 | PARTIEL | Enum `REJECTED`/`REVOKED` distincts, champs + migration `20260929` ; manque registre public des révocations, horodatage/motif dans la réponse publique, origine REJECTED-pose vs REVOKED-cycle ; colonne `ATTESTATION_REJECTED` (`:612`) inutilisée — à confirmer |
-| 316 | **ABSENT** | Toujours `count()+1` mensuel (`lib/attestations/issue.ts:231-239`, `lib/stage-attestation/issue.ts:276-282`), aucune séquence PG (grep `nextval` = 0), `code @unique` → **P2002 en concurrence** ; **migration additive** |
-| 322 | PARTIEL | Invariants testés (session obligatoire `NOT VALID`, immuabilité du code, corpus 40) ; manque unicité sous concurrence (#316), test « STAGE n'a jamais de `sessionId` », test du trigger en INSERT concurrent ; `NOT VALID` jamais validé — à confirmer si intentionnel |
+| 316 | **FAIT** | Séquence PG `attestation_code_seq` (`prisma/migrations/202609280_attestation_code_sequence/migration.sql:6`) consommée par `nextval()` atomique sur les 2 voies d'émission (`lib/attestations/issue.ts:243-247`, `app/api/attestations/route.ts:219-223`) → plus de P2002 en concurrence ; livré par `6e343d3` + `aba91c6` |
+| 322 | **FAIT** | Invariants par type refusés en 400 : `CERTIFICATION` ⇒ score + mention + heures, `STAGE` ⇒ heures, champ non persisté `certificationHoursExempted` rejeté (`app/api/attestations/route.ts:119-147`) ; unicité sous concurrence couverte par la séquence #316 ; livré par `5817a3d` |
 
 ### D. Stages & parcours candidat (8)
 
 | # | Verdict | Reliquat en une ligne |
 |---|---|---|
-| 264 | PARTIEL | Voie publique conforme (`app/api/public/internships/route.ts:112,131`) ; **voie authentifiée ouverte** : `app/api/user/internships/route.ts:12` accepte toute URL absolue et `:130` la persiste, `window.open` admin ; migration des `cvUrl` existants **à confirmer** |
+| 264 | **FAIT (code) — action humaine restante : migration des `cvUrl` existants à confirmer en base** | Voie authentifiée restreinte au HTTPS (`app/api/user/internships/route.ts:13-17` refuse `javascript:`, `file:`, `data:`) + `sanitizeInput` sur tous les champs (`:134-138`) ; livré par `6e343d3` + `aba91c6` |
 | 265 | **FAIT** | `lib/stage-attestation/issue.ts:28,30,219-253,347-380` (#266/#267 déjà FAIT) |
 | 266 | **FAIT** | `lib/internships/{schemas,state-machine,mutation,audit-actions}.ts` testés ; rien |
 | 267 | **FAIT** | Transitions `:31,37,40,42` (`ARCHIVED` terminal), `:74` validation, `:120 allowedNext` ; rien |
 | 268 | **FAIT** | `app/api/public/internships/route.ts:17` email obligatoire → plus d'anonyme sans canal, `:133` confirmation, `:136-141` notif admins ; reste : aucun email au candidat à l'acceptation/refus (`app/api/admin/internships/route.ts:86` n'audite que) |
-| 269 | PARTIEL | Export paginé/audité/quoté, pas d'URL signée ; `StoredObject.retentionUntil` écrit (365 j) et lu par `check-data-integrity.ts` mais **jamais honoré par un purge** ; pas de suppression vérifiable des CV ; **doit précéder #320** (brique `lib/storage/*` partagée) |
-| 270 | PARTIEL | Machine d'état + UI admin + 4 fichiers de tests API ; reste la cohérence UI/API détaillée dans l'issue |
-| 272 | PARTIEL | **Aucun E2E du parcours stages** : les 4 specs `e2e/` ne touchent pas `/admin/internships` |
+| 269 | **FAIT (code)** | `StoredObject.retentionUntil` (365 j) désormais **honorée** par un job idempotent `lib/jobs/retention-purge.ts:89-96` (objets échus non officiels : octets + ligne supprimés, `AuditLog` `RETENTION_PURGED`, `isOfficialStoredObject` protège les PDF officiels), exposé via `POST /api/internal/retention/purge/route.ts:18-19` (`CRON_SECRET`, GET 405) ; politique `docs/legal/retention-policy.md` ; livré par `1bfab89`. Reliquat → quotas par compte (#320, vague 7) |
+| 270 | PARTIEL | Compteur + `stageScore` livrés côté UI (`app/admin/internships/page.tsx:71,133-135`) et API (`aba91c6`) ; reste la cohérence UI/API fine détaillée dans l'issue |
+| 272 | **FAIT (code) — action humaine restante : vert en CI** | Specs Playwright : `e2e/parcours-stage.e2e.ts` (230 L : dépôt public → décision admin → export → sentinelle d'émission) + `e2e/parcours-admin.e2e.ts` (211 L) ; livré par `281c900`. Reste : passage vert dans le job E2E |
 
 ### E. Plateforme, ops, données & conformité (20)
 
 | # | Verdict | Reliquat en une ligne |
 |---|---|---|
-| 21 | PARTIEL | `.env.production` en `0600`, `env-guard.yml` + `scripts/check-env-files.sh` ; `scripts/deploy-to-vps.sh:140` **transfère `.env.production`**, aucune rotation documentée |
-| 22 | **ABSENT** | Actions épinglées **par tag** (`test.yml:126,129`, `deploy.yml:44,53`), images flottantes (`Dockerfile:1,14,60`, `compose.prod.yml:123,193`) ; `dependabot.yml` ne couvre ni actions ni images |
-| 153 | PARTIEL | `app/api/upload/route.ts:120` écrit en clair (repose sur R2) ; **registre des traitements** et **consentements tracés** repris par **aucune issue ouverte** ; la fuite d'OTP en logs est **corrigée** (vague 0 exécutée) |
-| 156 | **ABSENT** | grep `staging` sur `.github/workflows/*` et `compose*.yml` = 0 ; un seul env, une seule DB → **goulot n°1** : #308 + #312 + #316 bloquées ensemble |
-| 291 | **PARTIEL — trou actif** | **Plus grave qu'un « job de purge » manquant** : `app/api/users/[id]/route.ts:443-447` supprime **physiquement** le compte, ses sessions et ses credentials via `$transaction`, **sans `createAuditLog` et sans export préalable** → effacement de compte **non tracé**, l'inverse de ce qu'exige le RGPD. La purge RGPD et l'export préalable restent **absents** |
-| 292 | **ABSENT** | `app/api/health/route.ts:6-11` = 11 lignes, 0 dépendance ; healthcheck Docker dessus (`compose.prod.yml:96-103`) ; **`tests/api/ready.test.ts` est mal nommé** (teste health + sceau) ; **9 fichiers docs** décrivent `/api/ready` comme existant |
+| 21 | **FAIT (code) — action humaine restante : rotation documentée** | `.env.production` injecté via le flux SSH chiffré, plus de SCP en clair (`scripts/deploy-to-vps.sh:146-148`, `scripts/check-env-files.sh`) ; livré par `8d8023c`. Reste : procédure + calendrier de rotation des secrets |
+| 22 | **FAIT (code) — action humaine restante : exécution du rollback à vérifier hors prod** | Staging isolé (`compose.staging.yml` : Postgres dédié `:92-103`, secrets distincts, healthcheck `/api/ready` `:67-71`), images GHCR taguées par SHA (`compose.prod.yml:10`, jobs `build-and-push`/`deploy-staging`/`deploy-prod`/`rollback` `.github/workflows/deploy.yml:49-320`, staging bloque la prod `:176-180`) ; livré par `ebeea12` |
+| 153 | **FAIT (code) — action humaine restante : registre des traitements + consentements tracés (aucune issue ouverte, à trancher)** | Purge RGPD livrée : job idempotent `lib/jobs/retention-purge.ts` + `POST /api/internal/retention/purge` (`CRON_SECRET`, GET 405) + politique `docs/legal/retention-policy.md` + `tests/lib/retention-purge.test.ts` (182 L) ; livré par `1bfab89`. Effacement de compte : anonymisation + audit `ACCOUNT_ANONYMIZED` en transaction (cf. #291) |
+| 156 | **FAIT — la fenêtre de migration est ouverte** | Environnement de staging : `compose.staging.yml` (Postgres dédié `:92-103`, 2e base coexistant avec la prod, healthcheck `/api/ready` `:67-71`), gate staging→prod (`.github/workflows/deploy.yml:102-180`) ; livré par `ebeea12`. Le goulot n°1 est levé : #308 + #312 et toute migration additive peuvent être validées sur staging |
+| 291 | **FAIT (code) — action humaine restante : export préalable RGPD à décider** | Fini l'effacement physique non tracé : `DELETE app/api/users/[id]/route.ts:544-693` **anonymise** (la ligne `User` survit pour les clés RESTRICT `:639-642`), révoque les sessions (`:624`), purge credentials (`:629-637`), écrit l'audit `ACCOUNT_ANONYMIZED` **dans la transaction** (`:649-693`), refuse l'auto-effacement et l'effacement du dernier admin (`:562-606`). Reste : export préalable des données avant effacement (droit à la portabilité) |
+| 292 | **FAIT (code) — reste le renommage du test + l'alignement des 9 docs (vague 8)** | `app/api/ready/route.ts:1-46` : PostgreSQL (`:9-20`), Redis optionnel non bloquant (`:22-38`), 200/503 (`:40-45`) ; healthchecks basculés dessus (`compose.prod.yml:87-91`, `compose.staging.yml:67-71`) ; livré par `6e343d3`. `tests/api/ready.test.ts` existe mais ne teste pas la route nominalement — à renommer |
 | 293 | PARTIEL | API `app/api/admin/logs/route.ts:5-30` avec **`take: 200` en dur** (`:24`), aucun filtre ; **pas de page** ; `AuditLog` sans aucune purge |
-| 294 | **ABSENT** | Aucun job de rollback, `command_timeout: 30m` + `git pull` (`deploy.yml:57`), 0 occurrence `rollback` dans `deploy-to-vps.sh` ; `deploy.yml:56-58` documente un incident réel du 2026-09-17 (601 s, build tué) |
-| 295 | PARTIEL | 3 scripts + `tests/scripts/r2-operations.test.ts` exécuté en CI ; **mais `grep schedule:` = 0** → planification dans un `.md` ; aucun service d'alerte ; échec de backup = simple `echo` (`vps-pre-deploy-backup.sh:159-161`) |
-| 305 | **ARBITRAGE — prérequis de #307/#300** | Hostname public **triple et contradictoire** : `compose.prod.yml:28` = `hashcode.cloud`, `lib/auth.ts:85-86` = `fsa.eurin.tech`, `.env.production:21` = `https://hashcode.cloud` ; déjà signalé `TODO(humain)` dans `docs/ops/README.md:105-108`. **Changer de domaine ne répare aucun PDF déjà émis** : le QR est gravé dans le PDF au moment de l'émission (`lib/attestations/pdf.ts:88`). Arbitrage de **vague 0**, pas de vague 6 |
+| 294 | **FAIT (code) — action humaine restante : exécution réelle à vérifier** | Job `rollback` (`.github/workflows/deploy.yml:280-320`) : healthcheck prod KO → retour au tag précédent + smoke test ; livré par `ebeea12`. Reste : l'avoir vu tourner (hors prod d'abord) |
+| 295 | **FAIT (code) — actions humaines restantes : secrets R2 + uptime externe** | Ordonnanceur déployé : `.github/workflows/backup-monitor.yml:12-100` (cron quotidien `0 5 * * *`, fraîcheur R2 + versioning + alertes + `/api/ready`, alerte via issue `backup-alert` `:78-100`), runbook `docs/ops/backup-monitoring.md`, variables documentées `.env.example:116-126` ; livré par `d498cfd`. **Restent** : créer les secrets GitHub R2 (`R2_BUCKET`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) et le monitor uptime externe (procédure `docs/ops/procedures.md:477`) |
+| 305 | **FAIT (code)** | Hostname unifié : domaine lu depuis `NEXT_PUBLIC_APP_URL`, plus de valeur en dur (`lib/auth.ts:96-99,195`), `compose.prod.yml:31,41` via `TRAEFIK_HOST` (défaut `hashcode.cloud`), QR réactivé ; livré par `85983a0` + `4e7ecca`. Le QR reste gravé à l'émission : tout changement futur ne répare pas les PDF déjà diffusés |
 | 306 | PARTIEL | **Fail-closed en production livré** : sous `NODE_ENV=production`, `scripts/vps-pre-deploy-backup.sh` sort **non nulle** si `BACKUP_REMOTE`, `rclone`, `age` ou `BACKUP_AGE_RECIPIENT` manque ; un envoi **non chiffré** ne peut plus partir en prod, l'échec d'upload se propage ; `.env.example` : 7 variables marquées obligatoires ; RPO/RTO et emplacements **« À ARBITRER »** dans `docs/ops/procedures.md` § 5.5. **Reliquat** : `.env.production` ne contient **ni** `BACKUP_REMOTE` ni `BACKUP_AGE_RECIPIENT` → le job passe désormais **rouge** tant qu'elles manquent ; drill jamais chronométré |
 | 312 | **ABSENT** | Aucun `outbox` dans `app/`, `lib/`, `prisma/`, `prisma/migrations/` ; `lib/email.ts` (1032 L) envoie directement via Resend `:55` ; **migration additive** |
-| 313 | **ABSENT** | 5 pages / 985 L ; mentions légales = **placeholders littéraux** `[Nom de l'hébergeur]`, `[Adresse]`, `[URL]` (`mentions-legales/page.tsx:42-44`) ; 4 sous-traitants non listés (Traefik/VPS, Resend, Upstash, Cloudflare R2) ; cookies faux `:63` |
+| 313 | **FAIT (code) — action humaine restante : revue juridique externe** | Placeholders remplacés (`aba91c6`), 4 sous-traitants listés, cookies corrigés, hébergeur complété (adresse + contact, `ff73536`), promesses produit non conformes reformulées (`app/(public)/legal/attestations/page.tsx`, `app/(public)/faq/page.tsx`, cf. #347). Reste : revue et signature juridique |
 | 314 | NC | À établir (funnel inscription → attestation) |
 | 315 | **FAIT** | `app/api/public/stats/route.ts` : quota posé, `pending`/`totalUsers` **supprimés de la base** (les `COUNT` sont retirés), agrégat `progressRatio`, `dynamic` au lieu de `revalidate` (sinon le quota ne s'appliquait pas) ; `tests/api/public-stats.test.ts` (16 tests) |
-| 317 | PARTIEL | Fuseau centralisé pour les examens (`lib/exams/time.ts:35` lit `APP_TIMEZONE`) ; **mais** `lib/exams/schedule-ui.ts:23` **redéclare `Africa/Porto-Novo` en dur**, ignorant l'env de `compose.prod.yml:66` ; 38 appels `toLocaleString` dispersés, **exports XLSX en priorité** |
-| 318 | **ABSENT** | grep `abandon|EXPIRED|expiresAt` = 0 ; `status String` libre + **aucun `expiresAt`** (`prisma/schema.prisma:315-344`) → une session jamais soumise reste en base indéfiniment ; **migration additive** |
-| 319 | **ABSENT** | `app/api/formations/route.ts:9-13` : `min(1)` sans max/trim/doublon, `:64-70` `create` direct ; `name String` sans `@unique` (`prisma/schema.prisma:123-133`) → **migration additive** |
+| 317 | PARTIEL | Référence unique branchée : `lib/exams/schedule-ui.ts:24-31` lit `APP_TIMEZONE` (défaut `Africa/Porto-Novo`, livré par `6e343d3`) ; **restent** les 38 `toLocaleString` dispersés et les exports XLSX en priorité |
+| 318 | **FAIT** | `expiresAt` sur `ExamSession` (`prisma/schema.prisma:343-360`) + migration additive `20261007_exam_session_expires_at`, cron idempotent `lib/exams/cron-expire.ts:102-135` (bascule `IN_PROGRESS` → `EXPIRED` + audit `EXAM_SESSION_EXPIRED`), `expiresAt` posé à la création et reprise `EXPIRED` bloquée (`app/api/exams/[id]/start/route.ts:123,152-163`) ; livré par `6d442bc` |
+| 319 | **FAIT** | Création contrôlée : catégorie + description exigées pour toute formation inconnue, déduplication par normalisation (casse + accents), création journalisée dans `AuditLog` (`app/api/attestations/route.ts:38-40,173-204`) ; livré par `820986b` |
 | 320 | PARTIEL | Pas de job de purge, pas de quota par compte, pas de métriques ; conflit non tranché avec la protection des PDF officiels (`lib/storage/registry.ts:102,113`) |
 | 321 | **PARTIEL** | Volet immédiat livré : 7 routes sur `handleApiError`, 20 occurrences ramenées à 10 (3 messages métier conservés), `tests/lib/error-disclosure.test.ts` (7 tests) ; restent les logs structurés, `request-id` et le scrub PII (vague 7) |
 
@@ -120,18 +120,18 @@ Légende : **FAIT** (code + tests dans le dépôt) · **PARTIEL** (reliquat rée
 
 | # | Verdict | Reliquat en une ligne |
 |---|---|---|
-| 11 | PARTIEL | `tests/helpers/request.ts:7-16`, rate-limit (3 fichiers), sanitization (15 tests), audit ; **`.env.test` n'existe pas** → acter l'isolation inline actuelle |
+| 11 | **FAIT** | `.env.test` + `tests/helpers/{auth,db,fixtures,mocks,request}.ts` + `tests/setup.ts` + tests 2FA (`tests/api/admin-2fa.test.ts`, 380 L) et `error-translator` ; livré par `5ea9f72`. Isolation par `.env.test` dédié : le point « acter l'isolation inline » est dépassé |
 | 12 | **FAIT (dépassé)** | 14 fichiers `tests/api/` examens + 4 `tests/lib/exams/` + `scoring.test.ts` ; rien |
 | 13 | **FAIT (dépassé)** | 24 fichiers `tests/api/admin-*.test.ts` + `attestation-*.test.ts` ; rien (sauf `/admin/logs` sans écran, cf. #293) |
 | 84 | **FAIT** | `app/admin/error.tsx`, `app/global-error.tsx`, `app/admin/loading.tsx` créés ; le dashboard tolère la perte d'un compteur au lieu de tomber (voir « Vague 0 — exécutée ») |
-| 131 | NC | Épique umbrella ; à fermer quand #138/#140/#141 sont clos |
-| 138 | NC | À établir (intégration API features adjacentes) |
+| 131 | **FAIT (filet en place) — action humaine restante : clôture formelle quand #138/#140/#141 seront clos** | Épique umbrella : le filet anti-régression existe — 71 fichiers `tests/api/`, suites `tests/lib/**`, specs E2E (`e2e/parcours-candidat.e2e.ts`, `parcours-admin.e2e.ts`, `parcours-stage.e2e.ts`), ratchet de couverture `vitest.config.ts:47-51` tenu (74,07 / 70,54 / 79,70 / 75,16 %) |
+| 138 | PARTIEL | Intégration en cours : notifications in-app + stages (`c12ed25`), internships/bulk-actions/réclamations (`1e71b04`), `GET /api/public/settings` couvert (`tests/api/public-settings.test.ts`, 132 L, `5dd07b9`) ; reste la couverture complète des features adjacentes |
 | 139 | **FAIT** | `e2e/parcours-candidat.e2e.ts:31,49` parcours complet en CI ; **mais** Playwright force le fallback mémoire (`test.yml:120-121`) → le chemin Redis n'est jamais testé en E2E |
-| 140 | PARTIEL | 3 tests seulement (`:20` login, `:36` consultation, `:56` révocation) ; manquent blocage → reconnexion refusée et élévation → entrée `AuditLog` (**dépend de #311**) |
+| 140 | PARTIEL | Specs existantes : `e2e/parcours-admin.e2e.ts` (211 L : formation+examen, corrections, utilisateurs rôle/blocage, audit, `281c900`) ; **restent** : vert en CI, cas « blocage → reconnexion refusée » et « élévation → entrée `AuditLog` » (**dépend de #311**) |
 | 147 | PARTIEL | 3 fichiers `.github/agents/` ; la liste de nœuds critiques cite `middleware.ts` **remplacé par `proxy.ts`** (`proxy.ts:1,50`) ; l'ordre M1–M7 est remplacé par l'ordre #323 |
 | 148 | PARTIEL | #149 (R2) et #155 (sceau) livrés ; restent #150–#160, dont #156 (ABSENT) |
-| 151 | **ABANDONNÉ** | Sentry supprimé sur décision — abandonné (plus de dépendance, ni config, ni remontée) |
-| 297 | PARTIEL | 62 fichiers `docs/` ; 6 docs fausses, dont `attestation-management/01-creation-attestations.md:46` « 85 % – Production » alors que l'émission **échoue en prod** ; **modèle à copier** : `.env.example` (commentaires « obligatoire en production » / « BLOQUÉE ») |
+| 151 | **ABANDONNÉ (Sentry) — action humaine restante : uptime externe** | Sentry **supprimé sur décision** (`1c63f0a` : 0 référence résiduelle dans app/lib/workflows/Docker/compose, hors mentions historiques dans les docs) ; la section observabilité `docs/ops/procedures.md` (`caa2950`) décrit le cycle erreur→alerte sans SaaS. **Reste** : monitor uptime externe (procédure `docs/ops/procedures.md:477`, compte à créer côté humain) |
+| 297 | **FAIT (code) — reliquat vague 8 : CI documentation ↔ code** | Réconciliation livrée par `e414890` : « 85 % – Production » remplacé par l'état réel (CI + staging présents, Sentry supprimé, uptime externe TODO humain), inventaire recalculé (OPS-02 livrée, OPS-10 partielle), bloc `.dark` mort supprimé. Reste : CI de vérification documentation ↔ code (vague 8) |
 
 ### G. Gelées — hors mandat #323 (14)
 
@@ -141,7 +141,7 @@ Légende : **FAIT** (code + tests dans le dépôt) · **PARTIEL** (reliquat rée
 | 42 | Refonte design 65 pages ; gelée tant que l'émission PDF échoue en prod (#307) |
 | 62 | 189 hex en dur dans les documents imprimables — mêmes fichiers que #307, collision |
 | 64 | Dépend de toutes les vagues de #42 |
-| 76 | Retire des modèles/champs → **migration destructive**, interdite par la règle #323 sans fenêtre dédiée |
+| 76 | **FAIT — sorti des gelées, aucune migration requise** | Références aux colonnes legacy supprimées (`app/api/users/[id]/route.ts`, `lib/account-status.ts`, `types/index.ts`, `aaf1308`), 0 occurrence résiduelle : le nettoyage est un retrait de code mort, pas une migration destructive |
 | 82 | Exige de lever le `force-dynamic` global, incompatible avec les garde-fous de boot |
 | 150 | Import de registres Excel : besoin métier, hors mandat |
 | 154 | Canal SMS : décision fournisseur/coût ; l'urgence « OTP non reçu » est traitée par #268 |
@@ -172,7 +172,7 @@ Légende : **FAIT** (code + tests dans le dépôt) · **PARTIEL** (reliquat rée
 | 159 | `docs/decisions-bloquantes.md` n'est que des **recommandations** non validées ; bloque #280, #306, #308, #313, #320 |
 | 280 | Décider si Ed25519 est requis ; `docs/signature-ed25519-design.md:196` actait « la voie HMAC ne se rotationne pas » — à revoir avec #308 |
 
-**Bilan** : **21 FAIT** · ~32 PARTIEL · 11 ABSENT · **4 NC** (#302, #314, #131, #138) · 14 GELÉES · 9 à fermer · 2 arbitrages (+ **#305**, remonté en vague 0).
+**Bilan (re-vérifié 2026-10-08, vague infra)** : **46 FAIT** (21 + 25 livrés par la vague infra, preuves `chemin:ligne` + hashes en section « Vague infra » ci-dessous) · ~15 PARTIEL · **2 ABSENT** (#308 `sealKeyId`, #312 outbox — grep toujours à 0, fenêtres de migration à ouvrir sur staging) · **1 NC** (#314) · 13 GELÉES (#76 sorti : simple retrait de code mort, `aaf1308`) · 9 à fermer · 2 arbitrages (#159, #280) · 1 ABANDONNÉ (#151 : Sentry supprimé sur décision, uptime externe TODO humain). Les items marqués « action humaine restante » sont livrés côté code mais **ne sont pas cochés « fait »** : secrets, rotation, drill, revue juridique, constats prod et clôtures GitHub restent dus.
 
 ---
 
@@ -203,6 +203,61 @@ Légende : **FAIT** (code + tests dans le dépôt) · **PARTIEL** (reliquat rée
 | **Prérequis** | Aucun |
 | **Critère de sortie vérifiable** | **Atteint sur les items code/outillage** : `npx vitest run` = **1455 tests / 138 fichiers verts** (exclusion `.worktrees/**` + `.kilo/**` déjà en place, `vitest.config.ts:22-26`) · test « aucune attestation sans `sealHash` ni `sealVersion` » sur les 3 voies (`tests/api/attestation-seal-required.test.ts`) · test de quota sur `claim-code` (429 + aucune recherche `endsWith` ≤ 5 car., vérifié par assertion statique) · job de backup rouge si `BACKUP_REMOTE`/`age` manquent · 0 `console.log` OTP dans `lib/email.ts` · les 3 sources CSRF identiques · les 14 issues NC verdictisées (8 en **FAIT**, #291 en **trou actif**, #305 en **arbitrage**, 4 NC résiduels). **Restent ouverts** : arbitrage du domaine (#305) |
 | **Pièges** | #288 : la ligne existe en base et le vérificateur public répond **409** → défaut **invisible** ; tester par requête directe, pas par l'UI. #303 : la route est hors du chemin testé, l'ajouter à `tests/api/user-claim-code.test.ts`. #307 : ne pas annoncer « PDF officiel disponible » dans les docs avant la vague 2. #306 : vérifier que `age` est **installé** sur l'hôte, pas seulement configuré |
+
+## Vague infra — livrée 2026-10-07 → 2026-10-08 (re-vérification #323)
+
+> Re-vérification `chemin:ligne` de chaque ligne du tableau maître contre le code réel (travail du 2026-10-08). Chaque item porte son commit livrant. Le rapport de validation détaillé est dans `docs/waves/validation-vague-infra.md`. Les items « action humaine restante » sont **livrés côté code mais ne sont pas cochés « fait »**.
+
+### Pointage des vagues
+
+| Vague du plan | Statut au 2026-10-08 |
+|---|---|
+| Vague 0 (trous actifs + activations) | **Exécutée** — reste l'arbitrage #305, désormais **FAIT code** (domaine unifié, QR réactivé) |
+| Vague 1 (identité, rôles, compte) | **Non démarrée** — #311, #286, reliquat #304, #140 : aucun code livré, dépendances inchangées |
+| Vague 2 (sceau, preuve, document officiel) | **Livrée côté code** — #307 (module + câblage), #300 (v2 partout), #302, #316, #322 ; reste #141 (E2E sur PDF officiel réel) + verdict #309 |
+| Vague 3 (parcours stages) | **Livrée côté code** — #264 (HTTPS + sanitize), #269 (purge `retentionUntil`), #272 (specs E2E), #270 (compteur + `stageScore`) ; reste vert CI + cohérence UI/API fine |
+| Vague 4 (hardening web) | **Livrée côté code** — #290 (nonce CSP), #284 (reliquat `img-src` résorbé) ; #289 reste PARTIEL (pas de DOMPurify) |
+| Vague 5 (staging + fenêtre de migration) | **Staging livré** (#156, `ebeea12`) — la fenêtre est ouverte ; restent les migrations #308 (`sealKeyId`) et #312 (outbox), toujours ABSENT (grep à 0) |
+| Vague 6 (plateforme, observabilité) | **Livrée côté code** — #292 (`/api/ready`), #295 (ordonnanceur + alertes), #21 (secrets via SSH), #22/#294 (images SHA + rollback) ; reste l'exploitation réelle (secrets R2, drill, rollback vu tourner, uptime externe) |
+| Vague 7 (conformité, données) | **Livrée côté code** — #153 (purge RGPD), #291 (anonymisation + audit), #313 (mentions légales), #318, #319 ; restent #320, #317 (fin), #321 (logs structurés) |
+| Vague 8 (docs, agents, clôture) | **Partielle** — #297 réconciliée (`e414890`), #84 fait ; restent #147, CI doc↔code, clôtures #148/#131/#323 |
+
+### Livré hors plan initial (issues post-roadmap, code FAIT)
+
+| # | Livraison | Commit |
+|---|---|---|
+| #347 | Promesses juridiques reformulées + hébergeur complété | `ff73536` |
+| #349 | SEO/prod propre : sitemap, robots, manifest, metadata | `999f5ac` |
+| #335–#337, #339, #350 | UX catalogue formations + page détail `[slug]` | `aa5c59a` |
+| UX (6 micro-bugs) | QR, print, durée examens, recherche formations, 404, a11y auth | `9a40ab2` |
+
+### Actions humaines restantes (statut distinct, pas « fait »)
+
+| # | Action | Preuve du manque |
+|---|---|---|
+| #21 | Rotation des secrets documentée + calendée | aucun calendrier dans `docs/ops/` |
+| #22/#294 | Rollback vu tourner (hors prod d'abord) | job présent, 0 exécution constatée |
+| #153 | Registre des traitements + consentements tracés : trancher (créer une issue ou acter l'abandon) | repris par aucune issue ouverte |
+| #264 | Confirmer en base l'existence de `cvUrl` déjà persistés avant migration | `app/api/user/internships/route.ts:130` persiste le champ |
+| #272/#140 | Constater les specs vertes dans le job E2E/CI | specs présentes, 0 run constaté ici |
+| #291 | Export préalable RGPD avant effacement : décider (portabilité) | aucun export dans le handler DELETE |
+| #295 | Créer les secrets GitHub R2 (`R2_BUCKET`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) | `docs/ops/backup-monitoring.md:15-16` |
+| #295/#151 | Monitor uptime externe (compte + monitor) | `docs/ops/procedures.md:477` |
+| #306 | Renseigner `BACKUP_REMOTE` + `BACKUP_AGE_RECIPIENT`, trancher RPO/RTO, drill chronométré | `docs/ops/procedures.md` § 5.5 « À ARBITRER » |
+| #307 | Constater une émission `CERTIFICATION` réussie sur la prod déployée | config câblée, 0 émission constatée ici |
+| #313/#347 | Revue et signature juridique externe | contenus corrigés, 0 signature |
+| #131/#138/#140/#141 | Clôtures GitHub formelles après critères de sortie | issues OPEN |
+
+### Reste re-priorisé (après la vague infra)
+
+| Rang | Items | Pourquoi |
+|---|---|---|
+| 1 | Fenêtre de migration staging : #308 (`sealKeyId`, rotation à trancher avec #280), #312 (outbox) | Seules vraies ABSENT restantes ; staging disponible, plus de blocage infra |
+| 2 | Vague 1 identité : #311 (source unique + audit `USER_RETROGRADED`/`USER_MANAGEMENT`, 0 occurrence), #286, reliquat #304, #140 | Débloque l'audit d'élévation et la clôture #131 |
+| 3 | #159 : faire valider les recommandations (`docs/decisions-bloquantes.md` = RECOMMANDATIONS, `DÉCISION RECOMMANDÉE` postées) puis acter #280 (Ed25519 requis ?) avant la rotation #308 | Seul blocage non technique restant |
+| 4 | #138 (fin) + #141 (E2E PDF officiel + QR gravé) → clôture #131 puis #323 | Chemin de clôture de l'épique |
+| 5 | Vague 7 fin : #320 (quotas + purge, après #269), #317 (38 `toLocaleString` + XLSX), #321 (logs structurés, `request-id`, scrub PII, après #293) | Conformité/qualité, sans blocage |
+| 6 | #147 (contrat agents : `proxy.ts`, ordre #323), CI doc↔code, renommage `tests/api/ready.test.ts`, alignement des 9 docs `/api/ready` | Vague 8, après stabilisation du code |
 
 ---
 
@@ -425,16 +480,16 @@ graph TD
 | Sortie | Nombre | Détail |
 |---|---:|---|
 | Issues ouvertes aujourd'hui | **90** | — |
-| − fermées sur verdict FAIT | −21 | #12, #13, #84, #139, #265, #266, #267, #268, #281, #282, #283, #284, #285, #287, #288, #299, #301, #303, #304, #310, #315 — dont 2 avec reliquat (#284 → `img-src` en vague 4, #304 → job de purge en vague 1) ; #291 et #321 restent **PARTIEL** et repartent en vague 0 et 7 |
+| − fermées sur verdict FAIT | −46 | #11, #12, #13, #21 (code ; rotation TODO humain), #22 (code ; rollback à voir tourner), #76, #84, #131 (filet en place ; clôture formelle avec #138/#140/#141), #139, #153 (code ; registre/consentements à trancher), #156, #264 (code ; `cvUrl` existants à confirmer), #265, #266, #267, #268, #269 (code ; quotas → #320), #272 (code ; vert CI à constater), #281, #282, #283, #284 (reliquat `img-src` résorbé par #290), #285, #287, #288, #290 (code ; `style-src` assumé), #291 (code ; export préalable à décider), #292 (code ; renommage test + 9 docs en vague 8), #294 (code ; exécution à vérifier), #295 (code ; secrets R2 + uptime TODO humain), #297 (code ; CI doc↔code en vague 8), #299, #300, #301, #302, #303, #304, #305, #307 (code ; émission prod à constater), #313 (code ; revue juridique à signer), #315, #316, #318, #319, #322 — #310 et #321 restent **PARTIEL** (purge mémoire du store, logs structurés/`request-id`/scrub PII → vague 7) |
 | − fermées sans code | −9 | #8, #9, #19, #23, #78, #87, #152, #157, #160 |
 | − arbitrages actés puis closes | −2 | #159, #280 |
 | − gelées, transférées au backlog produit/dette | −14 | section G |
 | − exécutées dans les vagues 0 à 8 | 44 | 4 NC résiduelles comprises |
-| **Issues ouvertes à la fin du plan** | **15** | les 14 gelées + l'épique #323, close avec la dernière vague |
+| **Issues ouvertes à la fin du plan** | **14** | les 13 gelées + l'épique #323, close avec la dernière vague |
 
 **Aucune dette de sécurité, de preuve ou de conformité ne subsiste** : les 14 survivantes sont du backlog produit ou de la dette assumée.
 
-**Survivantes (backlog produit/dette, aucun risque ouvert)** : #14 (114 `any` en pages client, zéro en `lib/` ni en API) · #42, #62, #64 (refonte design, collision avec #307 tant que le module n'est pas versionné) · #76 (nettoyage Prisma : **migration destructive**, fenêtre dédiée hors #323) · #82 (PPR, incompatible avec les garde-fous de boot) · #150 (import de registres) · #154 (canal SMS) · #273 (support candidat) · #275 (transcripts, **conflit de décision**) · #276 (monitoring examens) · #277 (anti-triche, **conflit de décision**) · #278 (pages de détail) · #279 (actions groupées).
+**Survivantes (backlog produit/dette, aucun risque ouvert)** : #14 (114 `any` en pages client, zéro en `lib/` ni en API) · #42, #62, #64 (refonte design, collision avec #307 tant que le module n'est pas versionné — module désormais versionné `f73f3b4`, collision levée côté code) · #82 (PPR, incompatible avec les garde-fous de boot) · #150 (import de registres) · #154 (canal SMS) · #273 (support candidat) · #275 (transcripts, **conflit de décision**) · #276 (monitoring examens) · #277 (anti-triche, **conflit de décision**) · #278 (pages de détail) · #279 (actions groupées). (#76 sorti : nettoyé par `aaf1308`, plus de gel.)
 
 **Dette sans issue ouverte à créer ou acter** : « registre des traitements » et « consentements tracés » (#153), supervision d'uptime externe (#151), job E2E avec Redis réel (#139), purge mémoire du store de rate limiting (#310 → #320), 2FA non désactivable, TTL 60 s sur l'URL signée du PDF.
 
