@@ -16,7 +16,8 @@
 }
 
 @media print {
-  .no-pdf {
+  .no-pdf,
+  .no-print {
     display: none !important;
   }
 
@@ -33,6 +34,15 @@
     -webkit-print-color-adjust: exact;
   }
 
+  /* Blocs internes : jamais coupés entre deux pages (issue #62 — Ctrl+P).
+     `.doc-block` est posé sur les cartes d'OfficialDocument et les sections
+     du CertificateTemplate ; à l'écran la règle est inoffensive. */
+  #official-document-content .doc-block,
+  #certificate-content .doc-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   #certificate-content {
     height: auto !important;
     min-height: 0 !important;
@@ -43,5 +53,6 @@
   #official-document-content svg,
   #certificate-content svg {
     max-width: 100%;
+    max-height: 100%;
   }
 }

@@ -6,6 +6,19 @@ import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
 import { resolveMention } from "@/lib/exams/scoring";
 
+/* Palette du certificat — tokens de marque (#62, épic #42).
+   Le rouge historique du cadre calligraphié s'aligne sur `brand` /
+   `brand-dark`, les filets fins sur `brand-light`, les filets dorés sur
+   `brand-accent` ; les textes suivent `brand-ink` / `brand-muted` et les
+   bordures neutres `brand-line`. Aucune donnée affichée ne change. */
+const BRAND = "var(--color-brand)";
+const BRAND_DARK = "var(--color-brand-dark)";
+const BRAND_LIGHT = "var(--color-brand-light)";
+const BRAND_ACCENT = "var(--color-brand-accent)";
+const INK = "var(--color-brand-ink)";
+const MUTED = "var(--color-brand-muted)";
+const LINE = "var(--color-brand-line)";
+
 interface CertificateTemplateProps {
   data: {
     fullName: string;
@@ -80,7 +93,7 @@ const CertificateTemplate = ({
         width: "1122px",
         height: "794px",
         fontFamily: "'Times New Roman', Times, serif",
-        backgroundColor: "#ffffff",
+        backgroundColor: "var(--color-brand-bg)",
       }}
       id={id}
     >
@@ -94,21 +107,21 @@ const CertificateTemplate = ({
       />
       <div
         className="w-full h-full p-12 relative flex flex-col items-center border-[1px]"
-        style={{ borderColor: "#e2e8f0" }}
+        style={{ borderColor: LINE }}
       >
         {/* 🛡️ SECURITY OVERLAY: REJECTED WATERMARK */}
         {data.status === "REJECTED" && (
-            <div aria-hidden="true" className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden">
-                <div className="rotate-[-25deg] border-[12px] border-rose-600/30 px-12 py-6 rounded-3xl flex flex-col items-center gap-2 backdrop-blur-[2px] scale-150">
-                    <span className="text-6xl md:text-8xl font-black text-rose-600/30 uppercase tracking-[0.2em]">RÉVOQUÉ</span>
-                    <span className="text-xl md:text-2xl font-bold text-rose-600/30 uppercase tracking-[0.5em]">CERTIFICAT ANNULÉ - FSA</span>
+            <div aria-hidden="true" className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)' }}>
+                <div className="rotate-[-25deg] border-[12px] px-12 py-6 rounded-3xl flex flex-col items-center gap-2 backdrop-blur-[2px] scale-150" style={{ borderColor: 'rgba(230, 0, 35, 0.3)' }}>
+                    <span className="text-6xl md:text-8xl font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(230, 0, 35, 0.5)' }}>RÉVOQUÉ</span>
+                    <span className="text-xl md:text-2xl font-bold uppercase tracking-[0.5em]" style={{ color: 'rgba(230, 0, 35, 0.4)' }}>CERTIFICAT ANNULÉ - FSA</span>
                 </div>
             </div>
         )}
 
         {/* Bordures Florales Rouges (Coins) */}
         <div aria-hidden="true" className="absolute top-4 left-4 w-40 h-40 opacity-90">
-          <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
+          <svg viewBox="0 0 100 100" style={{ fill: BRAND }}>
             <path
               d="M10,10 Q30,10 40,40 Q10,30 10,10 Z M20,20 Q60,20 70,70 Q20,60 20,20 Z"
               opacity="0.3"
@@ -116,23 +129,23 @@ const CertificateTemplate = ({
             <path
               d="M5,5 C30,5 50,25 50,50 C25,50 5,30 5,5 M15,5 C40,5 60,25 60,50 C35,50 15,30 15,5"
               fill="none"
-              stroke="#dc2626"
+              stroke={BRAND}
               strokeWidth="1"
             />
           </svg>
         </div>
         <div aria-hidden="true" className="absolute top-4 right-4 w-40 h-40 opacity-90 rotate-90">
-          <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
+          <svg viewBox="0 0 100 100" style={{ fill: BRAND }}>
             <path d="M10,10 Q30,10 40,40 Q10,30 10,10 Z" opacity="0.3" />
           </svg>
         </div>
         <div aria-hidden="true" className="absolute bottom-4 left-4 w-40 h-40 opacity-90 -rotate-90">
-          <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
+          <svg viewBox="0 0 100 100" style={{ fill: BRAND }}>
             <path d="M10,10 Q30,10 40,40 Q10,30 10,10 Z" opacity="0.3" />
           </svg>
         </div>
         <div aria-hidden="true" className="absolute bottom-4 right-4 w-40 h-40 opacity-90 rotate-180">
-          <svg viewBox="0 0 100 100" style={{ fill: "#dc2626" }}>
+          <svg viewBox="0 0 100 100" style={{ fill: BRAND }}>
             <path d="M10,10 Q30,10 40,40 Q10,30 10,10 Z" opacity="0.3" />
           </svg>
         </div>
@@ -141,19 +154,19 @@ const CertificateTemplate = ({
         <div
           aria-hidden="true"
           className="absolute inset-8 border-[1px] pointer-events-none"
-          style={{ borderColor: "#991b1b" }}
+          style={{ borderColor: BRAND_DARK }}
         ></div>
         <div
           aria-hidden="true"
           className="absolute inset-10 border-[0.5px] pointer-events-none"
-          style={{ borderColor: "#f87171" }}
+          style={{ borderColor: BRAND_LIGHT }}
         ></div>
 
         {/* Double Logos Circulaires */}
         <div className="z-10 w-full flex justify-between px-16 mt-4">
           <div
             className="w-32 h-32 rounded-full border-2 p-1 flex flex-col items-center justify-center text-center bg-white shadow-sm overflow-hidden"
-            style={{ borderColor: "#b91c1c" }}
+            style={{ borderColor: BRAND }}
           >
             {settings?.institutionLogo ? (
               <img
@@ -165,19 +178,19 @@ const CertificateTemplate = ({
               <>
                 <div
                   className="text-[10px] uppercase font-black leading-tight px-1"
-                  style={{ color: "#991b1b" }}
+                  style={{ color: BRAND_DARK }}
                 >
                   {settings?.institutionName || "Ferme Agro-Piscicole St André"}
                 </div>
                 <div
                   className="w-10 h-6 border-y my-1 flex items-center justify-center"
-                  style={{ borderColor: "#fca5a5" }}
+                  style={{ borderColor: BRAND_LIGHT }}
                 >
                   🐟
                 </div>
                 <div
                   className="text-[8px] font-bold uppercase tracking-widest"
-                  style={{ color: "#dc2626" }}
+                  style={{ color: BRAND }}
                 >
                   St Andre
                 </div>
@@ -188,7 +201,7 @@ const CertificateTemplate = ({
           <div className="text-center pt-4">
             <h1
               className="text-6xl font-serif font-bold tracking-widest uppercase mb-1"
-              style={{ color: "#dc2626" }}
+              style={{ color: BRAND }}
             >
               {data.type === "FORMATION"
                 ? "ATTESTATION"
@@ -199,11 +212,11 @@ const CertificateTemplate = ({
             <div className="flex items-center justify-center gap-4">
               <div
                 className="w-12 h-[2px]"
-                style={{ backgroundColor: "#d97706" }}
+                style={{ backgroundColor: BRAND_ACCENT }}
               ></div>
               <p
                 className="text-2xl uppercase tracking-[0.3em] font-medium"
-                style={{ color: "#b91c1c" }}
+                style={{ color: BRAND_DARK }}
               >
                 {data.type === "FORMATION"
                   ? "DE FORMATION"
@@ -213,14 +226,14 @@ const CertificateTemplate = ({
               </p>
               <div
                 className="w-12 h-[2px]"
-                style={{ backgroundColor: "#d97706" }}
+                style={{ backgroundColor: BRAND_ACCENT }}
               ></div>
             </div>
           </div>
 
           <div
             className="w-32 h-32 rounded-full border-2 p-1 flex flex-col items-center justify-center text-center bg-white shadow-sm overflow-hidden"
-            style={{ borderColor: "#b91c1c" }}
+            style={{ borderColor: BRAND }}
           >
             {settings?.institutionLogo ? (
               <img
@@ -232,19 +245,19 @@ const CertificateTemplate = ({
               <>
                 <div
                   className="text-[10px] uppercase font-black leading-tight px-1"
-                  style={{ color: "#991b1b" }}
+                  style={{ color: BRAND_DARK }}
                 >
                   {settings?.institutionName || "Ferme Agro-Piscicole St André"}
                 </div>
                 <div
                   className="w-10 h-6 border-y my-1 flex items-center justify-center"
-                  style={{ borderColor: "#fca5a5" }}
+                  style={{ borderColor: BRAND_LIGHT }}
                 >
                   🐟
                 </div>
                 <div
                   className="text-[8px] font-bold uppercase tracking-widest"
-                  style={{ color: "#dc2626" }}
+                  style={{ color: BRAND }}
                 >
                   St Andre
                 </div>
@@ -254,8 +267,8 @@ const CertificateTemplate = ({
         </div>
 
         {/* Corps du texte */}
-        <div className="z-10 text-center mt-12 space-y-6 px-24">
-          <p className="text-2xl" style={{ color: "#1e293b" }}>
+        <div className="doc-block z-10 text-center mt-12 space-y-6 px-24">
+          <p className="text-2xl" style={{ color: INK }}>
             {settings?.institutionName || "La Ferme Agro-Piscicole St André"}{" "}
             certifie que {prefix}
           </p>
@@ -268,7 +281,7 @@ const CertificateTemplate = ({
             )}
             style={{
               fontFamily: "'Charmonman', cursive, serif",
-              color: "#0f172a",
+              color: INK,
             }}
           >
             {data.fullName}
@@ -276,49 +289,49 @@ const CertificateTemplate = ({
 
           <p
             className="text-2xl leading-relaxed font-medium"
-            style={{ color: "#1e293b" }}
+            style={{ color: INK }}
           >
             a suivi avec succès une{" "}
             <span
-              className="font-black underline decoration-red-600"
-              style={{ textDecorationColor: "#dc2626" }}
+              className="font-black underline"
+              style={{ textDecorationColor: BRAND }}
             >
               Formation en {data.formationName}
             </span>
           </p>
 
           {data.score !== undefined && data.score > 0 && (
-            <p className="text-2xl font-bold italic" style={{ color: "#b91c1c" }}>
+            <p className="text-2xl font-bold italic" style={{ color: BRAND_DARK }}>
               avec une note de {data.score}/100
               {mentionLabel ? <span> ({mentionLabel})</span> : null}
             </p>
           )}
 
-          <p className="text-2xl" style={{ color: "#1e293b" }}>
+          <p className="text-2xl" style={{ color: INK }}>
             du <span className="font-bold underline">{startDate}</span> au{" "}
             <span className="font-bold underline">{endDate}</span>
           </p>
 
-          <p className="text-xl italic pt-8" style={{ color: "#334155" }}>
+          <p className="text-xl italic pt-8" style={{ color: MUTED }}>
             Cette attestation est délivrée pour servir et faire valoir ce que de
             droit.
           </p>
         </div>
 
         {/* Footer */}
-        <div className="z-10 w-full mt-auto mb-10 px-24 flex flex-col items-end">
-          <p className="text-lg" style={{ color: "#1e293b" }}>
+        <div className="doc-block z-10 w-full mt-auto mb-10 px-24 flex flex-col items-end">
+          <p className="text-lg" style={{ color: INK }}>
             Fait à {settings?.location || "Abomey-Calavi"}, le {issuedDate}
           </p>
 
           <div className="mt-8 text-center w-64 mr-4">
             <div
               className="w-full h-[1px] mb-2"
-              style={{ backgroundColor: "#94a3b8" }}
+              style={{ backgroundColor: LINE }}
             ></div>
             <p
               className="text-xl font-bold uppercase"
-              style={{ color: "#b91c1c" }}
+              style={{ color: BRAND_DARK }}
             >
               {settings?.instructorTitle || "Le Responsable"}
             </p>
@@ -326,7 +339,7 @@ const CertificateTemplate = ({
               className="h-16 flex items-center justify-center text-4xl"
               style={{
                 fontFamily: "'Dancing Script', cursive",
-                color: "#991b1b",
+                color: BRAND_DARK,
               }}
             >
               {settings?.signatureUrl ? (
@@ -342,7 +355,7 @@ const CertificateTemplate = ({
             {settings?.signatureUrl && (
               <p
                 className="text-sm font-bold mt-2"
-                style={{ color: "#334155" }}
+                style={{ color: MUTED }}
               >
                 {settings.instructorName}
               </p>
@@ -354,13 +367,13 @@ const CertificateTemplate = ({
         <div className="absolute bottom-4 w-full flex justify-center items-center gap-10">
           <p
             className="text-xs font-mono tracking-widest uppercase"
-            style={{ color: "#64748b" }}
+            style={{ color: MUTED }}
           >
             code de l&apos;attestation : {data.code}
           </p>
           <div
             className="p-1 bg-white border opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all"
-            style={{ borderColor: "#f1f5f9" }}
+            style={{ borderColor: LINE }}
           >
             <QRCodeSVG value={verificationUrl} size={35} />
           </div>

@@ -103,8 +103,8 @@ export function AttestationWatermark({
           }}
         />
 
-        {/* Verification code (visible mais discret) */}
-        <div className="absolute bottom-4 right-4 text-[9px] text-slate-500 opacity-80">
+        {/* Verification code (visible mais discret) — teinte de marque, jamais de bleu générique */}
+        <div className="absolute bottom-4 right-4 text-[9px] opacity-80" style={{ color: "var(--color-brand-muted)" }}>
           Réf: {code} | FP: {fingerprint}
         </div>
 
