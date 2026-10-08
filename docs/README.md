@@ -89,31 +89,55 @@ La plateforme FSA est structurée en modules fonctionnels indépendants et haute
 
 | Module | Progression | Statut | Documentation |
 |--------|-------------|--------|---------------|
-| 🔐 Authentification (Better Auth) | 100% | ✅ Complet | [docs/AUTH-COMPTES.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/AUTH-COMPTES.md) |
-| 🛡️ Sécurité & Anti-Triche | 95% | ✅ Complet | [docs/ANTI_CHEAT_SYSTEM.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/ANTI_CHEAT_SYSTEM.md) |
-| 📊 Dashboard Admin | 95% | ✅ Complet | [docs/admin-dashboard/01-tableau-bord.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/admin-dashboard/01-tableau-bord.md) |
-| 🌐 Pages Publiques | 90% | ✅ Complet | [docs/public-pages/01-pages-publiques.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/public-pages/01-pages-publiques.md) |
-| 📝 Gestion des Examens | 90% | ✅ Complet | [docs/exam-management/01-creation-examens.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/exam-management/01-creation-examens.md) |
-| 📜 Gestion des Attestations | % hérité d'avril 2026, non recalculé — à vérifier | ⚠️ À vérifier (CI et staging présents ; Sentry supprimé ; uptime externe : TODO humain) | [docs/attestation-management/01-creation-attestations.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/attestation-management/01-creation-attestations.md) |
+| 🔐 Authentification (Better Auth) | 100% | ✅ Complet | [docs/AUTH-COMPTES.md](AUTH-COMPTES.md) |
+| 🛡️ Sécurité & Anti-Triche | 95% | ✅ Complet | [docs/ANTI_CHEAT_SYSTEM.md](ANTI_CHEAT_SYSTEM.md) |
+| 📊 Dashboard Admin | 95% | ✅ Complet | [docs/admin-dashboard/01-tableau-bord.md](admin-dashboard/01-tableau-bord.md) |
+| 🌐 Pages Publiques | 90% | ✅ Complet | [docs/public-pages/01-pages-publiques.md](public-pages/01-pages-publiques.md) |
+| 📝 Gestion des Examens | 90% | ✅ Complet | [docs/exam-management/01-creation-examens.md](exam-management/01-creation-examens.md) |
+| 📜 Gestion des Attestations | % hérité d'avril 2026, non recalculé — à vérifier | ⚠️ À vérifier (CI et staging présents ; Sentry supprimé ; uptime externe : TODO humain) | [docs/attestation-management/01-creation-attestations.md](attestation-management/01-creation-attestations.md) |
 | ⏳ Waitlist d'inscription | — | 🗑️ Retiré (2026-06-22, `960852f`) | Module supprimé du produit : aucun modèle Prisma, aucune page, aucune API. |
-| 🎓 Résultats & Transcripts | 80% | ✅ Complet | [docs/results-transcripts/01-consultation-resultats.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/results-transcripts/01-consultation-resultats.md) |
+| 🎓 Résultats & Transcripts | 80% | ✅ Complet | [docs/results-transcripts/01-consultation-resultats.md](results-transcripts/01-consultation-resultats.md) |
 | ✏️ Demandes de Correction | 80% | ✅ Complet | Permet aux candidats de modifier leurs données personnelles d'identité sous validation admin. |
-| 💼 Gestion des Stages | 75% | ⚠️ Améliorable | [docs/internship-management/01-demandes-stage.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/internship-management/01-demandes-stage.md) |
+| 💼 Gestion des Stages | 75% | ⚠️ Améliorable | [docs/internship-management/01-demandes-stage.md](internship-management/01-demandes-stage.md) |
 | 📚 Ressources pédagogiques | — | 🗑️ Retiré (2026-06-22, `960852f`) + docs supprimées (#67) | Module supprimé du produit. |
-| 🔔 Notifications (Pusher) | 70% | ⚠️ Améliorable | [docs/notifications/01-notifications.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/notifications/01-notifications.md) |
+| 🔔 Notifications (Pusher) | 70% | ⚠️ Améliorable | [docs/notifications/01-notifications.md](notifications/01-notifications.md) |
 | 💬 Système de Chat | — | 🗑️ Retiré (2026-06-22, `960852f`) + docs supprimées (#67) | Module supprimé du produit. |
-| 📋 Audit Logging | 65% | ⚠️ Améliorable | [docs/audit-logging/01-journal-audit.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/audit-logging/01-journal-audit.md) |
-| 📹 Suivi d'Examen | 40% | 🔧 Partiel | [docs/EXAM_MONITORING.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/EXAM_MONITORING.md) |
+| 📋 Audit Logging | 65% | ⚠️ Améliorable | [docs/audit-logging/01-journal-audit.md](audit-logging/01-journal-audit.md) |
+| 📹 Suivi d'Examen | 40% | 🔧 Partiel | [docs/EXAM_MONITORING.md](EXAM_MONITORING.md) |
 
 ---
 
 ## 📖 Index des Guides de Référence
 
-- **Authentification & Comptes** : [AUTH-COMPTES.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/AUTH-COMPTES.md)
-- **Système Anti-Triche** : [ANTI_CHEAT_SYSTEM.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/ANTI_CHEAT_SYSTEM.md)
-- **Monitoring d'Examens** : [EXAM_MONITORING.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/EXAM_MONITORING.md)
-- **Routes de l'API** : [API-ROUTES.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/API-ROUTES.md)
-- **Sécurité et Corrections** : [SECURITY_FIX_GUIDE.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/SECURITY_FIX_GUIDE.md)
-- **Plan d'Élimination des `any`** : [PLAN_CORRECTION_TYPES.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/PLAN_CORRECTION_TYPES.md)
+- **Authentification & Comptes** : [AUTH-COMPTES.md](AUTH-COMPTES.md)
+- **Système Anti-Triche** : [ANTI_CHEAT_SYSTEM.md](ANTI_CHEAT_SYSTEM.md)
+- **Monitoring d'Examens** : [EXAM_MONITORING.md](EXAM_MONITORING.md)
+- **Routes de l'API** : [API_ROUTES_ANALYSIS.md](API_ROUTES_ANALYSIS.md) (analyse détaillée par criticité ; l'ancien inventaire `API-ROUTES.md` listait des routes supprimées — voir note d'entretien ci-dessous)
+- **Sécurité et Corrections** : [SECURITY_FIX_GUIDE.md](SECURITY_FIX_GUIDE.md)
+- **Plan d'Élimination des `any`** : [PLAN_CORRECTION_TYPES.md](PLAN_CORRECTION_TYPES.md)
 
 *Note : Les anciens rapports d'audit ponctuels ont été archivés dans le sous-dossier `docs/archive_audits/`.*
+
+---
+
+## 🧹 Entretien documentation (2026-10-08)
+
+État post-travaux sept–oct 2026 (voir `ROADMAP.md`, section « Vague infra ») :
+**CI** (`.github/workflows/test.yml`), **staging** (`compose.staging.yml`, `deploy.yml`),
+**images GHCR + rollback** (`ebeea12`), **purge RGPD** (`1bfab89`), **monitoring R2
+ordonnancé** (`d498cfd`), **Sentry supprimé sur décision** (`1c63f0a` — uptime externe :
+TODO humain), **SEO** (`999f5ac`), **refontes UX** catalogue/détail formations (`aa5c59a`),
+auth (`b63daed`), pages publiques (`5bc2b8a`), documents (`8a2035a`).
+
+Fichiers supprimés (contenu contredit par le code, 0 référence — `git rm`) :
+- `docs/API-ROUTES.md` — inventaire citant 6 routes mortes (`/api/candidates/exams`,
+  `/api/public/alumni`, `/api/settings`, `/api/submissions/submit`, `/api/auth/login`,
+  `/api/auth/register`) ; remplacé par `API_ROUTES_ANALYSIS.md`.
+- `docs/stage_request_flow.md` — décrivait un envoi CV en Base64 (`cvUrl` JSON, route
+  « à créer si absent ») ; le flux réel utilise `lib/storage` (R2 + URL signée, Zod).
+- `docs/technical_report.md` — rapport ponctuel d'avril 2026 (« ne pas modifier
+  `lib/auth.ts` » alors que 8+ commits l'ont fait depuis : 2FA, `trustedOrigins`, OTP).
+- `docs/public_tools.md`, `docs/tool_recommendations.md` — listes génériques d'outils
+  (Clerk, Stripe, Auth0…) dont aucun n'est dans les dépendances (stack réelle : Better Auth).
+- Tous les liens absolus `file:///c:/Users/PC/...` (illisibles hors poste d'origine)
+  ont été convertis en liens relatifs.

@@ -230,6 +230,7 @@ Légende : **FAIT** (code + tests dans le dépôt) · **PARTIEL** (reliquat rée
 | #349 | SEO/prod propre : sitemap, robots, manifest, metadata | `999f5ac` |
 | #335–#337, #339, #350 | UX catalogue formations + page détail `[slug]` | `aa5c59a` |
 | UX (6 micro-bugs) | QR, print, durée examens, recherche formations, 404, a11y auth | `9a40ab2` |
+| Docs (entretien) | 5 fichiers morts supprimés (`API-ROUTES.md`, `stage_request_flow.md`, `technical_report.md`, `public_tools.md`, `tool_recommendations.md`) + liens `file:///` relativisés + addendum `PROGRESS.md` | (ce commit) |
 
 ### Actions humaines restantes (statut distinct, pas « fait »)
 

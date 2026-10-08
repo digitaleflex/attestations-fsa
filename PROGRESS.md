@@ -1,6 +1,6 @@
 # 📊 État d'Avancement du Projet - Attestations FSA
 
-**Date** : 22 septembre 2026
+**Date** : 22 septembre 2026 (chiffres mesurés) + addendum d'entretien le **8 octobre 2026** (sans re-mesure)
 **Statut** : ✅ Vérifié par exécution (voir « Preuves de vérification » ci-dessous)
 
 > ⚠️ **Réalignement 2026-09-22** : ce document remplace l'instantané du 9 avril 2026.
@@ -151,3 +151,33 @@
 ---
 
 **Documentation détaillée** : [`docs/README.md`](./docs/README.md)
+
+---
+
+## 🆕 Addendum 2026-10-08 — travaux livrés depuis le 22 septembre (rappel, sans re-mesure)
+
+> Les chiffres de la section « Preuves de vérification » restent ceux du 22 septembre 2026.
+> Ce qui suit ne fait que pointer les livraisons constatées dans `git log` (détail et
+> preuves `chemin:ligne` dans `docs/ROADMAP.md`, sections « Vague infra » et
+> « Livré hors plan initial »). **Rien n'est re-mesuré ici.**
+
+| Livraison | Commit |
+|---|---|
+| CI GitHub Actions (quality, test, e2e) | `72d5f65` |
+| Staging + images GHCR + rollback | `ebeea12` |
+| Secrets injectés via SSH (plus de SCP en clair) | `8d8023c` |
+| **Sentry supprimé sur décision** (0 référence résiduelle ; uptime externe : TODO humain) | `1c63f0a` |
+| Monitoring R2 + readiness ordonnancés (alerte issue) | `d498cfd` |
+| Purge RGPD des données échues + journalisation | `1bfab89` |
+| SEO : sitemap, robots, manifest, metadata | `999f5ac` |
+| Refonte UX catalogue + page détail formations | `aa5c59a` |
+| Refonte mobile-first écrans auth | `b63daed` |
+| Refonte pages publiques (glossaire, hero, vérification, contact, stage) | `5bc2b8a` |
+| Alignement `OfficialDocument` / `CertificateTemplate` sur tokens de marque | `8a2035a` |
+| Corrections #318 (sessions d'examen), #319 (formations vides), #322 (score requis), #347 (mentions légales) | `6d442bc`, `820986b`, `5817a3d`, `ff73536` |
+| Réconciliation documentation ↔ code (#297), re-vérification vague infra (#323) | `e414890`, `0dc1187` |
+
+**Entretien documentation** : 5 fichiers morts supprimés (`docs/API-ROUTES.md`,
+`docs/stage_request_flow.md`, `docs/technical_report.md`, `docs/public_tools.md`,
+`docs/tool_recommendations.md` — preuves dans `docs/README.md`, section « Entretien
+documentation ») ; liens `file:///` absolus convertis en relatifs.
