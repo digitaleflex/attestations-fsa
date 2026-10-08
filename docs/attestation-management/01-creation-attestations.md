@@ -43,7 +43,11 @@ Module de création et gestion des attestations de formation, stage et certifica
 
 ## Niveau d'avancement
 
-**85%** - Production
+**À vérifier** — l'ancien « 85 % - Production » (instantané d'avril 2026) n'a pas été recalculé.
+État réel du socle vérifié le 2026-10-08 : CI présente (`.github/workflows/test.yml`),
+staging présent (`.github/workflows/deploy.yml`, `compose.staging.yml`), Sentry supprimé du
+code (aucune référence ; voir inventaire OPS-08 : remontée d'erreurs abandonnée sur décision),
+uptime externe : TODO humain (`docs/ops/procedures.md` § 6.1 — aucun monitoring externe configuré).
 
 ## Fichiers clés
 

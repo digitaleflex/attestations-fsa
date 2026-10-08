@@ -46,7 +46,7 @@
 | 🌐 Pages Publiques | 90% | ✅ Complet |
 | 📝 Gestion des Examens | 90% | ✅ Complet |
 | ⚙️ Paramètres | 90% | ✅ Complet |
-| 📜 Gestion des Attestations | 85% | ✅ Complet |
+| 📜 Gestion des Attestations | % hérité d'avril 2026, non recalculé — à vérifier | ⚠️ À vérifier (CI et staging présents ; Sentry supprimé ; uptime externe : TODO humain) |
 | 🎓 Résultats & Transcripts | 80% | ✅ Complet |
 | 📞 Contact & Support | 80% | ✅ Complet |
 | 🔒 Sécurité | 95% | ✅ Complet |

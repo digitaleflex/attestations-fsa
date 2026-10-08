@@ -41,6 +41,6 @@ Module de gestion des demandes de support et des contacts pour le support utilis
 ## Suggestions d'amélioration
 
 1. Intégrer un système de tickets (Zendesk/Intercom)
-2. Ajouter un chat en direct
+2. ~~Ajouter un chat en direct~~ — module Chat supprimé du produit le 2026-06-22 (`960852f`), non prévu.
 3. Créer une base de connaissances
 4. Implémenter un système de Priorité (urgent/normal/bas)

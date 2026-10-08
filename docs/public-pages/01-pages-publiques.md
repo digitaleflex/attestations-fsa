@@ -73,4 +73,4 @@ Ensemble des pages accessibles sans authentification pour le grand public.
 
 1. Ajouter un blog/actualités
 2. Implémenter une section carrières
-3. Ajouter un système de chat avec IA pour les questions fréquentes
+3. ~~Ajouter un système de chat avec IA pour les questions fréquentes~~ — module Chat supprimé du produit le 2026-06-22 (`960852f`), non prévu.

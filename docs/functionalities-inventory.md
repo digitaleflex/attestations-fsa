@@ -10,10 +10,10 @@ Exclusions : worktrees, build, sauvegardes locales, rapports générés et archi
 | Indicateur | Total | Livrées | Partielles | Absentes |
 |---|---:|---:|---:|---:|
 | P0 | 31 | 13 | 4 | 14 |
-| P1 | 39 | 19 | 6 | 14 |
+| P1 | 39 | 20 | 7 | 12 |
 | P2 | 30 | 14 | 4 | 12 |
 | P3 | 4 | 0 | 0 | 4 |
-| **Total** | **104** | **46** | **14** | **44** |
+| **Total** | **104** | **47** | **15** | **42** |
 
 Niveaux :
 
@@ -93,10 +93,10 @@ Niveaux :
 | SEC-07 | CSP avec nonces | Opérateur | Absente | — | #290 |
 | SEC-08 | `sanitizeHTML` effectivement branché | Système | Absente | — | #289 |
 | SEC-12 | Anti-force brute du claim | Candidat | Absente | SEC-06 | #303 |
-| OPS-02 | `/api/ready` DB/cache | Opérateur | Absente | — | #292 |
+| OPS-02 | `/api/ready` DB/cache | Opérateur | Livrée | — | `app/api/ready/route.ts` (DB + Redis optionnel), `tests/api/ready.test.ts`, smoke tests `deploy.yml` + `backup-monitor.yml` |
 | OPS-09 | CI quality, SCA, tests et E2E | Opérateur | Livrée | — | workflow test |
-| OPS-10 | Rollback applicatif par SHA | Opérateur | Absente | OPS-09 | #294 |
-| OPS-11 | Alertes planifiées R2/readiness | Opérateur | Partielle | OPS-02/06 | #295 |
+| OPS-10 | Rollback applicatif par SHA | Opérateur | Partielle | OPS-09 | job `rollback` dans `deploy.yml` (retour au tag précédent) ; exécution réelle jamais observée — à vérifier (#294) |
+| OPS-11 | Alertes planifiées R2/readiness | Opérateur | Partielle | OPS-06 | `backup-monitor.yml` (cron quotidien R2 + /api/ready, alerte via issue) ; secrets à créer côté humain — à vérifier (#295) |
 | QLT-01 | Tests unitaires et API | Opérateur | Livrée | — | 1053 tests |
 | QLT-02 | E2E candidat, admin, examen, vérification | Opérateur | Partielle | QLT-01 | #272 |
 | DAT-01 | Funnel inscription → attestation | Opérateur | Absente | — | #314 |
@@ -185,7 +185,7 @@ ADM-01 auth + ADM-10 RBAC + ADM-11 statut compte
 1. ATT-11 sceau v2 global (#300)
 2. ATT-13 PII fictives (#302)
 3. SEC-12 claim-code (#303)
-4. OPS-02 `/api/ready` (#292)
+4. ~~OPS-02 `/api/ready` (#292) — route livrée et testée ; reste : valider/clore #292 — à vérifier~~
 5. OPS-12 sauvegarde hors site/RPO/RTO (#306)
 6. STG-08 URLs CV (#264)
 
@@ -223,7 +223,7 @@ Priorité immédiate :
 - **SEC-03** : SSRF via `next/image`.
 - **ADM-11** : blocage de compte sans effet.
 - **ATT-10** : suppression physique d’un document officiel.
-- **OPS-02/OPS-12** : readiness et reprise après sinistre absentes.
+- **OPS-02/OPS-12** : readiness livrée (`/api/ready` + tests) ; reprise après sinistre (sauvegarde hors site chiffrée, RPO/RTO) toujours à vérifier.
 
 ## 6. Écarts documentaires
 

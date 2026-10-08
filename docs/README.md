@@ -94,7 +94,7 @@ La plateforme FSA est structurée en modules fonctionnels indépendants et haute
 | 📊 Dashboard Admin | 95% | ✅ Complet | [docs/admin-dashboard/01-tableau-bord.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/admin-dashboard/01-tableau-bord.md) |
 | 🌐 Pages Publiques | 90% | ✅ Complet | [docs/public-pages/01-pages-publiques.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/public-pages/01-pages-publiques.md) |
 | 📝 Gestion des Examens | 90% | ✅ Complet | [docs/exam-management/01-creation-examens.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/exam-management/01-creation-examens.md) |
-| 📜 Gestion des Attestations | 85% | ✅ Complet | [docs/attestation-management/01-creation-attestations.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/attestation-management/01-creation-attestations.md) |
+| 📜 Gestion des Attestations | % hérité d'avril 2026, non recalculé — à vérifier | ⚠️ À vérifier (CI et staging présents ; Sentry supprimé ; uptime externe : TODO humain) | [docs/attestation-management/01-creation-attestations.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/attestation-management/01-creation-attestations.md) |
 | ⏳ Waitlist d'inscription | — | 🗑️ Retiré (2026-06-22, `960852f`) | Module supprimé du produit : aucun modèle Prisma, aucune page, aucune API. |
 | 🎓 Résultats & Transcripts | 80% | ✅ Complet | [docs/results-transcripts/01-consultation-resultats.md](file:///c:/Users/PC/Documents/GitHub/attestations-fsa/docs/results-transcripts/01-consultation-resultats.md) |
 | ✏️ Demandes de Correction | 80% | ✅ Complet | Permet aux candidats de modifier leurs données personnelles d'identité sous validation admin. |
