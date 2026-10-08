@@ -39,6 +39,10 @@ export type AuditAction =
   // l'effacement. `newValue` décrit l'avant/après et l'identité du compte
   // concerné ; `userId` reste l'ADMIN qui a procédé, jamais le compte effacé.
   | "ACCOUNT_ANONYMIZED"
+  // #153 — Purge de rétention RGPD. Ligne unique écrite par le cron
+  // `lib/jobs/retention-purge.ts` à chaque passage EFFECTIF (zéro purge =
+  // silence) : `newValue` porte les compteurs (`storedObjects`, `auditLogs`).
+  | "RETENTION_PURGED"
   | "ADMIN_UPDATE_PROFILE";
 
 /**
