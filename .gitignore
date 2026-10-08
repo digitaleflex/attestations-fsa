@@ -40,6 +40,7 @@ yarn-error.log*
 # env files — seuls .env.local / .env.production (locaux) et .env.example (canonique)
 .env*
 !.env.example
+!.env.test
 *.bak
 *.bak.*
 .envsitter/
