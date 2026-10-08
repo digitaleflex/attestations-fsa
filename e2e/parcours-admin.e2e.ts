@@ -88,7 +88,7 @@ test.describe("Parcours admin de bout en bout (#140)", () => {
     });
     await expect(confirmButton).toBeDisabled();
     await page
-      .getByPlaceholder(/Erreur de saisie/)
+      .getByPlaceholder(/erreur de saisie/i)
       .fill("Test E2E #140 : révocation volontaire de l'attestation");
     await expect(confirmButton).toBeEnabled();
     await confirmButton.click();

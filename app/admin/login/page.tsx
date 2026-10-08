@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { translateAuthError } from "@/lib/error-translator";
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -56,7 +58,10 @@ export default function AdminLoginPage() {
             description: "Veuillez patienter...",
             duration: 3000,
           });
-          // callbackURL handles the redirect automatically
+          // Redirection explicite (comme /auth) : ne pas dépendre de la
+          // navigation automatique Better Auth, qui ne se produit pas
+          // systématiquement (ordre du plugin next-cookies).
+          router.push("/admin/dashboard");
         }
       });
 
