@@ -126,7 +126,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(5, "15 m"), // 5 essais / 15min
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:login",
       })
     : null,
@@ -136,7 +136,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(3, "1 h"), // 3 inscriptions / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:register",
       })
     : null,
@@ -146,7 +146,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(3, "1 h"), // 3 signalements / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:report",
       })
     : null,
@@ -156,7 +156,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(10, "1 h"), // 10 vérifications / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:verify",
       })
     : null,
@@ -166,7 +166,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(100, "1 m"), // 100 req / minute
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:api",
       })
     : null,
@@ -193,7 +193,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(600, "1 m"), // 600 req / minute
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:public-stats",
       })
     : null,
@@ -203,7 +203,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(5, "1 h"), // 5 submissions / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:submission",
       })
     : null,
@@ -215,7 +215,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(60, "1 m"), // 60 lectures / minute
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:exam-read",
       })
     : null,
@@ -225,7 +225,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(20, "1 h"), // 20 démarrages / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:exam-start",
       })
     : null,
@@ -237,7 +237,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(400, "1 h"), // 400 brouillons / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:exam-draft",
       })
     : null,
@@ -247,7 +247,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(3, "1 h"), // 3 demandes / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:password-reset",
       })
     : null,
@@ -257,7 +257,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(5, "1 h"), // 5 envois / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:email-verify",
       })
     : null,
@@ -267,7 +267,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(3, "1 h"), // 3 candidatures / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:internship",
       })
     : null,
@@ -277,7 +277,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(5, "1 h"), // 5 messages / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:contact",
       })
     : null,
@@ -287,7 +287,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(3, "10 m"),
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:fsa-otp-request",
       })
     : null,
@@ -297,7 +297,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(5, "15 m"),
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:fsa-otp-verify",
       })
     : null,
@@ -309,7 +309,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(20, "5 m"), // 20 appels / 5min
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:auth-endpoint",
       })
     : null,
@@ -319,7 +319,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(30, "1 h"), // 30 fichiers / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:upload",
       })
     : null,
@@ -331,7 +331,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(1, "1 h"),
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:bytes:uploadBytes",
       })
     : null,
@@ -342,7 +342,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(20, "1 h"), // 20 claims / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:attestation-claim",
       })
     : null,
@@ -356,7 +356,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(10, "15 m"), // 10 tentatives / 15 min
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:claim-code",
       })
     : null,
@@ -370,7 +370,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(10, "5 m"), // 10 opérations / 5min
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:admin-bulk",
       })
     : null,
@@ -380,7 +380,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(5, "10 m"), // 5 envois / 10min
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:admin-notifications",
       })
     : null,
@@ -390,7 +390,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(20, "1 h"), // 20 modifications / heure
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:admin-settings",
       })
     : null,
@@ -400,7 +400,7 @@ export const rateLimits = {
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(5, "15 m"), // 5 essais / 15min
-        analytics: true,
+        analytics: false,
         prefix: "ratelimit:admin-login",
       })
     : null,
