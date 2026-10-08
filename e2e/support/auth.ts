@@ -14,7 +14,7 @@ import {
 export async function loginAsCandidate(page: Page): Promise<void> {
   await page.goto("/auth");
 
-  await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Se connecter" })).toBeVisible();
   await expect(page.locator("#email")).toBeVisible();
 
   await page.locator("#email").fill(CANDIDATE_EMAIL);
