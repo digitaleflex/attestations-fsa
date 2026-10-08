@@ -55,7 +55,7 @@ export default defineConfig({
     {
       // Parcours prouvés (auth, endpoints applicatifs, certificat, vérification).
       name: "chromium",
-      testIgnore: /(ui-examen|parcours-admin)\.e2e\.ts/,
+      testIgnore: /(ui-examen|parcours-admin|parcours-stage)\.e2e\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -65,6 +65,16 @@ export default defineConfig({
       name: "chromium-admin",
       testMatch: /parcours-admin\.e2e\.ts/,
       dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      // Versant STAGES du cœur métier (issue #272) : dépôt public, décision
+      // admin (machine à états #267), export tableur et sentinelle d'émission.
+      // Autonome (données propres par run) → déclaré APRÈS `chromium-admin`
+      // pour profiter du séquentiel (workers: 1), sans dépendance dure.
+      name: "chromium-stage",
+      testMatch: /parcours-stage\.e2e\.ts/,
+      dependencies: ["chromium-admin"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
