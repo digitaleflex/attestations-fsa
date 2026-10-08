@@ -70,7 +70,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start E2E database
-        run: pnpm e2e:db:up
+        run: docker compose -f compose.local.yml up -d --wait postgres-e2e
 
       - name: Migrate E2E database
         run: pnpm e2e:db:migrate
