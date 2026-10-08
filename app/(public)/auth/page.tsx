@@ -1,37 +1,27 @@
 "use client";
 
-import { useState, useEffect, Suspense, type CSSProperties } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Label } from "@/components/ui/label";
-import {
-  Loader2,
-  KeyRound,
-  Mail,
-  ArrowRight,
-  ShieldCheck,
-  RefreshCw,
-  ArrowLeft,
-  GraduationCap,
-  Lock,
-  Eye,
-  EyeOff,
-  UserPlus,
-} from "lucide-react";
+import { KeyRound, Mail, Lock, RefreshCw, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { z } from "zod";
-import {
-  div as MotionDiv,
-  form as MotionForm,
-  span as MotionSpan,
-} from "framer-motion/client";
-import { AnimatePresence } from "@/lib/framer-motion-client";
 import { authClient } from "@/lib/auth-client";
 import { translateAuthError } from "@/lib/error-translator";
+import {
+  AuthLayout,
+  AuthHeader,
+  AuthFooter,
+  FormField,
+  FormAlert,
+  OtpInput,
+  PasswordField,
+  SubmitButton,
+  FIELD_INPUT_CLASS,
+} from "@/components/auth";
+import { cn } from "@/lib/utils";
 
 // Même règle que `app/api/auth/fsa-login` : l'identifiant est soit une adresse
 // e-mail complète, soit un code FSA COMPLET. Les « 5 derniers caractères » ne
@@ -57,7 +47,8 @@ const FsaCodeSchema = z.object({
 const OtpSchema = z.object({
   otp: z
     .string()
-    .length(6, "Le code OTP doit comporter exactement 6 chiffres."),
+    .length(6, "Le code doit comporter exactement 6 chiffres.")
+    .regex(/^\d{6}$/, "Le code ne doit contenir que des chiffres."),
 });
 
 const EmailSignInSchema = z.object({
@@ -68,28 +59,29 @@ const EmailSignInSchema = z.object({
 type LoginTab = "password" | "fsa";
 type VerificationMode = "fsa" | "email";
 
-const slideVariants = {
-  enter: (dir: number) => ({
-    x: dir > 0 ? 50 : -50,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      x: { type: "spring" as const, stiffness: 300, damping: 30 },
-      opacity: { duration: 0.2 },
-    },
-  },
-  exit: (dir: number) => ({
-    x: dir < 0 ? 50 : -50,
-    opacity: 0,
-    transition: {
-      x: { type: "spring" as const, stiffness: 300, damping: 30 },
-      opacity: { duration: 0.2 },
-    },
-  }),
-} as const;
+/** Distingue code expiré / déjà utilisé pour un message actionnable (#358). */
+function otpErrorKind(raw: string): "expired" | "used" | "invalid" {
+  const msg = raw.toLowerCase();
+  if (msg.includes("expir")) return "expired";
+  if (
+    msg.includes("déjà utilisé") ||
+    msg.includes("deja utilis") ||
+    msg.includes("already used") ||
+    msg.includes("already-used") ||
+    msg.includes("used")
+  )
+    return "used";
+  return "invalid";
+}
+
+function otpErrorMessage(raw: string): string {
+  const kind = otpErrorKind(raw);
+  if (kind === "expired")
+    return "Ce code a expiré. Demandez un nouveau code puis réessayez.";
+  if (kind === "used")
+    return "Ce code a déjà été utilisé. Demandez un nouveau code pour continuer.";
+  return "Ce code est invalide. Vérifiez les chiffres puis réessayez.";
+}
 
 // Messages lisibles pour les codes d'erreur renvoyés dans l'URL (?error=...)
 const URL_ERROR_MESSAGES: Record<string, string> = {
@@ -124,18 +116,21 @@ function getSafeCallbackUrl(value: string | null): string {
   }
 }
 
+const TABS: Array<{ id: LoginTab; label: string; icon: typeof Lock }> = [
+  { id: "password", label: "Mot de passe", icon: Lock },
+  { id: "fsa", label: "Code FSA", icon: KeyRound },
+];
+
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const callbackUrl = getSafeCallbackUrl(
-    searchParams?.get("callbackUrl") ||
-      searchParams?.get("callbackURL"),
+    searchParams?.get("callbackUrl") || searchParams?.get("callbackURL"),
   );
 
   // États de l'interface
   const [step, setStep] = useState<1 | 2>(1);
-  const [direction, setDirection] = useState<number>(1); // 1 = suivant, -1 = précédent
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -199,15 +194,15 @@ function AuthContent() {
     setFieldErrors({});
   };
 
-  const handleFsaCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFsaCode(e.target.value);
-    clearFieldError("fsaCode");
-  };
-
-  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
-    setOtp(val);
-    clearFieldError("otp");
+  const handleTabKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    const order: LoginTab[] = ["password", "fsa"];
+    const current = order.indexOf(tab);
+    const delta = e.key === "ArrowRight" ? 1 : -1;
+    const next = order[(current + delta + order.length) % order.length];
+    switchTab(next);
+    document.getElementById(`auth-tab-${next}`)?.focus();
   };
 
   // ============ CONNEXION E-MAIL + MOT DE PASSE ============
@@ -250,12 +245,11 @@ function AuthContent() {
           // Compte existant dont l'e-mail n'est pas vérifié :
           // on bascule vers la vérification par code OTP.
           setMaskedEmail(trimmedEmail);
-          setDirection(1);
           setVerificationMode("email");
           setStep(2);
           setOtp("");
           setError(
-            "Votre adresse e-mail n'est pas encore vérifiée. Saisissez le code qui vient de vous être envoyé, ou cliquez sur « Renvoyer le code ».",
+            "Votre adresse e-mail n'est pas encore vérifiée. Saisissez le code qui vient de vous être envoyé, ou demandez un nouveau code.",
           );
           toast.info("Vérification de l'e-mail requise", {
             description: "Un nouveau code vient de vous être envoyé.",
@@ -322,11 +316,11 @@ function AuthContent() {
       }
 
       setMaskedEmail(data.emailMasked);
-      setDirection(1);
       setVerificationMode("fsa");
       setStep(2);
+      setOtp("");
       setResendCooldown(60); // Initialiser le cooldown à 60s
-      toast.success("🔑 Options de connexion envoyées par e-mail !");
+      toast.success("Code envoyé par e-mail !");
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -360,7 +354,7 @@ function AuthContent() {
       }
 
       setResendCooldown(60); // Réinitialiser le cooldown à 60s après renvoi réussi
-      toast.success("🔄 Nouveau code de vérification envoyé !");
+      toast.success("Nouveau code envoyé !");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Impossible de renvoyer le code.";
@@ -378,15 +372,16 @@ function AuthContent() {
   ) => {
     setResending(true);
     try {
-      const { error: otpError } = await authClient.emailOtp.sendVerificationOtp({
-        email: targetEmail,
-        type: "email-verification",
-      });
+      const { error: otpError } =
+        await authClient.emailOtp.sendVerificationOtp({
+          email: targetEmail,
+          type: "email-verification",
+        });
 
       if (otpError) throw otpError;
 
       setResendCooldown(60);
-      if (showToast) toast.success("🔄 Nouveau code de vérification envoyé !");
+      if (showToast) toast.success("Nouveau code envoyé !");
       return true;
     } catch (err: unknown) {
       const message = translateAuthError(
@@ -443,9 +438,8 @@ function AuthContent() {
       setIsRedirecting(true);
       router.push(callbackUrl);
     } catch (err: unknown) {
-      const message = translateAuthError(
-        err instanceof Error ? err.message : "Code invalide ou expiré.",
-      );
+      const raw = err instanceof Error ? err.message : "Code invalide.";
+      const message = otpErrorMessage(translateAuthError(raw));
       setError(message);
       toast.error(message);
     } finally {
@@ -492,8 +486,8 @@ function AuthContent() {
       setIsRedirecting(true);
       router.push(callbackUrl);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Code de vérification invalide.";
+      const raw = err instanceof Error ? err.message : "Code invalide.";
+      const message = otpErrorMessage(raw);
       setError(message);
       toast.error(message);
     } finally {
@@ -502,7 +496,6 @@ function AuthContent() {
   };
 
   const goBackToStepOne = () => {
-    setDirection(-1);
     setStep(1);
     setOtp("");
     setVerificationMode("fsa");
@@ -510,659 +503,294 @@ function AuthContent() {
     setFieldErrors({});
   };
 
-  const headerTitle =
+  const header =
     step === 1
-      ? "Connexion"
-      : verificationMode === "email"
-        ? "Vérifiez votre e-mail"
-        : "Sécurité OTP";
-
-  const headerDescription =
-    step === 1
-      ? tab === "password"
-        ? "Connectez-vous avec votre adresse e-mail et votre mot de passe."
-        : "Saisissez votre e-mail ou votre code d'attestation FSA complet pour recevoir un code de connexion."
-      : verificationMode === "email"
-        ? "Pour activer votre compte, saisissez le code de vérification à 6 chiffres envoyé à :"
-        : "Pour votre sécurité, un code d'authentification à 6 chiffres a été envoyé à :";
+      ? {
+          kicker: "Espace candidat",
+          title: "Se connecter",
+          description: "Accédez à vos formations, examens et attestations.",
+        }
+      : {
+          kicker: "Code FSA",
+          title: "Vérifiez votre e-mail",
+          description:
+            "Nous avons envoyé un code à 6 chiffres à l'adresse suivante. Il expire dans 10 minutes.",
+        };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 relative overflow-hidden px-4 py-8">
-      {/* Premium Backdrops */}
-      <div className="absolute inset-0 z-0 bg-grid-slate-200/50 bg-[size:30px_30px] opacity-40 pointer-events-none" />
-      <div className="absolute -top-[10%] -left-[10%] w-[50vw] h-[50vw] bg-brand/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      <div className="absolute -bottom-[10%] -right-[10%] w-[50vw] h-[50vw] bg-brand-dark/10 rounded-full blur-[120px] pointer-events-none" />
+    <AuthLayout label="Connexion à l'espace candidat">
+      <AuthHeader
+        kicker={header.kicker}
+        title={header.title}
+        description={header.description}
+        email={step === 2 ? maskedEmail : undefined}
+      />
 
-      {/* Main card box with glassmorphism and subtle ring */}
-      <Card className="bg-white/80 backdrop-blur-3xl rounded-[3rem] shadow-[0_32px_64px_rgba(0,0,0,0.06)] w-full max-w-lg px-6 py-10 sm:px-12 sm:py-14 border border-white/90 relative overflow-hidden z-10 hover:shadow-[0_48px_80px_rgba(0,0,0,0.08)] transition-all duration-500">
-        {/* Glow corner elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-dark/5 rounded-full blur-2xl pointer-events-none" />
-
-        {/* Dynamic Animate Header & Icons */}
-        <div className="flex flex-col items-center mb-8 relative z-10 text-center">
-          <div className="relative w-20 h-20 bg-gradient-to-br from-brand to-brand-dark rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-brand/30 group overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000" />
-            {step === 1 ? (
-              tab === "password" ? (
-                <Lock className="w-9 h-9 text-white" />
-              ) : (
-                <KeyRound className="w-9 h-9 text-white" />
-              )
-            ) : verificationMode === "email" ? (
-              <Mail className="w-9 h-9 text-white" />
-            ) : (
-              <ShieldCheck className="w-9 h-9 text-white animate-pulse" />
-            )}
-          </div>
-
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none">
-            {headerTitle}
-          </h1>
-
-          <p className="text-slate-400 text-sm mt-3 px-4 font-medium leading-relaxed">
-            {headerDescription}
-          </p>
-
-          {step === 2 && (
-            <span className="mt-3 font-bold text-brand-dark text-xs tracking-wider bg-brand/10 px-4 py-1.5 rounded-full border border-brand/20 shadow-sm">
-              {maskedEmail}
-            </span>
-          )}
-        </div>
-
-        {error && (
-          <Alert
-            variant="destructive"
-            className="mb-6 rounded-2xl border-red-100 bg-red-50/50 backdrop-blur-md"
-          >
-            <AlertTitle className="font-bold">Erreur</AlertTitle>
-            <AlertDescription className="font-medium text-xs text-red-800/95 leading-relaxed">
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="relative overflow-hidden min-h-[200px]">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
-            {step === 1 ? (
-              /* ================= ÉTAPE 1 : CONNEXION ================= */
-              <MotionForm
-                key="step1"
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                onSubmit={
-                  tab === "password"
-                    ? handleEmailPasswordSubmit
-                    : handleRequestOtp
-                }
-                className="space-y-6 relative z-10"
-              >
-                {/* Sélecteur de méthode */}
-                <div role="tablist" aria-label="Méthode de connexion" className="grid grid-cols-2 gap-1 p-1 bg-slate-100/80 rounded-2xl border border-slate-100">
-                  {(
-                    [
-                      { id: "password", label: "Mot de passe", icon: Lock },
-                      { id: "fsa", label: "Code FSA & OTP", icon: KeyRound },
-                    ] as const
-                  ).map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      role="tab"
-                      id={`auth-tab-${id}`}
-                      aria-selected={tab === id}
-                      onClick={() => switchTab(id)}
-                      className={`relative z-10 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors duration-300 ${
-                        tab === id
-                          ? "text-white"
-                          : "text-slate-400 hover:text-slate-600"
-                      }`}
-                    >
-                      {tab === id && (
-                        <MotionSpan
-                          layoutId="auth-tab-pill"
-                          className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-brand to-brand-dark shadow-lg shadow-brand/20"
-                          transition={{
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 32,
-                          }}
-                        />
-                      )}
-                      <Icon className="w-3.5 h-3.5" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {tab === "password" ? (
-                  /* --- Connexion e-mail + mot de passe --- */
-                  <>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="email"
-                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
-                      >
-                        Adresse e-mail
-                      </Label>
-                      <div className="relative group">
-                        <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => {
-                            setEmail(e.target.value);
-                            clearFieldError("email");
-                          }}
-                          required
-                          placeholder="votre@email.com"
-                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
-                            fieldErrors.email
-                              ? "border-red-500 focus:ring-red-500/5"
-                              : ""
-                          }`}
-                          autoComplete="email"
-                          disabled={loading}
-                          aria-invalid={Boolean(fieldErrors.email)}
-                          aria-describedby={
-                            fieldErrors.email ? "auth-email-error" : undefined
-                          }
-                        />
-                      </div>
-                      {fieldErrors.email && (
-                        <p id="auth-email-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 pl-2">
-                          {fieldErrors.email}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between ml-1">
-                        <Label
-                          htmlFor="password"
-                          className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                        >
-                          Mot de passe
-                        </Label>
-                        <Link
-                          href="/forgot-password"
-                          className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-brand transition-colors"
-                        >
-                          Mot de passe oublié ?
-                        </Link>
-                      </div>
-                      <div className="relative group">
-                        <Lock className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
-                        <Input
-                          id="password"
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => {
-                            setPassword(e.target.value);
-                            clearFieldError("password");
-                          }}
-                          required
-                          placeholder="••••••••"
-                          className={`pl-12 pr-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
-                            fieldErrors.password
-                              ? "border-red-500 focus:ring-red-500/5"
-                              : ""
-                          }`}
-                          autoComplete="current-password"
-                          disabled={loading}
-                          aria-invalid={Boolean(fieldErrors.password)}
-                          aria-describedby={
-                            fieldErrors.password ? "auth-password-error" : undefined
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-4 top-4 rounded-md text-slate-300 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                          aria-label={
-                            showPassword
-                              ? "Masquer le mot de passe"
-                              : "Afficher le mot de passe"
-                          }
-                          aria-pressed={showPassword}
-                          disabled={loading}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="w-5 h-5" />
-                          ) : (
-                            <Eye className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                      {fieldErrors.password && (
-                        <p id="auth-password-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 pl-2">
-                          {fieldErrors.password}
-                        </p>
-                      )}
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
-                          Connexion...
-                        </>
-                      ) : (
-                        <>
-                          Se connecter
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-                        </>
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  /* --- Connexion par code FSA / OTP --- */
-                  <>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="fsaCode"
-                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
-                      >
-                        E-mail ou Code FSA
-                      </Label>
-                      <div className="relative group">
-                        <KeyRound className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
-                        <Input
-                          id="fsaCode"
-                          name="fsaCode"
-                          type="text"
-                          value={fsaCode}
-                          onChange={handleFsaCodeChange}
-                          required
-                          placeholder="candidat@email.com ou FSA-2026-M01-00042-f0f9a"
-                          className={`pl-12 h-14 rounded-2xl text-base font-bold tracking-wide border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
-                            fieldErrors.fsaCode
-                              ? "border-red-500 focus:ring-red-500/5"
-                              : ""
-                          }`}
-                          autoComplete="off"
-                          disabled={loading}
-                          aria-invalid={Boolean(fieldErrors.fsaCode)}
-                          aria-describedby={
-                            fieldErrors.fsaCode ? "auth-fsacode-error" : undefined
-                          }
-                        />
-                      </div>
-                      {fieldErrors.fsaCode && (
-                        <p id="auth-fsacode-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 pl-2">
-                          {fieldErrors.fsaCode}
-                        </p>
-                      )}
-
-                      <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex items-start gap-3 mt-3">
-                        <GraduationCap className="w-5 h-5 text-brand shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                          Saisissez votre e-mail (si pré-enregistré par
-                          l&apos;administration) ou le code FSA complet
-                          figurant sur votre relevé ou attestation (ex :{" "}
-                          <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold font-mono text-brand-dark">
-                            FSA-2026-M01-00042-f0f9a
-                          </code>
-                          ). Les fragments du code ne sont pas acceptés.
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group text-white border-none"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
-                          Recherche du dossier...
-                        </>
-                      ) : (
-                        <>
-                          Continuer
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-                        </>
-                      )}
-                    </Button>
-                  </>
-                )}
-              </MotionForm>
-            ) : verificationMode === "email" ? (
-              /* ================= ÉTAPE 2 : VÉRIFICATION E-MAIL ================= */
-              <MotionDiv
-                key="email-verify"
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="space-y-6 relative z-10"
-              >
-                <form onSubmit={handleVerifyEmailOtp} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="email-otp"
-                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
-                    >
-                      Code de vérification (6 chiffres)
-                    </Label>
-                    <div className="relative group">
-                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
-                      <Input
-                        id="email-otp"
-                        name="email-otp"
-                        type="text"
-                        inputMode="numeric"
-                        value={otp}
-                        onChange={handleOtpChange}
-                        required
-                        placeholder="0 0 0 0 0 0"
-                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
-                          fieldErrors.otp
-                            ? "border-red-500 focus:ring-red-500/5"
-                            : ""
-                        }`}
-                        autoComplete="one-time-code"
-                        disabled={loading}
-                        aria-invalid={Boolean(fieldErrors.otp)}
-                        aria-describedby={
-                          fieldErrors.otp ? "auth-email-otp-error" : undefined
-                        }
-                      />
-                    </div>
-                    {fieldErrors.otp && (
-                      <p id="auth-email-otp-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 text-center">
-                        {fieldErrors.otp}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={goBackToStepOne}
-                      className="flex-1 h-14 font-black uppercase tracking-widest text-xs rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-500 flex items-center justify-center gap-2"
-                      disabled={loading || resending}
-                    >
-                      <ArrowLeft className="w-4 h-4 text-slate-400" />
-                      Retour
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
-                      disabled={loading || resending}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
-                          Vérification...
-                        </>
-                      ) : (
-                        "Vérifier le code"
-                      )}
-                    </Button>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => sendEmailVerificationOtp(maskedEmail, true)}
-                      className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors focus:outline-none ${
-                        resendCooldown > 0
-                          ? "text-slate-300 cursor-not-allowed"
-                          : "text-slate-400 hover:text-brand"
-                      }`}
-                      disabled={loading || resending || resendCooldown > 0}
-                    >
-                      <RefreshCw
-                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-brand" : ""}`}
-                      />
-                      {resending
-                        ? "Renvoi en cours..."
-                        : resendCooldown > 0
-                          ? `Renvoyer le code (dans ${resendCooldown}s)`
-                          : "Renvoyer le code"}
-                    </button>
-                  </div>
-                </form>
-              </MotionDiv>
-            ) : (
-              /* ================= ÉTAPE 2 : OTP FSA ================= */
-              <MotionDiv
-                key="step2"
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="space-y-6 relative z-10"
-              >
-                <form onSubmit={handleVerifyOtp} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="otp"
-                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1"
-                    >
-                      Code OTP (6 chiffres)
-                    </Label>
-                    <div className="relative group">
-                      <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-brand transition-colors duration-300" />
-                      <Input
-                        id="otp"
-                        name="otp"
-                        type="text"
-                        inputMode="numeric"
-                        value={otp}
-                        onChange={handleOtpChange}
-                        required
-                        placeholder="0 0 0 0 0 0"
-                        className={`pl-12 h-14 rounded-2xl text-center text-xl font-black tracking-[0.25em] border-slate-100 bg-slate-50/50 focus:border-brand/80 focus:bg-white focus:ring-4 focus:ring-brand/5 transition-all duration-300 shadow-inner ${
-                          fieldErrors.otp
-                            ? "border-red-500 focus:ring-red-500/5"
-                            : ""
-                        }`}
-                        autoComplete="one-time-code"
-                        disabled={loading}
-                        aria-invalid={Boolean(fieldErrors.otp)}
-                        aria-describedby={
-                          fieldErrors.otp ? "auth-otp-error" : undefined
-                        }
-                      />
-                    </div>
-                    {fieldErrors.otp && (
-                      <p id="auth-otp-error" role="alert" className="text-red-500 text-xs font-semibold mt-1 text-center">
-                        {fieldErrors.otp}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={goBackToStepOne}
-                      className="flex-1 h-14 font-black uppercase tracking-widest text-xs rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-500 flex items-center justify-center gap-2"
-                      disabled={loading || resending}
-                    >
-                      <ArrowLeft className="w-4 h-4 text-slate-400" />
-                      Retour
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-[2] h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-gradient-to-r from-brand to-brand-dark hover:from-brand-dark hover:to-brand-dark shadow-xl shadow-brand/10 hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 text-white border-none"
-                      disabled={loading || resending}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="animate-spin w-5 h-5 mr-1 text-white" />
-                          Connexion...
-                        </>
-                      ) : (
-                        <>Se connecter</>
-                      )}
-                    </Button>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors focus:outline-none ${
-                        resendCooldown > 0
-                          ? "text-slate-300 cursor-not-allowed"
-                          : "text-slate-400 hover:text-brand"
-                      }`}
-                      disabled={loading || resending || resendCooldown > 0}
-                    >
-                      <RefreshCw
-                        className={`w-3.5 h-3.5 ${resending ? "animate-spin text-brand" : ""}`}
-                      />
-                      {resending
-                        ? "Renvoi en cours..."
-                        : resendCooldown > 0
-                          ? `Renvoyer le code (dans ${resendCooldown}s)`
-                          : "Renvoyer le code OTP"}
-                    </button>
-                  </div>
-                </form>
-              </MotionDiv>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Créer un compte + retour au portail */}
-        <div className="mt-8 pt-6 border-t border-slate-100/80 flex flex-col items-center gap-3">
-          <Link
-            href="/inscription"
-            className="text-xs font-bold uppercase tracking-widest text-brand hover:text-brand-dark transition-colors flex items-center gap-1.5"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Pas de compte ? Créer un compte
-          </Link>
-          <Link
-            href="/"
-            className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-brand transition-colors flex items-center gap-1.5"
-          >
-            <span>←</span> Retour au portail
-          </Link>
-        </div>
-      </Card>
-
-      {/* Modern Vortex Portal overlay */}
-      {isRedirecting && (
-        <div
-          className="vortex-overlay"
-          style={
-            {
-              "--vortex-color-1": "#10b981",
-              "--vortex-color-2": "#2563eb",
-            } as CSSProperties
-          }
-        >
-          <div className="vortex-halo">
-            <div className="vortex-ring" />
-            <div className="vortex-ring-inner" />
-            <div className="vortex-core">
-              <GraduationCap className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <p className="text-brand-dark font-black uppercase tracking-widest text-sm animate-pulse mt-8">
-            Ouverture de votre Espace...
-          </p>
+      {error && (
+        <div className="mb-5">
+          <FormAlert variant="error" title="Une action est requise">
+            {error}
+          </FormAlert>
         </div>
       )}
 
-      {/* Specific Vortex CSS classes */}
-      <style jsx global>{`
-        .vortex-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 100;
-          background: rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(24px);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .vortex-halo {
-          position: relative;
-          width: 120px;
-          height: 120px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .vortex-ring {
-          position: absolute;
-          inset: -10px;
-          border: 3px solid transparent;
-          border-top-color: var(--vortex-color-1);
-          border-bottom-color: var(--vortex-color-1);
-          border-radius: 50%;
-          animation: spin 2s linear infinite;
-        }
-
-        .vortex-ring-inner {
-          position: absolute;
-          inset: 5px;
-          border: 3px solid transparent;
-          border-left-color: var(--vortex-color-2);
-          border-right-color: var(--vortex-color-2);
-          border-radius: 50%;
-          animation: spin-reverse 1.5s cubic-bezier(0.53, 0.21, 0.29, 0.67)
-            infinite;
-        }
-
-        .vortex-core {
-          width: 60px;
-          height: 60px;
-          border-radius: 20px;
-          background: linear-gradient(
-            135deg,
-            var(--vortex-color-1),
-            var(--vortex-color-2)
-          );
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
-        }
-
-        @keyframes spin {
-          0% {
-            transform: rotate(0deg);
+      {step === 1 ? (
+        /* ================= ÉTAPE 1 : CONNEXION ================= */
+        <form
+          onSubmit={
+            tab === "password" ? handleEmailPasswordSubmit : handleRequestOtp
           }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
+          noValidate
+          className="space-y-5"
+        >
+          <div
+            role="tablist"
+            aria-label="Méthode de connexion"
+            onKeyDown={handleTabKeyDown}
+            className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1"
+          >
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`auth-tab-${id}`}
+                aria-selected={tab === id}
+                aria-controls={`auth-panel-${id}`}
+                tabIndex={tab === id ? 0 : -1}
+                onClick={() => switchTab(id)}
+                className={cn(
+                  "flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  tab === id
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800",
+                )}
+              >
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
 
-        @keyframes spin-reverse {
-          0% {
-            transform: rotate(360deg);
+          {tab === "password" ? (
+            <div
+              role="tabpanel"
+              id="auth-panel-password"
+              aria-labelledby="auth-tab-password"
+              className="space-y-5"
+            >
+              <FormField
+                id="email"
+                label="Adresse e-mail"
+                error={fieldErrors.email}
+              >
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearFieldError("email");
+                  }}
+                  required
+                  placeholder="votre@email.com"
+                  autoComplete="email"
+                  disabled={loading}
+                  aria-invalid={Boolean(fieldErrors.email) || undefined}
+                  aria-describedby={
+                    fieldErrors.email ? "email-error" : undefined
+                  }
+                  className={cn(
+                    FIELD_INPUT_CLASS,
+                    fieldErrors.email && "border-red-400",
+                  )}
+                />
+              </FormField>
+
+              <div>
+                <FormField
+                  id="password"
+                  label="Mot de passe"
+                  error={fieldErrors.password}
+                >
+                  <PasswordField
+                    id="password"
+                    value={password}
+                    onChange={(value) => {
+                      setPassword(value);
+                      clearFieldError("password");
+                    }}
+                    autoComplete="current-password"
+                    disabled={loading}
+                    hasError={Boolean(fieldErrors.password)}
+                    describedBy={
+                      fieldErrors.password ? "password-error" : undefined
+                    }
+                    showPassword={showPassword}
+                    onToggleVisibility={() => setShowPassword((v) => !v)}
+                    toggleLabel={{
+                      show: "Afficher le mot de passe",
+                      hide: "Masquer le mot de passe",
+                    }}
+                  />
+                </FormField>
+                <div className="mt-1 flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="inline-flex min-h-[44px] items-center text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+              </div>
+
+              <SubmitButton loading={loading} loadingLabel="Connexion...">
+                Se connecter
+              </SubmitButton>
+            </div>
+          ) : (
+            <div
+              role="tabpanel"
+              id="auth-panel-fsa"
+              aria-labelledby="auth-tab-fsa"
+              className="space-y-5"
+            >
+              <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
+                Sans mot de passe : recevez un code à usage unique à
+                l'adresse liée à votre dossier FSA.
+              </p>
+              <FormField
+                id="fsaCode"
+                label="E-mail ou code FSA"
+                error={fieldErrors.fsaCode}
+                hint="Votre code FSA complet figure sur votre relevé ou attestation (ex : FSA-2026-M01-00042-f0f9a)."
+              >
+                <Input
+                  id="fsaCode"
+                  name="fsaCode"
+                  type="text"
+                  value={fsaCode}
+                  onChange={(e) => {
+                    setFsaCode(e.target.value);
+                    clearFieldError("fsaCode");
+                  }}
+                  required
+                  placeholder="candidat@email.com ou FSA-2026-..."
+                  autoComplete="off"
+                  disabled={loading}
+                  aria-invalid={Boolean(fieldErrors.fsaCode) || undefined}
+                  aria-describedby={
+                    fieldErrors.fsaCode ? "fsaCode-error" : undefined
+                  }
+                  className={cn(
+                    FIELD_INPUT_CLASS,
+                    fieldErrors.fsaCode && "border-red-400",
+                  )}
+                />
+              </FormField>
+
+              <SubmitButton loading={loading} loadingLabel="Envoi du code...">
+                Recevoir le code
+              </SubmitButton>
+            </div>
+          )}
+        </form>
+      ) : (
+        /* ================= ÉTAPE 2 : CODE FSA ================= */
+        <form
+          onSubmit={
+            verificationMode === "email" ? handleVerifyEmailOtp : handleVerifyOtp
           }
-          100% {
-            transform: rotate(0deg);
-          }
-        }
-      `}</style>
-    </div>
+          noValidate
+          className="space-y-5"
+        >
+          <FormField
+            id="otp"
+            label="Code de vérification"
+            centerLabel
+            error={fieldErrors.otp}
+            hint="Saisissez les 6 chiffres ou collez le code complet."
+          >
+            <OtpInput
+              id="otp"
+              value={otp}
+              onChange={(value) => {
+                setOtp(value);
+                clearFieldError("otp");
+              }}
+              disabled={loading}
+              hasError={Boolean(fieldErrors.otp)}
+              describedBy={fieldErrors.otp ? "otp-error" : undefined}
+            />
+          </FormField>
+
+          <SubmitButton loading={loading} loadingLabel="Vérification...">
+            Vérifier et se connecter
+          </SubmitButton>
+
+          <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={
+                verificationMode === "email"
+                  ? () => sendEmailVerificationOtp(maskedEmail, true)
+                  : handleResendOtp
+              }
+              disabled={loading || resending || resendCooldown > 0}
+              className="inline-flex min-h-[44px] items-center gap-2 px-2 text-sm font-semibold text-slate-600 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:text-slate-300"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={cn("h-4 w-4", resending && "animate-spin")}
+              />
+              {resending
+                ? "Renvoi en cours..."
+                : resendCooldown > 0
+                  ? `Renvoyer le code (dans ${resendCooldown}s)`
+                  : "Renvoyer le code"}
+            </button>
+            <button
+              type="button"
+              onClick={goBackToStepOne}
+              disabled={loading || resending}
+              className="inline-flex min-h-[44px] items-center gap-2 px-2 text-sm text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+            >
+              <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+              Modifier l'adresse e-mail
+            </button>
+          </div>
+        </form>
+      )}
+
+      {step === 1 && (
+        <AuthFooter
+          links={[
+            {
+              href: "/inscription",
+              label: "Pas encore de compte ? Créer un compte",
+              primary: true,
+            },
+            { href: "/", label: "Retour au portail" },
+          ]}
+        />
+      )}
+
+      {isRedirecting && (
+        <div
+          role="status"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white/90"
+        >
+          <Loader2
+            className="h-8 w-8 animate-spin text-brand"
+            aria-hidden="true"
+          />
+          <p className="text-sm font-semibold text-slate-700">
+            Ouverture de votre espace...
+          </p>
+        </div>
+      )}
+    </AuthLayout>
   );
 }
 
@@ -1170,9 +798,11 @@ export default function AuthPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 relative">
-          <div className="absolute inset-0 bg-grid-slate-200/50 bg-[size:30px_30px] opacity-40 pointer-events-none" />
-          <Loader2 className="animate-spin w-8 h-8 text-brand relative z-10" />
+        <div className="flex min-h-screen w-full items-center justify-center bg-slate-50">
+          <Loader2
+            className="h-8 w-8 animate-spin text-brand"
+            aria-label="Chargement..."
+          />
         </div>
       }
     >
