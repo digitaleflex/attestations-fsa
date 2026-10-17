@@ -170,14 +170,88 @@ chmod 600 "$BACKUP_FILE" "$BACKUP_FILE.sha256" 2>/dev/null || true
 echo "==> Backup complete: $BACKUP_FILE ($(wc -c < "$BACKUP_FILE") bytes)"
 echo "==> Checksum: $(cut -d' ' -f1 "$BACKUP_FILE.sha256")"
 
+# -----------------------------------------------------------------
+# RESTAURABILITÉ — le filet ne vaut que s'il se déroule vraiment.
+#
+# Un dump tronqué ou corrompu est NON VIDE : il passe le garde `test -s`
+# ci-dessus et laisse croire à une sauvegarde exploitable, alors qu'elle
+# echouera au moment de la restauration, le jour ou on en aura besoin.
+# On demande donc a PostgreSQL de lire l'archive (`pg_restore --list`)
+# AVANT toute migration. Un fichier illisible arrete le deploy.
+#
+# Le dump est copie dans le conteneur (pg_restore doit y lire l'archive)
+# puis supprime : le conteneur ne doit pas garder de copie de donnees
+# personnelles en plus du dump deja present sur l'hote.
+# -----------------------------------------------------------------
+TMP_IN_CONTAINER="/tmp/$BASENAME.verify"
+restore_check() {
+  cleanup_and_fail() {
+    docker exec "$CONTAINER" rm -f "$TMP_IN_CONTAINER" >/dev/null 2>&1 || true
+    echo "ERROR: le dump $BACKUP_FILE n'est PAS restaurable." >&2
+    echo "       Il est non vide mais PostgreSQL ne peut pas lire l'archive." >&2
+    echo "       -> aucune migration ne doit partir sur cette base." >&2
+    echo "       -> restaurer depuis l'offsite (voir docs/ops/fsa-reference-and-restore.md)" >&2
+    echo "          puis relancer le deploy." >&2
+    exit 1
+  }
+
+  if ! docker cp "$BACKUP_FILE" "$CONTAINER:$TMP_IN_CONTAINER" >/dev/null 2>&1; then
+    cleanup_and_fail
+    return 1
+  fi
+
+  # Une seule passe : lecture de l'archive + comptage, avant suppression.
+  local listing entries
+  if ! listing=$(docker exec "$CONTAINER" pg_restore --list "$TMP_IN_CONTAINER" 2>/dev/null); then
+    cleanup_and_fail
+    return 1
+  fi
+  entries=$(printf '%s\n' "$listing" | grep -c "TABLE DATA" || true)
+  docker exec "$CONTAINER" rm -f "$TMP_IN_CONTAINER" >/dev/null 2>&1 || true
+
+  echo "==> Restorability OK: archive lisible par pg_restore, $entries table(s)."
+
+  # Une base reellement peuplee doit contenir des donnees. Un dump valide
+  # mais sans aucune table indique un conteneur qui n'etait pas encore
+  # monte au moment du pg_dump : la migration partirait sur une base vide.
+  if [ "${entries:-0}" -lt 1 ]; then
+    echo "ERROR: l'archive est lisible mais ne contient AUCUNE table." >&2
+    echo "       -> le conteneur Postgres n'etait probablement pas pret" >&2
+    echo "          au moment du pg_dump (base vide = perte de donnees)." >&2
+    echo "       -> verifier 'docker ps $CONTAINER' et l'etat du volume," >&2
+    echo "          puis relancer le deploy." >&2
+    exit 1
+  fi
+}
+
+restore_check
+
 # =================================================================
 # 2. FICHIERS UPLOADÉS (volumes)
 # =================================================================
 # Lus DEPUIS le conteneur applicatif (busybox tar est présent dans l'image
 # alpine) : aucune image supplémentaire à tirer, et on archive exactement ce
 # que le volume expose au chemin attendu.
+# Fail-closed, exactement comme pour la base (l.55-59) : sans le conteneur
+# applicatif on ne peut pas lire les volumes d'uploads. Previously ce cas se
+# contentait d'un WARN et la sauvegarde CONTINUAIT — donc un deploy pouvait
+# migrer le schéma avec des CV et des scans d'examen non sauvegardes. Perte
+# de donnees silencieuse, y compris la piece a conviction d'un litige
+# (arbitrage #95). On sort en erreur, sauf escape hatch explicite.
 if ! docker ps --format '{{.Names}}' | grep -qx "$APP_CONTAINER"; then
-  echo "==> App container '$APP_CONTAINER' non démarré — fichiers NON sauvegardés." >&2
+  if [ "${ALLOW_UNBACKED_UPLOADS:-0}" = "1" ]; then
+    echo "WARN: conteneur '$APP_CONTAINER' absent mais ALLOW_UNBACKED_UPLOADS=1" >&2
+    echo "      -> les volumes d'uploads (CV, scans) NE SONT PAS sauvegardes." >&2
+    echo "      -> a n'utiliser que si l'on sait qu'aucun upload n'existe." >&2
+  else
+    echo "ERROR: conteneur applicatif '$APP_CONTAINER' absent de" >&2
+    echo "       -> sauvegarde des uploads (CV + scans d'examen) IMPOSSIBLE." >&2
+    echo "       -> aucun deploy ne doit migrer le schema dans cet etat." >&2
+    echo "       -> Remediation : demarrer le conteneur, ou exporter les volumes" >&2
+    echo "          a la main, ou poser ALLOW_UNBACKED_UPLOADS=1 si et confirme" >&2
+    echo "          qu'aucun upload n'existe. Voir docs/ops/procedures.md § 5.5." >&2
+    exit 1
+  fi
 else
   for target in "${UPLOAD_TARGETS[@]}"; do
     label="${target%%:*}"
