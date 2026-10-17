@@ -1,7 +1,7 @@
 # Issues — attestations-fsa
 
 > **Source de vérité : GitHub Issues** (`gh issue list`). Ce fichier est un miroir
-> de suivi local, mis à jour après chaque merge. Dernière synchro : **2026-09-12**.
+> de suivi local, mis à jour après chaque merge. Dernière synchro : **2026-10-17** (état réel vérifié via `gh issue view`).
 
 ---
 
@@ -65,14 +65,15 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 
 ---
 
-## 🟠 Ouvertes — Dégraissage v2 (EPIC #87)
+## ✅ Dégraissage v2 (EPIC #87) — CLOS
 
-- #88–#111 : lots A→M (routes mortes, composants orphelins, Pusher→polling,
-  anti-triche, Prisma, feedback 4→2, QA non-régression)
+- **EPIC #87 fermé**, les 24 sous-issues #88–#111 sont toutes fermées :
+  lots A→M (routes mortes, composants orphelins, Pusher→polling, anti-triche,
+  Prisma, feedback 4→2, QA non-régression) + C1–C3, I1–I3, J1–J3, K1–K2.
 
-## 🟡 Qualité / tests / audits (EPIC #131)
+## 🟡 Qualité / tests / audits (EPIC #131) — EN COURS
 
-### ✅ Corrigées (7)
+### ✅ Corrigées (11)
 | Issue | Titre | PR |
 | :---- | :---- | :- |
 | #133  | [T2] Tests unitaires cœur (scoring, availability, issue) | #188 |
@@ -83,36 +84,64 @@ Toutes les entrées de l'ancien `ISSUES.md` (#1–#14) sont **résolues dans le 
 | #143  | [A2] Audit deps SCA (deps inutilisées + job CI SCA) | #192 |
 | #144  | [A3] Audit a11y (skip-link WCAG 2.4.1) | #194 |
 
-### 🟠 Partielles / ouvertes
-- **#137 [T6]** : ✅ **corrigée** (PR #195-#206, 9 incréments — couverture admin **12,56 % → 69,15 % stmts / 70,53 % lignes**, objectif ≥70 % atteint).
-- **#138 [T7]** : 2 incréments mergés (PR #197 + #200 — notifications in-app, stages public/user/admin, réclamations, 23 tests) ; reste feedback, settings public.
-- #139–#141 : tests T8→T10
-- **#145 [A4]** : ✅ **corrigée** (PR #198 — N+1 monitoring → createMany + rapport perf rafraîchi). Dette documentée : `force-dynamic` global, ratio client components 60/65.
-- **#146 [A5]** : ✅ **corrigée** (PR #199 — script `check-data-integrity.ts` + rapport `docs/data_integrity_audit.md`).
+### ✅ Corrigées
+- **#137 [T6]** : ✅ **fermée** (PR #195-#206, 9 incréments — couverture admin **12,56 % → 69,15 % stmts / 70,53 % lignes**, objectif ≥70 % atteint).
+- **#139 [T8]** : ✅ **fermée** (E2E parcours candidat Playwright).
+- **#145 [A4]** : ✅ **fermée** (PR #198 — N+1 monitoring → createMany + rapport perf rafraîchi). Dette documentée : `force-dynamic` global, ratio client components 60/65.
+- **#146 [A5]** : ✅ **fermée** (PR #199 — script `check-data-integrity.ts` + rapport `docs/data_integrity_audit.md`).
 
-## 🎨 Ouvertes — Design (EPIC #42) & Responsive (#34)
+### 🟠 Ouvertes (3 restantes)
+- **#138 [T7]** : notifications/stages/réclamations couverts ; reste feedback + settings public.
+- **#140 [T9]** : E2E parcours admin (Playwright).
+- **#141 [T10]** : documents PDF / QR / impression / vérification.
 
-- #35–#41 : responsive (CRITIQUE → MINEUR)
-- #43–#64 : refonte V0→V3 (tokens, primitives, layouts, écrans, documents imprimables)
+## ✅ Design (EPIC #42) & Responsive (#34) — CLOS
 
-## 🚀 Ouvertes — Production M8 (EPIC #148)
+- **EPIC #42 et #34 fermés** : les 30 issues #35–#64 sont toutes fermées
+  (responsive #35–#41 ; refonte V0→V3 #43–#64 : tokens, primitives, layouts,
+  écrans, documents imprimables).
+- Le nouveau backlog UX/UI est porté par les issues #335–#361.
 
-- #149–#160 : stockage objet, reprise données, observabilité, runbook, conformité RGPD,
-  SMS, valeur probante certificat, staging, restauration, KPI, décisions, livrable vertical
+## 🚀 Production M8 (EPIC #148) — EN COURS
 
-## 📋 Ouvertes — Backlog (EPIC #78)
+### ✅ Fermées
+- #149 stockage objet (modèle `StoredObject`), #150 reprise des données, #152 runbook,
+  #154 canal SMS, #155 valeur probante du certificat (signature/scellement),
+  #157 exercice de restauration, #158 KPI produit, #160 livrable vertical.
 
-- #7–#14 : features fantômes / auto-save / monitoring / PDF / graphiques / tests / types
-- #19, #21, #22, #23, #81–#86 : CI/CD, secrets, backup, QR public, PPR, dark mode, etc.
+### 🟠 Ouvertes (4 restantes)
+- **#151** observabilité & alerting (Sentry + uptime)
+- **#153** conformité données personnelles (rétention, effacement, chiffrement)
+- **#156** environnement de staging + migrations/rollback
+- **#159** trancher les décisions bloquantes
+
+## ✅ Dette historique résolue (EPIC #78 & divers)
+
+- #7–#14 : features fantômes / auto-save / monitoring / PDF / graphiques / tests / types → **fermées**
+- #21 secrets hors `.env.production` → **fermée** (gitignore + gate CI `env-guard` + `chmod 600`)
+- #22 CI/CD build hors prod + GHCR tagué SHA + rollback → **fermée** (`deploy.yml` : `workflow_run` → `build-and-push` → `deploy-staging` → `deploy-prod` → `rollback`)
+- #76 nettoyage Prisma (modèles obsolètes) → **fermée** (`Admin`, `VerificationToken`, `Resource` retirés et tracés dans `schema.prisma`)
+
+## 🔴 CI — corrigé le 2026-10-17 (`a85c52e`)
+
+- **#370** `awscli` absent des dépôts Ubuntu 24.04 → installé via `pipx` (fallback `pip --user`)
+- **#371** job `notify` sans `checkout` → `--repo "$GITHUB_REPOSITORY"` sur toutes les commandes `gh`
+- Bonus hygiène : `playwright-report/` + `test-results/` ajoutés aux ignores ESLint
+  (~3 300 faux positifs supprimés), directives `eslint-disable` mortes retirées de `lib/redis.ts`
 
 ---
 
-## Prochaines actions de synchronisation
+## 📌 État du repo au 2026-10-17
 
-1. ~~Traiter l'EPIC #112 (cœur métier)~~ — **TERMINÉ** : les 11 issues (#119-#130) sont corrigées et mergées (PR #177-#187)
-2. Poursuivre le dégraissage v2 (EPIC #87)
-3. Monter la couverture tests (EPIC #131) — **330 tests** actuellement, ratchet `10/9/12/10`
-4. Décider du sort du pilote design (PR #33, branche `fix/issue-115-mention-unique`)
+- **Gate** : `pnpm verify` vert — `tsc` 0 erreur, `eslint` 0 erreur / 0 warning, **1 535 tests** (144 fichiers).
+- **Issues ouvertes restantes : 43** (backlog produit légitime), dont 2 EPIC de suivi ouverts
+  (#131 qualité, #148 production) et le plan de remédiation #323.
 
-> ⚠️ La branche `fix/issue-115-mention-unique` contient le pilote design (PR #33)
-> **non mergé** — le fix #115/#127 a été cherry-pické sur main (`1d6d096`).
+## Prochaines actions
+
+1. **P0 production** : #151 (Sentry/uptime), #153 (RGPD), #156 (staging), #159 (décisions bloquantes) — EPIC #148
+2. **Qualité** : #138, #140, #141 — EPIC #131
+3. **Backlog UX/produit** : #335–#361 (formations, auth V2, mobile, SEO, prod, légal)
+4. **Docs** : #297 — réconcilier la documentation avec le produit réel
+   (ex. `analysis_fsa_status.md` référence encore `CompositionScan` et des routes
+   `submissions/[id]/scans` qui n'existent plus dans le schéma ni dans `app/`)
