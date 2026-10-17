@@ -88,6 +88,19 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Le store mémoire du rate-limit vit sur `globalThis` (volontairement : il
+  // doit survivre au hot-reload de Next). Conséquence en test : les workers
+  // Vitest étant RÉUTILISÉS entre fichiers, ce store est partagé par tous les
+  // fichiers qui passent dans le même processus, malgré l'isolation des
+  // modules. `beforeEach` vide le store en entrée de test, mais ce fichier
+  // consomme jusqu'à 600 requêtes sur la fenêtre ; sans vidage en sortie, il
+  // laisse derrière lui ~600 horodatages pour le fichier suivant du worker.
+  //
+  // Déborder ne peut pas faire échouer ce fichier (chaque test repart d'un
+  // store vide), mais cela rend le comportement du store mémoire dépendant de
+  // l'ordre d'exécution des fichiers — exactement le genre d'aléa qui fait
+  // apparaître un échec « impossible » sur une CI qui passe par ailleurs.
+  __resetInMemoryRateLimitsForTests();
   Object.assign(memoryFallbackLimits, originalLimits);
   vi.unstubAllEnvs();
 });
