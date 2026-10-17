@@ -4,6 +4,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  ConsentValidationError,
+  isConsentType,
+  recordConsents,
+  type ConsentTypeName,
+} from "@/lib/consent";
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +20,46 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { phone, birthPlace, address, birthDate, formationId } = body;
+    const { phone, birthPlace, address, birthDate, formationId, consents } = body;
+
+    // #153 — Consentements acceptés à l'inscription. Traités AVANT le profil :
+    // si un consentement est invalide, on refuse tout (pas d'inscription à
+    // moitié documentée). Le lot est écrit en transaction par recordConsents.
+    if (consents !== undefined) {
+      if (!Array.isArray(consents)) {
+        return NextResponse.json({ error: "Consentements invalides" }, { status: 400 });
+      }
+      const invalid = consents.find(
+        (c: unknown) =>
+          typeof c !== "object" || c === null ||
+          !isConsentType((c as { type?: unknown }).type) ||
+          typeof (c as { granted?: unknown }).granted !== "boolean",
+      );
+      if (invalid) {
+        return NextResponse.json(
+          { error: "Consentement mal formé : { type, granted } attendus" },
+          { status: 400 },
+        );
+      }
+
+      try {
+        await recordConsents(
+          consents.map((c: { type: ConsentTypeName; granted: boolean }) => ({
+            userId: user.id,
+            type: c.type,
+            granted: c.granted,
+            ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+            userAgent: request.headers.get("user-agent") ?? null,
+          })),
+        );
+      } catch (error) {
+        if (error instanceof ConsentValidationError) {
+          return NextResponse.json({ error: error.message }, { status: 422 });
+        }
+        console.error("[AFTER_SIGNUP_CONSENT_ERROR]", error);
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+      }
+    }
 
     const updateData: Record<string, unknown> = {};
     
@@ -38,8 +83,13 @@ export async function POST(request: Request) {
       updateData.formationId = formationId;
     }
 
+    // Les consentements ont pu être enregistrés sans aucun champ de profil :
+    // dans ce cas on ne renvoie pas « aucune donnée à mettre à jour », qui
+    // ferait croire à un no-op alors que l'écriture a bien eu lieu.
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ message: "Aucune donnée à mettre à jour" });
+      return consents !== undefined
+        ? NextResponse.json({ message: "Consentements enregistrés" })
+        : NextResponse.json({ message: "Aucune donnée à mettre à jour" });
     }
 
     await prisma.user.update({

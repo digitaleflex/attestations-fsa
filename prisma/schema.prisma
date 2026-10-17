@@ -28,16 +28,16 @@ model Account {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  ipAddress String?
-  token     String   @unique
-  updatedAt DateTime @updatedAt
-  userAgent String?
+  id             String   @id @default(cuid())
+  userId         String
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+  ipAddress      String?
+  token          String   @unique
+  updatedAt      DateTime @updatedAt
+  userAgent      String?
   impersonatedBy String?
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -56,23 +56,23 @@ model Verification {
 }
 
 model User {
-  id                    String              @id @default(uuid())
-  name                  String?
-  email                 String?             @unique
-  emailVerified         DateTime?
-  image                 String?
-  password              String?
-  role                  String              @default("user")
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("user")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   // Admin Plugin Fields
-  banned                Boolean?
-  banReason             String?
-  banExpires            DateTime?
+  banned           Boolean?
+  banReason        String?
+  banExpires       DateTime?
   // Two-Factor Plugin Fields (better-auth twoFactor)
-  twoFactorEnabled      Boolean             @default(false)
-  
+  twoFactorEnabled Boolean   @default(false)
+
   address               String?
   birthDate             DateTime?
   birthPlace            String?
@@ -95,6 +95,7 @@ model User {
   sessions              Session[]
   twoFactor             TwoFactor[]
   storedObjects         StoredObject[]
+  consents              Consent[]
   exam                  Exam?               @relation(fields: [examId], references: [id])
   formation             Formation?          @relation(fields: [formationId], references: [id])
 
@@ -198,8 +199,8 @@ model Attestation {
   correctionRequests        CorrectionRequest[]
   reclamations              Reclamation[]
 
-  @@index([userId])
   @@unique([sessionId])
+  @@index([userId])
   @@index([status])
   @@index([userId, status])
   @@index([formationId])
@@ -236,36 +237,36 @@ model Report {
 }
 
 model Exam {
-  id                 String        @id @default(uuid())
+  id                 String           @id @default(uuid())
   title              String
   description        String?
-  status             ExamStatus    @default(DRAFT)
-  totalPoints        Int           @default(100)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  status             ExamStatus       @default(DRAFT)
+  totalPoints        Int              @default(100)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
   formationId        String?
-  duration           Int           @default(3600)
+  duration           Int              @default(3600)
   name               String
-  part1Enabled       Boolean       @default(true)
-  part1Points        Int           @default(20)
-  part1Questions     Int           @default(20)
-  part2Enabled       Boolean       @default(true)
-  part2Points        Int           @default(40)
-  part2Questions     Int           @default(5)
-  part3Enabled       Boolean       @default(true)
-  part3Mode          String        @default("digital")
-  part3Points        Int           @default(40)
+  part1Enabled       Boolean          @default(true)
+  part1Points        Int              @default(20)
+  part1Questions     Int              @default(20)
+  part2Enabled       Boolean          @default(true)
+  part2Points        Int              @default(40)
+  part2Questions     Int              @default(5)
+  part3Enabled       Boolean          @default(true)
+  part3Mode          String           @default("digital")
+  part3Points        Int              @default(40)
   part3Subject       String?
-  passingScore       Int           @default(65)
-  randomizeQuestions Boolean       @default(false)
-  showResults        Boolean       @default(false)
+  passingScore       Int              @default(65)
+  randomizeQuestions Boolean          @default(false)
+  showResults        Boolean          @default(false)
   // M9 — jour d'ouverture, minuit en APP_TIMEZONE, stocké en UTC (instant).
   // NULL = repli historique sur le jour local de `scheduledAt` (cf. lib/exams/time.ts).
   opensOn            DateTime?
   scheduledAt        DateTime?
   session            String?
-  formation          Formation?    @relation(fields: [formationId], references: [id])
-  type               ExamType      @default(OFFICIAL)
+  formation          Formation?       @relation(fields: [formationId], references: [id])
+  type               ExamType         @default(OFFICIAL)
   parts              ExamPart[]
   sessions           ExamSession[]
   users              User[]
@@ -313,42 +314,42 @@ model QuestionOption {
 }
 
 model ExamSession {
-  id          String            @id @default(uuid())
-  examId      String
-  userId      String
+  id              String        @id @default(uuid())
+  examId          String
+  userId          String
   // Statuts : PENDING, IN_PROGRESS, PENDING_REVIEW, GRADED, COMPLETED,
   // ARCHIVED (rétrogradation #301), EXPIRED (purge #318).
-  status      String            @default("PENDING")
-  scorePart1      Float @default(0) // raw Part 1 auto-grade (QCM)
+  status          String        @default("PENDING")
+  scorePart1      Float         @default(0) // raw Part 1 auto-grade (QCM)
   scorePart2      Float? // raw Part 2 admin-grade — null = partie non corrigée
   scorePart3      Float? // raw Part 3 admin-grade — null = partie non corrigée
-  score           Float @default(0) // legacy Part 1 score alias — prefer scorePart1
-  totalScore      Float @default(0) // somme brute des points (scorePart1+2+3) — pas de division par 5
-  internshipScore Float @default(0) // internship component score
-  finalScore      Float @default(0) // pourcentage examen 0..100 (totalScore / maxPoints * 100) — #124 : internshipScore est un composant SÉPARÉ (note de stage), il n'entre pas dans finalScore
-  gradedBy    String?
-  gradedAt    DateTime?
-  startedAt   DateTime          @default(now())
-  submittedAt DateTime?
-  updatedAt   DateTime          @updatedAt
-  answers     Json?             @default("{}")
-  observations String?          // notes de correction (texte riche)
+  score           Float         @default(0) // legacy Part 1 score alias — prefer scorePart1
+  totalScore      Float         @default(0) // somme brute des points (scorePart1+2+3) — pas de division par 5
+  internshipScore Float         @default(0) // internship component score
+  finalScore      Float         @default(0) // pourcentage examen 0..100 (totalScore / maxPoints * 100) — #124 : internshipScore est un composant SÉPARÉ (note de stage), il n'entre pas dans finalScore
+  gradedBy        String?
+  gradedAt        DateTime?
+  startedAt       DateTime      @default(now())
+  submittedAt     DateTime?
+  updatedAt       DateTime      @updatedAt
+  answers         Json?         @default("{}")
+  observations    String? // notes de correction (texte riche)
   // #301 — Une session probante n'est JAMAIS supprimée : la rétrogradation
   // l'ARCHIVE (statut `ARCHIVED` + horodatage + motif). `answers` reste
   // lisible, le journal d'examen reste reconstituable. `archivedById` est sans
   // clé étrangère pour que la trace survive à la suppression du compte admin.
-  archivedAt    DateTime?
-  archivedById  String?
-  archiveReason String?
+  archivedAt      DateTime?
+  archivedById    String?
+  archiveReason   String?
   // #318 — Expiration des sessions d'examen. `expiresAt` est posé à la
   // création (startedAt + durée de l'examen) ; le cron `lib/exams/cron-expire.ts`
   // bascule les sessions IN_PROGRESS dont l'échéance est atteinte vers le
   // statut EXPIRED. NULL = session héritée non expirable (repli historique).
-  expiresAt     DateTime?
-  reclamations Reclamation[]
-  type        ExamType          @default(OFFICIAL)
-  exam        Exam              @relation(fields: [examId], references: [id])
-  candidate   User              @relation(fields: [userId], references: [id])
+  expiresAt       DateTime?
+  reclamations    Reclamation[]
+  type            ExamType      @default(OFFICIAL)
+  exam            Exam          @relation(fields: [examId], references: [id])
+  candidate       User          @relation(fields: [userId], references: [id])
 
   @@unique([userId, examId])
   @@index([status])
@@ -496,24 +497,24 @@ model Contact {
 // Migration required: prisma migrate dev --name remove_legacy_models
 
 model Reclamation {
-  id            String        @id @default(uuid())
+  id            String       @id @default(uuid())
   userId        String
-  type          String        @default("RECLAMATION") // RECLAMATION | CORRECTION
+  type          String       @default("RECLAMATION") // RECLAMATION | CORRECTION
   submissionId  String?
   subject       String?
   message       String
-  status        String        @default("PENDING")
+  status        String       @default("PENDING")
   adminReply    String?
   attestationId String?
   field         String?
   oldValue      String?
   newValue      String?
   reason        String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  user          User          @relation(fields: [userId], references: [id])
-  submission    ExamSession?  @relation(fields: [submissionId], references: [id])
-  attestation   Attestation?  @relation(fields: [attestationId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation(fields: [userId], references: [id])
+  submission    ExamSession? @relation(fields: [submissionId], references: [id])
+  attestation   Attestation? @relation(fields: [attestationId], references: [id])
 
   @@index([userId])
   @@index([submissionId])
@@ -526,25 +527,66 @@ model Reclamation {
 // signée expirante. `ownerUserId` permet de vérifier la propriété avant toute
 // lecture ou suppression ; `purpose` interdit la suppression des PDF officiels.
 model StoredObject {
-  id         String   @id @default(uuid())
-  key        String   @unique
-  ownerUserId String?
-  purpose    String
+  id               String    @id @default(uuid())
+  key              String    @unique
+  ownerUserId      String?
+  purpose          String
   linkedEntityType String?
   linkedEntityId   String?
-  checksum   String
-  sizeBytes  Int?
-  contentType String?
+  checksum         String
+  sizeBytes        Int?
+  contentType      String?
   // Fin de conservation souhaitée (RGPD). NULL = conservation indéfinie.
-  retentionUntil DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  owner      User?    @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  retentionUntil   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  owner            User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
 
   @@index([ownerUserId])
   @@index([purpose, createdAt])
   @@index([linkedEntityType, linkedEntityId])
   @@index([retentionUntil])
+}
+
+// #153 — Trace des consentements (RGPD art. 7 « la personne doit pouvoir
+// retirer son consentement à tout moment », donc il faut prouver QUAND elle
+// l'a donné et QUAND elle l'a retiré, pas seulement l'afficher dans une
+// page).
+//
+// Une ligne par couple (utilisateur, type). Une révocation n'efface JAMAIS la
+// ligne : elle passe `granted = false` + `revokedAt`, sinon on détruirait la
+// preuve même du retrait. `documentVersion` fige la version des CGU acceptées
+// : accepter les CGU de mars ne vaut pas pour celles de septembre.
+model Consent {
+  id              String      @id @default(uuid())
+  userId          String
+  type            ConsentType
+  granted         Boolean     @default(true)
+  grantedAt       DateTime    @default(now())
+  revokedAt       DateTime?
+  // Version du document au moment de l'acceptation (ex. "cgu-2026-01").
+  documentVersion String
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([type, grantedAt])
+}
+
+enum ConsentType {
+  // Contrat d'utilisation — base : exécution du contrat
+  TERMS
+  // Politique de confidentialité
+  PRIVACY
+  // Traitement des données d'identité, examens et attestations
+  DATA_PROCESSING
+  // Transferts hors UE (Resend, Cloudflare R2, Upstash) — information explicite
+  THIRD_PARTY_TRANSFER
+  // Communications facultatives — seul consentement réellement révocable
+  MARKETING
 }
 
 enum AttestationStatus {
@@ -626,5 +668,3 @@ enum NotificationType {
   SUPPORT_REPLY
   GENERAL
 }
-
-

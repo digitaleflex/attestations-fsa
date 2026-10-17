@@ -59,6 +59,7 @@ export async function GET(request: Request) {
       notifications,
       auditTrail,
       storedObjects,
+      consents,
     ] = await Promise.all([
       // 1. Profil — liste blanche, `password` explicitement absent.
       prisma.user.findUnique({
@@ -279,6 +280,20 @@ export async function GET(request: Request) {
           createdAt: true,
         },
       }),
+      // #153 — Consentements : type, état, horodatage et version du document.
+      // L'IP et le user-agent ne sont pas exportés ici (déjà dans auditTrail),
+      // le dossier reste lisible par la personne.
+      prisma.consent.findMany({
+        where: { userId },
+        select: {
+          type: true,
+          granted: true,
+          grantedAt: true,
+          revokedAt: true,
+          documentVersion: true,
+        },
+        orderBy: { grantedAt: "desc" },
+      }),
     ]);
 
     if (!profile) {
@@ -317,6 +332,9 @@ export async function GET(request: Request) {
         notifications,
         auditTrail,
         storedObjects,
+        // #153 — Les consentements font partie du dossier de la personne :
+        // le RGPD impose de pouvoir les démontrer, donc ils sont exportables.
+        consents,
       },
       {
         status: 200,

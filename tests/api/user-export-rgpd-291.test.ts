@@ -61,6 +61,8 @@ const db = vi.hoisted(() => ({
   auditLogFindMany: vi.fn(),
   storedObjectFindMany: vi.fn(),
   twoFactorFindMany: vi.fn(),
+  // #153 — les consentements figurent dans le dossier exportable.
+  consentFindMany: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -75,6 +77,7 @@ vi.mock("@/lib/prisma", () => ({
     notification: { findMany: db.notificationFindMany },
     auditLog: { findMany: db.auditLogFindMany },
     storedObject: { findMany: db.storedObjectFindMany },
+    consent: { findMany: db.consentFindMany },
     // Délégués PIÈGE : la route ne doit JAMAIS les lire.
     twoFactor: { findMany: db.twoFactorFindMany },
     session: { findMany: vi.fn() },
@@ -199,6 +202,26 @@ const FULL_STORED_OBJECT = {
   updatedAt: new Date("2026-09-01T00:10:00.000Z"),
 };
 
+// #153 — Consentements du titulaire (RGPD art. 7 : doivent être démontrables).
+const FULL_CONSENTS = [
+  {
+    userId: "user-1",
+    type: "TERMS",
+    granted: true,
+    grantedAt: new Date("2026-01-05T10:00:00.000Z"),
+    revokedAt: null,
+    documentVersion: "2026-01",
+  },
+  {
+    userId: "user-1",
+    type: "MARKETING",
+    granted: false,
+    grantedAt: new Date("2026-01-05T10:00:00.000Z"),
+    revokedAt: new Date("2026-02-01T08:00:00.000Z"),
+    documentVersion: "2026-01",
+  },
+];
+
 const FULL_INTERNSHIP = {
   id: "int-1",
   fullName: "Awa Diallo",
@@ -239,6 +262,7 @@ const scopedDelegates = () => [
   db.notificationFindMany,
   db.auditLogFindMany,
   db.storedObjectFindMany,
+  db.consentFindMany,
 ];
 
 beforeEach(() => {
@@ -260,6 +284,11 @@ beforeEach(() => {
   db.storedObjectFindMany.mockImplementation(
     async (args: { where: Row; select?: Record<string, boolean> }) =>
       projectedFindMany([FULL_STORED_OBJECT], args.where, args.select) as never,
+  );
+  // #153
+  db.consentFindMany.mockImplementation(
+    async (args: { where: Row; select?: Record<string, boolean> }) =>
+      projectedFindMany(FULL_CONSENTS, args.where, args.select) as never,
   );
   db.internshipRequestFindMany.mockImplementation(
     async (args: { where: Row; select?: Record<string, boolean> }) =>
@@ -322,6 +351,16 @@ describe("GET /api/user/export — export RGPD (#291)", () => {
     // Les liens vers les documents de l'intéressé sortent, sans leur clé.
     expect(payload.storedObjects).toHaveLength(1);
     expect(payload.storedObjects[0]).toMatchObject({ purpose: "ATTESTATION_PDF" });
+    // #153 — Les consentements, accords ET retraits, sortent du dossier :
+    // le RGPD impose de pouvoir les démontrer.
+    expect(payload.consents).toHaveLength(2);
+    expect(payload.consents).toContainEqual(
+      expect.objectContaining({ type: "TERMS", granted: true, documentVersion: "2026-01" }),
+    );
+    // Le retrait de MARKETING est exportable avec sa date.
+    expect(payload.consents).toContainEqual(
+      expect.objectContaining({ type: "MARKETING", granted: false }),
+    );
     // Les demandes de stage du compte sortent, sans les clés de CV.
     expect(payload.internshipRequests).toHaveLength(1);
     for (const section of [
