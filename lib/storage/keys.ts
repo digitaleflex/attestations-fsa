@@ -45,6 +45,22 @@ export const IMMUTABLE_PURPOSES: ReadonlySet<StoragePurpose> = new Set<StoragePu
   "attestation",
 ]);
 
+/**
+ * Durée de conservation des objets NON probants (tout sauf `attestation`).
+ *
+ * Source UNIQUE, volontairement ici et non dans une route : cette valeur
+ * était définie localement dans `app/api/upload/route.ts` puis oubliée dans
+ * `app/api/public/internships/route.ts`, qui enregistrait donc les CV de
+ * stage avec `retentionUntil = null` — soit « conservation indéfinie » — et
+ * échappait au cron de purge. Deux chemins d'écriture, une seule politique :
+ * la constante doit vivre à côté de la politique qu'elle implémente
+ * (`docs/legal/retention-policy.md`), pas dans l'un des appelants.
+ *
+ * Les pièces probantes (`attestation`) n'ont pas de date d'échéance : voir
+ * `IMMUTABLE_PURPOSES` et `docs/legal/retention-policy.md`.
+ */
+export const DEFAULT_RETENTION_DAYS = 365;
+
 export function isStoragePurpose(value: unknown): value is StoragePurpose {
   return typeof value === "string" && (STORAGE_PURPOSES as readonly string[]).includes(value);
 }

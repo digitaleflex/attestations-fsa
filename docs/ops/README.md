@@ -14,6 +14,8 @@ Runbooks, procédures et checklists d'exploitation. Issue [#152] (EPIC #148, M8)
 |---|---|
 | **C'est en panne, MAINTENANT** | [`runbook-incident.md`](runbook-incident.md) — triage P0/P1 en tête de document |
 | Je dois déployer / redéployer | [`procedures.md`](procedures.md) § Déploiement |
+| Je veux valider une migration avant la prod | [`staging-procedure.md`](staging-procedure.md) — staging isole et jetable |
+| Je dois comprendre le rollback (ou pourquoi il n'y en a pas d'automatique) | [`staging-procedure.md`](staging-procedure.md) § 6 |
 | Le dernier deploy a cassé quelque chose | [`procedures.md`](procedures.md) § Rollback |
 | Je dois couper le service (maintenance) | [`procedures.md`](procedures.md) § Maintenance / dégradation |
 | Un secret a fuité / doute de fuite | [`runbook-incident.md`](runbook-incident.md) § Incident 3, puis [`procedures.md`](procedures.md) § Rotation de secrets |

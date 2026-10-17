@@ -66,6 +66,18 @@ export class S3StorageDriver implements StorageDriver {
         Key: assertSafeKey(key),
         Body: body,
         ContentType: contentType,
+        // #153 — Chiffrement au repos demande explicitement (SSE-S3, clés
+        // gérées par le fournisseur).
+        //
+        // Pourquoi ici et pas dans l'application : les lectures passent par des
+        // URL SIGNÉES, donc le client récupère les octets DIRECTEMENT du
+        // object store. Un chiffrement applicatif lui servirait du chiffré
+        // au lieu du PDF — il faudrait router les lectures par l'application
+        // (perte des URL signées, coût CPU, complexification). Cloudflare R2
+        // chiffre ses objets au repos, mais le demander explicitement rend la
+        // garantie visible dans le code et la protège si le backend change
+        // (un MinIO ou un S3 mal configuré ne chiffreraient rien).
+        ServerSideEncryption: "AES256",
       })
     );
   }

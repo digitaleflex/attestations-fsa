@@ -4,7 +4,7 @@ import { emailService } from '@/lib/email';
 import { applyRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/sanitization';
 import { notifyAllAdmins } from '@/lib/notifications';
-import { DEFAULT_READ_URL_TTL_SECONDS, buildObjectKey, getStorage, validateUpload } from '@/lib/storage';
+import { DEFAULT_READ_URL_TTL_SECONDS, DEFAULT_RETENTION_DAYS, buildObjectKey, getStorage, validateUpload } from '@/lib/storage';
 import { StorageConfigError } from '@/lib/storage/types';
 import { computeChecksum, registerStoredObject } from '@/lib/storage/registry';
 import { z } from 'zod';
@@ -130,6 +130,15 @@ export async function POST(request: NextRequest) {
       checksum,
       sizeBytes: bytes.length,
       contentType: validation.mime,
+      // #153 : un CV de stage n'est PAS une pièce probante (seul `attestation`
+      // l'est, cf. IMMUTABLE_PURPOSES). Sans cette ligne, `registry.ts` retombe
+      // sur `?? null`, donc `retentionUntil` NULL = « conservation indéfinie »
+      // et le cron de purge (`lib/jobs/retention-purge.ts`) ignore la ligne.
+      // Résultat constaté en production : les CV de stage s'accumulaient
+      // indéfiniment, en violation de `docs/legal/retention-policy.md` qui
+      // leur fixe 365 jours. Le chemin `app/api/upload/route.ts:129` posait
+      // déjà la bonne valeur — celui-ci avait été oublié.
+      retentionUntil: new Date(Date.now() + DEFAULT_RETENTION_DAYS * 24 * 60 * 60 * 1000),
     });
 
     // URL de lecture courte, régénérée à la demande par l'admin.

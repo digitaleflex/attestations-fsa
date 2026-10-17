@@ -90,3 +90,26 @@ describe("bucket privé (#260)", () => {
     );
   });
 });
+
+describe("chiffrement au repos (#153)", () => {
+  it("demande explicitement le chiffrement serveur (SSE-S3) à chaque écriture", async () => {
+    // Sans cet en-tête, la garantie de chiffrement au repos repose entièrement
+    // sur la configuration du fournisseur : un MinIO ou un S3 en local
+    // stockeraient alors les CV et les scans en clair. Le rendre explicite
+    // protège si le backend change.
+    await makeDriver().put("cv/a.pdf", Buffer.from("x"), "application/pdf");
+
+    expect(commands.sent).toHaveLength(1);
+    const input = (commands.sent[0] as { input: Record<string, unknown> }).input;
+    expect(input.ServerSideEncryption).toBe("AES256");
+    expect(input.Bucket).toBe("fsa-private");
+    expect(input.Key).toBe("cv/a.pdf");
+  });
+
+  it("chiffre aussi les pièces probantes (attestations) — aucune exception", async () => {
+    await makeDriver().put("attestations/att-1.pdf", Buffer.from("x"), "application/pdf");
+
+    const input = (commands.sent[0] as { input: Record<string, unknown> }).input;
+    expect(input.ServerSideEncryption).toBe("AES256");
+  });
+});

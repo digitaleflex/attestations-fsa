@@ -29,6 +29,7 @@ export {
   MAX_READ_URL_TTL_SECONDS,
   PURPOSE_PREFIX,
   STORAGE_PURPOSES,
+  DEFAULT_RETENTION_DAYS,
   buildObjectKey,
   isOfficialObjectKey,
   isStoragePurpose,

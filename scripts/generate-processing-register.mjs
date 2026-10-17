@@ -278,11 +278,19 @@ service aux candidats (cf. #153).
 - **OTP et codes de secours 2FA** : chiffrés en production (\`storeOTP\` /
   \`storeBackupCodes\` = \`encrypted\`, \`lib/auth.ts\`).
 - **Mots de passe** : hachés par Better Auth, jamais stockés en clair.
-- **Fichiers déposés (CV, scans)** : **non chiffrés au repos**. Seul un SHA-256
-  d'\`intégrité\` est calculé (\`lib/storage/registry.ts\`, \`computeChecksum\`).
-  Le chiffrement de l'\`at rest\` est identifié comme un besoin mais **n'est pas
-  implémenté** : il exigerait de migrer les objets déjà stockés, donc il est
-  traité séparément et non dans le cadre de #153.
+- **Fichiers déposés (CV, scans)** : **chiffrés au repos**. Le driver S3/R2
+  demande explicitement un chiffrement serveur à chaque écriture
+  (\`ServerSideEncryption: "AES256"\`, \`lib/storage/s3-driver.ts\`), en plus du
+  chiffrement que le fournisseur applique par défaut. Un SHA-256 d'\`intégrité\`
+  est également calculé et stocké (\`computeChecksum\`,
+  \`lib/storage/registry.ts\`).
+  *Pourquoi côté fournisseur et pas dans l'application* : les lectures passent
+  par des URL signées, donc le client récupère les octets directement du object
+  store. Un chiffrement applicatif lui servirait du chiffré au lieu du PDF.
+- **Disque local du VPS** : les volumes d'uploads et les dumps de sauvegarde
+  locaux ne sont **pas** chiffrés au repos ; ils sont protégés par
+  \`chmod 600\` et les copies hors site le sont par \`age\`
+  (\`scripts/vps-pre-deploy-backup.sh\`).
 
 ## Droits des personnes
 
@@ -299,9 +307,12 @@ ${unknownHtml}
 
 ## Ce qui reste à faire (cf. #153)
 
-1. **Chiffrement des fichiers déposés au repos** — non implémenté, exigerait une
-   migration des objets existants ; traité hors périmètre de #153.
-2. **Levée de la réserve sur les transferts hors UE** (Cloudflare R2, Upstash).
+1. **Levée de la réserve sur les transferts hors UE** (Cloudflare R2, Upstash) —
+   cadre contractuel à confirmer, hors code.
+2. **Chiffrement du disque local du VPS** — les volumes d'uploads et les dumps
+   locaux ne sont pas chiffrés au repos (protégés par \`chmod 600\`, et par
+   \`age\` pour les copies hors site). À traiter comme une opération de
+   migration, pas comme un correctif.
 3. **Cases à cocher dans l'interface** — la table \`Consent\` et l'API
    \`/api/user/consent\` existent, mais les cases du parcours d'inscription ne
    sont pas encore câblées côté client : les consentements ne sont donc pas

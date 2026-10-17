@@ -5,6 +5,15 @@ set -euo pipefail
 # .env.production sont locaux, ignorés par git et donc invisibles ici)
 ALLOWED=(
   .env.example
+  # `.env.test` est volontairement SUIVI par git (exception `!.env.test` dans
+  # .gitignore) : il porte la configuration de la base de test E2E, sans
+  # secret reel — les identifiants y sont factices.
+  #
+  # Son absence dans cette liste rendait le job `env-guard` ROUGE a chaque push
+  # (verifie sur les 6 derniers runs du workflow). Un garde permanentement rouge
+  # est pire qu'aucun garde : l'equipe apprend a l'ignorer, donc a ignorer
+  # aussi le cas ou il bloque vraiment un secret.
+  .env.test
 )
 
 # Pattern strict : .env.local, .env.example, .env.production

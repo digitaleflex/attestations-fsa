@@ -3,6 +3,7 @@ import { getAdminUser, getCurrentUser } from "@/lib/auth";
 import { applyByteQuotaByUser, applyRateLimit } from "@/lib/rate-limit";
 import {
   DEFAULT_READ_URL_TTL_SECONDS,
+  DEFAULT_RETENTION_DAYS,
   buildObjectKey,
   getStorage,
   isStoragePurpose,
@@ -185,8 +186,6 @@ export async function DELETE(request: NextRequest) {
     return storageErrorResponse(error, "[UPLOAD_DELETE_ERROR]", "Erreur lors de la suppression");
   }
 }
-
-const DEFAULT_RETENTION_DAYS = 365;
 
 function storageErrorResponse(error: unknown, logTag: string, message: string) {
   if (error instanceof StorageConfigError) {
