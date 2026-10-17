@@ -16,6 +16,12 @@ export default tseslint.config(
       // Rapport de couverture : fichiers GÉNÉRÉS (sinon le gate linter du
       // bruit : 2 warnings sur coverage/lcov-report/*.js après un run --coverage).
       "coverage/",
+      // Artefacts Playwright (générés, déjà gitignorés) : sans ces ignores,
+      // `eslint .` remonte ~3 300 erreurs sur playwright-report/trace/assets
+      // (bundles minifiés) et le gate `pnpm verify` casse en local.
+      "playwright-report/",
+      "test-results/",
+      "playwright/.cache/",
       // Copies locales du repo (worktrees) + sauvegardes : code dupliqué,
       // déjà ignoré par git via .git/info/exclude. Linter une copie gaspille
       // du temps et peut remonter des faux positifs. Sans ".worktrees/**",

@@ -11,13 +11,11 @@
 // ── Interface minimale compatible ────────────────────────────────────────────
 
 export interface RedisClient {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get(key: string): Promise<any>;
   set(key: string, value: string, ...args: unknown[]): Promise<unknown>;
   del(key: string): Promise<unknown>;
   ping(): Promise<string>;
   eval(script: string, keys: string[], args: unknown[]): Promise<unknown>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   evalsha(sha: string, keys: string[], args: unknown[]): Promise<any>;
   incr(key: string): Promise<number>;
   incrby(key: string, increment: number): Promise<number>;
@@ -28,18 +26,15 @@ export interface RedisClient {
 // ── Client Upstash HTTP ──────────────────────────────────────────────────────
 
 function createUpstashClient(url: string, token: string): RedisClient {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Redis } = require("@upstash/redis") as typeof import("@upstash/redis");
   // Cast nécessaire : @upstash/ratelimit attend le type Redis natif,
   // pas notre interface simplifiée.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new Redis({ url, token }) as any;
 }
 
 // ── Client ioredis natif ─────────────────────────────────────────────────────
 
 function createNativeClient(): RedisClient {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Redis = require("ioredis") as typeof import("ioredis").default;
   const client = new Redis({
     host: process.env.REDIS_HOST || "127.0.0.1",
@@ -55,7 +50,6 @@ function createNativeClient(): RedisClient {
   // Adapter ioredis vers l'interface RedisClient
   return {
     get: (key: string) => client.get(key),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     set: (key: string, value: string, ...args: unknown[]) => client.set(key, value, ...(args as any[])),
     del: (key: string) => client.del(key),
     ping: () => client.ping(),

@@ -34,10 +34,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # `awscli` n'existe plus dans les dépôts Ubuntu 24.04 des runners
+      # GitHub (paquet retiré) -> apt-get échoue et le job tombe avant les
+      # contrôles R2. On installe awscli v2 via pipx et `jq` via apt (#370).
       - name: Install awscli + jq
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq awscli jq
+          sudo apt-get install -y -qq jq
+          pipx install awscli || python3 -m pip install --user --quiet awscli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          aws --version
+          jq --version
 
       - name: Configure AWS profile for R2
         run: |
@@ -83,18 +90,24 @@ jobs:
     permissions:
       issues: write
     steps:
+      # Ce job ne fait pas de checkout : sans dépôt git, `gh` échoue avec
+      # "not a git repository" et l'issue d'alerte n'est jamais créée (#371).
+      # On passe donc explicitement --repo à toutes les commandes gh.
       - name: Create or comment backup-alert issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+          REPO="$GITHUB_REPOSITORY"
           DATE="$(date -u +%Y-%m-%d)"
           TITLE="[backup-alert] Echec monitoring sauvegardes $DATE"
-          BODY="Alerte backup-monitoring du $DATE (UTC) : au moins un controle a echoue (fraicheur/versioning R2 ou /api/ready). Run : $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Runbook : docs/ops/backup-monitoring.md."
-          gh label create backup-alert --color B60205 --description "Alerte automatique du monitoring sauvegardes/R2" 2>/dev/null || true
-          OPEN_COUNT="$(gh issue list --label backup-alert --state open --json number --jq 'length')"
+          BODY="Alerte backup-monitoring du $DATE (UTC) : au moins un controle a echoue (fraicheur/versioning R2 ou /api/ready). Run : $GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID. Runbook : docs/ops/backup-monitoring.md."
+          gh label create backup-alert --color B60205 --description "Alerte automatique du monitoring sauvegardes/R2" --repo "$REPO" 2>/dev/null || true
+          OPEN_COUNT="$(gh issue list --label backup-alert --state open --json number --repo "$REPO" --jq 'length')"
           if [ "$OPEN_COUNT" -gt 0 ]; then
-            NUM="$(gh issue list --label backup-alert --state open --json number --jq '.[0].number')"
-            gh issue comment "$NUM" --body "$BODY"
+            NUM="$(gh issue list --label backup-alert --state open --json number --repo "$REPO" --jq '.[0].number')"
+            gh issue comment "$NUM" --body "$BODY" --repo "$REPO"
+            echo "Commentaire depose sur l'issue #${NUM}"
           else
-            gh issue create --title "$TITLE" --label backup-alert --body "$BODY"
+            gh issue create --title "$TITLE" --label backup-alert --body "$BODY" --repo "$REPO"
           fi
