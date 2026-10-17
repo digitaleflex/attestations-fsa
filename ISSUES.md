@@ -117,10 +117,18 @@ en interne par **#295 (fermée)** : cron quotidien `backup-monitor.yml`
 `backup-alert` + runbook `docs/ops/backup-monitoring.md`.
 Les endpoints `/api/health` et `/api/ready` sont **conservés**.
 
-### 🟠 Ouvertes (3 restantes)
+### ✅ #159 fermée — les 10 décisions bloquantes sont tranchées
+2FA optionnel, dark mode abandonné, features fantômes supprimées, feedback
+fusionné de 4 à 2, transcript et scans supprimés, `internshipScore` exclu,
+CSRF/BotID retiré. Chacune appliquée **dans le code**, pas seulement annoncée.
+
+**#74 (2FA) — DÉCISION 2026-10-17 : développé mais NON activé par défaut.**
+`requireTwoFactor` volontairement absent de `lib/auth.ts:359`. Risque assumé
+et documenté dans le code. Inversion = `requireTwoFactor: true`.
+
+### 🟠 Ouvertes (2 restantes)
 - **#153** conformité données personnelles (rétention, effacement, chiffrement)
 - **#156** environnement de staging + migrations/rollback
-- **#159** trancher les décisions bloquantes
 
 ## ✅ Dette historique résolue (EPIC #78 & divers)
 
@@ -141,14 +149,14 @@ Les endpoints `/api/health` et `/api/ready` sont **conservés**.
 ## 📌 État du repo au 2026-10-17
 
 - **Gate** : `pnpm verify` vert — `tsc` 0 erreur, `eslint` 0 erreur / 0 warning, **1 535 tests** (144 fichiers).
-- **Issues ouvertes restantes : 41** (backlog produit légitime), dont 2 EPIC de suivi ouverts
+- **Issues ouvertes restantes : 39** (backlog produit légitime), dont 2 EPIC de suivi ouverts
   (#131 qualité, #148 production) et le plan de remédiation #323.
 - **Hors périmètre (décision produit)** : Sentry + uptime externe (#151), sans impact code.
 
 ## Prochaines actions
 
-1. **P0 production** : #153 (RGPD), #156 (staging), #159 (décisions bloquantes) — EPIC #148
-   (Sentry/uptime retiré du périmètre — cf. #151)
+1. **P0 production** : #153 (RGPD), #156 (staging) — EPIC #148
+   (Sentry/uptime hors périmètre cf. #151 ; décisions tranchées cf. #159)
 2. **Qualité** : #138, #140, #141 — EPIC #131
 3. **Backlog UX/produit** : #335–#361 (formations, auth V2, mobile, SEO, prod, légal)
 4. **Docs** : #297 — réconcilier la documentation avec le produit réel
