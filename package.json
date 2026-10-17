@@ -27,6 +27,7 @@
     "postinstall": "prisma generate",
     "test:coverage": "vitest run --coverage",
     "test:r2-scripts": "bash scripts/tests/test-r2-scripts.sh",
+    "drill:restore": "bash scripts/restore-drill.sh",
     "check:migrations": "node scripts/check-destructive-migrations.mjs",
     "verify": "tsc --noEmit && eslint . && vitest run && node scripts/check-destructive-migrations.mjs",
     "e2e:db:up": "docker compose -f compose.local.yml up -d postgres-e2e",

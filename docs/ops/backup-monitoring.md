@@ -75,7 +75,39 @@ ils vivent dans les secrets GitHub (CI) et `~/.config/attestations-fsa/backup.en
    Tant qu'elle reste ouverte, les runs suivants commentent au lieu de
    rouvrir (anti-spam).
 
-## 4. Uptime externe recommandé
+## 4. Exercice de restauration — à passer réellement
+
+> Un plan de restauration peut être parfait et le backup inutilisable : dump
+> tronqué, index corrompu, données à moitié revenues. Tant que personne n'a
+> restauré **pour de vrai**, le filet de sécurité est une hypothèse, pas un
+> fait.
+
+```bash
+pnpm drill:restore
+```
+
+`scripts/restore-drill.sh` monte un PostgreSQL jetable, y crée le **schéma
+réel** de l'application, injecte 1 500 lignes de contrôle, fait un `pg_dump`,
+restaure réellement, puis **compare table par table** (nombre de lignes ET
+empreinte md5 du contenu des utilisateurs). Aucune donnée réelle n'est
+requisée et la production n'est jamais touchée.
+
+Le script se termine par un **cas négatif** : il tronque volontairement un
+dump et vérifie que `pg_restore` le refuse. Un test de restauration qui ne
+sait pas détecter la corruption ne prouve rien.
+
+Durée : ~30 s. À passer **avant toute mise en production**, puis à_INTERVALLE
+régulier (recommandation : à chaque changement de schéma, donc à chaque
+migration).
+
+Sortie attendue : `EXERCICE COMPLET — restauration fidèle ET corruption
+détectée.`
+
+> `scripts/verify-backup-restore.ts` reste le pendant « sans risque » : il
+> produit un plan vers une base `fsa_restore_*` et n'exécute rien. L'exercice
+> ci-dessus va plus loin mais reste confiné à une base qu'il crée et supprime.
+
+## 5. Uptime externe recommandé
 
 Le workflow GitHub ne remplace pas une sonde externe (fréquence, réseau
 indépendant). `TODO(humain)` — créer le compte et le monitor côté humain :
