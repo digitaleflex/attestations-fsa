@@ -1,0 +1,46 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+
+  "entry": [
+    "app/**/{page,layout,route,error,loading,not-found,default,template}.{ts,tsx}",
+    "app/api/**/route.ts",
+    "proxy.ts",
+    "next.config.mjs",
+    "scripts/**/*.{ts,mjs}",
+    "e2e/**/*.e2e.ts",
+    "e2e/**/*.{ts,mjs}",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ],
+
+  "project": ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "hooks/**/*.{ts,tsx}", "types/**/*.ts"],
+
+  "ignore": [
+    ".worktrees/**",
+    ".kilo/**",
+    "Backup/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**"
+  ],
+
+  "ignoreDependencies": [
+    "@types/webpack",
+    "webpack",
+    "tailwindcss",
+    "tailwindcss-animate"
+  ],
+
+  "rules": {
+    "files": "off",
+    "dependencies": "error",
+    "unlisted": "error",
+    "binaries": "off",
+    "exports": "off",
+    "types": "off",
+    "duplicates": "off",
+    "classMembers": "off"
+  },
+
+  "ignoreExportsUsedInFile": true
+}
