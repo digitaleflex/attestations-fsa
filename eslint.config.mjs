@@ -3,6 +3,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import jsxA11y from "eslint-plugin-jsx-a11y";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   { 
@@ -112,6 +113,38 @@ export default tseslint.config(
     rules: {
       ...jsxA11y.flatConfigs.recommended.rules,
       "jsx-a11y/no-autofocus": "error",
+    },
+  },
+  // Regles des hooks React — plugin installe mais jusqu'ici JAMAIS branche :
+  // les hooks n'etaient donc verifies par aucun lint, seulement a la relecture.
+  //
+  // Deux niveaux de severite, volontairement distincts :
+  //
+  // 1. `rules-of-hooks` en ERROR — un hook appele conditionnellement, ou dans
+  //    une boucle, viole l'ordre des hooks et provoque des crashs React
+  //    imprevisibles (et des violations de hooks en mode strict). C'est la
+  //    classe de bug qui fait crasher la production ; elle doit bloquer.
+  //    Verifie a l'activation : ZERO violation existante.
+  //
+  // 2. `exhaustive-deps` en WARN — dependances manquantes dans un tableau de
+  //    deps. Sur ce depot, les 6 avertissements restants portent sur des
+  //    effets de SYNCHRONISATION (lecture de searchParams, fetch au montage) :
+  //    y ajouter la dependance reboucle l'effet et casse le comportement.
+  //    Exemple reel : `app/admin/attestations/page.tsx` synchronise les
+  //    filtres avec l'URL ; dependre de `search` le ferait reinitialiser le
+  //    champ de recherche a chaque frappe. Le couplage est donc DELIBERE.
+  //
+  //    Reste en `warn` : elle bloque le gate (`eslint .` ne sort en erreur que
+  //    sur les erreurs, pas les avertissements), donc elle alerte sans casser
+  //    la CI, et elle documente les 6 cas au lieu de les laisser passer
+  //    inaperces.
+  {
+    files: ["**/*.{ts,tsx}"],
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   }
 );
