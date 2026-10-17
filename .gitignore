@@ -81,5 +81,10 @@ package-lock.json
 # Rapports d'intégrité et d'inventaire générés localement
 /reports/
 
+# Traceurs d'outils locaux abandonnés (node_modules embarqués, ~58 Mo).
+# Aucun script, workflow ou cron du dépôt ne les référence.
+# NB: `.cursor/` est volontairement SUIVI (rules/codacy.mdc) — ne pas l'ignorer.
+/.mimocode/
+
 # Worktrees isolés pour les lots de développement
 /.worktrees/
