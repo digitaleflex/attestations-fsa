@@ -356,6 +356,21 @@ export const auth = betterAuth({
           : []),
       ],
     }),
+    // ─────────────────────────────────────────────────────────────────
+    // DÉCISION PRODUIT (2026-10-17, issue #74) : 2FA DÉVELOPPÉ mais NON
+    // ACTIVÉ PAR DÉFAUT.
+    //
+    // `requireTwoFactor` est volontairement ABSENT : le second facteur
+    // reste optionnel, chaque admin l'active depuis /admin/2fa/setup ou
+    // son profil. Risque assumé : un compte admin sans 2FA se connecte
+    // avec son seul mot de passe, sur une surface large (32 routes API
+    // admin, attestations officielles, correction d'examens).
+    //
+    // Pour inverser la décision : ajouter `requireTwoFactor: true` ici.
+    // Better Auth gère alors l'enforcement complet. Ne pas le poser sans
+    // avoir vérifié que tous les admins existants ont un 2FA configuré,
+    // sinon ils se verrouillent hors de leur session.
+    // ─────────────────────────────────────────────────────────────────
     twoFactor({
       issuer: "Ferme Agro-Piscicole Cité St André",
       totpOptions: {
