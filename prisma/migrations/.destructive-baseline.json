@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Migrations DESTRUCTIVES deja APPLIQUEES en base. Le garde-fou",
+    "scripts/check-destructive-migrations.mjs les ignore : il protege",
+    "l'AVENIR, il ne rejoue pas le passe.",
+    "",
+    "Ne pas y ajouter une migration pour contourner le controle :",
+    "chaque entree est une decision consciente. La justification est",
+    "obligeatoire pour que la revue puisse la contester."
+  ],
+  "accepted": {
+    "20260910_sync_schema": {
+      "reason": "Nettoyage des colonnes OAuth legacy (access_token, expires_at, id_token, provider, ...) migrees vers le model Account de Better Auth. Aucune donnee metier concernee."
+    },
+    "20260924_drop_legacy_scans_portfolio_org": {
+      "reason": "Retrait des colonnes du module Portfolio/Organisation supprime du produit le 2026-06-22 (960852f). Champs non porteurs de donnees de reference."
+    },
+    "20261007000000_remove_legacy_user_columns": {
+      "reason": "Suppression des colonnes User dupliquees (attestationCode, attestationStatus, blockedReason, lastBlockedAt) au profit des tables dediees Attestation/ExamSession. Migration precedee de la copie des valeurs (cf. scripts/unify-roles.sql et la migration de liaison attestation/session)."
+    }
+  },
+  "_verifications": [
+    "20260928_exam_opens_on et 20261007_exam_session_expires_at apparaissent",
+    "dans une recherche naive par 'TRUNCATE', mais l'occurrence est un",
+    "COMMENTAIRE de la migration elle-meme qui dit explicitement",
+    "'aucun DROP, aucun TRUNCATE, aucun UPDATE massif'. Le controle ignore",
+    "les commentaires SQL : ces deux migrations sont propres et n'ont pas",
+    "besoin d'une entree de baseline."
+  ]
+}
