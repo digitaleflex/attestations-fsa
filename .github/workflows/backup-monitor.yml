@@ -32,7 +32,7 @@ jobs:
       MAX_AGE_HOURS: "30"
       APP_URL: https://attestations.fermestandre.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # `awscli` n'existe plus dans les dépôts Ubuntu 24.04 des runners
       # GitHub (paquet retiré) -> apt-get échoue et le job tombe avant les
