@@ -67,7 +67,7 @@ jobs:
             5. Termine par un résumé en français : changements, fichiers touchés, tests, points d'attention.
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9.15.4
 
