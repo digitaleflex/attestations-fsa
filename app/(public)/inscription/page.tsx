@@ -86,16 +86,12 @@ const RESEND_COOLDOWN_SECONDS = 30;
 function ConsentCheckbox({
   id,
   checked,
-  required,
-  invalid,
   disabled,
   onChange,
   children,
 }: {
   id: string;
   checked: boolean;
-  required?: boolean;
-  invalid?: boolean;
   disabled?: boolean;
   onChange: (checked: boolean) => void;
   children: React.ReactNode;
@@ -104,10 +100,7 @@ function ConsentCheckbox({
     <label
       htmlFor={id}
       className={cn(
-        "flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-xs leading-relaxed transition-colors",
-        invalid
-          ? "border-red-300 bg-red-50/50"
-          : "border-slate-200 hover:bg-slate-50",
+        "flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 text-xs leading-relaxed transition-colors hover:bg-slate-50",
         disabled && "cursor-not-allowed opacity-70",
       )}
     >
@@ -115,19 +108,11 @@ function ConsentCheckbox({
         id={id}
         type="checkbox"
         checked={checked}
-        required={required}
-        aria-invalid={invalid || undefined}
-        aria-required={required || undefined}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
         className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand accent-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       />
-      <span className="text-slate-600">
-        {children}
-        {required && (
-          <span className="ml-1 font-semibold text-slate-500">(obligatoire)</span>
-        )}
-      </span>
+      <span className="text-slate-600">{children}</span>
     </label>
   );
 }
