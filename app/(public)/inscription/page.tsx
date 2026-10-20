@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { translateAuthError } from "@/lib/error-translator";
+import { buildRegistrationConsents } from "@/lib/consent-types";
 import {
   AuthLayout,
   AuthHeader,
@@ -72,6 +73,65 @@ const OtpSchema = z.object({
 const SUCCESS_REDIRECT = "/dashboard";
 const RESEND_COOLDOWN_SECONDS = 30;
 
+/**
+ * Case à cocher de consentement.
+ *
+ * Il n'existe qu'UN seul cas d'usage à l'inscription : le marketing. Les
+ * autres traitements (CGU, confidentialité, exécution du contrat) passent par
+ * le clic sur « Créer mon compte » — voir le bloc clickwrap dans le rendu.
+ *
+ * Composant local plutôt qu'importé : il n'y a pas de `Checkbox` dans
+ * `components/ui`, et cette case porte une sémantique légale propre.
+ */
+function ConsentCheckbox({
+  id,
+  checked,
+  required,
+  invalid,
+  disabled,
+  onChange,
+  children,
+}: {
+  id: string;
+  checked: boolean;
+  required?: boolean;
+  invalid?: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn(
+        "flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-xs leading-relaxed transition-colors",
+        invalid
+          ? "border-red-300 bg-red-50/50"
+          : "border-slate-200 hover:bg-slate-50",
+        disabled && "cursor-not-allowed opacity-70",
+      )}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        required={required}
+        aria-invalid={invalid || undefined}
+        aria-required={required || undefined}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand accent-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+      />
+      <span className="text-slate-600">
+        {children}
+        {required && (
+          <span className="ml-1 font-semibold text-slate-500">(obligatoire)</span>
+        )}
+      </span>
+    </label>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /*                                   Page                                     */
 /* -------------------------------------------------------------------------- */
@@ -94,6 +154,19 @@ export default function InscriptionPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // #153 — Consentement MARKETING uniquement.
+  //
+  // CGU, politique de confidentialité et traitement des données sont acceptés
+  // par le clic sur « Créer mon compte » (clickwrap) : ils reposent sur
+  // l'exécution du contrat (RGPD art. 6.1.b) et l'obligation d'information,
+  // pas sur un consentement libre et révocable. Aucune case obligatoire, donc
+  // aucun utilisateur bloqué à l'inscription.
+  //
+  // Le marketing, lui, EXIGE un consentement (art. 6.1.a) : case décochée par
+  // défaut, jamais pré-cochée (une case pré-cochée est invalide — CJUE
+  // Planet49).
+  const [marketingConsent, setMarketingConsent] = useState(false);
 
   // Étape 2
   const [otp, setOtp] = useState("");
@@ -337,6 +410,40 @@ export default function InscriptionPage() {
       });
 
       if (signInError) throw signInError;
+
+      // #153 — Enregistrement des consentements.
+      //
+      // La session n'existe qu'ici : `requireEmailVerification` est actif en
+      // production (`lib/auth.ts:293`), donc `signUp.email` ne crée pas de
+      // session, et `/api/user/after-signup` exige un utilisateur authentifié.
+      //
+      // Clickwrap : le clic sur « Créer mon compte » vaut acceptation des CGU,
+      // de la politique de confidentialité et du traitement des données. On
+      // écrit donc systématiquement ces trois lignes — c'est la preuve de
+      // l'acceptation, pas une case à cocher. `MARKETING` n'est envoyé que si
+      // la case a été cochée : envoyer `granted: false` pour un type non
+      // révocable ferait échouer tout le lot en 422 (`lib/consent.ts:162`),
+      // et l'absence de ligne vaut déjà refus côté `getConsentState`.
+      const grantedConsents = buildRegistrationConsents(marketingConsent);
+
+      try {
+        const consentResponse = await fetch("/api/user/after-signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ consents: grantedConsents }),
+        });
+        if (!consentResponse.ok) {
+          throw new Error(`HTTP ${consentResponse.status}`);
+        }
+      } catch (consentErr: unknown) {
+        // Le compte est créé et l'e-mail vérifié : bloquer la redirection
+        // laisserait la personne devant un écran mort, sans pouvoir réessayer
+        // (l'OTP est consommé). On trace l'échec de façon exploitable.
+        console.error("[SIGNUP_CONSENT_ERROR]", consentErr);
+        toast.error(
+          "Compte créé, mais l'enregistrement de vos consentements a échoué. Merci de le signaler au support.",
+        );
+      }
 
       toast.success("E-mail vérifié ! Connexion en cours...");
       setIsRedirecting(true);
@@ -606,27 +713,52 @@ export default function InscriptionPage() {
                 </div>
               </FormField>
 
-              <SubmitButton loading={loading} loadingLabel="Création...">
-                Créer mon compte
-              </SubmitButton>
+              {/* #153 — Clickwrap : le clic sur « Créer mon compte » vaut
+                  acceptation des CGU, de la politique de confidentialité et du
+                  traitement des données. Aucune case obligatoire, donc aucun
+                  utilisateur bloqué — l'acceptation est horodatée, versionnée
+                  et conservée côté serveur (IP + user-agent).
+
+                  Seul le marketing est une case, décochée par défaut : c'est
+                  le seul traitement qui repose sur le consentement (RGPD
+                  art. 6.1.a), et une case pré-cochée serait invalide. */}
+              <ConsentCheckbox
+                id="consent-marketing"
+                checked={marketingConsent}
+                disabled={loading}
+                onChange={setMarketingConsent}
+              >
+                Je souhaite recevoir des informations sur les formations et les
+                événements. Facultatif, révocable à tout moment depuis mon
+                compte.
+              </ConsentCheckbox>
 
               <p className="text-center text-xs leading-relaxed text-slate-500">
-                En créant un compte, vous acceptez nos{" "}
+                En cliquant sur « Créer mon compte », vous acceptez nos{" "}
                 <Link
                   href="/legal/cgu"
+                  target="_blank"
+                  rel="noreferrer"
                   className="font-semibold text-slate-700 underline underline-offset-2 hover:text-brand"
                 >
-                  conditions générales
+                  conditions générales d&apos;utilisation
                 </Link>{" "}
                 et notre{" "}
                 <Link
                   href="/legal/confidentialite"
+                  target="_blank"
+                  rel="noreferrer"
                   className="font-semibold text-slate-700 underline underline-offset-2 hover:text-brand"
                 >
                   politique de confidentialité
                 </Link>
-                .
+                , et vous acceptez le traitement de vos données pour la gestion
+                de votre compte, de votre formation et de vos attestations.
               </p>
+
+              <SubmitButton loading={loading} loadingLabel="Création...">
+                Créer mon compte
+              </SubmitButton>
             </form>
           ) : (
             /* ================= ÉTAPE 2 : VÉRIFICATION E-MAIL ================= */

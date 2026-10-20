@@ -3,7 +3,7 @@
 > **Généré automatiquement** par `scripts/generate-processing-register.mjs` — ne pas
 > éditer à la main. Source de vérité : `prisma/schema.prisma`.
 >
-> Obligation RGPD art. 30 / APDP Bénin. Généré le **2026-10-17** :
+> Obligation RGPD art. 30 / APDP Bénin. Généré le **2026-10-20** :
 > 23 tables classifiées.
 
 ## Comment lire ce registre
@@ -114,7 +114,8 @@ service aux candidats (cf. #153).
    locaux ne sont pas chiffrés au repos (protégés par `chmod 600`, et par
    `age` pour les copies hors site). À traiter comme une opération de
    migration, pas comme un correctif.
-3. **Cases à cocher dans l'interface** — la table `Consent` et l'API
-   `/api/user/consent` existent, mais les cases du parcours d'inscription ne
-   sont pas encore câblées côté client : les consentements ne sont donc pas
-   enregistrés en pratique tant que ce n'est pas fait.
+3. **Récupération des consentements pour les comptes créés avant #153** — les
+   inscriptions postérieures enregistrent désormais leur acceptation
+   (clickwrap sur `app/(public)/inscription/page.tsx`), mais les comptes
+   antérieurs n'ont aucune ligne `Consent`. Une reprise manuelle ou une
+   demande d'acceptation à la première connexion reste à décider.

@@ -29,48 +29,37 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { ConsentType, Prisma } from "@prisma/client";
-
-/** Types de consentement acceptés par l'API. */
-export const CONSENT_TYPES = [
-  "TERMS",
-  "PRIVACY",
-  "DATA_PROCESSING",
-  "THIRD_PARTY_TRANSFER",
-  "MARKETING",
-] as const satisfies readonly ConsentType[];
-
-export type ConsentTypeName = (typeof CONSENT_TYPES)[number];
+import type { Prisma } from "@prisma/client";
+import {
+  CONSENT_TYPES,
+  CURRENT_DOCUMENT_VERSION,
+  isConsentType,
+  isRevocable,
+  REQUIRED_CONSENTS,
+  type ConsentTypeName,
+} from "@/lib/consent-types";
 
 /**
- * Types exigés pour qu'un compte soit utilisable : sans ces trois
- * acceptations, le traitement n'a pas de base légale documentée.
+ * Les constantes vivent dans `lib/consent-types.ts`, sans dépendance runtime,
+ * pour être importables par le formulaire d'inscription (composant client).
+ * Réexportées ici afin que les appelants serveur n'aient qu'un seul point
+ * d'entrée.
  */
-export const REQUIRED_CONSENTS: readonly ConsentTypeName[] = [
-  "TERMS",
-  "PRIVACY",
-  "DATA_PROCESSING",
-];
-
-/** Seuls ceux-ci sont révocables par la personne (voir l'en-tête du module). */
-export const REVOCABLE_CONSENTS: readonly ConsentTypeName[] = ["MARKETING"];
-
-/** Version courante des documents acceptés. À bumped à chaque révision. */
-export const CURRENT_DOCUMENT_VERSION = "2026-01";
+export {
+  CONSENT_TYPES,
+  REQUIRED_CONSENTS,
+  REVOCABLE_CONSENTS,
+  CURRENT_DOCUMENT_VERSION,
+  isConsentType,
+  isRevocable,
+} from "@/lib/consent-types";
+export type { ConsentTypeName } from "@/lib/consent-types";
 
 export class ConsentValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ConsentValidationError";
   }
-}
-
-export function isConsentType(value: unknown): value is ConsentTypeName {
-  return typeof value === "string" && (CONSENT_TYPES as readonly string[]).includes(value);
-}
-
-export function isRevocable(type: ConsentTypeName): boolean {
-  return REVOCABLE_CONSENTS.includes(type);
 }
 
 /** Contexte de traçabilité, relevé côté requête HTTP. */
