@@ -126,9 +126,9 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # Migrator one-shot pour staging
+  # Migrator one-shot pour staging (image dédiée, voir `Dockerfile.migrator`)
   prisma-staging:
-    image: ghcr.io/digitaleflex/attestations-fsa:staging
+    image: ghcr.io/digitaleflex/attestations-fsa:${MIGRATOR_TAG:-migrator}
     container_name: attestations-fsa-prisma-staging
     environment:
       DATABASE_URL: postgresql://${STAGING_POSTGRES_USER:-attestation_fsa_staging_user}:${STAGING_POSTGRES_PASSWORD}@fsa-postgres-staging:5432/${STAGING_POSTGRES_DB:-attestation_fsa_staging}?sslmode=disable

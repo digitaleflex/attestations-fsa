@@ -96,6 +96,18 @@ jobs:
             NEXT_PUBLIC_PUSHER_KEY=${{ vars.NEXT_PUBLIC_PUSHER_KEY }}
             NEXT_PUBLIC_PUSHER_CLUSTER=${{ vars.NEXT_PUBLIC_PUSHER_CLUSTER }}
 
+      # Migrateur Prisma (image dédiée `Dockerfile.migrator`, sans secrets) :
+      # l'image applicative (standalone) ne contient pas la CLI Prisma.
+      - name: Build and push migrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.migrator
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:migrator
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   # ─────────────────────────────────────────────────────────────────────────
   # 2. DEPLOY STAGING — Déploie sur staging + migrations Prisma
   # ─────────────────────────────────────────────────────────────────────────

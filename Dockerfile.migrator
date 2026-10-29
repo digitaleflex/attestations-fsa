@@ -1,0 +1,33 @@
+# =====================================================================
+# MIGRATOR — FSA Attestations
+# Image minimale pour `prisma migrate deploy` (prod + staging).
+#
+# Pourquoi une image dédiée : l'image applicative est un build Next.js
+# "standalone" qui ne contient PAS la CLI Prisma. L'ancien montage
+# (`compose run prisma migrate deploy` sur l'image app) échouait avec
+# `Cannot find module '/app/migrate'` (constaté le 2026-10-29).
+#
+# Version de Prisma : synchronisée manuellement avec `package.json`
+# (`ARG PRISMA_VERSION`). Un écart mineur CLI/client est toléré par Prisma,
+# mais on évite les surprises en restant aligné.
+# =====================================================================
+FROM node:24-slim
+
+# OpenSSL requis par le moteur de schéma Prisma.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl \
+  && rm -rf /var/lib/apt/lists
+
+WORKDIR /migrator
+
+# Installation GLOBALE volontaire : on ne veut ni le `package.json` du projet
+# (dont l'arbre React 19 ferait échouer la résolution npm) ni ses dépendances.
+# Seule la CLI Prisma compte, versionnée par `ARG PRISMA_VERSION`.
+ARG PRISMA_VERSION=6.19.3
+RUN npm install --global --no-audit --no-fund prisma@${PRISMA_VERSION}
+
+# Schéma + historique des migrations (source de vérité).
+COPY prisma ./prisma
+
+ENTRYPOINT ["prisma"]
+CMD ["migrate", "deploy"]

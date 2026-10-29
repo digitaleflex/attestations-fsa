@@ -151,8 +151,10 @@ services:
 
   # Migrator one-shot : applique les migrations Prisma puis s'arrête.
   # Usage : docker compose -f compose.prod.yml --profile tools run --rm prisma migrate deploy
+  # Image dédiée (`Dockerfile.migrator`) : l'image applicative est un build
+  # Next.js standalone SANS la CLI Prisma (`Cannot find module '/app/migrate'`).
   prisma:
-    image: ghcr.io/digitaleflex/attestations-fsa:${IMAGE_TAG:-latest}
+    image: ghcr.io/digitaleflex/attestations-fsa:${MIGRATOR_TAG:-migrator}
     container_name: attestations-fsa-prisma-prod
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-attestation_fsa_user}:${POSTGRES_PASSWORD}@fsa-postgres:5432/${POSTGRES_DB:-attestation_fsa}?sslmode=disable
