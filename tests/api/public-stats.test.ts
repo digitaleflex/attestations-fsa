@@ -225,11 +225,26 @@ describe("GET /api/public/stats — aucune donnée d'exploitation (#315)", () =>
     db.attestationCount.mockResolvedValue(7 as never);
     db.userCount.mockResolvedValue(42 as never);
 
-    const raw = JSON.stringify(await (await callStats()).json());
+    const body = await (await callStats()).json();
 
-    expect(raw).toContain("7");
+    // ⚠️ On inspecte les VALEURS numériques, pas la chaîne JSON brute :
+    // `cachedAt` est un horodatage dont les millisecondes peuvent valoir
+    // `.423` — soit la sous-chaîne « 42 ». L'ancienne assertion
+    // `not.toContain("42")` échouait donc environ une fois sur mille
+    // (constaté en CI le 29/10/2026 à 13:47:08.423Z).
+    const numericLeaves: number[] = [];
+    const walk = (value: unknown) => {
+      if (typeof value === "number") numericLeaves.push(value);
+      else if (Array.isArray(value)) value.forEach(walk);
+      else if (value && typeof value === "object") {
+        Object.values(value).forEach(walk);
+      }
+    };
+    walk(body);
+
+    expect(numericLeaves).toContain(7);
     // 42 n'apparaît nulle part : c'est le nombre d'inscrits, jamais publié.
-    expect(raw).not.toContain("42");
+    expect(numericLeaves).not.toContain(42);
   });
 });
 
