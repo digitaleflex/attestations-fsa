@@ -28,7 +28,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=${TRAEFIK_NETWORK:-proxy}"
-      - "traefik.http.routers.fsa-app.rule=Host(`${TRAEFIK_HOST:-hashcode.cloud}`) || Host(`www.${TRAEFIK_HOST:-hashcode.cloud}`)"
+      - "traefik.http.routers.fsa-app.rule=Host(`attestations.fermestandre.com`)"
       - "traefik.http.routers.fsa-app.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.fsa-app.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
       - "traefik.http.services.fsa-app.loadbalancer.server.port=3000"
