@@ -2,7 +2,12 @@ import { createAuthClient } from "better-auth/react"
 import { adminClient, emailOTPClient, twoFactorClient } from "better-auth/client/plugins"
 
 export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"),
+    // Relatif volontairement : une URL absolue (NEXT_PUBLIC_APP_URL) casse
+    // tous les appels dès que l'origine du document diffère d'un caractère
+    // (point final, www, ancien domaine) — le CSP `connect-src 'self'`
+    // bloque alors get-session, sign-in, OTP... (constaté le 2026-10-29).
+    // En relatif, les requêtes partent toujours vers la même origine.
+    baseURL: "/api/auth",
     plugins: [
         adminClient(),
         emailOTPClient(),
