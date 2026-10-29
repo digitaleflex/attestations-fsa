@@ -52,7 +52,10 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
+      # Tag COURT unique (les `tags` de meta sont multilignes et cassaient
+      # la référence d'image : `...:tag1\ntag2` => `invalid reference format`
+      # constaté le 2026-10-29). Même format que meta (`short` = 7 car.).
+      image_tag: ${{ steps.tag.outputs.short }}
       image_digest: ${{ steps.build-push.outputs.digest }}
 
     steps:
@@ -79,6 +82,12 @@ jobs:
           tags: |
             type=sha,prefix=,suffix=,format=short
             type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Compute short image tag
+        id: tag
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         id: build-push
