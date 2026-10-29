@@ -2,12 +2,12 @@ import { createAuthClient } from "better-auth/react"
 import { adminClient, emailOTPClient, twoFactorClient } from "better-auth/client/plugins"
 
 export const authClient = createAuthClient({
-    // Relatif volontairement : une URL absolue (NEXT_PUBLIC_APP_URL) casse
-    // tous les appels dès que l'origine du document diffère d'un caractère
-    // (point final, www, ancien domaine) — le CSP `connect-src 'self'`
-    // bloque alors get-session, sign-in, OTP... (constaté le 2026-10-29).
-    // En relatif, les requêtes partent toujours vers la même origine.
-    baseURL: "/api/auth",
+    // Origine du DOCUMENT (absolue, exigée par Better Auth — une base
+    // relative lève `Invalid base URL`). Au navigateur, c'est toujours la
+    // même origine que la page : le CSP `connect-src 'self'` matche sur
+    // toutes les variantes d'hôte (point final, www, ancien domaine).
+    // Côté serveur (prerender), repli sur l'URL configurée.
+    baseURL: `${typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000")}/api/auth`,
     plugins: [
         adminClient(),
         emailOTPClient(),
