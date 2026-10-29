@@ -24,6 +24,14 @@ vi.mock("@/lib/email", () => ({
   },
 }));
 
+const rateLimitDeps = vi.hoisted(() => ({
+  applyRateLimit: vi.fn(),
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  applyRateLimit: rateLimitDeps.applyRateLimit,
+}));
+
 import { POST } from "../../app/api/formations/inscription/route";
 import { makeRequest } from "../helpers/request";
 
@@ -39,6 +47,7 @@ function validBody(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rateLimitDeps.applyRateLimit.mockResolvedValue({ allowed: true } as never);
   db.formationFindUnique.mockResolvedValue({ name: "Licence FSA" } as never);
   db.contactCreate.mockResolvedValue({ id: "contact-1" } as never);
   db.settingsFindFirst.mockResolvedValue(null as never);
@@ -98,5 +107,26 @@ describe("POST /api/formations/inscription", () => {
     db.contactCreate.mockRejectedValue(new Error("db down") as never);
     const res = await POST(makeRequest(validBody()));
     expect(res.status).toBe(500);
+  });
+
+  it("400 si l'email est invalide (zod, avec détails)", async () => {
+    const res = await POST(makeRequest(validBody({ email: "pas-un-email" })));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.details).toBeDefined();
+    expect(db.contactCreate).not.toHaveBeenCalled();
+  });
+
+  it("429 si rate limité (réponse du limiteur relayée)", async () => {
+    const limited = new Response(JSON.stringify({ error: "Trop de requêtes" }), {
+      status: 429,
+    });
+    rateLimitDeps.applyRateLimit.mockResolvedValue({
+      allowed: false,
+      response: limited,
+    } as never);
+    const res = await POST(makeRequest(validBody()));
+    expect(res.status).toBe(429);
+    expect(db.contactCreate).not.toHaveBeenCalled();
   });
 });

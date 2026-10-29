@@ -1,19 +1,40 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { emailService } from "@/lib/email";
 import { sanitizeInput } from "@/lib/sanitization";
 
+// Même garde-fou que `/api/public/contact` : sans validation serveur ni
+// rate limit, chaque appel spam = 1 ligne `Contact` + 1 e-mail admin.
+const InscriptionSchema = z.object({
+  nom: z.string().trim().min(2, "Nom trop court").max(120),
+  email: z.string().trim().email("Email invalide").max(254),
+  telephone: z.string().trim().min(6, "Numéro de téléphone invalide").max(40),
+  formationId: z.string().min(1, "Formation requise"),
+  message: z.string().trim().max(5000).optional(),
+});
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { nom, email, telephone, formationId, message } = body;
+    // Rate limit - 5 demandes par heure par IP (seau `contact` partagé : même
+    // table, même profil d'abus).
+    const rateLimit = await applyRateLimit(req, "contact");
+    if (!rateLimit.allowed) {
+      return rateLimit.response;
+    }
 
-    if (!nom || !email || !telephone || !formationId) {
+    const body = await req.json();
+    const parse = InscriptionSchema.safeParse(body);
+
+    if (!parse.success) {
       return NextResponse.json(
-        { error: "Champs obligatoires manquants" },
+        { error: "Données invalides", details: parse.error.errors },
         { status: 400 }
       );
     }
+
+    const { nom, email, telephone, formationId, message } = parse.data;
 
     const formation = await prisma.formation.findUnique({
       where: { id: formationId },
