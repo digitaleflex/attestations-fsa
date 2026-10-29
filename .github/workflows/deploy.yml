@@ -101,8 +101,11 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────
   deploy-staging:
     needs: build-and-push
+    # `skip_staging` est un input booléen : `gh -f` comme l'UI l'envoient en
+    # booléen, jamais en chaîne. Comparer à `'true'` seul ne matche donc
+    # jamais (bug constaté le 2026-10-29 : staging tournait malgré le skip).
     if: >-
-      github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != 'true' ||
+      github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != true && github.event.inputs.skip_staging != 'true' ||
       github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     environment: staging
@@ -175,8 +178,10 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────
   deploy-prod:
     needs: [build-and-push, deploy-staging]
+    # Même remarque qu'au job staging : l'input est booléen (`true`), la
+    # comparaison à la seule chaîne `'true'` ne matchait jamais en manuel.
     if: >-
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging == 'true') ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.skip_staging == true || github.event.inputs.skip_staging == 'true')) ||
       (github.event_name == 'workflow_run' && needs.deploy-staging.result == 'success')
     runs-on: ubuntu-latest
     environment: production
