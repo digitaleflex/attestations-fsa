@@ -26,7 +26,7 @@ export function FormAlert({
       role={variant === "error" ? "alert" : "status"}
       className={cn(
         "flex items-start gap-3 rounded-xl border p-4 text-sm",
-        variant === "error" && "border-red-200 bg-red-50 text-red-900",
+        variant === "error" && "border-red-200 bg-[#FFF1F2] text-red-900",
         variant === "info" && "border-slate-200 bg-slate-50 text-slate-700",
         variant === "success" &&
           "border-green-200 bg-green-50 text-green-900",

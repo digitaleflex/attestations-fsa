@@ -18,7 +18,7 @@ export function AuthLayout({
   label?: string;
 }) {
   return (
-    <div className="flex min-h-[calc(100vh-5rem)] w-full items-start justify-center bg-slate-50 px-4 py-8 sm:items-center sm:py-12">
+    <div className="flex min-h-[calc(100vh-5rem)] w-full items-start justify-center bg-[#FAFAFB] px-4 py-8 sm:items-center sm:py-12">
       <Card
         aria-label={label}
         className={cn(

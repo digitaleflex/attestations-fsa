@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 export const FIELD_INPUT_CLASS =
-  "h-12 rounded-xl border-2 border-slate-300 bg-white text-base font-medium text-slate-900 shadow-none transition-colors placeholder:text-slate-400 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20";
+  "h-12 rounded-xl border border-[#DDE2E8] bg-white text-base font-medium text-slate-900 shadow-none transition-colors placeholder:text-slate-400 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20";
 
 /**
  * Champ de formulaire avec label visible et erreur associée (#357, #355).
