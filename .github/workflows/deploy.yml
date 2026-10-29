@@ -180,9 +180,12 @@ jobs:
     needs: [build-and-push, deploy-staging]
     # Même remarque qu'au job staging : l'input est booléen (`true`), la
     # comparaison à la seule chaîne `'true'` ne matchait jamais en manuel.
+    # `always()` est en outre indispensable : GitHub saute tout job dont un
+    # `needs` est sauté, même avec un `if` vrai — sans lui, `skip_staging`
+    # condamnait `deploy-prod` dans tous les cas (constaté le 2026-10-29).
     if: >-
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.skip_staging == true || github.event.inputs.skip_staging == 'true')) ||
-      (github.event_name == 'workflow_run' && needs.deploy-staging.result == 'success')
+      always() && ((github.event_name == 'workflow_dispatch' && (github.event.inputs.skip_staging == true || github.event.inputs.skip_staging == 'true')) ||
+      (github.event_name == 'workflow_run' && needs.deploy-staging.result == 'success'))
     runs-on: ubuntu-latest
     environment: production
 
