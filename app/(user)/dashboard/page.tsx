@@ -22,6 +22,7 @@ import {
   CandidateErrorState,
   CandidateLoading,
 } from "@/components/CandidateStates";
+import { ConsentBanner } from "@/components/ConsentBanner";
 
 type DashboardExamEntry = {
   id: string; examName: string; status: string; score: number;
@@ -108,6 +109,7 @@ export default function UserDashboardPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+      <ConsentBanner />
 
       <Card className="p-8 bg-brand text-white shadow-xl relative overflow-hidden group border-none rounded-3xl">
         <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand-dark/20 rounded-full blur-3xl group-hover:bg-brand-dark/30 transition-all duration-1000" />

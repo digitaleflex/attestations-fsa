@@ -171,7 +171,9 @@ export default function ConfidentialitePage() {
             <li><strong>Droit à la limitation</strong> : demander la limitation du traitement de vos données</li>
           </ul>
           <p className="mt-2">
-            Pour exercer vos droits, contactez-nous à <strong>+229 01 91 07 60 93</strong> ou par courrier à
+            Depuis votre profil, rubrique « Mes données », vous pouvez exercer ces droits en autonomie :
+            télécharger une copie de vos données, régler vos communications et demander la suppression
+            de votre compte. Vous pouvez aussi nous écrire à <strong>+229 01 91 07 60 93</strong> ou par courrier à
             <strong> Abomey-Calavi, Bénin</strong>.
           </p>
         </section>

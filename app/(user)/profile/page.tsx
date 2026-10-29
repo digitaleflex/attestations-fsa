@@ -36,6 +36,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import Link from "next/link";
 import {
   AlertCircle,
   User,
@@ -47,6 +49,10 @@ import {
   Save,
   Link2,
   Loader2,
+  ShieldCheck,
+  Download,
+  Megaphone,
+  Trash2,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -74,6 +80,73 @@ export default function UserProfilePage() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isMarketingSaving, setIsMarketingSaving] = useState(false);
+
+  // « Mes données » (RGPD) : l'état des consentements pilote l'interrupteur
+  // marketing. Même clé de cache que `ConsentBanner` (tableau de bord).
+  const { data: consentData } = useQuery({
+    queryKey: ["user-consents"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/consent");
+      if (!res.ok) throw new Error("Consentements indisponibles");
+      return res.json() as Promise<{
+        consents: Record<string, { granted: boolean }>;
+      }>;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+  const marketingGranted = consentData?.consents?.MARKETING?.granted ?? false;
+
+  // Export RGPD : le clic sur le bouton EST la demande (clickwrap, aucune
+  // case). Le fichier est généré à la volée, jamais stocké.
+  const handleExportData = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/user/export");
+      if (!res.ok) throw new Error("Export impossible");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "mes-donnees-fsa.json";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Vos données ont été téléchargées.");
+    } catch {
+      toast.error("Téléchargement impossible pour le moment. Réessayez plus tard.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Marketing : l'interrupteur EST le consentement (opt-in) / la révocation.
+  // Basculer suffit, aucune case à cocher.
+  const handleMarketingToggle = async (granted: boolean) => {
+    setIsMarketingSaving(true);
+    try {
+      const res = await fetch("/api/user/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "MARKETING", granted }),
+      });
+      if (!res.ok) throw new Error("Consentement non enregistré");
+      queryClient.invalidateQueries({ queryKey: ["user-consents"] });
+      toast.success(
+        granted
+          ? "Vous recevrez nos informations sur les formations et événements."
+          : "Désinscription enregistrée. Vous ne recevrez plus nos informations.",
+      );
+    } catch {
+      toast.error("Enregistrement impossible pour le moment. Réessayez plus tard.");
+    } finally {
+      setIsMarketingSaving(false);
+    }
+  };
 
   // États de Correction
   const [correctionField, setCorrectionField] = useState<{
@@ -494,6 +567,75 @@ export default function UserProfilePage() {
             de bout en bout.
           </div>
         )}
+      </Card>
+
+      {/* Section Mes données (RGPD) : aucun formulaire, aucune case à cocher.
+          Chaque contrôle EST l'action : le bouton d'export vaut demande
+          d'accès, l'interrupteur vaut consentement ou révocation marketing,
+          le lien de suppression pré-remplit la demande (le clic sur
+          « Envoyer » dans le formulaire de contact vaut demande). */}
+      <Card className="p-8 bg-white shadow-md border-slate-100">
+        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <ShieldCheck className="w-6 h-6 text-brand" aria-hidden="true" /> Mes données
+        </h3>
+        <p className="text-sm text-slate-500 mt-1 mb-6">
+          Exportez vos données, réglez vos communications ou demandez la suppression de votre compte — en un clic, sans formulaire.
+        </p>
+        <div className="space-y-6 max-w-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <Download className="w-4 h-4 text-brand" aria-hidden="true" /> Recevoir une copie de mes données
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                En cliquant, vous recevez toutes vos données (profil, attestations, examens, demandes) en format JSON.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleExportData}
+              disabled={isExporting}
+              className="h-11 shrink-0 gap-2"
+            >
+              {isExporting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Download className="w-4 h-4" aria-hidden="true" />}
+              {isExporting ? "Préparation..." : "Télécharger"}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4 justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+            <div>
+              <Label htmlFor="marketing-switch" className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
+                <Megaphone className="w-4 h-4 text-brand" aria-hidden="true" /> Recevoir nos informations
+              </Label>
+              <p className="text-xs text-slate-500 mt-1">
+                Formations et événements. Facultatif, modifiable ici à tout moment.
+              </p>
+            </div>
+            <Switch
+              id="marketing-switch"
+              checked={marketingGranted}
+              disabled={isMarketingSaving}
+              onCheckedChange={handleMarketingToggle}
+              aria-label="Recevoir les informations sur les formations et les événements"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-600" aria-hidden="true" /> Supprimer mon compte
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Votre compte est anonymisé sur demande. Les attestations déjà délivrées sont conservées par obligation légale.
+              </p>
+            </div>
+            <Link href="/contact?subject=suppression" className="shrink-0">
+              <Button variant="outline" className="h-11 gap-2 text-rose-700 hover:text-rose-800 hover:bg-rose-50">
+                Demander la suppression
+              </Button>
+            </Link>
+          </div>
+        </div>
       </Card>
 
       <CorrectionModal

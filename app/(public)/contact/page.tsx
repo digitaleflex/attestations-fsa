@@ -56,6 +56,14 @@ function ContactContent() {
           ? `Bonjour, je souhaite une préinscription à la formation (ID: ${formationId}). Pouvez-vous me recontacter ?` 
           : "Bonjour, je souhaite des informations avant une préinscription à l'une de vos formations."
       }));
+    } else if (sub === "suppression") {
+      // Demande d'effacement (profil « Mes données ») : le clic sur
+      // « Envoyer » dans ce formulaire vaut demande, aucune case requise.
+      setFormData(prev => ({
+        ...prev,
+        subject: "suppression",
+        message: "Bonjour, en application de mon droit à l'effacement, je demande la suppression de mon compte et de mes données personnelles. Je comprends que les attestations déjà délivrées sont conservées par obligation légale."
+      }));
     }
   }, [searchParams]);
 
@@ -330,6 +338,7 @@ function ContactContent() {
                                     <option value="examen">Question sur un examen</option>
                                     <option value="support">Support technique</option>
                                     <option value="rdv">Demander un rendez-vous</option>
+                                    <option value="suppression">Suppression de mes données</option>
                                     <option value="info">Question générale</option>
                                 </select>
                                 <div aria-hidden="true" className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-brand-muted">
