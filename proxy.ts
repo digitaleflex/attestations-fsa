@@ -92,6 +92,19 @@ function unauthorizedApiResponse() {
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Canonicalisation FQDN : `domaine.` (point final) === `domaine` en DNS,
+  // mais PAS en origin. Sans ça, navigation sur l'URL pointée => document
+  // `https://hôte./`, cookies et CSRF sur un autre hôte, et Better Auth
+  // répond `Invalid origin` en 403 (constaté le 2026-10-29). On ramène tout
+  // le monde sur l'hôte canonique AVANT tout traitement (308 = méthode
+  // préservée pour les rares POST directs).
+  const host = request.headers.get("host") ?? "";
+  if (host.endsWith(".")) {
+    const url = request.nextUrl.clone();
+    url.host = host.slice(0, -1);
+    return NextResponse.redirect(url, 308);
+  }
+
   // #290 — Nonce CSP unique par requête.
   // Généré ici et passé en header pour que les Server Components puissent
   // l'injecter dans les balises <script> et <style> inline.
