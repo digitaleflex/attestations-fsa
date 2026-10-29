@@ -17,7 +17,17 @@ import { applyRateLimitByUser, getSessionBucket } from "@/lib/rate-limit";
  * quota (par IP, et par IP+code sur la vérification d'OTP).
  */
 const AUTH_RATE_LIMIT_PREFIX = "/api/auth";
-const AUTH_RATE_LIMIT_EXCLUDED = ["/api/auth/fsa-login", "/api/auth/logout"];
+const AUTH_RATE_LIMIT_EXCLUDED = [
+  "/api/auth/fsa-login",
+  "/api/auth/logout",
+  // Lecture seule, appelée à CHAQUE chargement de page (Better Auth). La
+  // compter épuise le quota `authEndpoint` partagé par IP et finit par refuser
+  // les connexions légitimes : constaté en E2E (429 sur get-session, puis
+  // sign-in bloqué). Rien à deviner ici — l'exclure ne retire aucune protection
+  // anti-force-brute, qui reste portée par sign-in/sign-up/reset.
+  "/api/auth/get-session",
+  "/api/auth/session",
+];
 
 function isAuthRateLimited(pathname: string): boolean {
   if (!pathname.startsWith(AUTH_RATE_LIMIT_PREFIX)) return false;
@@ -86,9 +96,14 @@ export default async function proxy(request: NextRequest) {
   // Généré ici et passé en header pour que les Server Components puissent
   // l'injecter dans les balises <script> et <style> inline.
   const nonce = randomUUID().replace(/-/g, "");
+  // `unsafe-eval` est requis par React UNIQUEMENT en développement (reconstruction
+  // des piles d'appels, Fast Refresh). Sans lui, l'hydratation échoue par
+  // intermittence : les formulaires repartent en soumission GET native
+  // (`/auth?email=&password=`) et rendent l'E2E instable. Jamais en production.
+  const devEval = process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : "";
   const cspHeader = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${devEval}`,
     `style-src 'self' 'unsafe-inline'`,
     "img-src 'self' data: blob:",
     "font-src 'self' data:",

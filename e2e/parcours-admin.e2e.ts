@@ -229,8 +229,11 @@ test.describe("Parcours admin de bout en bout (#140)", () => {
       roleResponse.status(),
       `changement de rôle refusé : ${await roleResponse.text()}`,
     ).toBe(200);
+    // `PATCH /api/users/:id` renvoie `{ message, user }` — le rôle est dans
+    // `user.role`, pas à la racine (bug de test jamais exercé tant que le
+    // parcours admin restait bloqué par le rate-limit Redis).
     expect(
-      ((await roleResponse.json()) as { role: string }).role,
+      ((await roleResponse.json()) as { user: { role: string } }).user.role,
     ).toBe("user");
 
     // Blocage avec motif obligatoire (#76 corrigé : `banned`/`banReason`
@@ -256,7 +259,8 @@ test.describe("Parcours admin de bout en bout (#140)", () => {
       `déblocage refusé : ${await unblockResponse.text()}`,
     ).toBe(200);
     expect(
-      ((await unblockResponse.json()) as { status: string }).status,
+      ((await unblockResponse.json()) as { user: { status: string } }).user
+        .status,
     ).toBe("ACTIVE");
   });
 

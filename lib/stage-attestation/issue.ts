@@ -195,7 +195,12 @@ export async function issueStageAttestation({
       // Signature alignée sur celle de PrismaClient (`maxWait` / `timeout` /
       // `isolationLevel`) — `maxWait` borne l'attente du pool de connexions
       // avant de lever P2028 ; il ne joue aucun rôle dans le verrou.
-      const runSerializable = prisma.$transaction as unknown as <R>(
+      // ⚠️ `.bind(prisma)` est INDISPENSABLE : extraire la méthode sans la lier
+      // perd `this` et fait planter Prisma à l'exécution
+      // (`TypeError: Cannot read properties of undefined (reading '_engineConfig')`).
+      // Le cast ne sert qu'à retrouver la surcharge interactive, non résolue
+      // sur un client étendu (`$extends`).
+      const runSerializable = prisma.$transaction.bind(prisma) as unknown as <R>(
         fn: (tx: Tx) => Promise<R>,
         options?: {
           maxWait?: number;
