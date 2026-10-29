@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -71,13 +72,30 @@ const reassurance = [
 export default function Home() {
   return (
     <div className="relative flex w-full flex-1 flex-col items-center overflow-hidden bg-white pb-16">
-      {/* Hero : une seule colonne centrée. La carte « Aperçu » répétait les
-          trois étapes détaillées plus bas — supprimée, sans perte d'info. */}
+      {/* Hero : photo aquacole en fond (cover, centrée), voile blanc marqué
+          à gauche pour la lisibilité du titre, version recadrée sur mobile.
+          Image décorative (`aria-hidden`), contenus textuels inchangés. */}
       <section className="relative flex w-full items-center justify-center overflow-hidden px-5 py-12 sm:px-6 md:py-16">
-        <div
-          aria-hidden="true"
-          className="absolute left-1/2 top-0 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-brand/10 blur-[100px]"
-        />
+        <div aria-hidden="true" className="absolute inset-0">
+          <Image
+            src="/images/hero-aquaculture-mobile.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center md:hidden"
+          />
+          <Image
+            src="/images/hero-aquaculture.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="hidden object-cover object-center md:block"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/40" />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+        </div>
 
         <div className="relative z-10 mx-auto w-full max-w-3xl text-center">
           <p className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
