@@ -1,8 +1,21 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Phone, MapPin } from "lucide-react";
 
 /** Footer public réutilisable — identité FSA en mode clair. */
 export function Footer() {
+  // Page d'inscription : une seule ligne, sans distraction.
+  if (usePathname() === "/inscription") {
+    return (
+      <footer className="w-full border-t border-brand-line bg-white">
+        <p className="mx-auto max-w-7xl px-5 py-4 text-center text-xs font-medium text-slate-500">
+          Ferme Agro-Piscicole Saint-André · Bénin
+        </p>
+      </footer>
+    );
+  }
   return (
     <footer className="relative w-full overflow-hidden border-t border-brand-line bg-white">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/30 to-transparent" />

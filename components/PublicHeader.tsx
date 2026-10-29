@@ -47,6 +47,32 @@ export function PublicHeader() {
     { label: "Stages", href: "/demande-stage" },
   ];
 
+  // Page d'inscription : navigation allégée (logo + retour + connexion),
+  // les menus Formations/Examens/Stages y sont secondaires.
+  if (pathname === "/inscription") {
+    return (
+      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-brand-line/80 bg-white/95 px-4 py-3 shadow-sm shadow-slate-900/5 backdrop-blur-xl md:px-10 md:py-4 lg:px-12">
+        <Link href="/" className="group flex items-center gap-2.5 rounded-xl md:gap-3" aria-label="Ferme Agro-piscicole Saint André — Accueil">
+          <div className="relative h-9 w-9 overflow-hidden rounded-xl shadow-sm shadow-brand/20 transition-transform duration-300 group-hover:-rotate-2 group-hover:scale-105 md:h-10 md:w-10">
+            <Image src="/logo-fsa.png" alt="" fill sizes="40px" className="object-cover" priority />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-extrabold uppercase leading-none tracking-[-0.02em] text-brand-ink md:text-xs">Ferme Agro-piscicole</span>
+            <span className="mt-1 text-[8px] font-bold uppercase leading-none tracking-[0.16em] text-brand md:text-[9px]">Saint André</span>
+          </div>
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/" className="inline-flex h-11 items-center rounded-xl px-3 text-xs font-semibold text-slate-500 transition-colors hover:text-brand-ink">
+            Retour au portail
+          </Link>
+          <Link href="/auth" className="inline-flex h-11 items-center rounded-xl bg-brand px-5 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-brand-dark">
+            Se connecter
+          </Link>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-brand-line/80 bg-white/95 px-4 py-3 shadow-sm shadow-slate-900/5 backdrop-blur-xl md:px-10 md:py-4 lg:px-12">
       <div className="flex items-center gap-3">

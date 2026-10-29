@@ -7,15 +7,12 @@ import { z } from "zod";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  ArrowRight,
   Eye,
   EyeOff,
-  GraduationCap,
   Loader2,
-  Mail,
   RefreshCw,
   ShieldCheck,
-  User,
-  Lock,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -458,45 +455,20 @@ export default function InscriptionPage() {
   /* ------------------------------------------------------------------ */
 
   return (
-    <AuthLayout wide label="Création d'un compte candidat">
-      <div className="grid lg:grid-cols-[1fr_1.25fr]">
-        {/* Panneau latéral : desktop uniquement, jamais sur mobile (#360). */}
-        <aside className="hidden flex-col justify-between bg-brand p-8 text-white lg:flex">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-              <GraduationCap className="h-5 w-5 text-white" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-sm font-bold">Ferme St André</p>
-              <p className="text-xs text-white/70">Espace candidat</p>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-extrabold leading-tight tracking-tight">
-              Créez votre compte
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/80">
-              Suivez vos formations, examens et attestations depuis un seul
-              espace.
-            </p>
-          </div>
-
-          <p className="text-xs text-white/60">
-            Vos informations restent protégées et confidentielles.
-          </p>
-        </aside>
-
-        {/* Panneau formulaire */}
-        <section className="p-6 sm:p-8">
-          <StepIndicator step={step} label="Progression de l'inscription" />
+    <AuthLayout label="Création d'un compte candidat">
+      {/*
+        Carte unique centrée, comme la connexion : pas de panneau latéral.
+        Le formulaire reste pile au centre sur mobile comme sur desktop.
+      */}
+      <section>
+        <StepIndicator step={step} label="Progression de l'inscription" />
 
           <AuthHeader
-            kicker="Inscription"
-            title={step === 1 ? "Créer votre compte" : "Vérifiez votre e-mail"}
+            kicker="Espace candidat"
+            title={step === 1 ? "Créer un compte" : "Vérifiez votre e-mail"}
             description={
               step === 1
-                ? "Suivez vos formations, examens et attestations depuis un seul espace."
+                ? "Accédez à vos formations, examens et attestations."
                 : "Nous avons envoyé un code à 6 chiffres. Il expire dans 10 minutes."
             }
             email={step === 2 ? email : undefined}
@@ -514,35 +486,28 @@ export default function InscriptionPage() {
             /* ================= ÉTAPE 1 : CRÉATION DU COMPTE ================= */
             <form onSubmit={handleSignUp} noValidate className="space-y-5">
               <FormField id="name" label="Nom complet" error={fieldErrors.name}>
-                <div className="relative">
-                  <User
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                  />
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      clearFieldError("name");
-                    }}
-                    required
-                    placeholder="Ex : Awa Dupont"
-                    autoComplete="name"
-                    disabled={loading}
-                    aria-invalid={Boolean(fieldErrors.name) || undefined}
-                    aria-describedby={
-                      fieldErrors.name ? "name-error" : undefined
-                    }
-                    className={cn(
-                      FIELD_INPUT_CLASS,
-                      "pl-11",
-                      fieldErrors.name && "border-red-400",
-                    )}
-                  />
-                </div>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    clearFieldError("name");
+                  }}
+                  required
+                  placeholder="Ex : Awa Dupont"
+                  autoComplete="name"
+                  disabled={loading}
+                  aria-invalid={Boolean(fieldErrors.name) || undefined}
+                  aria-describedby={
+                    fieldErrors.name ? "name-error" : undefined
+                  }
+                  className={cn(
+                    FIELD_INPUT_CLASS,
+                    fieldErrors.name && "border-red-400",
+                  )}
+                />
               </FormField>
 
               <FormField
@@ -550,35 +515,28 @@ export default function InscriptionPage() {
                 label="Adresse e-mail"
                 error={fieldErrors.email}
               >
-                <div className="relative">
-                  <Mail
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                  />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      clearFieldError("email");
-                    }}
-                    required
-                    placeholder="votre@email.com"
-                    autoComplete="email"
-                    disabled={loading}
-                    aria-invalid={Boolean(fieldErrors.email) || undefined}
-                    aria-describedby={
-                      fieldErrors.email ? "email-error" : undefined
-                    }
-                    className={cn(
-                      FIELD_INPUT_CLASS,
-                      "pl-11",
-                      fieldErrors.email && "border-red-400",
-                    )}
-                  />
-                </div>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearFieldError("email");
+                  }}
+                  required
+                  placeholder="votre@email.com"
+                  autoComplete="email"
+                  disabled={loading}
+                  aria-invalid={Boolean(fieldErrors.email) || undefined}
+                  aria-describedby={
+                    fieldErrors.email ? "email-error" : undefined
+                  }
+                  className={cn(
+                    FIELD_INPUT_CLASS,
+                    fieldErrors.email && "border-red-400",
+                  )}
+                />
               </FormField>
 
               <div>
@@ -588,10 +546,6 @@ export default function InscriptionPage() {
                   error={fieldErrors.password}
                 >
                   <div className="relative">
-                    <Lock
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                    />
                     <Input
                       id="password"
                       name="password"
@@ -611,7 +565,7 @@ export default function InscriptionPage() {
                       }
                       className={cn(
                         FIELD_INPUT_CLASS,
-                        "pl-11 pr-12",
+                        "pr-12",
                         fieldErrors.password && "border-red-400",
                       )}
                     />
@@ -647,10 +601,6 @@ export default function InscriptionPage() {
                 error={fieldErrors.confirmPassword}
               >
                 <div className="relative">
-                  <Lock
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                  />
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
@@ -674,7 +624,7 @@ export default function InscriptionPage() {
                     }
                     className={cn(
                       FIELD_INPUT_CLASS,
-                      "pl-11 pr-12",
+                      "pr-12",
                       fieldErrors.confirmPassword && "border-red-400",
                     )}
                   />
@@ -713,9 +663,7 @@ export default function InscriptionPage() {
                 disabled={loading}
                 onChange={setMarketingConsent}
               >
-                Je souhaite recevoir des informations sur les formations et les
-                événements. Facultatif, révocable à tout moment depuis mon
-                compte.
+                Recevoir les informations sur les formations et les événements (facultatif).
               </ConsentCheckbox>
 
               <p className="text-center text-xs leading-relaxed text-slate-500">
@@ -737,12 +685,14 @@ export default function InscriptionPage() {
                 >
                   politique de confidentialité
                 </Link>
-                , et vous acceptez le traitement de vos données pour la gestion
-                de votre compte, de votre formation et de vos attestations.
+                , ainsi que le traitement de vos données.
               </p>
 
               <SubmitButton loading={loading} loadingLabel="Création...">
-                Créer mon compte
+                <span className="inline-flex items-center gap-2">
+                  Créer mon compte
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                </span>
               </SubmitButton>
             </form>
           ) : (
@@ -824,14 +774,13 @@ export default function InscriptionPage() {
             links={[
               {
                 href: "/auth",
-                label: "Déjà un compte ? Se connecter",
+                label: "Déjà inscrit ? Se connecter",
                 primary: true,
               },
               { href: "/", label: "Retour au portail" },
             ]}
           />
-        </section>
-      </div>
+      </section>
 
       {isRedirecting && (
         <div
