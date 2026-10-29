@@ -98,10 +98,15 @@ export default async function proxy(request: NextRequest) {
   // répond `Invalid origin` en 403 (constaté le 2026-10-29). On ramène tout
   // le monde sur l'hôte canonique AVANT tout traitement (308 = méthode
   // préservée pour les rares POST directs).
+  // `hostname` + `port` séparés : `nextUrl` porte le port INTERNE (3000)
+  // derrière Traefik — `url.host = ...` seul le conservait et produisait
+  // `https://hôte:3000/...` (constaté le 2026-10-29).
   const host = request.headers.get("host") ?? "";
-  if (host.endsWith(".")) {
+  const dotted = host.match(/^(.*)\.(?::(\d+))?$/);
+  if (dotted) {
     const url = request.nextUrl.clone();
-    url.host = host.slice(0, -1);
+    url.hostname = dotted[1];
+    if (!dotted[2]) url.port = "";
     return NextResponse.redirect(url, 308);
   }
 
