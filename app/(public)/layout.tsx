@@ -5,7 +5,9 @@ import { Footer } from "@/components/Footer";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://fsa.eurin.tech"),
+  // `?.trim() ||` (et non `??`) : en Docker l'ARG peut arriver vide, et
+  // `new URL("")` ferait échouer le build (`Failed to collect page data`).
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://fsa.eurin.tech"),
   title: {
     default: 'Ferme Agro-piscicole Saint André — Portail officiel',
     template: '%s | FSA',
