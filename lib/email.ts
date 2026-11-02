@@ -307,7 +307,9 @@ export const emailService = {
       const resetUrl = `${APP_URL}/reset-password`;
       await sendEmail({
         to,
-        subject: `🔐 Votre code de vérification : ${otp}`,
+        // Le code n'est JAMAIS dans le sujet : les sujets apparaissent dans
+        // les notifications, les aperçus de messagerie et les journaux SMTP.
+        subject: "🔐 Réinitialisation de votre mot de passe - Code de vérification",
         html: `
           <!DOCTYPE html>
           <html>
@@ -912,7 +914,8 @@ export const emailService = {
       const year = new Date().getFullYear();
       await sendEmail({
         to,
-        subject: `🔑 Votre code de connexion temporaire : ${otp}`,
+        // Idem : jamais l'OTP dans le sujet (aperçus, notifications, logs).
+        subject: "🔑 Votre code de connexion - Ferme St André",
         html: `
           <!DOCTYPE html>
           <html>

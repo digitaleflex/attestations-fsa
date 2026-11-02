@@ -21,6 +21,9 @@ export default function Admin2FAVerifyPage() {
   const [backupCode, setBackupCode] = useState("");
   const [method, setMethod] = useState<"totp" | "email" | "backup">("totp");
   const [emailSent, setEmailSent] = useState(false);
+  // Opt-in explicite : ne jamais marquer l'appareil comme « de confiance »
+  // (30 jours sans second facteur) sans que l'administrateur l'ait demandé.
+  const [trustDevice, setTrustDevice] = useState(false);
 
   // Verify TOTP
   const handleVerifyTOTP = async () => {
@@ -35,7 +38,7 @@ export default function Admin2FAVerifyPage() {
     try {
       const { data, error: authError } = await authClient.twoFactor.verifyTotp({
         code: totpCode,
-        trustDevice: true,
+        trustDevice,
       });
 
       if (authError) {
@@ -89,7 +92,7 @@ export default function Admin2FAVerifyPage() {
     try {
       const { data, error: authError } = await authClient.twoFactor.verifyOtp({
         code: emailCode,
-        trustDevice: true,
+        trustDevice,
       });
 
       if (authError) {
@@ -120,7 +123,7 @@ export default function Admin2FAVerifyPage() {
     try {
       const { data, error: authError } = await authClient.twoFactor.verifyBackupCode({
         code: backupCode,
-        trustDevice: true,
+        trustDevice,
       });
 
       if (authError) {
@@ -319,6 +322,23 @@ export default function Admin2FAVerifyPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        <label
+          htmlFor="trust-device"
+          className="mt-6 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600"
+        >
+          <input
+            id="trust-device"
+            type="checkbox"
+            checked={trustDevice}
+            onChange={(event) => setTrustDevice(event.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-amber-600"
+          />
+          <span>
+            Se souvenir de cet appareil pendant 30 jours. À éviter sur un poste
+            partagé : la 2FA ne sera plus demandée sur ce navigateur.
+          </span>
+        </label>
 
         <div className="mt-8 pt-6 border-t border-gray-100 text-center">
           <p className="text-xs text-gray-500">

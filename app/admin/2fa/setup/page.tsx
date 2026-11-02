@@ -81,7 +81,9 @@ export default function Admin2FASetupPage() {
     try {
       const { data, error: authError } = await authClient.twoFactor.verifyTotp({
         code: verificationCode,
-        trustDevice: true,
+        // L'activation ne doit pas créer un appareil « de confiance » :
+        // le prochain login doit redemander le second facteur.
+        trustDevice: false,
       });
 
       if (authError) {

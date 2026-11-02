@@ -48,12 +48,11 @@ export async function POST(request: Request) {
     const token = randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)  // 24 heures
 
-    // Supprimer les anciens tokens de vérification
+    // Supprimer les anciens tokens de vérification de CET utilisateur.
+    // `value` est un token aléatoire : le filtrer par `startsWith(user.id)` ne
+    // matchait jamais et laissait tous les anciens tokens valides pendant 24 h.
     await prisma.verification.deleteMany({
-      where: {
-        identifier: { startsWith: 'email_verify:' },
-        value: { startsWith: user.id }
-      }
+      where: { identifier: `email_verify:${user.id}` },
     })
 
     // Stocker le token

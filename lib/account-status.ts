@@ -151,7 +151,10 @@ export function evaluateAccountAccess(
   const detail = user.banReason || null;
   const base = { status, banExpires, expired, detail, user };
 
-  // Suspension expirée : le compte redevient actif (et sera purgé en base).
+  // Suspension/bannissement expiré : le compte redevient actif (et sera purgé
+  // en base). Le comportement couvre volontairement `BLOCKED` + `banExpires` :
+  // une sanction datée est une suspension temporaire, quel que soit le libellé
+  // de statut choisi par l'interface d'administration.
   if (expired) {
     return { ...base, allowed: true, reason: "SUSPENDED_EXPIRED" };
   }
