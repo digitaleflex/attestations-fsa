@@ -72,9 +72,19 @@ URL : https://votre-domaine.com/admin/2fa/setup
 5. Accédez au dashboard
 
 ### Appareil de confiance
-- Si vous cochez "Se souvenir de cet appareil"
-- Aucune 2FA demandée pendant **30 jours**
-- Réinitialisable depuis les paramètres
+- La case **« Se souvenir de cet appareil pendant 30 jours »** est
+  **décochée par défaut** : sans action explicite, la 2FA est redemandée au
+  prochain login.
+- Si elle est cochée, aucune 2FA n'est demandée sur ce navigateur pendant
+  **30 jours** (à éviter sur un poste partagé).
+- Réinitialisable depuis les paramètres.
+
+> **Note d'implémentation** — `/admin/2fa/verify` est volontairement
+> accessible **sans cookie de session**. Quand la 2FA est en attente, Better
+> Auth supprime le cookie de session et ne laisse qu'un cookie `two_factor` ;
+> exiger une session sur cette page renverrait l'admin vers `/admin/login` en
+> boucle. Ce sont les endpoints `POST /api/auth/two-factor/*` qui exigent le
+> cookie `two_factor` et protègent réellement la vérification.
 
 ---
 
@@ -166,7 +176,10 @@ twoFactorClient({
 
 ### "La 2FA me redirige en boucle"
 - Videz les **cookies** du navigateur
-- Vérifiez que `/admin/2fa/verify` n'est pas bloqué
+- Vérifiez que le cookie `better-auth.two_factor` est bien conservé pendant
+  les 10 minutes de la vérification
+- `/admin/2fa/verify` doit rester accessible sans session : ce comportement est
+  désormais couvert par `tests/proxy.test.ts`
 - Contactez le support technique
 
 ---
