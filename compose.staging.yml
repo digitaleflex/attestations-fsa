@@ -43,6 +43,11 @@ services:
       NEXT_PUBLIC_PUSHER_CLUSTER: ${STAGING_NEXT_PUBLIC_PUSHER_CLUSTER}
       UPSTASH_REDIS_REST_URL: ${STAGING_UPSTASH_REDIS_REST_URL}
       UPSTASH_REDIS_REST_TOKEN: ${STAGING_UPSTASH_REDIS_REST_TOKEN}
+      # #384 — Rate limiting distribué : Redis interne, réseau backend-staging.
+      REDIS_HOST: fsa-redis-staging
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${STAGING_REDIS_PASSWORD:?STAGING_REDIS_PASSWORD requis}
+      RATE_LIMIT_FAIL_OPEN: "false"
       CERT_SEAL_SECRET: ${STAGING_CERT_SEAL_SECRET}
       ADMIN_USER_IDS: ${STAGING_ADMIN_USER_IDS}
       APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Porto-Novo}
@@ -60,6 +65,8 @@ services:
     restart: unless-stopped
     depends_on:
       fsa-postgres-staging:
+        condition: service_healthy
+      fsa-redis-staging:
         condition: service_healthy
     networks:
       - proxy
@@ -83,6 +90,41 @@ services:
     cpus: 1.0
     pids_limit: 512
     stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # #384 — Redis interne du staging, isolé sur backend-staging.
+  fsa-redis-staging:
+    image: redis:7-alpine
+    container_name: attestations-fsa-redis-staging
+    hostname: fsa-redis-staging
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${STAGING_REDIS_PASSWORD:?STAGING_REDIS_PASSWORD requis}
+    volumes:
+      - fsa-redis-staging-data:/data
+    networks:
+      - backend-staging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -160,3 +202,7 @@ volumes:
   fsa-uploads-private-staging:
     driver: local
     name: attestations-fsa-uploads-private-staging
+  # #384 — Persistance AOF des compteurs de rate-limit (staging).
+  fsa-redis-staging-data:
+    driver: local
+    name: attestations-fsa-redis-staging-data

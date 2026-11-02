@@ -45,9 +45,12 @@ docker exec attestations-fsa-prod sh -c 'for v in BETTER_AUTH_SECRET AUTH_SECRET
 - [ ] `RESEND_API_KEY` : **bloquant pour les emails** — sans elle, tout envoi OTP/reset/2FA
       lève une erreur en prod (`lib/email-health.ts:41-50`) ⇒ connexion des candidats HS
       (flux OTP : `app/api/auth/fsa-login/route.ts:202-239`, `lib/auth.ts:148-192`).
-- [ ] `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` : sans eux, rate-limit en fallback
-      mémoire par-process (`lib/redis.ts:6-16`, `lib/rate-limit.ts:326-336`) — acceptable
-      brièvement, refusé comme état permanent.
+- [ ] `REDIS_HOST=fsa-redis`, `REDIS_PORT=6379`, `REDIS_PASSWORD` : Redis interne
+      (`compose.prod.yml`, #384). `RATE_LIMIT_FAIL_OPEN=false` : si Redis est
+      indisponible, les endpoints sensibles répondent **503** (fail-closed) au
+      lieu de laisser passer le trafic. Ne jamais revenir à `true` en production.
+- [ ] (Optionnel) `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` : alternative
+      cloud si le service interne n'est pas utilisé.
 - [ ] `POSTGRES_PASSWORD` alignée avec le mot de passe **réel** du rôle dans la base
       (`DATABASE_URL` est construit avec, `compose.prod.yml:33` ; voir le piège de rotation,
       [`procedures.md`](procedures.md) § 4.3).

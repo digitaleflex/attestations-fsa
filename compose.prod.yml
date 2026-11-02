@@ -50,10 +50,15 @@ services:
       NEXT_PUBLIC_PUSHER_CLUSTER: ${NEXT_PUBLIC_PUSHER_CLUSTER}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
-      # Échappatoire temporaire SANS Redis (P0 Upstash supprimée) : le limiteur
-      # devient permissif au lieu de répondre 503. Doit disparaître avec le
-      # retour d'un Redis réel (voir UPSTASH_* ci-dessus).
-      RATE_LIMIT_FAIL_OPEN: ${RATE_LIMIT_FAIL_OPEN:-false}
+      # #384 — Rate limiting distribué : Redis interne, réseau backend privé.
+      # `lib/redis.ts` bascule sur le client natif dès que REDIS_HOST est défini.
+      REDIS_HOST: fsa-redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD requis}
+      # #384 — Plus d'échappatoire fail-open en production : si le compteur
+      # distribué est indisponible, les endpoints sensibles répondent 503
+      # (fail-closed) au lieu de laisser passer le trafic.
+      RATE_LIMIT_FAIL_OPEN: "false"
       # Scellement HMAC-SHA256 des certificats (#155) — valeur probante
       CERT_SEAL_SECRET: ${CERT_SEAL_SECRET}
       # Plugin admin Better Auth : IDs des utilisateurs promus admin
@@ -85,6 +90,8 @@ services:
     depends_on:
       fsa-postgres:
         condition: service_healthy
+      fsa-redis:
+        condition: service_healthy
     networks:
       - proxy
       - backend
@@ -108,6 +115,43 @@ services:
     cpus: 1.0
     pids_limit: 512
     stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # #384 — Compteur distribué des rate-limits (auth, upload, mutations).
+  # Réseau backend uniquement : jamais exposé à Traefik ni à l'hôte.
+  # La persistance AOF survit à un redémarrage (compteurs et fenêtres actives).
+  fsa-redis:
+    image: redis:7-alpine
+    container_name: attestations-fsa-redis-prod
+    hostname: fsa-redis
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD requis}
+    volumes:
+      - fsa-redis-prod-data:/data
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -287,7 +331,6 @@ services:
         max-size: "5m"
         max-file: "2"
 
-
 networks:
   # Externe, créé par Traefik sur le VPS : docker network create proxy
   # Seul fsa-app y est branché. fsa-postgres reste sur backend uniquement.
@@ -320,3 +363,8 @@ volumes:
   fsa-uploads-private:
     driver: local
     name: attestations-fsa-uploads-private
+
+  # #384 — Persistance AOF des compteurs de rate-limit.
+  fsa-redis-prod-data:
+    driver: local
+    name: attestations-fsa-redis-prod-data

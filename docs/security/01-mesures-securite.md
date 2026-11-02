@@ -11,7 +11,9 @@ Ensemble des mesures de sécurité implémentées dans l'application.
 - Protection des endpoints critiques
 - Limite de 10 vérifications/heure pour `/api/verifier`
 - Limite configurable par endpoint
-- Utilisation d'Upstash Redis
+- Redis distribué : service interne en production/staging (`fsa-redis`,
+  `compose.prod.yml`) ou Upstash en option. `RATE_LIMIT_FAIL_OPEN=false`
+  en production : les endpoints sensibles sont fail-closed.
 
 ### 2. Sanitization des entrées
 
