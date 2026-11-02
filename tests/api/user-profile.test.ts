@@ -32,6 +32,11 @@ vi.mock("@/lib/auth", () => ({
   auth: { api: { changePassword: authDeps.changePassword } },
 }));
 
+const statusDeps = vi.hoisted(() => ({ revokeUserSessions: vi.fn() }));
+vi.mock("@/lib/account-status", () => ({
+  revokeUserSessions: statusDeps.revokeUserSessions,
+}));
+
 const cryptoDeps = vi.hoisted(() => ({
   hashPassword: vi.fn(),
   verifyPassword: vi.fn(),
@@ -137,6 +142,21 @@ describe("PATCH /api/user/profile", () => {
         data: expect.objectContaining({ phone: "+237600000000", address: "Rue 2" }),
       }),
     );
+  });
+
+  it("200 changement d'email : retire le statut vérifié et révoque les sessions", async () => {
+    const res = await callPatch({ email: "nouvelle@example.com" });
+    expect(res.status).toBe(200);
+    expect(db.userUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: "nouvelle@example.com",
+          // Contournement de `requireEmailVerification` sans cette remise à null.
+          emailVerified: null,
+        }),
+      }),
+    );
+    expect(statusDeps.revokeUserSessions).toHaveBeenCalledWith("user-1");
   });
 
   it("200 convertit la date au format français jj/mm/aaaa", async () => {

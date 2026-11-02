@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
+import { revokeUserSessions } from '@/lib/account-status';
 
 // Schéma de validation pour la modification du profil
 const UserProfileSchema = z.object({
@@ -114,7 +115,13 @@ export async function PATCH(request: Request) {
     const updateData: import('@prisma/client').Prisma.UserUpdateInput = {};
 
     if (name) updateData.name = name;
-    if (email) updateData.email = email;
+    if (email) {
+      updateData.email = email;
+      // Le nouveau destinataire n'a rien prouvé : sans cette remise à null,
+      // l'utilisateur restait « email vérifié » sur une adresse qu'il vient
+      // de saisir (contournement de `requireEmailVerification` en production).
+      updateData.emailVerified = null;
+    }
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
     if (birthDate) {
@@ -197,6 +204,13 @@ export async function PATCH(request: Request) {
         gender: true,
       }
     });
+
+    // Changement d'adresse : les sessions ouvertes sur l'ancienne identité
+    // sont révoquées. L'utilisateur devra se reconnecter, puis vérifier la
+    // nouvelle adresse par OTP (le login non vérifié propose ce flux).
+    if (email) {
+      await revokeUserSessions(userId);
+    }
 
     return NextResponse.json({
       message: 'Profil mis à jour avec succès',

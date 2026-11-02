@@ -160,3 +160,17 @@ describe("régression - aucun UUID admin codé en dur dans lib/auth.ts", () => {
     expect(content).toContain("ADMIN_USER_IDS");
   });
 });
+
+describe("configuration Better Auth — durcissement", () => {
+  it("révoque les sessions ouvertes après un reset de mot de passe", () => {
+    expect(
+      auth.options.emailAndPassword?.revokeSessionsOnPasswordReset,
+    ).toBe(true);
+  });
+
+  it("place le plugin nextCookies en DERNIER (sinon des Set-Cookie sont perdus)", () => {
+    const plugins =
+      (auth.options as { plugins?: Array<{ id?: string }> }).plugins ?? [];
+    expect(plugins.at(-1)?.id).toBe("next-cookies");
+  });
+});

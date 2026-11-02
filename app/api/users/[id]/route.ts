@@ -248,7 +248,13 @@ export async function PATCH(
     // Préparer les données pour la mise à jour
     const updateData: Record<string, unknown> = {};
     if (data.name) updateData.name = data.name;
-    if (data.email) updateData.email = data.email;
+    if (data.email) {
+      updateData.email = data.email;
+      // Une adresse changée par un administrateur n'est pas vérifiée pour
+      // autant : sans cette remise à null, le nouveau destinataire héritait
+      // du statut « e-mail vérifié » de l'ancienne adresse.
+      updateData.emailVerified = null;
+    }
     if (data.role) updateData.role = data.role;
     if (data.birthDate) updateData.birthDate = new Date(data.birthDate);
     if (data.birthPlace) updateData.birthPlace = data.birthPlace;
@@ -353,13 +359,16 @@ export async function PATCH(
       return updatedUser;
     });
 
-    // #304 — Révocation des sessions du compte dont le statut vient de changer.
-    // Sans cela, un compte banni conserverait sa session (30 jours) et
-    // continuerait à appeler les routes utilisateur.
-    if (data.status) {
+    // Révocation des sessions à chaque changement sensible :
+    //  - statut : un compte banni ne doit pas conserver sa session (30 jours) ;
+    //  - mot de passe : un admin qui réinitialise un compte compromis doit
+    //    couper la session de l'attaquant, pas seulement changer le secret ;
+    //  - email : une session ouverte sur l'ancienne adresse n'est plus légitime ;
+    //  - rôle : une élévation/révocation de privilèges doit être immédiate.
+    if (data.status || data.password || data.email || data.role) {
       const revoked = await revokeUserSessions(id);
       console.log(
-        `[ADMIN] Statut ${data.status} appliqué à ${id} — ${revoked} session(s) révoquée(s)`,
+        `[ADMIN] Modification sensible appliquée à ${id} (status=${data.status ?? "-"}, password=${Boolean(data.password)}, email=${Boolean(data.email)}, role=${data.role ?? "-"}) — ${revoked} session(s) révoquée(s)`,
       );
     }
 

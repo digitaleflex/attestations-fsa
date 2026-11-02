@@ -291,6 +291,10 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     requireEmailVerification: process.env.NODE_ENV === "production",
+    // Un reset de mot de passe doit couper les sessions déjà ouvertes :
+    // sans ce flag, une session volée survit au changement de mot de passe
+    // (jusqu'à 30 jours). Better Auth ne révoque que si l'option est true.
+    revokeSessionsOnPasswordReset: true,
   },
   databaseHooks: {
     user: {
@@ -346,7 +350,6 @@ export const auth = betterAuth({
     }),
   },
   plugins: [
-    nextCookies(),
     admin({
       adminUserIds: [
         ...(process.env.ADMIN_USER_IDS
@@ -436,6 +439,12 @@ export const auth = betterAuth({
         }
       },
     }),
+    // IMPORTANT : ce plugin doit rester le DERNIER. Il recopie les `Set-Cookie`
+    // émis par les plugins dans le cookie-store Next.js ; un plugin placé
+    // après lui (dont les hooks `after` posent des cookies, comme la 2FA ou
+    // l'email OTP) verrait ses cookies perdus. Better Auth émet d'ailleurs un
+    // avertissement explicite si ce n'est pas le cas.
+    nextCookies(),
   ],
   advanced: {
     cookiePrefix: "better-auth",

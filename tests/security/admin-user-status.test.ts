@@ -60,6 +60,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   deps.getAdminUser.mockResolvedValue(ADMIN);
   db.userFindUnique.mockResolvedValue({
+    id: "user-1",
     status: "ACTIVE",
     role: "user",
     email: "candidat@exemple.com",
@@ -85,6 +86,34 @@ beforeEach(() => {
 });
 
 describe("#304 — PATCH /api/users/[id] : blocage effectif", () => {
+  it("réinitialisation du mot de passe par un admin : révoque les sessions", async () => {
+    const res = await patch({ password: "NouveauMotDePasse123" });
+
+    expect(res.status).toBe(200);
+    // Le nouveau secret ne suffit pas : la session de l'attaquant doit tomber.
+    expect(db.sessionDeleteMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+    });
+  });
+
+  it("changement d'email par un admin : retire le statut vérifié et révoque", async () => {
+    const res = await patch({ email: "nouvelle@exemple.com" });
+
+    expect(res.status).toBe(200);
+    expect(db.userUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: "nouvelle@exemple.com",
+          // Le nouveau destinataire n'a rien prouvé.
+          emailVerified: null,
+        }),
+      }),
+    );
+    expect(db.sessionDeleteMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+    });
+  });
+
   it("bannit le compte ET révoque ses sessions", async () => {
     const res = await patch({ status: "BLOCKED", banReason: "Fraude" });
 
