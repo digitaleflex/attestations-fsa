@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 // `lib/rate-limit` est volontairement autonome (ni Prisma, ni Better Auth) :
 // il est chargé par le proxy. L'identité client vient de là, pas de
 // `lib/api-auth` (qui tirerait `lib/auth` dans le bundle du proxy).
-import { applyRateLimitByUser, getSessionBucket } from "@/lib/rate-limit";
+import {
+  applyRateLimit,
+  applyRateLimitByUser,
+  getSessionBucket,
+} from "@/lib/rate-limit";
 
 // #287 — Rate limit des endpoints d'authentification.
 /**
@@ -36,6 +40,29 @@ function isAuthRateLimited(pathname: string): boolean {
 
 // Routes protégées
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
+
+/**
+ * Pages d'authentification admin accessibles SANS cookie de session.
+ *
+ * `/admin/2fa/verify` en fait partie : quand la 2FA est en attente, Better Auth
+ * a SUPPRIMÉ le cookie de session et n'a émis qu'un cookie `two_factor`
+ * (prefixé `better-auth.`). Exiger une session ici renvoie l'administrateur
+ * vers `/admin/login` en boucle et le verrouille hors de son compte dès qu'il
+ * active la 2FA. C'est le second facteur lui-même qui protège cette page : les
+ * endpoints `POST /api/auth/two-factor/*` exigent le cookie `two_factor`.
+ */
+const ADMIN_UNAUTHENTICATED_PAGES = [
+  "/admin/login",
+  "/admin/register",
+  "/admin/signup",
+  "/admin/2fa/verify",
+];
+
+function isAdminUnauthenticatedPage(pathname: string): boolean {
+  return ADMIN_UNAUTHENTICATED_PAGES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
 const USER_ROUTES = [
   "/dashboard",
   "/exams",
@@ -135,11 +162,15 @@ export default async function proxy(request: NextRequest) {
   // Bloc autonome et strictement local : il ne touche ni à la classification
   // des routes, ni à la logique de session/compte qui suit.
   if (isAuthRateLimited(pathname)) {
-    const rateLimit = await applyRateLimitByUser(
-      request,
-      getSessionBucket(request),
-      "authEndpoint",
-    );
+    // Double comptage IP + session UNIQUEMENT quand une session existe.
+    // Sans cookie, il n'y a pas de seau « utilisateur » : utiliser le seau IP
+    // seul. Un seau anonyme commun plafonnerait tous les visiteurs à un même
+    // budget (cf. `getSessionBucket`), ce qui bloquerait l'authentification
+    // de tout le monde après quelques tentatives.
+    const sessionBucket = getSessionBucket(request);
+    const rateLimit = sessionBucket
+      ? await applyRateLimitByUser(request, sessionBucket, "authEndpoint")
+      : await applyRateLimit(request, "authEndpoint");
     if (!rateLimit.allowed) return rateLimit.response;
   }
 
@@ -184,11 +215,7 @@ export default async function proxy(request: NextRequest) {
 
   // 3. Logique Admin
   if (isAdminRoute) {
-    if (
-      pathname === "/admin/login" ||
-      pathname === "/admin/register" ||
-      pathname === "/admin/signup"
-    ) {
+    if (isAdminUnauthenticatedPage(pathname)) {
       return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
     }
 

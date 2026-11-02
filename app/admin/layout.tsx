@@ -5,6 +5,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { auth } from "@/lib/auth";
+import { enforceAccountStatus } from "@/lib/account-status";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -34,21 +35,41 @@ export default async function AdminLayout({
     pathname === "/admin/login" ||
     pathname.startsWith("/admin/login/");
 
+  // `/admin/2fa/verify` est une page d'authentification à part entière : quand
+  // la 2FA est en attente, Better Auth a supprimé le cookie de session et n'a
+  // laissé qu'un cookie `two_factor`. Exiger ici une session admin renverrait
+  // l'administrateur vers /admin/login en boucle et le verrouillerait hors de
+  // son compte. Les endpoints de vérification, eux, exigent le cookie 2FA.
+  const isTwoFactorVerifyPage =
+    pathname === "/admin/2fa/verify" ||
+    pathname.startsWith("/admin/2fa/verify/");
+
+  const isStandaloneAuthPage = isLoginPage || isTwoFactorVerifyPage;
+
   // Sécurité Stricte (RSC Validation)
-  if (!isLoginPage) {
+  if (!isStandaloneAuthPage) {
     // Si pas connecté ou pas admin -> on bloque et on redirige
     if (!session || session.user.role?.toLowerCase() !== "admin") {
       redirect("/admin/login");
     }
-  } else {
+
+    // Défense en profondeur : le layout ne se contente pas du cookie/role lus
+    // par `getSession`, il applique la MÊME source de vérité que les routes API
+    // (`enforceAccountStatus`). Un compte bloqué/suspendu dont la session
+    // aurait survécu (échec de révocation, accès direct) est refusé ici aussi.
+    const access = await enforceAccountStatus(session.user.id);
+    if (!access.allowed) {
+      redirect("/admin/login");
+    }
+  } else if (isLoginPage) {
     // Si sur la page de login et déjà connecté en tant qu'admin -> go dashboard
     if (session && session.user.role?.toLowerCase() === "admin") {
       redirect("/admin/dashboard");
     }
   }
 
-  // Pour la page de login des non-connectés, on n'affiche pas la Sidebar
-  if (isLoginPage) {
+  // Pour les pages d'authentification, on n'affiche pas la Sidebar
+  if (isStandaloneAuthPage) {
     return <>{children}</>;
   }
 

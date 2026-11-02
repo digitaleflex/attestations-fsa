@@ -91,7 +91,14 @@ describe("proxy - route ADMIN sans session", () => {
     });
   });
 
-  it.each(["/admin/login", "/admin/register", "/admin/signup"])(
+  it.each([
+    "/admin/login",
+    "/admin/register",
+    "/admin/signup",
+    // 2FA en attente : le cookie de session a été supprimé par Better Auth,
+    // seul le cookie `two_factor` subsiste. La page doit rester accessible.
+    "/admin/2fa/verify",
+  ])(
     "laisse passer la page d'auth admin %s sans session",
     async (pathname) => {
       const res = await proxy(makeRequest(pathname));

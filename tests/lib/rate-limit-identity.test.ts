@@ -118,17 +118,20 @@ describe("#287 — double comptage IP + utilisateur sur l'auth", () => {
   it("le seau utilisateur bloque même en changeant d'IP", async () => {
     const max = memoryFallbackLimits.login.max;
     const cookie = "better-auth.session_token=abcdef-session-value";
+    const bucket = getSessionBucket(makeRequest({ cookie }));
+    if (!bucket) throw new Error("seau de session attendu avec un cookie");
+
     for (let i = 0; i < max; i++) {
       const res = await applyRateLimitByUser(
         makeRequest({ "x-forwarded-for": `10.1.0.${i}`, cookie }),
-        getSessionBucket(makeRequest({ cookie })),
+        bucket,
         "login",
       );
       expect(res.allowed).toBe(true);
     }
     const blocked = await applyRateLimitByUser(
       makeRequest({ "x-forwarded-for": "10.1.0.250", cookie }),
-      getSessionBucket(makeRequest({ cookie })),
+      bucket,
       "login",
     );
     expect(blocked.allowed).toBe(false);
@@ -144,7 +147,10 @@ describe("#287 — double comptage IP + utilisateur sur l'auth", () => {
     expect(a).not.toContain("secret");
   });
 
-  it("sans cookie de session, l'anonyme est son propre seau", () => {
-    expect(getSessionBucket(makeRequest({}))).toBe("sess:anonymous");
+  it("sans cookie de session, aucun seau utilisateur n'est créé", () => {
+    // Régression : un seau « sess:anonymous » commun, combiné au double
+    // comptage IP + utilisateur, plafonnait TOUS les anonymes à un seul
+    // budget et bloquait les connexions/inscriptions de tout le monde.
+    expect(getSessionBucket(makeRequest({}))).toBeNull();
   });
 });

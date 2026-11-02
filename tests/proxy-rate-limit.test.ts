@@ -66,6 +66,37 @@ describe("#287 — rate limit sur /api/auth (middleware)", () => {
     expect(blocked.status).toBe(429);
   });
 
+  it("ne partage pas un budget anonyme global entre IP distinctes (régression)", async () => {
+    // Avant correctif, `getSessionBucket` renvoyait « sess:anonymous » : le
+    // double comptage IP + utilisateur imposait un plafond GLOBAL à tous les
+    // visiteurs anonymes (20 appels / 5 min). Une IP neuve était donc bloquée
+    // à cause des appels des autres. Chaque IP doit avoir son propre budget.
+    memoryFallbackLimits.authEndpoint = { max: 2, windowMs: 60_000 };
+
+    expect(
+      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.1" }))).status,
+    ).toBe(200);
+    expect(
+      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.2" }))).status,
+    ).toBe(200);
+    expect(
+      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.3" }))).status,
+    ).toBe(200);
+
+    // La première IP consomme son second et dernier jeton, puis est bloquée.
+    expect(
+      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.1" }))).status,
+    ).toBe(200);
+    expect(
+      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.1" }))).status,
+    ).toBe(429);
+
+    // Une IP encore vierge n'hérite pas du blocage des autres.
+    expect(
+      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.4" }))).status,
+    ).toBe(200);
+  });
+
   it("le spoofing de x-forwarded-for ne crée pas de nouveau budget", async () => {
     memoryFallbackLimits.authEndpoint = { max: 2, windowMs: 60_000 };
     await proxy(makeRequest("/api/auth/sign-in/email", { ip: "1.1.1.1, 203.0.113.7" }));

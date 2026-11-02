@@ -111,12 +111,19 @@ function readSessionCookieValue(cookieHeader: string | null): string | null {
 /**
  * Seau « utilisateur » pour le proxy, où aucune lecture DB n'est possible : on
  * se base sur la VALEUR du cookie de session, hachée. Un cookie n'est pas
- * devinable -> le seau ne se forge pas sans une session réelle. Sans cookie
- * (tentative de connexion/inscription) : seau anonyme commun.
+ * devinable -> le seau ne se forge pas sans une session réelle.
+ *
+ * Retourne `null` quand la requête n'a PAS de session. Il ne faut surtout pas
+ * fabriquer ici un seau anonyme commun : combiné au double comptage
+ * IP + utilisateur (`applyRateLimitByUser`), il plafonnerait TOUS les
+ * visiteurs anonymes à un seul budget partagé (20 appels / 5 min pour
+ * `authEndpoint`), donc bloquerait les connexions et inscriptions de tout le
+ * monde après quelques tentatives. L'appelant doit se rabattre sur le seul
+ * compteur IP (`applyRateLimit`).
  */
-export function getSessionBucket(request: Request): string {
+export function getSessionBucket(request: Request): string | null {
   const value = readSessionCookieValue(request.headers.get("cookie"));
-  return value ? `sess:${hashIdentifier(value)}` : "sess:anonymous";
+  return value ? `sess:${hashIdentifier(value)}` : null;
 }
 
 // Rate limits par endpoint
