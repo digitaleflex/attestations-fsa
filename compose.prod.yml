@@ -229,6 +229,65 @@ services:
         max-size: "5m"
         max-file: "2"
 
+  # Cron d'expiration des sessions d'examen.
+  # Bascule IN_PROGRESS -> EXPIRED pour toute session dont expiresAt est atteint.
+  # Toute mutation passe par POST /api/internal/exams/expire, protégée par
+  # `Authorization: Bearer $CRON_SECRET` : sans le secret, la route répond 401
+  # et ne modifie rien. L'opération est idempotente, donc un chevauchement de
+  # ticks est sans effet.
+  # Réseau `backend` uniquement : le cron n'est joignable que par fsa-app,
+  # jamais par Traefik ni par l'extérieur.
+  #
+  # Démarrage :
+  #   docker compose -f compose.prod.yml --profile cron up -d exam-expire-cron
+  #   docker compose -f compose.prod.yml logs -f exam-expire-cron
+  # Équivalent cron système (5 min) : */5 * * * * ./scripts/cron-expire-sessions.sh
+  exam-expire-cron:
+    image: curlimages/curl:8.12.1
+    container_name: attestations-fsa-exam-expire-cron
+    environment:
+      APP_URL: http://fsa-app:3000
+      CRON_SECRET: ${CRON_SECRET}
+      # Période de déclenchement, en secondes (300 = 5 minutes).
+      CRON_INTERVAL_SECONDS: ${CRON_INTERVAL_SECONDS:-300}
+    # Boucle : un appel immediate puis un appel toutes les CRON_INTERVAL_SECONDS.
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          if [ -z "$$CRON_SECRET" ]; then
+            echo "[exam-expire-cron] CRON_SECRET absent — appel ignore"
+          else
+            curl --silent --show-error --max-time 20 \
+              --request POST \
+              --header "Authorization: Bearer $$CRON_SECRET" \
+              --header "Content-Type: application/json" \
+              --data '{}' \
+              "$$APP_URL/api/internal/exams/expire" \
+              && echo "" || echo "[exam-expire-cron] echec de l'expiration automatique"
+          fi
+          sleep "$$CRON_INTERVAL_SECONDS"
+        done
+    depends_on:
+      fsa-app:
+        condition: service_healthy
+    networks:
+      - backend
+    profiles:
+      - cron
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+
 networks:
   # Externe, créé par Traefik sur le VPS : docker network create proxy
   # Seul fsa-app y est branché. fsa-postgres reste sur backend uniquement.
