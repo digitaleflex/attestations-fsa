@@ -58,7 +58,7 @@ export default async function AdminLayout({
     // (`enforceAccountStatus`). Un compte bloqué/suspendu dont la session
     // aurait survécu (échec de révocation, accès direct) est refusé ici aussi.
     const access = await enforceAccountStatus(session.user.id);
-    if (!access.allowed) {
+    if (!access.allowed || access.user?.resetPasswordRequired) {
       redirect("/admin/login");
     }
   } else if (isLoginPage) {
