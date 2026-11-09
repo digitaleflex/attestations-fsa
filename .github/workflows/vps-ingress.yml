@@ -40,12 +40,32 @@ jobs:
             echo "==> Conteneurs ingress (même arrêtés)"
             docker ps -a --format '{{.Names}}\t{{.Status}}\t{{.Image}}' | grep -Ei 'traefik|cloudflared|ingress|caddy' || true
 
+            echo "==> Unité traefik"
+            systemctl cat traefik.service 2>/dev/null || true
+            echo "==> Statut traefik"
+            systemctl status traefik.service --no-pager -l 2>/dev/null | tail -40 || true
+
             echo "==> Tentative de redémarrage des services connus"
             for svc in traefik cloudflared; do
               if systemctl list-unit-files "$svc.service" >/dev/null 2>&1; then
                 sudo -n systemctl restart "$svc" 2>/dev/null && echo "$svc redémarré" || echo "$svc: restart refusé/indisponible"
               fi
             done
+
+            echo "==> Relance directe du compose Traefik (sans sudo)"
+            UNIT="$(systemctl cat traefik.service 2>/dev/null || true)"
+            WORKDIR="$(printf '%s\n' "$UNIT" | sed -n 's/^WorkingDirectory=//p' | head -1)"
+            echo "WorkingDirectory=$WORKDIR"
+            if [ -n "$WORKDIR" ] && [ -d "$WORKDIR" ]; then
+              cd "$WORKDIR"
+              for f in compose.yml docker-compose.yml compose.yaml docker-compose.yaml; do
+                if [ -f "$f" ]; then
+                  echo "==> docker compose -f $f up -d"
+                  docker compose -f "$f" up -d || true
+                  break
+                fi
+              done
+            fi
 
             echo "==> App locale"
             docker exec attestations-fsa-prod wget -qO- http://127.0.0.1:3000/api/ready || true
