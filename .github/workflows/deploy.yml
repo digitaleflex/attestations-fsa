@@ -146,19 +146,29 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           STAGING_REDIS_PASSWORD: ${{ secrets.STAGING_REDIS_PASSWORD }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
           command_timeout: 20m
-          envs: STAGING_REDIS_PASSWORD
+          envs: STAGING_REDIS_PASSWORD,GHCR_TOKEN,GHCR_USER
           script: |
             set -e
             umask 077
 
             echo "==> 🐳 Starting Staging deployment..."
             cd /home/audest/attestations-fsa
+
+            # GHCR : le `docker image prune -af` supprime l'image migrator ;
+            # sans login, le pull échoue en « denied ». Le token est éphémère
+            # (GITHUB_TOKEN) et n'est jamais affiché.
+            if [ -z "${GHCR_TOKEN:-}" ]; then
+              echo "==> ERREUR: GHCR_TOKEN absent"; exit 1
+            fi
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-github}" --password-stdin >/dev/null
 
             echo "==> Pulling latest code..."
             git pull origin $(git rev-parse --abbrev-ref HEAD)
@@ -239,19 +249,29 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
           command_timeout: 30m
-          envs: REDIS_PASSWORD
+          envs: REDIS_PASSWORD,GHCR_TOKEN,GHCR_USER
           script: |
             set -e
             umask 077
 
             echo "==> 🐳 Starting Production deployment..."
             cd /home/audest/attestations-fsa
+
+            # GHCR : le `docker image prune -af` supprime l'image migrator ;
+            # sans login, le pull échoue en « denied ». Le token est éphémère
+            # (GITHUB_TOKEN) et n'est jamais affiché.
+            if [ -z "${GHCR_TOKEN:-}" ]; then
+              echo "==> ERREUR: GHCR_TOKEN absent"; exit 1
+            fi
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-github}" --password-stdin >/dev/null
 
             echo "==> Pulling latest code..."
             git pull origin $(git rev-parse --abbrev-ref HEAD)
