@@ -267,6 +267,33 @@ export async function guardSessionCreation(
 }
 
 /**
+ * #385 — Une seule source de vérité pour « qui est admin ».
+ *
+ * `ADMIN_USER_IDS` était lu par le plugin admin Better Auth mais ignoré par
+ * `getAdminUser` : un ID listé pouvait utiliser `/api/auth/admin/*` (ban,
+ * set-role, impersonate) sans avoir le rôle applicatif `admin`. On aligne les
+ * deux chemins sur la même règle : rôle `admin` OU ID présent dans
+ * `ADMIN_USER_IDS`.
+ */
+export function getAdminUserIds(): string[] {
+  return (process.env.ADMIN_USER_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+export function isAdminUser(
+  user: { id?: unknown; role?: unknown } | null | undefined,
+): boolean {
+  if (!user) return false;
+  const role = getUserRole(user);
+  if (role?.toLowerCase() === "admin") return true;
+  return (
+    typeof user.id === "string" && getAdminUserIds().includes(user.id)
+  );
+}
+
+/**
  * Instance d'authentification Better Auth
  */
 export const auth = betterAuth({
@@ -351,13 +378,9 @@ export const auth = betterAuth({
   },
   plugins: [
     admin({
-      adminUserIds: [
-        ...(process.env.ADMIN_USER_IDS
-          ? process.env.ADMIN_USER_IDS.split(",")
-              .map((id) => id.trim())
-              .filter(Boolean)
-          : []),
-      ],
+      // Même liste que `isAdminUser` : le plugin Better Auth et les contrôles
+      // applicatifs ne peuvent plus diverger.
+      adminUserIds: getAdminUserIds(),
     }),
     // ─────────────────────────────────────────────────────────────────
     // DÉCISION PRODUIT (2026-10-17, issue #74) : 2FA DÉVELOPPÉ mais NON
@@ -512,8 +535,8 @@ export async function getAdminUser(
       // session estinvalidée et l'accès refusé.
       if (!(await isSessionUserAllowed(userId))) return null;
 
-      const role = getUserRole(session.user);
-      if (role?.toLowerCase() !== "admin") return null;
+      // Rôle `admin` OU ID présent dans ADMIN_USER_IDS (source unique, #385).
+      if (!isAdminUser(session.user)) return null;
       return {
         id: session.user.id as string,
         email: session.user.email as string,

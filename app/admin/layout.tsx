@@ -4,7 +4,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { auth } from "@/lib/auth";
+import { auth, isAdminUser } from "@/lib/auth";
 import { enforceAccountStatus } from "@/lib/account-status";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -49,7 +49,7 @@ export default async function AdminLayout({
   // Sécurité Stricte (RSC Validation)
   if (!isStandaloneAuthPage) {
     // Si pas connecté ou pas admin -> on bloque et on redirige
-    if (!session || session.user.role?.toLowerCase() !== "admin") {
+    if (!session || !isAdminUser(session.user)) {
       redirect("/admin/login");
     }
 
@@ -63,7 +63,7 @@ export default async function AdminLayout({
     }
   } else if (isLoginPage) {
     // Si sur la page de login et déjà connecté en tant qu'admin -> go dashboard
-    if (session && session.user.role?.toLowerCase() === "admin") {
+    if (session && isAdminUser(session.user)) {
       redirect("/admin/dashboard");
     }
   }

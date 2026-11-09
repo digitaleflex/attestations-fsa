@@ -14,7 +14,7 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers()),
 }));
 
-import { auth, getAdminUser, getCurrentUser } from "@/lib/auth";
+import { auth, getAdminUser, getCurrentUser, isAdminUser } from "@/lib/auth";
 
 function makeRequest(): Request {
   return { headers: new Headers() } as Request;
@@ -158,6 +158,42 @@ describe("régression - aucun UUID admin codé en dur dans lib/auth.ts", () => {
     const authPath = path.resolve(__dirname, "../lib/auth.ts");
     const content = fs.readFileSync(authPath, "utf8");
     expect(content).toContain("ADMIN_USER_IDS");
+  });
+});
+
+describe("isAdminUser — source unique rôle + ADMIN_USER_IDS (#385)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("accepte le rôle admin, insensible à la casse", () => {
+    expect(isAdminUser({ id: "u1", role: "ADMIN" })).toBe(true);
+    expect(isAdminUser({ id: "u1", role: "admin" })).toBe(true);
+  });
+
+  it("accepte un ID listé dans ADMIN_USER_IDS même si le rôle est user", () => {
+    vi.stubEnv("ADMIN_USER_IDS", "listed-1, listed-2");
+    expect(isAdminUser({ id: "listed-1", role: "user" })).toBe(true);
+    expect(isAdminUser({ id: "listed-2", role: "user" })).toBe(true);
+    expect(isAdminUser({ id: "other", role: "user" })).toBe(false);
+  });
+
+  it("getAdminUser applique la même règle qu'isAdminUser", async () => {
+    vi.stubEnv("ADMIN_USER_IDS", "listed-1");
+    vi.spyOn(auth.api, "getSession").mockResolvedValue({
+      user: {
+        id: "listed-1",
+        email: "listed@example.com",
+        name: "Listed Admin",
+        role: "user",
+        emailVerified: true,
+      },
+    } as any);
+
+    const result = await getAdminUser(makeRequest());
+    expect(result?.id).toBe("listed-1");
+    expect(result?.role).toBe("admin");
   });
 });
 

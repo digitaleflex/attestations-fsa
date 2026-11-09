@@ -315,7 +315,9 @@ function AuthContent() {
         throw new Error(data.message || "Une erreur est survenue.");
       }
 
-      setMaskedEmail(data.emailMasked);
+      // Réponse volontairement indifférenciée : si le dossier n'existe pas,
+      // l'API renvoie 200 avec `emailMasked: null` (anti-énumération, #385).
+      setMaskedEmail(data.emailMasked ?? "votre adresse e-mail");
       setVerificationMode("fsa");
       setStep(2);
       setOtp("");
@@ -514,7 +516,7 @@ function AuthContent() {
           kicker: "Code FSA",
           title: "Vérifiez votre e-mail",
           description:
-            "Nous avons envoyé un code à 6 chiffres à l'adresse suivante. Il expire dans 10 minutes.",
+            "Si un dossier correspond à votre saisie, un code à 6 chiffres vient d'être envoyé. Il expire dans 10 minutes.",
         };
 
   return (

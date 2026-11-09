@@ -116,13 +116,30 @@ const LoginSchema = z.discriminatedUnion("action", [
  * l'existence d'un code, sans jamais deviner les 5 derniers caractères. Les
  * deux cas sont aujourd'hui indistinguables, comme « e-mail inconnu ».
  */
-function unknownDossierResponse() {
+/**
+ * #385 — Réponse UNIQUE de `request-otp`, que le dossier existe ou non.
+ *
+ * Avant, un e-mail inconnu répondait 404 et un e-mail connu 200 avec le nom du
+ * candidat : le simple statut suffisait à énumérer les comptes. Désormais les
+ * deux cas renvoient exactement le même corps 200 ; aucun OTP n'est envoyé si
+ * le dossier n'existe pas (ou s'il s'agit d'un administrateur).
+ */
+function genericOtpRequestResponse() {
+  return NextResponse.json({ success: true, emailMasked: null });
+}
+
+/**
+ * Refus indistinguable selon l'action :
+ * - `request-otp` : 200 générique (aucune information sur l'existence) ;
+ * - `verify-otp` : 401 générique, identique à un OTP invalide.
+ */
+function otpIdentifierRejectedResponse(
+  action: "request-otp" | "verify-otp",
+) {
+  if (action === "request-otp") return genericOtpRequestResponse();
   return NextResponse.json(
-    {
-      message:
-        "Identifiant inconnu ou dossier indisponible. Veuillez vérifier votre e-mail ou votre code FSA.",
-    },
-    { status: 404 },
+    { message: "Code de vérification invalide ou expiré." },
+    { status: 401 },
   );
 }
 
@@ -202,47 +219,53 @@ export async function POST(request: Request) {
       if (!limiter.allowed) return limiter.response;
     }
 
+    // Le lien magique est désactivé : réponse immédiate, sans lecture base.
+    // Placé AVANT la recherche pour ne pas transformer cette action en oracle
+    // d'existence (404/200) alors qu'elle ne peut de toute façon rien ouvrir.
+    if (data.action === "request-magic-link") {
+      return NextResponse.json(
+        {
+          message:
+            "La connexion par lien magique est désactivée. Utilisez le code de vérification (OTP) envoyé par e-mail.",
+        },
+        { status: 410 },
+      );
+    }
+
     // 1. Recherche par identifiant (e-mail ou code FSA complet)
     const inputCleaned = data.fsaCode.toLowerCase();
     const isEmail = EMAIL_SHAPE.test(inputCleaned);
 
     let email = "";
-    let candidateName = "";
     let attestation: AttestationRecord = null;
 
     if (isEmail) {
       const user = await prisma.user.findUnique({
         where: { email: inputCleaned },
-        select: { id: true, email: true, name: true, role: true },
+        select: { id: true, email: true, role: true },
       });
 
       if (!user) {
-        return unknownDossierResponse();
+        return otpIdentifierRejectedResponse(data.action);
       }
 
+      // Les administrateurs utilisent /admin/login : réponse indistinguable
+      // d'un identifiant inconnu, et aucun OTP n'est envoyé.
       if (user.role?.toLowerCase() === "admin") {
-        return NextResponse.json(
-          {
-            message:
-              "Accès refusé. Les administrateurs doivent utiliser l'interface de connexion dédiée.",
-          },
-          { status: 403 },
-        );
+        return otpIdentifierRejectedResponse(data.action);
       }
 
       email = user.email || inputCleaned;
-      candidateName = user.name || "Candidat";
     } else {
       const foundAttestation = await findAttestationByCode(data.fsaCode);
 
       // Un dossier sans e-mail exploitable ne vaut pas mieux qu'un dossier
       // inexistant pour qui essaie de deviner le code : réponse identique.
       if (!foundAttestation?.email) {
-        return unknownDossierResponse();
+        return otpIdentifierRejectedResponse(data.action);
       }
 
       email = foundAttestation.email;
-      candidateName = foundAttestation.fullName;
       attestation = foundAttestation;
     }
 
@@ -285,10 +308,8 @@ export async function POST(request: Request) {
 
       const response = NextResponse.json({
         success: true,
-        email: maskEmail(email),
-        // Conservé pour compatibilité avec l'UI existante.
+        // Même forme que la réponse générique : seule la valeur change.
         emailMasked: maskEmail(email),
-        name: candidateName,
       });
 
       // Transmettre d'éventuels cookies signés émis par Better Auth.
@@ -356,17 +377,6 @@ export async function POST(request: Request) {
       }
 
       return response;
-    }
-
-    // --- ACTION : REQUEST MAGIC LINK (désactivée) ---
-    if (data.action === "request-magic-link") {
-      return NextResponse.json(
-        {
-          message:
-            "La connexion par lien magique est désactivée. Utilisez le code de vérification (OTP) envoyé par e-mail.",
-        },
-        { status: 410 },
-      );
     }
 
     return NextResponse.json(

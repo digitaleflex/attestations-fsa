@@ -231,8 +231,8 @@ describe("#303 — réponses indifférenciées (aucune énumération)", () => {
     const codeInconnuStatus = codeInconnu.status;
     const codeInconnuBody = await codeInconnu.json();
 
-    // INVERSION : l'ancien test figeait 400 « aucune adresse e-mail », un statut
-    // qui révélait à lui seul l'existence du code. Dorénavant 404 identique.
+    // #385 — Réponse 200 identique pour un identifiant inconnu : le statut
+    // ne permet plus de distinguer l'existence d'un compte ou d'un code.
     db.attestationFindUnique.mockResolvedValue(
       makeAttestation({ email: null }) as never,
     );
@@ -241,7 +241,8 @@ describe("#303 — réponses indifférenciées (aucune énumération)", () => {
     db.userFindUnique.mockResolvedValue(null as never);
     const emailInconnu = await call({ action: "request-otp", fsaCode: CANDIDATE_EMAIL });
 
-    expect(codeInconnuStatus).toBe(404);
+    expect(codeInconnuStatus).toBe(200);
+    expect(codeInconnuBody).toEqual({ success: true, emailMasked: null });
     for (const res of [dossierSansEmail, emailInconnu]) {
       expect(res.status).toBe(codeInconnuStatus);
       expect(await res.json()).toEqual(codeInconnuBody);
@@ -254,41 +255,50 @@ describe("#303 — réponses indifférenciées (aucune énumération)", () => {
       makeAttestation({ email: null }) as never,
     );
     const res = await call({ action: "request-otp", fsaCode: VALID_CODE });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, emailMasked: null });
     expect(authApi.sendVerificationOTP).not.toHaveBeenCalled();
   });
 });
 
 describe("POST /api/auth/fsa-login — request-otp", () => {
-  it("404 si l'email n'est associé à aucun compte", async () => {
+  it("200 générique si l'email n'est associé à aucun compte", async () => {
     db.userFindUnique.mockResolvedValue(null as never);
     const res = await call({ action: "request-otp", fsaCode: CANDIDATE_EMAIL });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, emailMasked: null });
+    expect(authApi.sendVerificationOTP).not.toHaveBeenCalled();
   });
 
-  it("403 pour un compte administrateur", async () => {
+  it("200 générique pour un compte administrateur, sans envoi d'OTP", async () => {
     db.userFindUnique.mockResolvedValue({
       id: "admin-1",
       email: "admin@example.com",
       role: "admin",
     } as never);
     const res = await call({ action: "request-otp", fsaCode: "admin@example.com" });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, emailMasked: null });
+    expect(authApi.sendVerificationOTP).not.toHaveBeenCalled();
   });
 
-  it("404 si le code FSA est introuvable", async () => {
+  it("200 générique si le code FSA est introuvable", async () => {
     db.attestationFindUnique.mockResolvedValue(null as never);
     const res = await call({ action: "request-otp", fsaCode: VALID_CODE });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, emailMasked: null });
+    expect(authApi.sendVerificationOTP).not.toHaveBeenCalled();
   });
 
-  it("200 envoie l'OTP et masque l'email", async () => {
+  it("200 envoie l'OTP et masque l'email sans exposer le nom", async () => {
     const res = await call({ action: "request-otp", fsaCode: CANDIDATE_EMAIL });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.emailMasked).toBe("al***e@example.com");
-    expect(body.name).toBe("Alice");
+    expect(body).toEqual({
+      success: true,
+      emailMasked: "al***e@example.com",
+    });
+    expect(body.name).toBeUndefined();
   });
 
   it("200 pour un code FSA complet, et l'OTP part vers l'e-mail du dossier", async () => {
@@ -306,7 +316,7 @@ describe("POST /api/auth/fsa-login — request-otp", () => {
 });
 
 describe("POST /api/auth/fsa-login — verify-otp", () => {
-  it("403 pour un compte administrateur", async () => {
+  it("401 générique pour un compte administrateur (aucune information)", async () => {
     db.userFindUnique.mockResolvedValue({
       id: "admin-1",
       role: "admin",
@@ -316,7 +326,10 @@ describe("POST /api/auth/fsa-login — verify-otp", () => {
       fsaCode: "admin@example.com",
       otp: "123456",
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({
+      message: "Code de vérification invalide ou expiré.",
+    });
   });
 
   it("401 si le code OTP est invalide", async () => {
