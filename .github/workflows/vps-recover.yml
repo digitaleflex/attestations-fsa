@@ -52,13 +52,28 @@ jobs:
             fi
 
             echo "==> État AVANT"
+            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' || true
             docker compose --env-file .env.production -f compose.prod.yml ps || true
 
-            echo "==> Redémarrage des services de production (sans migration)"
-            docker compose --env-file .env.production -f compose.prod.yml up -d --wait
+            echo "==> Redémarrage des services de production (sans pull ni migration)"
+            docker compose --env-file .env.production -f compose.prod.yml \
+              up -d --wait --pull never || \
+              docker compose --env-file .env.production -f compose.prod.yml \
+              up -d --wait
+
+            echo "==> Redémarrage de Traefik s'il est arrêté"
+            for c in $(docker ps -a --format '{{.Names}}' | grep -i traefik || true); do
+              docker start "$c" >/dev/null 2>&1 || true
+              echo "  - $c"
+            done
 
             echo "==> État APRÈS"
-            docker compose --env-file .env.production -f compose.prod.yml ps
+            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' || true
+            docker compose --env-file .env.production -f compose.prod.yml ps || true
+
+            echo "==> Logs récents fsa-app"
+            docker compose --env-file .env.production -f compose.prod.yml \
+              logs --tail=40 fsa-app || true
 
             echo "==> Smoke test /api/ready"
             docker compose --env-file .env.production -f compose.prod.yml \
