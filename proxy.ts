@@ -33,9 +33,25 @@ const AUTH_RATE_LIMIT_EXCLUDED = [
   "/api/auth/session",
 ];
 
-function isAuthRateLimited(pathname: string): boolean {
-  if (!pathname.startsWith(AUTH_RATE_LIMIT_PREFIX)) return false;
-  return !AUTH_RATE_LIMIT_EXCLUDED.some((prefix) => pathname.startsWith(prefix));
+type AuthRateLimitType = "login" | "register" | "authEndpoint";
+
+/**
+ * #385 — Budgets distincts par point d'entrée :
+ *  - connexion (`sign-in/*`) : `login`, 5 / 15 min par IP ;
+ *  - inscription (`sign-up/*`) : `register`, 3 / 1 h par IP ;
+ *  - le reste de `/api/auth/*` : `authEndpoint`, 20 / 5 min (+ seau session).
+ *
+ * L'admin login passe par le même `sign-in/email` que le login candidat : il
+ * hérite donc du budget strict `login`, et `adminLogin` (mort) a été retiré.
+ */
+function getAuthRateLimitType(pathname: string): AuthRateLimitType | null {
+  if (!pathname.startsWith(AUTH_RATE_LIMIT_PREFIX)) return null;
+  if (AUTH_RATE_LIMIT_EXCLUDED.some((prefix) => pathname.startsWith(prefix))) {
+    return null;
+  }
+  if (pathname.startsWith("/api/auth/sign-in")) return "login";
+  if (pathname.startsWith("/api/auth/sign-up")) return "register";
+  return "authEndpoint";
 }
 
 // Routes protégées
@@ -161,16 +177,16 @@ export default async function proxy(request: NextRequest) {
   // 0. Rate limit des endpoints d'authentification (#287).
   // Bloc autonome et strictement local : il ne touche ni à la classification
   // des routes, ni à la logique de session/compte qui suit.
-  if (isAuthRateLimited(pathname)) {
-    // Double comptage IP + session UNIQUEMENT quand une session existe.
-    // Sans cookie, il n'y a pas de seau « utilisateur » : utiliser le seau IP
-    // seul. Un seau anonyme commun plafonnerait tous les visiteurs à un même
-    // budget (cf. `getSessionBucket`), ce qui bloquerait l'authentification
-    // de tout le monde après quelques tentatives.
+  const authLimitType = getAuthRateLimitType(pathname);
+  if (authLimitType) {
+    // Double comptage IP + session uniquement sur le seau générique, et
+    // seulement quand une session existe. Les buckets `login` / `register`
+    // sont par IP : ils couvrent la connexion et l'inscription anonymes.
     const sessionBucket = getSessionBucket(request);
-    const rateLimit = sessionBucket
-      ? await applyRateLimitByUser(request, sessionBucket, "authEndpoint")
-      : await applyRateLimit(request, "authEndpoint");
+    const rateLimit =
+      authLimitType === "authEndpoint" && sessionBucket
+        ? await applyRateLimitByUser(request, sessionBucket, authLimitType)
+        : await applyRateLimit(request, authLimitType);
     if (!rateLimit.allowed) return rateLimit.response;
   }
 

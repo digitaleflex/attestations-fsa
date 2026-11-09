@@ -82,7 +82,7 @@ describe("#310 — classification fail-closed", () => {
     for (const type of [
       "login",
       "register",
-      "adminLogin",
+      "adminUserCreate",
       "passwordReset",
       "fsaOtpRequest",
       "fsaOtpVerify",
