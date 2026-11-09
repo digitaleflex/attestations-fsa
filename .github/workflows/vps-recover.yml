@@ -1,0 +1,68 @@
+name: VPS emergency recovery
+
+# Procédure de secours MANUELLE, sans build, sans migration, sans prune.
+# Objectif : remettre la production en ligne quand un déploiement a laissé
+# Docker/les conteneurs dans un état intermédiaire.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Restart production containers
+        uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          command_timeout: 15m
+          envs: GHCR_TOKEN,GHCR_USER,REDIS_PASSWORD
+          script: |
+            set -e
+            umask 077
+            cd /home/audest/attestations-fsa
+
+            echo "==> État du disque et de Docker"
+            df -h || true
+            df -i || true
+            docker system df || true
+
+            echo "==> Authentification GHCR"
+            if [ -z "${GHCR_TOKEN:-}" ]; then
+              echo "ERREUR: GHCR_TOKEN absent"; exit 1
+            fi
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-github}" --password-stdin >/dev/null
+
+            echo "==> Injection du mot de passe Redis"
+            if [ -n "${REDIS_PASSWORD:-}" ]; then
+              grep -v '^REDIS_PASSWORD=' .env.production > .env.production.tmp || true
+              printf 'REDIS_PASSWORD=%s\n' "$REDIS_PASSWORD" >> .env.production.tmp
+              mv .env.production.tmp .env.production
+            fi
+
+            echo "==> État AVANT"
+            docker compose --env-file .env.production -f compose.prod.yml ps || true
+
+            echo "==> Redémarrage des services de production (sans migration)"
+            docker compose --env-file .env.production -f compose.prod.yml up -d --wait
+
+            echo "==> État APRÈS"
+            docker compose --env-file .env.production -f compose.prod.yml ps
+
+            echo "==> Smoke test /api/ready"
+            docker compose --env-file .env.production -f compose.prod.yml \
+              exec -T fsa-app wget --no-verbose --tries=1 --spider \
+              "http://127.0.0.1:3000/api/ready" >/dev/null
+
+            echo "==> ✅ Production redémarrée"
