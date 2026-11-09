@@ -10,7 +10,7 @@ const COLUMNS = 9;
 export function UsersTableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <div aria-hidden="true">
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <div className="flex gap-4 border-b border-slate-100 px-4 py-3">
           {Array.from({ length: COLUMNS }).map((_, i) => (
             <Skeleton key={i} className="h-4 flex-1" />
@@ -33,7 +33,7 @@ export function UsersTableSkeleton({ rows = 8 }: { rows?: number }) {
           </div>
         ))}
       </div>
-      <div className="space-y-4 md:hidden">
+      <div className="space-y-4 lg:hidden">
         {Array.from({ length: 3 }).map((_, r) => (
           <Card key={r} className="space-y-3 p-4">
             <Skeleton className="h-5 w-2/3" />

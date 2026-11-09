@@ -294,7 +294,7 @@ export default function AdminExamsPage() {
         ) : (
           <>
             {/* Table View (Desktop) */}
-            <div className="hidden md:block bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-x-auto">
+            <div className="hidden lg:block bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-x-auto">
                <table className="w-full text-left border-collapse">
                  <thead>
                    <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -359,7 +359,7 @@ export default function AdminExamsPage() {
             </div>
 
             {/* Mobile Card View for List Mode */}
-            <div className="md:hidden space-y-4">
+            <div className="space-y-4 lg:hidden">
                {filteredExams.map((exam) => {
                  const config = statusConfig[exam.status as keyof typeof statusConfig];
                  return (

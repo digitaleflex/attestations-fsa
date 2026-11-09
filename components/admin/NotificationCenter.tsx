@@ -96,7 +96,7 @@ export default function NotificationCenter() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="w-80 md:w-96 bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden" align="end">
+      <DropdownMenuContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden sm:w-80 md:w-96" align="end">
         <DropdownMenuLabel className="p-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-amber-400" />

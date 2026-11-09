@@ -236,7 +236,7 @@ export default function AdminSubmissionsPage() {
       ) : (
         <Card className="border-slate-100 shadow-sm overflow-hidden">
           {/* Vue Bureau (Tableau) */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
@@ -303,7 +303,7 @@ export default function AdminSubmissionsPage() {
           </div>
 
           {/* Vue Mobile (Cartes) */}
-          <div className="md:hidden divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 lg:hidden">
             {filtered.map((sub) => (
               <div key={sub.id} className="p-4 space-y-3 bg-white hover:bg-slate-50 transition-colors">
                 <div className="flex items-start justify-between gap-3">

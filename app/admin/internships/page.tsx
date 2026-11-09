@@ -279,7 +279,7 @@ export default function AdminInternshipsPage() {
       </div>
 
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-2xl overflow-hidden rounded-2xl p-0 border-none shadow-2xl">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl border-none p-0 shadow-2xl">
           {selected && (
             <div className="relative">
               <div className="h-32 bg-gradient-to-r from-red-600 to-rose-700 p-8">
