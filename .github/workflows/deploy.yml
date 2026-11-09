@@ -28,6 +28,11 @@ on:
         required: false
         default: "false"
         type: boolean
+      docker_maintenance:
+        description: "One-off: clean Docker storage on VPS (images/containers/build cache, volumes preserved) and try to restart Docker"
+        required: false
+        default: "false"
+        type: boolean
 
 # Sérialise les déploiements : deux push rapprochés sur main ne doivent JAMAIS
 # construire en parallèle sur le même VPS. Incident du 2026-09-17 : 4 builds
@@ -161,6 +166,22 @@ jobs:
             set -e
             umask 077
 
+            if [ "${{ github.event.inputs.docker_maintenance }}" = "true" ]; then
+              echo "==> 🧹 Docker maintenance (one-off)"
+              df -h || true
+              df -i || true
+              docker system df || true
+              # Ne supprime PAS les volumes nommés (Postgres/uploads intacts).
+              docker system prune -af || true
+              if sudo -n systemctl restart docker 2>/dev/null; then
+                echo "==> Docker redémarré"
+                for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
+              else
+                echo "==> Redémarrage Docker ignoré (sudo indisponible) ; prune effectué"
+              fi
+              sleep 5
+            fi
+
             echo "==> 🐳 Starting Staging deployment..."
             cd /home/audest/attestations-fsa
 
@@ -239,8 +260,14 @@ jobs:
     # `needs` est sauté, même avec un `if` vrai — sans lui, `skip_staging`
     # condamnait `deploy-prod` dans tous les cas (constaté le 2026-10-29).
     if: >-
-      always() && ((github.event_name == 'workflow_dispatch' && (github.event.inputs.skip_staging == true || github.event.inputs.skip_staging == 'true')) ||
-      (github.event_name == 'workflow_run' && needs.deploy-staging.result == 'success'))
+      always() && (
+        (github.event_name == 'workflow_dispatch' && (
+          github.event.inputs.skip_staging == true ||
+          github.event.inputs.skip_staging == 'true' ||
+          needs.deploy-staging.result == 'success'
+        )) ||
+        (github.event_name == 'workflow_run' && needs.deploy-staging.result == 'success')
+      )
     runs-on: ubuntu-latest
     environment: production
 
@@ -266,6 +293,22 @@ jobs:
           script: |
             set -e
             umask 077
+
+            if [ "${{ github.event.inputs.docker_maintenance }}" = "true" ]; then
+              echo "==> 🧹 Docker maintenance (one-off)"
+              df -h || true
+              df -i || true
+              docker system df || true
+              # Ne supprime PAS les volumes nommés (Postgres/uploads intacts).
+              docker system prune -af || true
+              if sudo -n systemctl restart docker 2>/dev/null; then
+                echo "==> Docker redémarré"
+                for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
+              else
+                echo "==> Redémarrage Docker ignoré (sudo indisponible) ; prune effectué"
+              fi
+              sleep 5
+            fi
 
             echo "==> 🐳 Starting Production deployment..."
             cd /home/audest/attestations-fsa
