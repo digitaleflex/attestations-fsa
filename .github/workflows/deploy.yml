@@ -5,6 +5,11 @@ on:
   # workflow_dispatch reste disponible pour une intervention manuelle.
   workflow_run:
     workflows:
+      # Le workflow de CI s'appelle « Test » (singulier) dans test.yml.
+      # « Tests » était une faute de nom : aucun déploiement automatique ne se
+      # déclenchait après un push vert. On accepte les deux pour tolérer un
+      # futur renommage.
+      - Test
       - Tests
     types:
       - completed
