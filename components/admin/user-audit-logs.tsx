@@ -103,16 +103,16 @@ export function UserAuditLogs({ userId }: { userId: string }) {
                   {log.oldValue && (
                     <div className="space-y-1">
                       <p className="text-[8px] font-bold text-slate-600 uppercase">Avant</p>
-                      <pre className="text-[9px] text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap bg-black/20 p-1 rounded">
-                        {JSON.stringify(log.oldValue)}
+                      <pre className="max-h-24 overflow-auto whitespace-pre-wrap break-words rounded bg-black/20 p-1 text-[9px] text-slate-500">
+                        {JSON.stringify(log.oldValue, null, 2)}
                       </pre>
                     </div>
                   )}
                   {log.newValue && (
                     <div className="space-y-1">
                       <p className="text-[8px] font-bold text-emerald-600 uppercase tracking-tighter">Après</p>
-                      <pre className="text-[9px] text-emerald-400 overflow-hidden text-ellipsis whitespace-nowrap bg-emerald-500/5 p-1 rounded">
-                        {JSON.stringify(log.newValue)}
+                      <pre className="max-h-24 overflow-auto whitespace-pre-wrap break-words rounded bg-emerald-500/5 p-1 text-[9px] text-emerald-400">
+                        {JSON.stringify(log.newValue, null, 2)}
                       </pre>
                     </div>
                   )}

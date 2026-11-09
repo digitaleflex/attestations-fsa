@@ -77,7 +77,7 @@ export default async function AdminLayout({
     <SidebarProvider defaultOpen={true}>
       <AdminSidebar admin={session?.user || null} />
 
-      <SidebarInset className="flex flex-col min-h-screen bg-slate-50">
+      <SidebarInset className="flex min-w-0 flex-col min-h-screen bg-slate-50">
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4 md:px-6">
           <div className="flex-1 flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
@@ -92,7 +92,12 @@ export default async function AdminLayout({
             </div>
           </div>
         </header>
-        <main id="contenu-principal" className="flex-1 overflow-y-auto">{children}</main>
+        <main
+          id="contenu-principal"
+          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+        >
+          {children}
+        </main>
       </SidebarInset>
       <AdminCommandPalette />
     </SidebarProvider>

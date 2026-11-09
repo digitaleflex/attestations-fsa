@@ -19,6 +19,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -795,7 +796,7 @@ export default function AdminUsersPage() {
     null;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-w-0 space-y-6 p-4 sm:p-6">
       {/* Navigation Apprenants / CRM */}
       <nav aria-label="Sections apprenants" className="flex gap-6 border-b border-slate-200">
         <Link href="/admin/users" aria-current="page" className="pb-3 text-sm font-bold text-brand border-b-2 border-brand flex items-center gap-2">
@@ -958,10 +959,11 @@ export default function AdminUsersPage() {
         />
       </Card>
 
-      {/* Vue Bureau (Tableau) */}
-      <Card className="bg-white hidden md:block overflow-hidden">
+      {/* Vue Bureau (Tableau) — à partir de lg : en md les 9 colonnes
+          écrasent Rôle/Statut et donnent l'impression d'un contenu masqué. */}
+      <Card className="bg-white hidden lg:block overflow-hidden">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[1080px]">
             <TableCaption className="sr-only">
               Liste des apprenants — triable par nom, email et dates, actions par utilisateur
             </TableCaption>
@@ -1079,13 +1081,13 @@ export default function AdminUsersPage() {
                       </span>
                     </TableCell>
                     <TableCell className="max-w-56 truncate" title={u.email || undefined}>{u.email || "-"}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <StatusBadge status={u.status} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <RoleBadge role={u.role} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <VerifiedBadge verified={Boolean(u.emailVerified)} />
                     </TableCell>
                     <TableCell className="text-sm text-slate-500">
@@ -1154,8 +1156,8 @@ export default function AdminUsersPage() {
         </div>
       </Card>
 
-      {/* Vue Mobile (Cartes) */}
-      <div className="md:hidden space-y-4">
+      {/* Vue Mobile / Tablette (Cartes) */}
+      <div className="space-y-4 lg:hidden">
         {loading && users.length === 0 ? (
           <UsersTableSkeleton rows={3} />
         ) : loadError && users.length === 0 ? (
@@ -1278,16 +1280,18 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      <AlertDialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <AlertDialogContent className="max-w-2xl bg-slate-900 text-white border border-white/10 rounded-[2.5rem] shadow-2xl backdrop-blur-xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight text-white">
+      {/* Détails : un Dialog (fermeture au clic extérieur / Échap / croix),
+          pas un AlertDialog réservé aux confirmations destructives. */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-[2.5rem] border border-white/10 bg-slate-900 text-white shadow-2xl backdrop-blur-xl [&>button]:text-white [&>button]:hover:bg-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black tracking-tight text-white">
               Détails de l'utilisateur
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400 font-medium italic">
+            </DialogTitle>
+            <DialogDescription className="font-medium italic text-slate-400">
               Informations complètes sur le profil candidat.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           {viewingUser && (
             <div className="space-y-6 pt-4">
               <div className="flex items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/10 mb-2">
@@ -1427,13 +1431,18 @@ export default function AdminUsersPage() {
               )}
             </div>
           )}
-          <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white rounded-xl h-11 px-6 font-bold transition-all">
+          <div className="flex justify-end pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setViewDialogOpen(false)}
+              className="h-11 rounded-xl border-white/10 bg-white/5 px-6 font-bold text-white transition-all hover:bg-white/10 hover:text-white"
+            >
               Fermer
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
         <DialogContent>
           <DialogHeader>
