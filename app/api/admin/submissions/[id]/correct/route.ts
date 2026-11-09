@@ -257,7 +257,9 @@ export async function POST(
             ? `Votre auto-évaluation "${exam.title}" a été corrigée. Score: ${totalScore}/${totalPoints} (${finalScore.toFixed(2)}%).`
             : `Félicitations ! Votre examen "${exam.title}" a été corrigé avec une moyenne globale de ${finalScore.toFixed(2)}/100.${attestationGenerated ? ' Votre attestation est prête.' : ''}`
           : `La correction de "${exam.title}" est terminée. Moyenne: ${finalScore.toFixed(2)}/100.`,
-        link: isMock ? '/transcript' : passed ? '/attestations' : '/results',
+        // Il n'existe pas de page /transcript : le relevé est consultable
+        // dans /results, comme pour un examen officiel.
+        link: isMock ? '/results' : passed ? '/attestations' : '/results',
       });
     }
 

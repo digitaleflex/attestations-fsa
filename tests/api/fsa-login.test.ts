@@ -391,15 +391,7 @@ describe("POST /api/auth/fsa-login — verify-otp", () => {
   });
 });
 
-describe("POST /api/auth/fsa-login — autres actions", () => {
-  it("410 : le magic link est désactivé", async () => {
-    const res = await call({
-      action: "request-magic-link",
-      fsaCode: CANDIDATE_EMAIL,
-    });
-    expect(res.status).toBe(410);
-  });
-
+describe("POST /api/auth/fsa-login — erreurs", () => {
   it("500 si une erreur fatale survient", async () => {
     authApi.sendVerificationOTP.mockRejectedValue(new Error("boom") as never);
     const res = await call({ action: "request-otp", fsaCode: CANDIDATE_EMAIL });

@@ -95,15 +95,9 @@ const VerifyOtpSchema = z.object({
     .length(6, "Le code de vérification doit contenir exactement 6 chiffres."),
 });
 
-const RequestMagicLinkSchema = z.object({
-  action: z.literal("request-magic-link"),
-  fsaCode: FsaCodeField,
-});
-
 const LoginSchema = z.discriminatedUnion("action", [
   RequestOtpSchema,
   VerifyOtpSchema,
-  RequestMagicLinkSchema,
 ]);
 
 /**
@@ -200,8 +194,8 @@ export async function POST(request: Request) {
     // fenêtre exacte pendant laquelle une attaque de force brute passerait.
     // Un quota fail-closed n'est donc plus une simple limitation de débit.
 
-    // request-otp / request-magic-link : 3/10min par IP (envoi d'e-mail).
-    if (data.action === "request-otp" || data.action === "request-magic-link") {
+    // request-otp : 3/10min par IP (envoi d'e-mail).
+    if (data.action === "request-otp") {
       const limiter = await applyRateLimit(request, "fsaOtpRequest");
       if (!limiter.allowed) return limiter.response;
     }
@@ -217,19 +211,6 @@ export async function POST(request: Request) {
         "fsaOtpVerify",
       );
       if (!limiter.allowed) return limiter.response;
-    }
-
-    // Le lien magique est désactivé : réponse immédiate, sans lecture base.
-    // Placé AVANT la recherche pour ne pas transformer cette action en oracle
-    // d'existence (404/200) alors qu'elle ne peut de toute façon rien ouvrir.
-    if (data.action === "request-magic-link") {
-      return NextResponse.json(
-        {
-          message:
-            "La connexion par lien magique est désactivée. Utilisez le code de vérification (OTP) envoyé par e-mail.",
-        },
-        { status: 410 },
-      );
     }
 
     // 1. Recherche par identifiant (e-mail ou code FSA complet)

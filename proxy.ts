@@ -87,7 +87,6 @@ const USER_ROUTES = [
   "/profile",
   "/internships",
   "/notifications",
-  "/transcript",
   "/api/user",
 ];
 
