@@ -112,6 +112,10 @@ export default defineConfig({
       // définie dans process.env n'est jamais écrasée par .env.local).
       UPSTASH_REDIS_REST_URL: "",
       UPSTASH_REDIS_REST_TOKEN: "",
+      // #385 — La suite enchaîne plusieurs connexions depuis la même IP
+      // (budget `login` 5/15 min) : on neutralise les quotas UNIQUEMENT dans
+      // ce serveur de test. `lib/rate-limit.ts` refuse ce bypass en production.
+      RATE_LIMIT_BYPASS: "true",
       // ── Émission d'attestation + preuve PDF (#258) ─────────────────────
       // Le flux métier n'émet une CERTIFICATION que si un générateur PDF
       // SERVEUR est configuré. La suite charge ici une fixture locale

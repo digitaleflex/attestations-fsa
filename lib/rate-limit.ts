@@ -745,11 +745,26 @@ function resolveRedisUnavailable(
   return { allowed: false, response: buildRateLimitUnavailableResponse(limitType) };
 }
 
+/**
+ * Échappatoire réservée aux tests E2E : le serveur Playwright enchaîne
+ * plusieurs connexions depuis la même IP (même budget `login` 5/15 min), ce
+ * qui ferait échouer la suite pour une raison sans rapport avec le produit.
+ * Refusée en production, même si la variable est posée par erreur.
+ */
+function isRateLimitBypassedForTests(): boolean {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.RATE_LIMIT_BYPASS === "true"
+  );
+}
+
 // ✅ FIX: Accept Request instead of NextRequest
 export async function applyRateLimit(
   request: Request,
   limitType: keyof typeof rateLimits,
 ): Promise<RateLimitDecision> {
+  if (isRateLimitBypassedForTests()) return { allowed: true, headers: {} };
+
   // #287 — identité via le proxy de confiance, jamais `x-forwarded-for` brut.
   const ip = getClientIp(request);
   const limit = rateLimits[limitType];
@@ -791,6 +806,8 @@ export async function applyRateLimitByUser(
   userId: string,
   limitType: keyof typeof rateLimits,
 ): Promise<RateLimitDecision> {
+  if (isRateLimitBypassedForTests()) return { allowed: true, headers: {} };
+
   const ip = getClientIp(request);
   const limit = rateLimits[limitType];
   const userIdentifiers = [`ip:${ip}`, `user:${userId}`];
@@ -893,6 +910,8 @@ export async function applyByteQuotaByUser(
   bytes: number,
   limitType: "uploadBytes",
 ): Promise<RateLimitDecision> {
+  if (isRateLimitBypassedForTests()) return { allowed: true, headers: {} };
+
   const ip = getClientIp(request);
   const config = memoryFallbackLimits[limitType];
   const windowMs = config?.windowMs ?? 60 * MINUTE;
