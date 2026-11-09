@@ -154,8 +154,17 @@ services:
     pids_limit: 128
     security_opt:
       - no-new-privileges:true
+    # L'entrypoint officiel bascule root -> redis (gosu) et initialise le
+    # volume AOF : il a besoin de ces quatre capacités, et d'elles seules.
+    # Sans elles, Redis démarre puis meurt sur « appendonlydir: Permission
+    # denied » (vérifié en local).
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
 
   fsa-postgres:
     image: postgres:17-alpine
