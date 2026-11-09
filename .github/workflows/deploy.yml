@@ -139,20 +139,34 @@ jobs:
 
       - name: Deploy to Staging (Docker)
         uses: appleboy/ssh-action@v1
+        env:
+          STAGING_REDIS_PASSWORD: ${{ secrets.STAGING_REDIS_PASSWORD }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
           command_timeout: 20m
+          envs: STAGING_REDIS_PASSWORD
           script: |
             set -e
+            umask 077
 
             echo "==> 🐳 Starting Staging deployment..."
             cd /home/audest/attestations-fsa
 
             echo "==> Pulling latest code..."
             git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+            # #384 — Redis : injecte/actualise le mot de passe depuis le secret
+            # GitHub sans jamais l'afficher. Le fichier .env.staging n'est pas
+            # versionné ; c'est le seul endroit où la valeur est écrite.
+            if [ -z "${STAGING_REDIS_PASSWORD:-}" ]; then
+              echo "==> ERREUR: secret STAGING_REDIS_PASSWORD absent"; exit 1
+            fi
+            grep -v '^STAGING_REDIS_PASSWORD=' .env.staging > .env.staging.tmp || true
+            printf 'STAGING_REDIS_PASSWORD=%s\n' "$STAGING_REDIS_PASSWORD" >> .env.staging.tmp
+            mv .env.staging.tmp .env.staging
 
             # ── 0. Libérer de l'espace disque ──
             echo "==> Espace disque AVANT nettoyage :"
@@ -218,20 +232,34 @@ jobs:
 
       - name: Deploy to Production (Docker)
         uses: appleboy/ssh-action@v1
+        env:
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
           command_timeout: 30m
+          envs: REDIS_PASSWORD
           script: |
             set -e
+            umask 077
 
             echo "==> 🐳 Starting Production deployment..."
             cd /home/audest/attestations-fsa
 
             echo "==> Pulling latest code..."
             git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+            # #384 — Redis : injecte/actualise le mot de passe depuis le secret
+            # GitHub sans jamais l'afficher. Le fichier .env.production n'est
+            # pas versionné ; c'est le seul endroit où la valeur est écrite.
+            if [ -z "${REDIS_PASSWORD:-}" ]; then
+              echo "==> ERREUR: secret REDIS_PASSWORD absent"; exit 1
+            fi
+            grep -v '^REDIS_PASSWORD=' .env.production > .env.production.tmp || true
+            printf 'REDIS_PASSWORD=%s\n' "$REDIS_PASSWORD" >> .env.production.tmp
+            mv .env.production.tmp .env.production
 
             # ── 0. Libérer de l'espace disque (AVANT tout le reste) ──
             echo "==> Espace disque AVANT nettoyage :"
