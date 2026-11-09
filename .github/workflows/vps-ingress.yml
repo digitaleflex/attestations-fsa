@@ -1,0 +1,57 @@
+name: VPS ingress diagnostic / recovery
+
+# Diagnostic ciblé de la couche d'exposition (Traefik/Cloudflare) après un
+# redémarrage Docker. Ne touche ni aux images ni aux volumes.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ingress:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Diagnose and restart ingress
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          command_timeout: 5m
+          script: |
+            set -e
+
+            echo "==> Services ingress connus"
+            for svc in traefik cloudflared caddy nginx; do
+              state="$(systemctl is-active "$svc" 2>/dev/null || true)"
+              enabled="$(systemctl is-enabled "$svc" 2>/dev/null || true)"
+              echo "$svc: active=$state enabled=$enabled"
+            done
+
+            echo "==> Unités systemd ingress"
+            systemctl list-units --type=service --all 2>/dev/null | grep -Ei 'traefik|cloudflared|caddy|ingress' || true
+
+            echo "==> Ports 80/443"
+            ss -lntp 2>/dev/null | grep -E ':(80|443)\b' || true
+
+            echo "==> Conteneurs ingress (même arrêtés)"
+            docker ps -a --format '{{.Names}}\t{{.Status}}\t{{.Image}}' | grep -Ei 'traefik|cloudflared|ingress|caddy' || true
+
+            echo "==> Tentative de redémarrage des services connus"
+            for svc in traefik cloudflared; do
+              if systemctl list-unit-files "$svc.service" >/dev/null 2>&1; then
+                sudo -n systemctl restart "$svc" 2>/dev/null && echo "$svc redémarré" || echo "$svc: restart refusé/indisponible"
+              fi
+            done
+
+            echo "==> App locale"
+            docker exec attestations-fsa-prod wget -qO- http://127.0.0.1:3000/api/ready || true
+
+            echo "==> Réseaux de l'app"
+            docker inspect attestations-fsa-prod --format '{{json .NetworkSettings.Networks}}' || true
+
+            echo "==> Réseau proxy"
+            docker network inspect proxy --format '{{json .Containers}}' 2>/dev/null || true
