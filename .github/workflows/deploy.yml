@@ -153,7 +153,9 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
-          command_timeout: 20m
+          # 40m : le pull/extraction de l'image migrator peut être lent sur le
+          # VPS (disque à 85 %, réseau), surtout après une purge d'images.
+          command_timeout: 40m
           envs: STAGING_REDIS_PASSWORD,GHCR_TOKEN,GHCR_USER
           script: |
             set -e
@@ -162,9 +164,9 @@ jobs:
             echo "==> 🐳 Starting Staging deployment..."
             cd /home/audest/attestations-fsa
 
-            # GHCR : le `docker image prune -af` supprime l'image migrator ;
-            # sans login, le pull échoue en « denied ». Le token est éphémère
-            # (GITHUB_TOKEN) et n'est jamais affiché.
+            # GHCR : le prune peut supprimer l'image migrator (ou une image
+            # absente du cache) ; sans login, le pull échoue en « denied ».
+            # Le token est éphémère (GITHUB_TOKEN) et n'est jamais affiché.
             if [ -z "${GHCR_TOKEN:-}" ]; then
               echo "==> ERREUR: GHCR_TOKEN absent"; exit 1
             fi
@@ -187,7 +189,10 @@ jobs:
             echo "==> Espace disque AVANT nettoyage :"
             df -h / | tail -1
             echo "==> Purge des images inutilisées et du cache de build..."
-            docker image prune -af || true
+            # Ne supprime que les images inutilisées de plus de 30 jours :
+            # l'image migrator (récente) est conservée, ce qui évite de la
+            # re-télécharger à chaque déploiement.
+            docker image prune -af --filter "until=720h" || true
             docker builder prune -af || true
             echo "==> Espace disque APRÈS nettoyage :"
             df -h / | tail -1
@@ -256,7 +261,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
-          command_timeout: 30m
+          command_timeout: 60m
           envs: REDIS_PASSWORD,GHCR_TOKEN,GHCR_USER
           script: |
             set -e
@@ -265,9 +270,9 @@ jobs:
             echo "==> 🐳 Starting Production deployment..."
             cd /home/audest/attestations-fsa
 
-            # GHCR : le `docker image prune -af` supprime l'image migrator ;
-            # sans login, le pull échoue en « denied ». Le token est éphémère
-            # (GITHUB_TOKEN) et n'est jamais affiché.
+            # GHCR : le prune peut supprimer l'image migrator (ou une image
+            # absente du cache) ; sans login, le pull échoue en « denied ».
+            # Le token est éphémère (GITHUB_TOKEN) et n'est jamais affiché.
             if [ -z "${GHCR_TOKEN:-}" ]; then
               echo "==> ERREUR: GHCR_TOKEN absent"; exit 1
             fi
@@ -290,7 +295,10 @@ jobs:
             echo "==> Espace disque AVANT nettoyage :"
             df -h / | tail -1
             echo "==> Purge des images inutilisées et du cache de build..."
-            docker image prune -af || true
+            # Ne supprime que les images inutilisées de plus de 30 jours :
+            # l'image migrator (récente) est conservée, ce qui évite de la
+            # re-télécharger à chaque déploiement.
+            docker image prune -af --filter "until=720h" || true
             docker builder prune -af || true
             echo "==> Espace disque APRÈS nettoyage :"
             df -h / | tail -1
@@ -361,32 +369,45 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────
   rollback:
     needs: deploy-prod
-    if: failure()
+    # Ne pas déclencher un rollback prod si c'est le staging qui a échoué :
+    # deploy-prod est alors `skipped`, pas `failure`.
+    if: failure() && needs.deploy-prod.result == 'failure'
     runs-on: ubuntu-latest
     environment: production
 
     steps:
       - name: Rollback to previous image
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
-          command_timeout: 10m
+          command_timeout: 15m
+          envs: GHCR_TOKEN,GHCR_USER
           script: |
             set -e
+            umask 077
 
             echo "==> ⚠️  Production healthcheck failed — initiating rollback..."
             cd /home/audest/attestations-fsa
+
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-github}" --password-stdin >/dev/null
+            fi
 
             # Récupérer le tag précédent (l'avant-dernière image)
             PREVIOUS_TAG=$(docker images --format '{{.Tag}}' \
               ghcr.io/digitaleflex/attestations-fsa | grep -v '${{ needs.build-and-push.outputs.image_tag }}' | head -1)
 
             if [ -z "$PREVIOUS_TAG" ]; then
-              echo "==> ❌ No previous image found for rollback!"
-              exit 1
+              echo "==> ⚠️  Aucune image précédente locale pour le rollback."
+              echo "    Le déploiement prod a déjà échoué ; on ne masque pas"
+              echo "    cette erreur par un second échec de rollback."
+              exit 0
             fi
 
             echo "==> Rolling back to image tag: $PREVIOUS_TAG"
