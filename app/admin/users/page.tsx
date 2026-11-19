@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Card } from "@/components/ui/card";
@@ -66,6 +67,8 @@ import {
 import { UsersTableSkeleton } from "@/components/admin/users/UsersTableSkeleton";
 import { UsersBulkBar, type BulkKind } from "@/components/admin/users/UsersBulkBar";
 import { TableCaption } from "@/components/ui/table";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 // ... (icons)
 import {
   Loader2,
@@ -262,17 +265,8 @@ export default function AdminUsersPage() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 });
-  const [stats, setStats] = useState({ total: 0, active: 0, verified: 0, unverified: 0 });
-  useEffect(() => {
-    fetch("/api/users/stats")
-      .then((r) => r.json())
-      .then((d) => setStats(d))
-      .catch(() => {});
-  }, []);
+  const [metaDefault] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 });
+  const statsDefault = { total: 0, active: 0, verified: 0, unverified: 0 };
 
   // Filtres lus depuis l'URL (source de vérité partageable)
   const rawStatus = searchParams.get("status") || "";
@@ -302,6 +296,61 @@ export default function AdminUsersPage() {
     page: Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1),
   };
   const filtersKey = JSON.stringify(filters);
+
+  const usersQuery = useQuery({
+    queryKey: ["admin-users", filters],
+    queryFn: async () => {
+      const f = filters;
+      const params = new URLSearchParams();
+      params.set("page", String(f.page));
+      if (f.q) params.set("q", f.q);
+      if (f.status) params.set("status", f.status);
+      if (f.role) params.set("role", f.role);
+      if (f.verified) params.set("verified", f.verified);
+      const { from } = periodToRange(f.period);
+      if (from) params.set("from", from);
+      params.set("sort", f.sort);
+      params.set("direction", f.direction);
+      const res = await fetch(`/api/users?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return {
+        items: Array.isArray(data.items) ? (data.items as User[]) : [],
+        meta: data.meta || { total: 0, page: 1, totalPages: 1, limit: 20 },
+      };
+    },
+  });
+
+  const users = usersQuery.data?.items ?? [];
+  const loading = usersQuery.isLoading;
+  const loadError = usersQuery.isError;
+  const meta = usersQuery.data?.meta ?? { total: 0, page: 1, totalPages: 1, limit: 20 };
+  const refetchUsers = usersQuery.refetch;
+
+  const statsQuery = useQuery({
+    queryKey: ["admin-users-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/users/stats");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return {
+        total: Number(data?.total ?? 0),
+        active: Number(data?.active ?? 0),
+        verified: Number(data?.verified ?? 0),
+        unverified: Number(data?.unverified ?? 0),
+      };
+    },
+  });
+  const stats = statsQuery.data ?? { total: 0, active: 0, verified: 0, unverified: 0 };
+
+  const fetchUsers = useCallback(() => {
+    refetchUsers();
+  }, [refetchUsers]);
+
+  // Réinitialiser la sélection à chaque changement de jeu de résultats
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [filtersKey]);
 
   const [search, setSearch] = useState(filters.q);
   const debouncedSearch = useDebounce(search, 500);
@@ -368,61 +417,6 @@ export default function AdminUsersPage() {
     },
     [pathname, router],
   );
-
-  const fetchUsers = useCallback(async () => {
-    const f = filtersRef.current;
-    setLoading(true);
-    // La sélection appartient au jeu de résultats courant
-    setSelectedIds([]);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(f.page));
-      if (f.q) params.set("q", f.q);
-      if (f.status) params.set("status", f.status);
-      if (f.role) params.set("role", f.role);
-      if (f.verified) params.set("verified", f.verified);
-      const { from } = periodToRange(f.period);
-      if (from) params.set("from", from);
-      params.set("sort", f.sort);
-      params.set("direction", f.direction);
-      const res = await fetch(`/api/users?${params.toString()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setUsers(Array.isArray(data.items) ? data.items : []);
-      setMeta(data.meta || { total: 0, page: 1, totalPages: 1, limit: 20 });
-      setLoadError(false);
-    } catch (err) {
-      console.error("[admin/users] chargement impossible:", err);
-      setLoadError(true);
-      toast.error("Impossible de charger les utilisateurs.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [filtersKey, fetchUsers]);
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await fetch("/api/users/stats");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setStats({
-        total: Number(data?.total ?? 0),
-        active: Number(data?.active ?? 0),
-        verified: Number(data?.verified ?? 0),
-        unverified: Number(data?.unverified ?? 0),
-      });
-    } catch (err) {
-      console.error("[admin/users] chargement des stats impossible:", err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
 
   // La recherche debouncée met à jour l'URL (qui déclenche le rechargement)
   useEffect(() => {
@@ -556,7 +550,7 @@ export default function AdminUsersPage() {
     try {
       const res = await fetch(`/api/users/${deleteId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erreur lors de la suppression");
-      setUsers((prev) => prev.filter((u) => u.id !== deleteId));
+      fetchUsers();
       toast.success("Utilisateur supprimé");
     } catch (err: unknown) {
       console.error("[admin/users] suppression impossible:", err);
@@ -698,6 +692,60 @@ export default function AdminUsersPage() {
 
   // Le filtrage se fait côté serveur via fetchUsers() + URL
   const displayUsers = users;
+
+  const handleExportCSV = () => {
+    const rows = displayUsers.map((u) => ({
+      Nom: u.name || "-",
+      Email: u.email || "-",
+      Statut: u.status,
+      Rôle: u.role,
+      Vérifié: u.emailVerified ? "Oui" : "Non",
+      "Date d'inscription": formatDate(u.createdAt),
+    }));
+    const headers = Object.keys(rows[0] || {});
+    const csv = [
+      headers.join(","),
+      ...rows.map((r) =>
+        headers
+          .map((h) => `"${String((r as any)[h]).replace(/"/g, '""')}"`)
+          .join(","),
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `apprenants-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Export CSV généré");
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Liste des apprenants", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Date d'export : ${new Date().toLocaleDateString("fr-FR")}`, 14, 22);
+    const tableColumn = ["Nom", "Email", "Statut", "Rôle", "Vérifié", "Date d'inscription"];
+    const tableRows = displayUsers.map((u) => [
+      u.name || "-",
+      u.email || "-",
+      u.status,
+      u.role,
+      u.emailVerified ? "Oui" : "Non",
+      formatDate(u.createdAt),
+    ]);
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 28,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [67, 56, 202] },
+    });
+    doc.save(`apprenants-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success("Export PDF généré");
+  };
   const hasActiveFilters = hasActiveUsersFilters({
     q: filters.q,
     status: filters.status,
@@ -929,6 +977,14 @@ export default function AdminUsersPage() {
           onPeriodChange={(period) => updateFilters({ period })}
           onReset={handleResetFilters}
         />
+        <div className="mt-4 flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV} className="gap-2">
+            Exporter CSV
+          </Button>
+          <Button variant="outline" onClick={handleExportPDF} className="gap-2">
+            Exporter PDF
+          </Button>
+        </div>
       </Card>
 
       {/* Vue Bureau (Tableau) — à partir de lg : en md les 9 colonnes
