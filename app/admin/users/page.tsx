@@ -958,7 +958,7 @@ export default function AdminUsersPage() {
                     onToggle={handleToggleSort}
                   />
                 </TableHead>
-                <TableHead scope="col" aria-sort={filters.sort === "email" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                <TableHead scope="col" className="hidden 2xl:table-cell" aria-sort={filters.sort === "email" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
                   <SortButton
                     field="email"
                     label="Email"
@@ -979,7 +979,7 @@ export default function AdminUsersPage() {
                     onToggle={handleToggleSort}
                   />
                 </TableHead>
-                <TableHead scope="col" aria-sort={filters.sort === "updatedAt" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                <TableHead scope="col" className="hidden xl:table-cell" aria-sort={filters.sort === "updatedAt" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
                   <SortButton
                     field="updatedAt"
                     label="Activité"
@@ -1042,7 +1042,7 @@ export default function AdminUsersPage() {
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      <span className="flex items-center gap-2.5">
+                      <span className="flex items-center gap-2.5" title={u.email || undefined}>
                         <span
                           aria-hidden="true"
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-black text-brand-dark"
@@ -1052,7 +1052,7 @@ export default function AdminUsersPage() {
                         {u.name || "-"}
                       </span>
                     </TableCell>
-                    <TableCell className="max-w-56 truncate" title={u.email || undefined}>{u.email || "-"}</TableCell>
+                    <TableCell className="max-w-56 truncate hidden 2xl:table-cell" title={u.email || undefined}>{u.email || "-"}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <StatusBadge status={u.status} />
                     </TableCell>
@@ -1065,7 +1065,7 @@ export default function AdminUsersPage() {
                     <TableCell className="text-sm text-slate-500">
                       {formatDate(u.createdAt)}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-500" title={formatDateTime(u.updatedAt)}>
+                    <TableCell className="text-sm text-slate-500 hidden xl:table-cell" title={formatDateTime(u.updatedAt)}>
                       {formatDate(u.updatedAt)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -1163,24 +1163,37 @@ export default function AdminUsersPage() {
           </Card>
         ) : (
           <>
-            {displayUsers.map((u) => (
+            {displayUsers.map((u) => {
+              const activeRecently = (() => {
+                if (!u.updatedAt) return false;
+                const d = new Date(u.updatedAt);
+                if (Number.isNaN(d.getTime())) return false;
+                return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
+              })();
+              return (
               <Card key={u.id} className="p-4 bg-white shadow-sm border-slate-100 space-y-4">
                 <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-1 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     <RowCheckbox
                       checked={selectedIds.includes(u.id)}
                       onChange={(checked) => toggleOne(u.id, checked)}
                       label={`Sélectionner ${u.name || u.email || "cet utilisateur"}`}
                     />
-                    <span
-                      aria-hidden="true"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-black text-brand-dark"
-                    >
-                      {initialsOf(u)}
-                    </span>
+                    <div className="relative shrink-0">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-sm font-black text-brand-dark"
+                      >
+                        {initialsOf(u)}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        title={activeRecently ? "Actif (moins de 7 jours)" : "Inactif (plus de 7 jours)"}
+                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-white ${activeRecently ? "bg-emerald-500" : "bg-slate-300"}`}
+                      />
+                    </div>
                     <div className="min-w-0">
                       <h3 className="font-bold text-slate-800 truncate">{u.name || "-"}</h3>
-                      <p className="text-sm text-slate-500 truncate">{u.email || "-"}</p>
                     </div>
                   </div>
                   <UserActionsMenu
@@ -1207,24 +1220,39 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
+                <div className="rounded-xl bg-slate-50/80 px-3 py-2.5 space-y-1.5 text-xs text-slate-600">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-500">Email</span>
+                    <span className="truncate font-semibold text-slate-700">{u.email || "-"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-500">Inscrit le</span>
+                    <span className="font-semibold text-slate-700">{formatDate(u.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-500">Dernière activité</span>
+                    <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${activeRecently ? "bg-emerald-500" : "bg-slate-300"}`} />
+                      {formatDate(u.updatedAt)}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
                   <VerifiedBadge verified={Boolean(u.emailVerified)} />
-                  <span className="text-[11px] text-slate-500">
-                    Inscrit le {formatDate(u.createdAt)}
-                  </span>
                 </div>
 
                 <Button
-                  variant="outline"
                   onClick={() => handleViewDetails(u)}
                   aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
-                  className="w-full min-h-[44px] gap-2 font-bold"
+                  className="w-full min-h-[44px] gap-2 font-bold shadow-md"
                 >
                   <Eye className="h-4 w-4" aria-hidden="true" />
-                  Voir
+                  Voir détails
                 </Button>
               </Card>
-            ))}
+              );
+            })}
 
             {/* Pagination Mobile */}
             <nav aria-label="Pagination des apprenants" className="flex items-center justify-between pt-4 pb-8">
