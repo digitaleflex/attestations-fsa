@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     // Tentative d'envoi réel via web-push si disponible (optionnel).
     let webpush: any = null;
     try {
-      // @ts-ignore - optional dependency
+      // @ts-expect-error - optional dependency
       webpush = await import("web-push");
     } catch {
       webpush = null;
