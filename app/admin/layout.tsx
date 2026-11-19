@@ -13,6 +13,8 @@ import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 import { AdminCommandPaletteTrigger } from "@/components/admin/AdminCommandPaletteTrigger";
 import { AdminCommandPalette } from "@/components/admin/AdminCommandPalette";
 import NotificationCenter from "@/components/admin/NotificationCenter";
+import { AdminNotificationsListener } from "@/components/admin/AdminNotificationsListener";
+// Notifications temps réel admin (hooks/use-admin-notifications.ts) actives sur toutes les pages admin.
 
 /**
  * Layout Admin optimisé (Server Component)
@@ -95,6 +97,7 @@ export default async function AdminLayout({
                 ⌘K
               </kbd>
               <NotificationCenter />
+              <AdminNotificationsListener />
             </div>
           </div>
         </header>
