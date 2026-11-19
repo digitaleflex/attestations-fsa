@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { User, UserStatus } from "@/types";
 import {
   Dialog,
@@ -94,18 +94,18 @@ export function UserDetailDialog({
     .toUpperCase();
 
   // Indicateur de présence : dérivé du statut et de la dernière activité.
-  const presence = useMemo(() => {
-    if (viewingUser.status !== "ACTIVE") {
-      return { online: false, label: "Hors ligne" };
-    }
-    const last = viewingUser.updatedAt
-      ? new Date(viewingUser.updatedAt).getTime()
-      : 0;
-    const recent = last > 0 && Date.now() - last < 24 * 60 * 60 * 1000;
-    return recent
-      ? { online: true, label: "En ligne" }
-      : { online: false, label: "Hors ligne" };
-  }, [viewingUser.status, viewingUser.updatedAt]);
+  const presence =
+    viewingUser.status !== "ACTIVE"
+      ? { online: false, label: "Hors ligne" }
+      : (() => {
+          const last = viewingUser.updatedAt
+            ? new Date(viewingUser.updatedAt).getTime()
+            : 0;
+          const recent = last > 0 && Date.now() - last < 24 * 60 * 60 * 1000;
+          return recent
+            ? { online: true, label: "En ligne" }
+            : { online: false, label: "Hors ligne" };
+        })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

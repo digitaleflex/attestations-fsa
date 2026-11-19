@@ -311,7 +311,7 @@ export default function AdminUsersPage() {
     if (filters.q !== search && document.activeElement?.id !== "users-search") {
       setSearch(filters.q);
     }
-  }, [filters.q]);
+  }, [filters.q, search]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
