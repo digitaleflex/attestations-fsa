@@ -48,8 +48,12 @@ import { UserAuditLogs } from "@/components/admin/user-audit-logs";
 import { User, UserStatus } from "@/types";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { StatCard, PageHeader } from "@/components/admin/";
 import { StatusBadge, RoleBadge, VerifiedBadge } from "@/components/admin/users/UserBadges";
 import { UserActionsMenu } from "@/components/admin/users/UserActionsMenu";
+import { UserDetailDialog } from "@/components/admin/users/UserDetailDialog";
+import { UserAssignDialog } from "@/components/admin/users/UserAssignDialog";
+import { UserCreateDialog } from "@/components/admin/users/UserCreateDialog";
 import {
   UsersFilterBar,
   hasActiveUsersFilters,
@@ -78,6 +82,7 @@ import {
   Activity,
   CheckCircle2,
   AlertTriangle,
+  ShieldCheck,
   Users,
   ChevronLeft,
   ChevronRight,
@@ -261,6 +266,13 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 });
+  const [stats, setStats] = useState({ total: 0, active: 0, verified: 0, unverified: 0 });
+  useEffect(() => {
+    fetch("/api/users/stats")
+      .then((r) => r.json())
+      .then((d) => setStats(d))
+      .catch(() => {});
+  }, []);
 
   // Filtres lus depuis l'URL (source de vérité partageable)
   const rawStatus = searchParams.get("status") || "";
@@ -299,7 +311,7 @@ export default function AdminUsersPage() {
     if (filters.q !== search && document.activeElement?.id !== "users-search") {
       setSearch(filters.q);
     }
-  }, [filters.q]);
+  }, [filters.q, search]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -391,6 +403,26 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [filtersKey, fetchUsers]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users/stats");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setStats({
+        total: Number(data?.total ?? 0),
+        active: Number(data?.active ?? 0),
+        verified: Number(data?.verified ?? 0),
+        unverified: Number(data?.unverified ?? 0),
+      });
+    } catch (err) {
+      console.error("[admin/users] chargement des stats impossible:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   // La recherche debouncée met à jour l'URL (qui déclenche le rechargement)
   useEffect(() => {
@@ -807,138 +839,78 @@ export default function AdminUsersPage() {
         </Link>
       </nav>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Apprenants</h1>
-          <p className="text-slate-500 mt-1">Gérez les comptes et profils des apprenants ({meta.total})</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto min-h-[44px]">
-              <UserPlus className="w-4 h-4" aria-hidden="true" />
-              Ajouter un apprenant
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingUser ? "Modifier l'utilisateur" : "Nouvel utilisateur"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-              <div>
-                <Label htmlFor="name">Nom</Label>
-                <Input
-                  id="name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">
-                  Mot de passe {editingUser && "(laisser vide pour ne pas changer)"}
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required={!editingUser}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="role">Rôle</Label>
-                <select
-                  id="role"
-                  value={form.role}
-                  onChange={(e) =>
-                    setForm({ ...form, role: e.target.value as "admin" | "user" })
-                  }
-                  className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md"
-                >
-                  <option value="user">Utilisateur</option>
-                  <option value="admin">Administrateur</option>
-                </select>
-              </div>
+      <PageHeader
+        breadcrumb={[{ label: "Admin", href: "/admin" }, { label: "Apprenants" }]}
+        title="Apprenants"
+        description="Gérez les comptes, les inscriptions et le suivi des apprenants."
+        action={
+          <Button onClick={() => { setEditingUser(null); setDialogOpen(true); }} className="gap-2 w-full sm:w-auto min-h-[44px]">
+            <UserPlus className="w-4 h-4" aria-hidden="true" />
+            Ajouter un apprenant
+          </Button>
+        }
+      />
 
-              <div className="border-t pt-4 mt-4">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3">Informations personnelles</h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="birthDate">Date de naissance</Label>
-                    <Input
-                      id="birthDate"
-                      type="date"
-                      value={form.birthDate}
-                      onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="birthPlace">Lieu de naissance</Label>
-                    <Input
-                      id="birthPlace"
-                      value={form.birthPlace}
-                      onChange={(e) => setForm({ ...form, birthPlace: e.target.value })}
-                      placeholder="Ville, Pays"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <Label htmlFor="phone">Téléphone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      placeholder="+229 95 12 34 56"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Adresse (optionnel)</Label>
-                    <Input
-                      id="address"
-                      value={form.address}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      placeholder="Quartier, Rue..."
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-                  {editingUser ? "Modifier" : "Créer"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard title="Total apprenants" value={stats.total} icon={Users} color="brand" />
+        <StatCard title="Comptes actifs" value={stats.active} icon={CheckCircle2} color="success" />
+        <StatCard title="Comptes vérifiés" value={stats.verified} icon={ShieldCheck} color="success" />
+        <StatCard title="Non vérifiés" value={stats.unverified} icon={AlertTriangle} color="warning" />
       </div>
+
+      <PageHeader
+        breadcrumb={[{ label: "Admin", href: "/admin" }, { label: "Apprenants" }]}
+        title="Apprenants"
+        description="Gérez les comptes, les inscriptions et le suivi des apprenants."
+        action={
+          <Button onClick={() => { setEditingUser(null); setDialogOpen(true); }} className="gap-2 w-full sm:w-auto min-h-[44px]">
+            <UserPlus className="w-4 h-4" aria-hidden="true" />
+            Ajouter un apprenant
+          </Button>
+        }
+      />
+
+
+          <UserCreateDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          editingUser={editingUser}
+          saving={saving}
+          onSubmit={async (form) => {
+            setSaving(true);
+            try {
+              const url = editingUser ? `/api/users/${editingUser.id}` : "/api/users";
+              const method = editingUser ? "PATCH" : "POST";
+              const body: any = {
+                name: form.name,
+                email: form.email,
+                role: form.role,
+              };
+              if (!editingUser || form.password) body.password = form.password;
+              if (form.birthDate) body.birthDate = new Date(form.birthDate);
+              if (form.birthPlace) body.birthPlace = form.birthPlace;
+              if (form.phone) body.phone = form.phone;
+              if (form.address) body.address = form.address;
+              const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              });
+              if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || "Erreur");
+              }
+              toast.success(editingUser ? "Utilisateur modifié" : "Utilisateur créé");
+              setDialogOpen(false);
+              fetchUsers();
+            } catch (err: unknown) {
+              console.error("[admin/users] enregistrement impossible:", err);
+              toast.error("Impossible d'enregistrer cet utilisateur.");
+            } finally {
+              setSaving(false);
+            }
+          }}
+        />
 
       <Card className="p-6 bg-white">
         <UsersFilterBar
@@ -986,7 +958,7 @@ export default function AdminUsersPage() {
                     onToggle={handleToggleSort}
                   />
                 </TableHead>
-                <TableHead scope="col" aria-sort={filters.sort === "email" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                <TableHead scope="col" className="hidden 2xl:table-cell" aria-sort={filters.sort === "email" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
                   <SortButton
                     field="email"
                     label="Email"
@@ -1007,7 +979,7 @@ export default function AdminUsersPage() {
                     onToggle={handleToggleSort}
                   />
                 </TableHead>
-                <TableHead scope="col" aria-sort={filters.sort === "updatedAt" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
+                <TableHead scope="col" className="hidden xl:table-cell" aria-sort={filters.sort === "updatedAt" ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}>
                   <SortButton
                     field="updatedAt"
                     label="Activité"
@@ -1070,7 +1042,7 @@ export default function AdminUsersPage() {
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      <span className="flex items-center gap-2.5">
+                      <span className="flex items-center gap-2.5" title={u.email || undefined}>
                         <span
                           aria-hidden="true"
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-black text-brand-dark"
@@ -1080,7 +1052,7 @@ export default function AdminUsersPage() {
                         {u.name || "-"}
                       </span>
                     </TableCell>
-                    <TableCell className="max-w-56 truncate" title={u.email || undefined}>{u.email || "-"}</TableCell>
+                    <TableCell className="max-w-56 truncate hidden 2xl:table-cell" title={u.email || undefined}>{u.email || "-"}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <StatusBadge status={u.status} />
                     </TableCell>
@@ -1093,7 +1065,7 @@ export default function AdminUsersPage() {
                     <TableCell className="text-sm text-slate-500">
                       {formatDate(u.createdAt)}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-500" title={formatDateTime(u.updatedAt)}>
+                    <TableCell className="text-sm text-slate-500 hidden xl:table-cell" title={formatDateTime(u.updatedAt)}>
                       {formatDate(u.updatedAt)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -1191,24 +1163,37 @@ export default function AdminUsersPage() {
           </Card>
         ) : (
           <>
-            {displayUsers.map((u) => (
+            {displayUsers.map((u) => {
+              const activeRecently = (() => {
+                if (!u.updatedAt) return false;
+                const d = new Date(u.updatedAt);
+                if (Number.isNaN(d.getTime())) return false;
+                return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
+              })();
+              return (
               <Card key={u.id} className="p-4 bg-white shadow-sm border-slate-100 space-y-4">
                 <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-1 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     <RowCheckbox
                       checked={selectedIds.includes(u.id)}
                       onChange={(checked) => toggleOne(u.id, checked)}
                       label={`Sélectionner ${u.name || u.email || "cet utilisateur"}`}
                     />
-                    <span
-                      aria-hidden="true"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-black text-brand-dark"
-                    >
-                      {initialsOf(u)}
-                    </span>
+                    <div className="relative shrink-0">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-sm font-black text-brand-dark"
+                      >
+                        {initialsOf(u)}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        title={activeRecently ? "Actif (moins de 7 jours)" : "Inactif (plus de 7 jours)"}
+                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-white ${activeRecently ? "bg-emerald-500" : "bg-slate-300"}`}
+                      />
+                    </div>
                     <div className="min-w-0">
                       <h3 className="font-bold text-slate-800 truncate">{u.name || "-"}</h3>
-                      <p className="text-sm text-slate-500 truncate">{u.email || "-"}</p>
                     </div>
                   </div>
                   <UserActionsMenu
@@ -1235,24 +1220,39 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
+                <div className="rounded-xl bg-slate-50/80 px-3 py-2.5 space-y-1.5 text-xs text-slate-600">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-500">Email</span>
+                    <span className="truncate font-semibold text-slate-700">{u.email || "-"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-500">Inscrit le</span>
+                    <span className="font-semibold text-slate-700">{formatDate(u.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-500">Dernière activité</span>
+                    <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${activeRecently ? "bg-emerald-500" : "bg-slate-300"}`} />
+                      {formatDate(u.updatedAt)}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
                   <VerifiedBadge verified={Boolean(u.emailVerified)} />
-                  <span className="text-[11px] text-slate-500">
-                    Inscrit le {formatDate(u.createdAt)}
-                  </span>
                 </div>
 
                 <Button
-                  variant="outline"
                   onClick={() => handleViewDetails(u)}
                   aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
-                  className="w-full min-h-[44px] gap-2 font-bold"
+                  className="w-full min-h-[44px] gap-2 font-bold shadow-md"
                 >
                   <Eye className="h-4 w-4" aria-hidden="true" />
-                  Voir
+                  Voir détails
                 </Button>
               </Card>
-            ))}
+              );
+            })}
 
             {/* Pagination Mobile */}
             <nav aria-label="Pagination des apprenants" className="flex items-center justify-between pt-4 pb-8">
@@ -1282,294 +1282,29 @@ export default function AdminUsersPage() {
 
       {/* Détails : un Dialog (fermeture au clic extérieur / Échap / croix),
           pas un AlertDialog réservé aux confirmations destructives. */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-[2.5rem] border border-white/10 bg-slate-900 text-white shadow-2xl backdrop-blur-xl [&>button]:text-white [&>button]:hover:bg-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-tight text-white">
-              Détails de l'utilisateur
-            </DialogTitle>
-            <DialogDescription className="font-medium italic text-slate-400">
-              Informations complètes sur le profil candidat.
-            </DialogDescription>
-          </DialogHeader>
-          {viewingUser && (
-            <div className="space-y-6 pt-4">
-              <div className="flex items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/10 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-2xl ${viewingUser.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                    {viewingUser.status === 'ACTIVE' ? <CheckCircle2 className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase text-slate-500 tracking-widest">Statut du Compte</p>
-                    <p className="font-bold text-white uppercase">{viewingUser.status === 'ACTIVE' ? 'Actif' : 'Bloqué'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                   {viewingUser.status === 'ACTIVE' ? (
-                     <Button
-                       onClick={() => handleUpdateStatus(viewingUser.id, 'BLOCKED')}
-                       className="bg-rose-600 hover:bg-rose-700 text-white font-bold h-10 px-4 rounded-xl text-xs gap-2"
-                     >
-                       <Ban className="w-4 h-4" /> Bloquer
-                     </Button>
-                   ) : (
-                     <Button
-                       onClick={() => handleUpdateStatus(viewingUser.id, 'ACTIVE')}
-                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 px-4 rounded-xl text-xs gap-2"
-                     >
-                       <Unlock className="w-4 h-4" /> Débloquer
-                     </Button>
-                   )}
-                </div>
-              </div>
+      <UserDetailDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        user={viewingUser}
+        onToggleStatus={handleUpdateStatus}
+        onResetPassword={handleResetPassword}
+      />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
-                 <Button
-                   variant="outline"
-                   onClick={() => handleResetPassword(viewingUser.id)}
-                   className="bg-white/5 border-white/10 text-white hover:bg-white/10 h-12 rounded-2xl font-bold text-xs gap-2"
-                 >
-                   <KeyRound className="w-4 h-4 text-brand-light" /> Forcer Reset Password
-                 </Button>
-                 <Button
-                   variant="outline"
-                   onClick={() => setViewTab(viewTab === 'INFO' ? 'AUDIT' : 'INFO')}
-                   className={`h-12 rounded-2xl font-bold text-xs gap-2 transition-all ${
-                     viewTab === 'AUDIT'
-                       ? 'bg-brand border-brand-light text-white shadow-lg shadow-brand/20'
-                       : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                   }`}
-                 >
-                   <Activity className={`w-4 h-4 ${viewTab === 'AUDIT' ? 'text-white' : 'text-slate-400'}`} />
-                   {viewTab === 'AUDIT' ? "Voir Profil Complet" : "Historique d'Audit"}
-                 </Button>
-              </div>
-
-              {viewTab === 'INFO' ? (
-                <>
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Nom complet</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.name || "-"}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.email || "-"}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Date de naissance</p>
-                      <p className="text-base font-bold text-white leading-tight">
-                        {viewingUser.birthDate ? new Date(viewingUser.birthDate).toLocaleDateString("fr-FR") : "-"}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Lieu de naissance</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.birthPlace || "-"}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Téléphone</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.phone || "-"}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Rôle</p>
-                      <span
-                        className={`inline-block text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${
-                          viewingUser.role === "admin"
-                            ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                            : "bg-white/10 text-white border border-white/20 shadow-sm"
-                        }`}
-                      >
-                        {viewingUser.role === "admin" ? "Administrateur" : "Utilisateur"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Adresse postale</p>
-                    <p className="text-base font-bold text-white leading-tight">{viewingUser.address || "-"}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8 pt-6 border-t border-white/5">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email vérifié</p>
-                      <p className="text-base font-bold">
-                        {viewingUser.emailVerified ? (
-                          <span className="text-emerald-400 font-bold">Vérifié</span>
-                        ) : (
-                          <span className="text-amber-400 font-bold italic">Non vérifié</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Créé le</p>
-                      <p className="text-base font-bold text-slate-400">
-                        {new Date(viewingUser.createdAt).toLocaleDateString("fr-FR", {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <UserExamResults userId={viewingUser.id} />
-                  </div>
-                </>
-              ) : (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                   <UserAuditLogs userId={viewingUser.id} />
-                </div>
-              )}
-            </div>
-          )}
-          <div className="flex justify-end pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setViewDialogOpen(false)}
-              className="h-11 rounded-xl border-white/10 bg-white/5 px-6 font-bold text-white transition-all hover:bg-white/10 hover:text-white"
-            >
-              Fermer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Affecter un examen</DialogTitle>
-          </DialogHeader>
-
-          {assigningUser && (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-500">
-                Candidat :{" "}
-                <span className="font-medium text-slate-800">
-                  {assigningUser.name || assigningUser.email || assigningUser.id}
-                </span>
-              </p>
-
-              <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Affectation actuelle
-                </p>
-                {assigningUser.examId ? (
-                  <>
-                    <p className="font-medium text-slate-800">
-                      {currentExamLabel}
-                    </p>
-                    <p className="text-slate-500">
-                      {assigningUser.examScheduledAt
-                        ? new Date(assigningUser.examScheduledAt).toLocaleString(
-                            "fr-FR",
-                          )
-                        : "Aucun créneau défini"}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-slate-500 italic">
-                    Aucun examen affecté
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="assign-exam">Examen</Label>
-                <Select
-                  value={assignForm.examId}
-                  onValueChange={handleExamSelect}
-                >
-                  <SelectTrigger id="assign-exam" className="mt-1">
-                    <SelectValue
-                      placeholder={
-                        examsLoading
-                          ? "Chargement..."
-                          : "Sélectionner un examen"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {visibleExams.map((exam) => (
-                      <SelectItem key={exam.id} value={exam.id}>
-                        {exam.title || exam.name} (
-                        {exam.status === "PUBLISHED" ? "Publié" : "Planifié"})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {visibleExams.length === 0 && !examsLoading && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    Aucun examen visible (SCHEDULED / PUBLISHED).
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="assign-scheduled">
-                  Créneau (date et heure) — optionnel
-                </Label>
-                <Input
-                  id="assign-scheduled"
-                  type="datetime-local"
-                  value={assignForm.examScheduledAt}
-                  onChange={(e) =>
-                    setAssignForm((prev) => ({
-                      ...prev,
-                      examScheduledAt: e.target.value,
-                    }))
-                  }
-                  className="mt-1"
-                />
-              </div>
-
-              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleRemoveAssignment}
-                  disabled={assignRemoving || !assigningUser.examId}
-                  className="text-rose-600 border-rose-200 hover:bg-rose-50"
-                >
-                  {assignRemoving ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4 mr-2" />
-                  )}
-                  Retirer l&apos;affectation
-                </Button>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setAssignDialogOpen(false)}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSaveAssignment}
-                    disabled={assignSaving}
-                  >
-                    {assignSaving ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : null}
-                    Enregistrer
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <UserAssignDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        assigningUser={assigningUser}
+        exams={exams}
+        examsLoading={examsLoading}
+        currentExamLabel={currentExamLabel}
+        assignForm={assignForm}
+        onExamSelect={handleExamSelect}
+        onScheduledChange={(v) => setAssignForm((prev) => ({ ...prev, examScheduledAt: v }))}
+        onSave={handleSaveAssignment}
+        onRemove={handleRemoveAssignment}
+        saving={assignSaving}
+        removing={assignRemoving}
+      />
 
       <AlertDialog open={!!deleteId || !!bulkDeleteIds} onOpenChange={(open) => { if (!open) closeDeleteDialog(); }}>
         <AlertDialogContent className="bg-white border-2 border-slate-100 shadow-2xl rounded-3xl">

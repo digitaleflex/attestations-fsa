@@ -88,6 +88,12 @@ export default async function AdminLayout({
 
             <div className="flex items-center gap-2">
               <AdminCommandPaletteTrigger />
+              <kbd
+                aria-hidden="true"
+                className="hidden rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-black text-slate-500 md:inline-flex"
+              >
+                ⌘K
+              </kbd>
               <NotificationCenter />
             </div>
           </div>

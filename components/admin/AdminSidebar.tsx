@@ -96,15 +96,15 @@ function NavItem({ item, pathname }: { item: NavLink; pathname: string | null })
         asChild
         isActive={isActive}
         tooltip={item.label}
-        className={`transition-all duration-200 ${
+        className={`transition-all duration-200 border-l-2 ${
           isActive
-            ? "bg-brand text-white shadow-md shadow-brand/30 hover:bg-brand-dark hover:text-white"
-            : "text-slate-600 hover:bg-slate-100"
+            ? "bg-brand/10 text-brand border-brand hover:bg-brand/15"
+            : "text-slate-600 border-transparent hover:bg-slate-100"
         }`}
       >
         <Link href={item.href} aria-current={isActive ? "page" : undefined}>
-          <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
-          <span className="font-medium text-sm">{item.label}</span>
+          <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-brand" : "text-slate-400"}`} />
+          <span className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>{item.label}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>

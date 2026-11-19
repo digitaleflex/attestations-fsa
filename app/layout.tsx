@@ -15,6 +15,9 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: "FSA - Plateforme d'Attestations",
   description: "Gestion des attestations de formation",
+  icons: {
+    icon: "/favicon.ico?v=2",
+  },
 };
 
 export default function RootLayout({
