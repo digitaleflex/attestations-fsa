@@ -31,6 +31,7 @@ import {
   Bell,
   Mail,
   User,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -67,6 +68,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Administration",
     links: [
       { href: "/admin/attestations", label: "Attestations", icon: FileText },
+      { href: "/admin/analytics", label: "Analytique", icon: BarChart3 },
       { href: "/admin/reclamations", label: "Réclamations", icon: AlertCircle },
       { href: "/admin/contacts", label: "Messages", icon: Mail },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },

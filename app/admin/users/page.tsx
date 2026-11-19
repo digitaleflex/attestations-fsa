@@ -70,6 +70,7 @@ import { UsersBulkBar, type BulkKind } from "@/components/admin/users/UsersBulkB
 import { TableCaption } from "@/components/ui/table";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 // ... (icons)
 import {
   Loader2,
@@ -747,6 +748,92 @@ export default function AdminUsersPage() {
     doc.save(`apprenants-${new Date().toISOString().slice(0, 10)}.pdf`);
     toast.success("Export PDF généré");
   };
+
+  const handleExportExcel = () => {
+    // Feuille 1 : Apprenants
+    const rows = displayUsers.map((u) => ({
+      Nom: u.name || "-",
+      Email: u.email || "-",
+      Statut: u.status,
+      Rôle: u.role,
+      Vérifié: u.emailVerified ? "Oui" : "Non",
+      "Date d'inscription": formatDate(u.createdAt),
+      "Dernière activité": formatDate(u.updatedAt),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Largeurs automatiques
+    const headers = Object.keys(rows[0] || {
+      Nom: "", Email: "", Statut: "", Rôle: "", Vérifié: "",
+      "Date d'inscription": "", "Dernière activité": "",
+    });
+    const colWidths = headers.map((h) => {
+      const maxLen = Math.max(
+        h.length,
+        ...rows.map((r) => String((r as any)[h] ?? "").length),
+      );
+      return { wch: Math.min(Math.max(maxLen + 2, 10), 45) };
+    });
+    ws["!cols"] = colWidths;
+
+    // Filtres automatiques
+    const range = XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: rows.length, c: headers.length - 1 },
+    });
+    ws["!autofilter"] = { ref: range };
+
+    // En-têtes en gras (best effort avec SheetJS)
+    headers.forEach((_, c) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[cellRef]) {
+        (ws[cellRef] as any).s = { font: { bold: true } };
+      }
+    });
+
+    // Feuille 2 : Statistiques
+    const adminCount = displayUsers.filter((u) => u.role === "admin").length;
+    const userCount = displayUsers.filter((u) => u.role === "user").length;
+    const suspendedCount = displayUsers.filter((u) => u.status === "SUSPENDED").length;
+    const blockedCount = displayUsers.filter((u) => u.status === "BLOCKED").length;
+    const statsRows: (string | number)[][] = [
+      ["Indicateur", "Valeur"],
+      ["Total apprenants", stats.total],
+      ["Comptes actifs", stats.active],
+      ["Comptes vérifiés", stats.verified],
+      ["Non vérifiés", stats.unverified],
+      [],
+      ["Par catégorie (page affichée)", ""],
+      ["Administrateurs", adminCount],
+      ["Apprenants", userCount],
+      ["Suspendus", suspendedCount],
+      ["Bloqués", blockedCount],
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(statsRows);
+    ws2["!cols"] = [{ wch: 34 }, { wch: 14 }];
+    // gras en-tête
+    const h1 = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    const h2 = XLSX.utils.encode_cell({ r: 0, c: 1 });
+    if (ws2[h1]) (ws2[h1] as any).s = { font: { bold: true } };
+    if (ws2[h2]) (ws2[h2] as any).s = { font: { bold: true } };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Apprenants");
+    XLSX.utils.book_append_sheet(wb, ws2, "Statistiques");
+
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `apprenants-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Export Excel généré");
+  };
   const hasActiveFilters = hasActiveUsersFilters({
     q: filters.q,
     status: filters.status,
@@ -981,6 +1068,9 @@ export default function AdminUsersPage() {
         <div className="mt-4 flex gap-2">
           <Button variant="outline" onClick={handleExportCSV} className="gap-2">
             Exporter CSV
+          </Button>
+          <Button variant="outline" onClick={handleExportExcel} className="gap-2">
+            Exporter Excel
           </Button>
           <Button variant="outline" onClick={handleExportPDF} className="gap-2">
             Exporter PDF
