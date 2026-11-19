@@ -92,7 +92,7 @@ export default function NotificationCenter() {
               ? `Notifications (${unreadCount} non lues)`
               : "Notifications"
           }
-          className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-brand-line hover:text-slate-700"
+          className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-brand-line hover:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
@@ -103,7 +103,7 @@ export default function NotificationCenter() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden sm:w-80 md:w-96" align="end">
+      <DropdownMenuContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden sm:w-80 md:w-96 dark:bg-slate-900 dark:border-slate-800" align="end">
         <DropdownMenuLabel className="p-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-amber-400" />

@@ -13,6 +13,7 @@ import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 import { AdminCommandPaletteTrigger } from "@/components/admin/AdminCommandPaletteTrigger";
 import { AdminCommandPalette } from "@/components/admin/AdminCommandPalette";
 import NotificationCenter from "@/components/admin/NotificationCenter";
+import { ThemeToggle } from "@/components/admin/ThemeToggle";
 import { AdminNotificationsListener } from "@/components/admin/AdminNotificationsListener";
 // Notifications temps réel admin (hooks/use-admin-notifications.ts) actives sur toutes les pages admin.
 
@@ -79,12 +80,12 @@ export default async function AdminLayout({
     <SidebarProvider defaultOpen={true}>
       <AdminSidebar admin={session?.user || null} />
 
-      <SidebarInset className="flex min-w-0 flex-col min-h-screen bg-slate-50">
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4 md:px-6">
+      <SidebarInset className="flex min-w-0 flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4 md:px-6 dark:bg-slate-900 dark:border-slate-800">
           <div className="flex-1 flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="-ml-1 h-11 w-11" aria-label="Basculer la barre latérale" />
-              <div className="h-4 w-px bg-slate-200 mx-2" aria-hidden="true" />
+              <div className="h-4 w-px bg-slate-200 mx-2 dark:bg-slate-700" aria-hidden="true" />
               <AdminBreadcrumbs className="hidden sm:block" />
             </div>
 
@@ -92,10 +93,11 @@ export default async function AdminLayout({
               <AdminCommandPaletteTrigger />
               <kbd
                 aria-hidden="true"
-                className="hidden rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-black text-slate-500 md:inline-flex"
+                className="hidden rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-black text-slate-500 md:inline-flex dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
               >
                 ⌘K
               </kbd>
+              <ThemeToggle />
               <NotificationCenter />
               <AdminNotificationsListener />
             </div>
