@@ -51,6 +51,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { StatCard, PageHeader } from "@/components/admin/";
 import { StatusBadge, RoleBadge, VerifiedBadge } from "@/components/admin/users/UserBadges";
+import { VirtualUserTable } from "@/components/admin/users/VirtualUserTable";
 import { UserActionsMenu } from "@/components/admin/users/UserActionsMenu";
 import { UserDetailDialog } from "@/components/admin/users/UserDetailDialog";
 import { UserAssignDialog } from "@/components/admin/users/UserAssignDialog";
@@ -989,6 +990,43 @@ export default function AdminUsersPage() {
 
       {/* Vue Bureau (Tableau) — à partir de lg : en md les 9 colonnes
           écrasent Rôle/Statut et donnent l'impression d'un contenu masqué. */}
+      {users.length > 50 ? (
+        <>
+          <VirtualUserTable
+            users={displayUsers}
+            selectedIds={selectedIds}
+            onToggleOne={toggleOne}
+            onToggleAll={toggleAllVisible}
+            allVisibleSelected={allVisibleSelected}
+            someVisibleSelected={someVisibleSelected}
+            sort={filters.sort}
+            direction={filters.direction}
+            onToggleSort={handleToggleSort}
+            onView={(u) => router.push(`/admin/users/${u.id}`)}
+            onEdit={handleOpenDialog}
+            onAssign={handleOpenAssignDialog}
+            onResetAccess={handleResetPassword}
+            onToggleStatus={handleUpdateStatus}
+            onDelete={handleDeleteRequest}
+          />
+          <div className="p-4 border-t flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-slate-50/50">
+            <p className="text-xs text-slate-500">
+              Affichage de <span className="font-bold text-slate-700">{users.length}</span> sur <span className="font-bold text-slate-700">{meta.total}</span> utilisateurs
+            </p>
+            <nav aria-label="Pagination des apprenants" className="flex items-center gap-2">
+              <Button variant="outline" disabled={meta.page <= 1 || loading} onClick={() => updateFilters({ page: meta.page - 1 })} aria-label="Page précédente" className="min-h-[44px] gap-1">
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" /> Précédent
+              </Button>
+              <div className="flex items-center gap-1 mx-2">
+                <span className="text-xs font-medium text-slate-600" aria-live="polite">Page {meta.page} sur {meta.totalPages}</span>
+              </div>
+              <Button variant="outline" disabled={meta.page >= meta.totalPages || loading} onClick={() => updateFilters({ page: meta.page + 1 })} aria-label="Page suivante" className="min-h-[44px] gap-1">
+                Suivant <ChevronRight className="w-4 h-4" aria-hidden="true" />
+              </Button>
+            </nav>
+          </div>
+        </>
+      ) : (
       <Card className="bg-white hidden lg:block overflow-hidden">
         <div className="overflow-x-auto">
           <Table className="min-w-[1080px]">
@@ -1183,6 +1221,7 @@ export default function AdminUsersPage() {
           </nav>
         </div>
       </Card>
+      )}
 
       {/* Vue Mobile / Tablette (Cartes) */}
       <div className="space-y-4 lg:hidden">
