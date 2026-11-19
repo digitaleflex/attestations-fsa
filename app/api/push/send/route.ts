@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser, getCurrentUser } from "@/lib/auth";
+import { verifyOrigin } from "@/lib/security";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 async function resolveAdmin(request: Request) {
   try {
@@ -27,6 +29,13 @@ async function resolveAdmin(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!verifyOrigin(request)) {
+    return NextResponse.json({ error: "Origin non autorisée" }, { status: 403 });
+  }
+  const rateLimit = await applyRateLimit(request, "adminBulk");
+  if (!rateLimit.allowed && rateLimit.response) {
+    return rateLimit.response;
+  }
   const adminUser = await resolveAdmin(request);
   if (!adminUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });

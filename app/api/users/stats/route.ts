@@ -3,10 +3,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth";
+import { verifyOrigin } from "@/lib/security";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { handleApiError } from "@/lib/error-handler";
 
 export async function GET(request: Request) {
   try {
+    if (!verifyOrigin(request)) {
+      return NextResponse.json({ error: "Origin non autorisée" }, { status: 403 });
+    }
+    const rateLimit = await applyRateLimit(request, "adminBulk");
+    if (!rateLimit.allowed && rateLimit.response) {
+      return rateLimit.response;
+    }
     const adminUser = await getAdminUser(request);
     if (!adminUser) {
       return NextResponse.json(
