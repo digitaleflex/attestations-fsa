@@ -18,6 +18,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
     }
 
+    // Sécurité : seuls les canaux admin sont autorisés
+    if (!channelName.startsWith("private-admin")) {
+      return NextResponse.json({ error: "Canal non autorisé" }, { status: 403 });
+    }
+
     const authResponse = pusherServer.authorizeChannel(socketId, channelName);
     return NextResponse.json(authResponse);
   } catch (error) {
