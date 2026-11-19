@@ -48,6 +48,7 @@ import { UserAuditLogs } from "@/components/admin/user-audit-logs";
 import { User, UserStatus } from "@/types";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { StatCard, PageHeader } from "@/components/admin/";
 import { StatusBadge, RoleBadge, VerifiedBadge } from "@/components/admin/users/UserBadges";
 import { UserActionsMenu } from "@/components/admin/users/UserActionsMenu";
 import {
@@ -78,6 +79,7 @@ import {
   Activity,
   CheckCircle2,
   AlertTriangle,
+  ShieldCheck,
   Users,
   ChevronLeft,
   ChevronRight,
@@ -261,6 +263,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 });
+  const [stats, setStats] = useState({ total: 0, active: 0, verified: 0, unverified: 0 });
 
   // Filtres lus depuis l'URL (source de vérité partageable)
   const rawStatus = searchParams.get("status") || "";
@@ -391,6 +394,26 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [filtersKey, fetchUsers]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users/stats");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setStats({
+        total: Number(data?.total ?? 0),
+        active: Number(data?.active ?? 0),
+        verified: Number(data?.verified ?? 0),
+        unverified: Number(data?.unverified ?? 0),
+      });
+    } catch (err) {
+      console.error("[admin/users] chargement des stats impossible:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   // La recherche debouncée met à jour l'URL (qui déclenche le rechargement)
   useEffect(() => {
@@ -807,18 +830,18 @@ export default function AdminUsersPage() {
         </Link>
       </nav>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Apprenants</h1>
-          <p className="text-slate-500 mt-1">Gérez les comptes et profils des apprenants ({meta.total})</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto min-h-[44px]">
-              <UserPlus className="w-4 h-4" aria-hidden="true" />
-              Ajouter un apprenant
-            </Button>
-          </DialogTrigger>
+      <PageHeader
+        breadcrumb={[{ label: "Admin", href: "/admin" }, { label: "Apprenants" }]}
+        title="Apprenants"
+        description="Gérez les comptes, les inscriptions et le suivi des apprenants."
+        action={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto min-h-[44px]">
+                <UserPlus className="w-4 h-4" aria-hidden="true" />
+                Ajouter un apprenant
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -938,6 +961,14 @@ export default function AdminUsersPage() {
             </form>
           </DialogContent>
         </Dialog>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Total apprenants" value={stats.total} icon={Users} color="brand" />
+        <StatCard title="Comptes actifs" value={stats.active} icon={CheckCircle2} color="success" />
+        <StatCard title="Comptes vérifiés" value={stats.verified} icon={ShieldCheck} color="success" />
+        <StatCard title="Comptes non vérifiés" value={stats.unverified} icon={AlertTriangle} color="warning" />
       </div>
 
       <Card className="p-6 bg-white">
@@ -1283,25 +1314,25 @@ export default function AdminUsersPage() {
       {/* Détails : un Dialog (fermeture au clic extérieur / Échap / croix),
           pas un AlertDialog réservé aux confirmations destructives. */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-[2.5rem] border border-white/10 bg-slate-900 text-white shadow-2xl backdrop-blur-xl [&>button]:text-white [&>button]:hover:bg-white/10">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-[2.5rem] border border-slate-200 bg-white text-slate-800 shadow-2xl [&>button]:text-slate-500 [&>button]:hover:bg-slate-100">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-tight text-white">
+            <DialogTitle className="text-2xl font-black tracking-tight text-slate-800">
               Détails de l'utilisateur
             </DialogTitle>
-            <DialogDescription className="font-medium italic text-slate-400">
+            <DialogDescription className="font-medium italic text-slate-500">
               Informations complètes sur le profil candidat.
             </DialogDescription>
           </DialogHeader>
           {viewingUser && (
             <div className="space-y-6 pt-4">
-              <div className="flex items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/10 mb-2">
+              <div className="flex items-center justify-between bg-slate-50 p-4 rounded-3xl border border-slate-200 mb-2">
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-2xl ${viewingUser.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                  <div className={`p-3 rounded-2xl ${viewingUser.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                     {viewingUser.status === 'ACTIVE' ? <CheckCircle2 className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
                   </div>
                   <div>
                     <p className="text-xs font-black uppercase text-slate-500 tracking-widest">Statut du Compte</p>
-                    <p className="font-bold text-white uppercase">{viewingUser.status === 'ACTIVE' ? 'Actif' : 'Bloqué'}</p>
+                    <p className="font-bold text-slate-800 uppercase">{viewingUser.status === 'ACTIVE' ? 'Actif' : 'Bloqué'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1327,20 +1358,20 @@ export default function AdminUsersPage() {
                  <Button
                    variant="outline"
                    onClick={() => handleResetPassword(viewingUser.id)}
-                   className="bg-white/5 border-white/10 text-white hover:bg-white/10 h-12 rounded-2xl font-bold text-xs gap-2"
+                   className="bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 h-12 rounded-2xl font-bold text-xs gap-2"
                  >
-                   <KeyRound className="w-4 h-4 text-brand-light" /> Forcer Reset Password
+                   <KeyRound className="w-4 h-4 text-brand" /> Forcer Reset Password
                  </Button>
                  <Button
                    variant="outline"
                    onClick={() => setViewTab(viewTab === 'INFO' ? 'AUDIT' : 'INFO')}
                    className={`h-12 rounded-2xl font-bold text-xs gap-2 transition-all ${
                      viewTab === 'AUDIT'
-                       ? 'bg-brand border-brand-light text-white shadow-lg shadow-brand/20'
-                       : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                       ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20'
+                       : 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100'
                    }`}
                  >
-                   <Activity className={`w-4 h-4 ${viewTab === 'AUDIT' ? 'text-white' : 'text-slate-400'}`} />
+                   <Activity className={`w-4 h-4 ${viewTab === 'AUDIT' ? 'text-white' : 'text-slate-500'}`} />
                    {viewTab === 'AUDIT' ? "Voir Profil Complet" : "Historique d'Audit"}
                  </Button>
               </div>
@@ -1350,39 +1381,39 @@ export default function AdminUsersPage() {
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Nom complet</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.name || "-"}</p>
+                      <p className="text-base font-bold text-slate-800 leading-tight">{viewingUser.name || "-"}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.email || "-"}</p>
+                      <p className="text-base font-bold text-slate-800 leading-tight">{viewingUser.email || "-"}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Date de naissance</p>
-                      <p className="text-base font-bold text-white leading-tight">
+                      <p className="text-base font-bold text-slate-800 leading-tight">
                         {viewingUser.birthDate ? new Date(viewingUser.birthDate).toLocaleDateString("fr-FR") : "-"}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Lieu de naissance</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.birthPlace || "-"}</p>
+                      <p className="text-base font-bold text-slate-800 leading-tight">{viewingUser.birthPlace || "-"}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Téléphone</p>
-                      <p className="text-base font-bold text-white leading-tight">{viewingUser.phone || "-"}</p>
+                      <p className="text-base font-bold text-slate-800 leading-tight">{viewingUser.phone || "-"}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Rôle</p>
                       <span
                         className={`inline-block text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${
                           viewingUser.role === "admin"
-                            ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                            : "bg-white/10 text-white border border-white/20 shadow-sm"
+                            ? "bg-purple-100 text-purple-700 border border-purple-200"
+                            : "bg-slate-100 text-slate-700 border border-slate-200 shadow-sm"
                         }`}
                       >
                         {viewingUser.role === "admin" ? "Administrateur" : "Utilisateur"}
@@ -1392,23 +1423,23 @@ export default function AdminUsersPage() {
 
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Adresse postale</p>
-                    <p className="text-base font-bold text-white leading-tight">{viewingUser.address || "-"}</p>
+                    <p className="text-base font-bold text-slate-800 leading-tight">{viewingUser.address || "-"}</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8 pt-6 border-t border-white/5">
+                  <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email vérifié</p>
                       <p className="text-base font-bold">
                         {viewingUser.emailVerified ? (
-                          <span className="text-emerald-400 font-bold">Vérifié</span>
+                          <span className="text-emerald-600 font-bold">Vérifié</span>
                         ) : (
-                          <span className="text-amber-400 font-bold italic">Non vérifié</span>
+                          <span className="text-amber-600 font-bold italic">Non vérifié</span>
                         )}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Créé le</p>
-                      <p className="text-base font-bold text-slate-400">
+                      <p className="text-base font-bold text-slate-500">
                         {new Date(viewingUser.createdAt).toLocaleDateString("fr-FR", {
                           year: 'numeric',
                           month: 'long',
@@ -1436,7 +1467,7 @@ export default function AdminUsersPage() {
               type="button"
               variant="outline"
               onClick={() => setViewDialogOpen(false)}
-              className="h-11 rounded-xl border-white/10 bg-white/5 px-6 font-bold text-white transition-all hover:bg-white/10 hover:text-white"
+              className="h-11 rounded-xl border-slate-200 bg-slate-50 px-6 font-bold text-slate-800 transition-all hover:bg-slate-100 hover:text-slate-800"
             >
               Fermer
             </Button>

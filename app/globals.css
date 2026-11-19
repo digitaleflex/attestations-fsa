@@ -244,6 +244,17 @@
     --sidebar-accent-foreground: 353 100% 45%;
     --sidebar-border: 60 4% 90%;
     --sidebar-ring: 353 100% 45%;
+
+    /* Palette institutionnelle admin (modernisation admin · Série 2) */
+    --admin-bg: #F8FAFC;
+    --admin-surface: #FFFFFF;
+    --admin-text: #172033;
+    --admin-text-secondary: #64748B;
+    --admin-primary: #DC2626;
+    --admin-success: #059669;
+    --admin-warning: #D97706;
+    --admin-error: #DC2626;
+    --admin-border: #E5E7EB;
   }
 }
 
