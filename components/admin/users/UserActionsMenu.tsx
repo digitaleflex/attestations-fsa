@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@/types";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export interface UserActionsMenuProps {
   user: User;
@@ -30,6 +31,10 @@ export interface UserActionsMenuProps {
   /** Nom affiché dans l'aria-label du déclencheur. */
   label?: string;
   align?: "start" | "end";
+  /** Surcharge optionnelle de la permission d'édition. */
+  canEdit?: boolean;
+  /** Surcharge optionnelle de la permission de suppression. */
+  canDelete?: boolean;
 }
 
 /**
@@ -47,10 +52,15 @@ export function UserActionsMenu({
   onDelete,
   label,
   align = "end",
+  canEdit,
+  canDelete,
 }: UserActionsMenuProps) {
   const triggerLabel =
     label ?? `Actions pour ${user.name || user.email || "cet utilisateur"}`;
   const isBlocked = user.status !== "ACTIVE";
+  const perms = usePermissions();
+  const allowEdit = canEdit ?? perms.hasPermission("users:write");
+  const allowDelete = canDelete ?? perms.hasPermission("users:delete");
 
   return (
     <DropdownMenu>
@@ -72,6 +82,7 @@ export function UserActionsMenu({
           <Eye className="h-4 w-4 text-slate-500" aria-hidden="true" />
           Voir
         </DropdownMenuItem>
+        {allowEdit && (
         <DropdownMenuItem
           onSelect={() => onEdit(user)}
           className="min-h-[44px] cursor-pointer gap-3 text-sm font-medium"
@@ -79,6 +90,7 @@ export function UserActionsMenu({
           <Edit className="h-4 w-4 text-slate-500" aria-hidden="true" />
           Modifier
         </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onSelect={() => onAssign(user)}
           className="min-h-[44px] cursor-pointer gap-3 text-sm font-medium"
@@ -109,14 +121,18 @@ export function UserActionsMenu({
           )}
           {isBlocked ? "Réactiver" : "Suspendre"}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={() => onDelete(user.id)}
-          className="min-h-[44px] cursor-pointer gap-3 text-sm font-bold text-rose-700 focus:text-rose-700"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden="true" />
-          Supprimer
-        </DropdownMenuItem>
+        {allowDelete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => onDelete(user.id)}
+              className="min-h-[44px] cursor-pointer gap-3 text-sm font-bold text-rose-700 focus:text-rose-700"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Supprimer
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
