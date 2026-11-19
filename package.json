@@ -68,7 +68,7 @@
     "jspdf-autotable": "^5.0.9",
     "lucide-react": "^0.264.0",
     "nanoid": "^5.1.16",
-    "next": "^16.4.2",
+    "next": "^16.4.5",
     "nextjs-toploader": "^3.9.17",
     "pg": "^8.23.1",
     "pusher": "^5.3.4",
