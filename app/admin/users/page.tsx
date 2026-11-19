@@ -1128,7 +1128,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
-                          onClick={() => handleViewDetails(u)}
+                          onClick={() => router.push(`/admin/users/${u.id}`)}
                           aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
                           className="h-11 gap-2 px-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                         >
@@ -1137,7 +1137,7 @@ export default function AdminUsersPage() {
                         </Button>
                         <UserActionsMenu
                           user={u}
-                          onView={handleViewDetails}
+                          onView={(user) => router.push(`/admin/users/${user.id}`)}
                           onEdit={handleOpenDialog}
                           onAssign={handleOpenAssignDialog}
                           onResetAccess={handleResetPassword}
@@ -1254,7 +1254,7 @@ export default function AdminUsersPage() {
                   </div>
                   <UserActionsMenu
                     user={u}
-                    onView={handleViewDetails}
+                    onView={(user) => router.push(`/admin/users/${user.id}`)}
                     onEdit={handleOpenDialog}
                     onAssign={handleOpenAssignDialog}
                     onResetAccess={handleResetPassword}
@@ -1299,7 +1299,7 @@ export default function AdminUsersPage() {
                 </div>
 
                 <Button
-                  onClick={() => handleViewDetails(u)}
+                  onClick={() => router.push(`/admin/users/${u.id}`)}
                   aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
                   className="w-full min-h-[44px] gap-2 font-bold shadow-md"
                 >
