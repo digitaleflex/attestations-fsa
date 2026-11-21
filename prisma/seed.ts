@@ -58,10 +58,17 @@ export async function ensureCredentialAccount(
 
 
 async function main() {
-  // Identifiants admin : E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD (flux e2e)
-  // prioritaire, sinon défauts locaux (dev).
-  const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'admin@fsa.bj';
-  const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminFSA1452.';
+  // #385 — Aucun identifiant par défaut en production : les valeurs de
+  // développement/E2E restent des fixtures locales, jamais utilisées en prod.
+  const isProduction = process.env.NODE_ENV === 'production';
+  const adminEmail = process.env.E2E_ADMIN_EMAIL ?? (isProduction ? undefined : 'admin@fsa.bj');
+  const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? (isProduction ? undefined : 'AdminFSA1452.');
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error(
+      'E2E_ADMIN_EMAIL et E2E_ADMIN_PASSWORD sont requis pour seeder en production (aucun identifiant par défaut).',
+    );
+  }
 
   // Vérifier si un admin existe déjà
   const adminExists = await prisma.user.findUnique({
@@ -90,8 +97,8 @@ async function main() {
 
     console.log('✅ Compte administrateur unifié créé avec succès (Better Auth Ready)');
     console.log('📧 Email:', adminEmail);
-    console.log('🔑 Mot de passe:', adminPassword);
-    console.log('\n⚠️  Veuillez changer ce mot de passe après votre première connexion !');
+    // #385 — Ne jamais journaliser le mot de passe, même en développement.
+    console.log('⚠️  Veuillez changer ce mot de passe après votre première connexion !');
   } else {
     // Admin existant : rafraîchir le hash du mot de passe (User) et
     // l'enregistrement credential (Account) pour que les deux utilisent
@@ -108,8 +115,16 @@ async function main() {
   }
   
   // Créer un utilisateur de test (candidat)
-  const candidateEmail = 'candidat@example.com';
-  const candidatePassword = 'Candidat123!';
+  // #385 — Même règle : aucun mot de passe par défaut en production.
+  const candidateEmail = process.env.E2E_CANDIDATE_EMAIL ?? 'candidat@example.com';
+  const candidatePassword =
+    process.env.E2E_CANDIDATE_PASSWORD ?? (isProduction ? undefined : 'Candidat123!');
+
+  if (!candidateEmail || !candidatePassword) {
+    throw new Error(
+      'E2E_CANDIDATE_EMAIL et E2E_CANDIDATE_PASSWORD sont requis pour seeder en production (aucun identifiant par défaut).',
+    );
+  }
 
   const userExists = await prisma.user.findUnique({
     where: { email: candidateEmail },
@@ -140,7 +155,7 @@ async function main() {
 
     console.log('✅ Compte candidat de test créé avec succès (Better Auth Ready)');
     console.log('📧 Email: candidat@example.com');
-    console.log('🔑 Mot de passe: Candidat123!');
+    // #385 — Le mot de passe n'est jamais journalisé.
   } else {
     // Idempotent : répare un `Account` manquant ou désaligné (ancien seed,
     // import partiel) sans créer de doublon.
@@ -155,7 +170,7 @@ async function main() {
     } else {
       console.log('✅ Compte candidat de test réparé : Account credential créé');
       console.log('📧 Email: candidat@example.com');
-      console.log('🔑 Mot de passe: Candidat123!');
+      // #385 — Le mot de passe n'est jamais journalisé.
     }
   }
 

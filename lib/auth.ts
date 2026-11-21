@@ -40,7 +40,12 @@ if (!authSecret && process.env.NODE_ENV === "development") {
 
 import { admin, twoFactor } from "better-auth/plugins";
 import { emailOTP } from "better-auth/plugins";
-import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+  isAPIError,
+} from "better-auth/api";
 import {
   accountBlockMessage,
   accountBlockLogMessage,
@@ -264,6 +269,44 @@ export async function guardSessionCreation(
       code: "ACCOUNT_BLOCKED",
     });
   }
+
+  // #385 — Mot de passe réinitialisé par l'administration : aucune session ne
+  // doit être ouverte tant que l'utilisateur n'a pas défini son nouveau mot de
+  // passe via le parcours public « mot de passe oublié » (OTP).
+  if (decision.user?.resetPasswordRequired) {
+    throw new APIError("FORBIDDEN", {
+      message:
+        "Un changement de mot de passe est requis. Utilisez « Mot de passe oublié » pour définir un nouveau mot de passe.",
+      code: "PASSWORD_RESET_REQUIRED",
+    });
+  }
+}
+
+/**
+ * #385 — Une seule source de vérité pour « qui est admin ».
+ *
+ * `ADMIN_USER_IDS` était lu par le plugin admin Better Auth mais ignoré par
+ * `getAdminUser` : un ID listé pouvait utiliser `/api/auth/admin/*` (ban,
+ * set-role, impersonate) sans avoir le rôle applicatif `admin`. On aligne les
+ * deux chemins sur la même règle : rôle `admin` OU ID présent dans
+ * `ADMIN_USER_IDS`.
+ */
+export function getAdminUserIds(): string[] {
+  return (process.env.ADMIN_USER_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+export function isAdminUser(
+  user: { id?: unknown; role?: unknown } | null | undefined,
+): boolean {
+  if (!user) return false;
+  const role = getUserRole(user);
+  if (role?.toLowerCase() === "admin") return true;
+  return (
+    typeof user.id === "string" && getAdminUserIds().includes(user.id)
+  );
 }
 
 /**
@@ -347,17 +390,37 @@ export const auth = betterAuth({
           code: "ACCOUNT_BLOCKED",
         });
       }
+      if (decision.user?.resetPasswordRequired) {
+        throw new APIError("FORBIDDEN", {
+          message:
+            "Un changement de mot de passe est requis. Utilisez « Mot de passe oublié » pour définir un nouveau mot de passe.",
+          code: "PASSWORD_RESET_REQUIRED",
+        });
+      }
+    }),
+    // #385 — Le reset de mot de passe par OTP est le SEUL moyen de lever le
+    // drapeau `resetPasswordRequired`. On ne le lève qu'après un succès réel
+    // (une APIError ne doit pas déverrouiller le compte).
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/reset-password") return;
+      if (isAPIError(ctx.context.returned)) return;
+
+      const body = ctx.body as { email?: unknown } | undefined;
+      const email =
+        typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+      if (!email) return;
+
+      await rawPrisma.user.updateMany({
+        where: { email },
+        data: { resetPasswordRequired: false },
+      });
     }),
   },
   plugins: [
     admin({
-      adminUserIds: [
-        ...(process.env.ADMIN_USER_IDS
-          ? process.env.ADMIN_USER_IDS.split(",")
-              .map((id) => id.trim())
-              .filter(Boolean)
-          : []),
-      ],
+      // Même liste que `isAdminUser` : le plugin Better Auth et les contrôles
+      // applicatifs ne peuvent plus diverger.
+      adminUserIds: getAdminUserIds(),
     }),
     // ─────────────────────────────────────────────────────────────────
     // DÉCISION PRODUIT (2026-10-17, issue #74) : 2FA DÉVELOPPÉ mais NON
@@ -486,7 +549,15 @@ async function isSessionUserAllowed(userId: string): Promise<boolean> {
   if (!userId) return false;
 
   const decision: AccountAccessDecision = await enforceAccountStatus(userId);
-  if (decision.allowed) return true;
+  if (decision.allowed) {
+    // #385 — Une session antérieure au flag ne doit plus agir : l'utilisateur
+    // doit d'abord passer par le reset OTP.
+    if (decision.user?.resetPasswordRequired) {
+      console.warn(`[AUTH] password reset required user=${userId}`);
+      return false;
+    }
+    return true;
+  }
 
   console.warn(accountBlockLogMessage(decision));
   return false;
@@ -512,8 +583,8 @@ export async function getAdminUser(
       // session estinvalidée et l'accès refusé.
       if (!(await isSessionUserAllowed(userId))) return null;
 
-      const role = getUserRole(session.user);
-      if (role?.toLowerCase() !== "admin") return null;
+      // Rôle `admin` OU ID présent dans ADMIN_USER_IDS (source unique, #385).
+      if (!isAdminUser(session.user)) return null;
       return {
         id: session.user.id as string,
         email: session.user.email as string,

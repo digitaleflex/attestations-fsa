@@ -1,0 +1,51 @@
+name: VPS Traefik recovery
+
+# Relance directe du compose Traefik (service systemd en échec), sans sudo.
+# Affiche l'erreur réelle et tente de démarrer avec l'image locale.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  traefik:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Restart Traefik compose
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          command_timeout: 10m
+          script: |
+            set +e
+            cd /home/audest/my_arch.bak/traefik || exit 1
+
+            echo "==> Fichiers"
+            ls -la
+
+            echo "==> Images traefik locales"
+            docker images | grep -i traefik || true
+
+            echo "==> Conteneurs traefik"
+            docker ps -a --format '{{.Names}}\t{{.Status}}\t{{.Image}}' | grep -i traefik || true
+
+            echo "==> Compose config"
+            docker compose config --quiet || true
+
+            echo "==> Démarrage sans pull"
+            docker compose up -d --remove-orphans --pull never 2>&1 | tail -80
+
+            echo "==> État après"
+            docker compose ps 2>&1 || true
+            docker ps -a --format '{{.Names}}\t{{.Status}}\t{{.Image}}' | grep -i traefik || true
+
+            echo "==> Logs Traefik"
+            docker compose logs --tail=60 2>&1 || true
+
+            echo "==> Ports 80/443"
+            ss -lntp 2>/dev/null | grep -E ':(80|443)\b' || true

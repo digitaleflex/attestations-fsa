@@ -262,43 +262,6 @@ export default function AttestationDetailsPage() {
     }
   };
 
-  const handleTransmitTranscript = async () => {
-    if (!data?.userId) return;
-    setActionLoading(true);
-    try {
-        await fetch("/api/user/notifications", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                userId: data.userId,
-                type: "EXAM_RESULT_PUBLISHED",
-                title: "Relevé de Notes disponible ! 📊",
-                message: "Votre relevé de notes officiel de la session d'examen est maintenant disponible sur votre portail.",
-                link: "/results"
-            })
-        });
-
-        // Logger la transmission dans l'audit trail
-        await fetch("/api/admin/audit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: 'TRANSCRIPT_TRANSMITTED',
-              resource: 'ATTESTATION',
-              resourceId: id,
-              userId: data.userId,
-              details: { method: 'PORTAL_NOTIFICATION' }
-            })
-        });
-
-        toast.success("🚀 Relevé transmis au candidat !");
-    } catch (e) {
-        toast.error("Échec de la transmission");
-    } finally {
-        setActionLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div

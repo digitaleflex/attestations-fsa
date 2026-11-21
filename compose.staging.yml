@@ -127,8 +127,15 @@ services:
     pids_limit: 128
     security_opt:
       - no-new-privileges:true
+    # Mêmes capacités minimales que la prod : l'entrypoint Redis doit pouvoir
+    # chown le volume AOF et basculer vers l'utilisateur redis.
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
 
   fsa-postgres-staging:
     image: postgres:17-alpine

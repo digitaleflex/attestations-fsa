@@ -86,17 +86,24 @@ export default function NotificationCenter() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all">
-          <Bell className="w-5 h-5" />
+        <button
+          aria-label={
+            unreadCount > 0
+              ? `Notifications (${unreadCount} non lues)`
+              : "Notifications"
+          }
+          className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-brand-line hover:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+        >
+          <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
-              {unreadCount}
+            <span className="absolute -top-1 -right-1 flex min-w-[20px] h-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white shadow-sm">
+              {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="w-80 md:w-96 bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden" align="end">
+      <DropdownMenuContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] bg-white shadow-2xl border-slate-100 rounded-2xl p-0 overflow-hidden sm:w-80 md:w-96 dark:bg-slate-900 dark:border-slate-800" align="end">
         <DropdownMenuLabel className="p-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-amber-400" />

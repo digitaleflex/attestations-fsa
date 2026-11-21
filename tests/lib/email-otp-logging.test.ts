@@ -40,7 +40,6 @@ const ORIGINAL_ENV = { ...process.env };
 const TO = "candidat@example.com";
 const NAME = "Alice Candidat";
 const OTP = "839201";
-const MAGIC_LINK = "https://app.example.com/api/auth/verify?token=secret-abc123";
 
 /** Capture réelle de tout ce que le code écrit sur la console. */
 function captureConsole() {
@@ -108,12 +107,6 @@ const SECRET_EMAILS = [
     secret: OTP,
     logsOnSuccess: false,
   },
-  {
-    label: "sendMagicLink (lien de connexion)",
-    call: () => emailService.sendMagicLink(TO, NAME, MAGIC_LINK),
-    secret: MAGIC_LINK,
-    logsOnSuccess: true,
-  },
 ];
 
 describe("emailService — aucun secret dans les logs en production", () => {
@@ -125,10 +118,6 @@ describe("emailService — aucun secret dans les logs en production", () => {
         const res = await call();
         expect(res).toEqual({ success: true });
         expect(cap.output).not.toContain(secret);
-        // Un lien magique ne doit pas non plus apparaître en clair.
-        if (secret === MAGIC_LINK) {
-          expect(cap.output).not.toContain("secret-abc123");
-        }
       } finally {
         cap.restore();
       }

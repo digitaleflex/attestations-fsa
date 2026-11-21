@@ -578,7 +578,7 @@ export default function AdminContactsPage() {
           if (!open) setDetailContact(null);
         }}
       >
-        <DialogContent className="max-w-2xl rounded-2xl">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl">
           {detailContact && (
             <>
               <DialogHeader className="space-y-3 pr-6">

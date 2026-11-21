@@ -43,6 +43,8 @@ export type AccountRecord = {
   banned?: boolean | null;
   banReason?: string | null;
   banExpires?: Date | string | null;
+  /** #385 — L'admin exige un changement de mot de passe avant reconnexion. */
+  resetPasswordRequired?: boolean | null;
 };
 
 export type AccountAccessDecision = {
@@ -66,6 +68,7 @@ const ACCOUNT_SELECT = {
   banned: true,
   banReason: true,
   banExpires: true,
+  resetPasswordRequired: true,
 } as const;
 
 /**

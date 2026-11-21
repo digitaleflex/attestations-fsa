@@ -43,13 +43,17 @@ describe("#287 — rate limit sur /api/auth (middleware)", () => {
     expect(res.status).toBe(200);
   });
 
-  it("bloque (429) les tentatives répétées sur un endpoint d'auth", async () => {
+  it("bloque (429) les tentatives répétées sur /api/auth (seau générique)", async () => {
     memoryFallbackLimits.authEndpoint = { max: 3, windowMs: 60_000 };
     for (let i = 0; i < 3; i++) {
-      const ok = await proxy(makeRequest("/api/auth/sign-in/email", { ip: "203.0.113.7" }));
+      const ok = await proxy(
+        makeRequest("/api/auth/request-password-reset", { ip: "203.0.113.7" }),
+      );
       expect(ok.status).toBe(200);
     }
-    const blocked = await proxy(makeRequest("/api/auth/sign-in/email", { ip: "203.0.113.7" }));
+    const blocked = await proxy(
+      makeRequest("/api/auth/request-password-reset", { ip: "203.0.113.7" }),
+    );
     expect(blocked.status).toBe(429);
     await expect(blocked.json()).resolves.toMatchObject({
       code: "RATE_LIMIT_EXCEEDED",
@@ -58,12 +62,28 @@ describe("#287 — rate limit sur /api/auth (middleware)", () => {
 
   it("double comptage : la même session est bloquée même en changeant d'IP", async () => {
     memoryFallbackLimits.authEndpoint = { max: 2, windowMs: 60_000 };
-    await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.0.0.1", cookie: SESSION }));
-    await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.0.0.2", cookie: SESSION }));
+    const path = "/api/auth/request-password-reset";
+    await proxy(makeRequest(path, { ip: "10.0.0.1", cookie: SESSION }));
+    await proxy(makeRequest(path, { ip: "10.0.0.2", cookie: SESSION }));
     const blocked = await proxy(
-      makeRequest("/api/auth/sign-in/email", { ip: "10.0.0.3", cookie: SESSION }),
+      makeRequest(path, { ip: "10.0.0.3", cookie: SESSION }),
     );
     expect(blocked.status).toBe(429);
+  });
+
+  it("la connexion utilise le budget strict `login` (5/15 min)", async () => {
+    memoryFallbackLimits.login = { max: 2, windowMs: 60_000 };
+    const path = "/api/auth/sign-in/email";
+    expect((await proxy(makeRequest(path, { ip: "10.20.0.1" }))).status).toBe(200);
+    expect((await proxy(makeRequest(path, { ip: "10.20.0.1" }))).status).toBe(200);
+    expect((await proxy(makeRequest(path, { ip: "10.20.0.1" }))).status).toBe(429);
+  });
+
+  it("l'inscription utilise le budget `register` (3/h)", async () => {
+    memoryFallbackLimits.register = { max: 1, windowMs: 60_000 };
+    const path = "/api/auth/sign-up/email";
+    expect((await proxy(makeRequest(path, { ip: "10.20.1.1" }))).status).toBe(200);
+    expect((await proxy(makeRequest(path, { ip: "10.20.1.1" }))).status).toBe(429);
   });
 
   it("ne partage pas un budget anonyme global entre IP distinctes (régression)", async () => {
@@ -72,37 +92,39 @@ describe("#287 — rate limit sur /api/auth (middleware)", () => {
     // visiteurs anonymes (20 appels / 5 min). Une IP neuve était donc bloquée
     // à cause des appels des autres. Chaque IP doit avoir son propre budget.
     memoryFallbackLimits.authEndpoint = { max: 2, windowMs: 60_000 };
+    const path = "/api/auth/request-password-reset";
 
     expect(
-      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.1" }))).status,
+      (await proxy(makeRequest(path, { ip: "10.9.0.1" }))).status,
     ).toBe(200);
     expect(
-      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.2" }))).status,
+      (await proxy(makeRequest(path, { ip: "10.9.0.2" }))).status,
     ).toBe(200);
     expect(
-      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.3" }))).status,
+      (await proxy(makeRequest(path, { ip: "10.9.0.3" }))).status,
     ).toBe(200);
 
     // La première IP consomme son second et dernier jeton, puis est bloquée.
     expect(
-      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.1" }))).status,
+      (await proxy(makeRequest(path, { ip: "10.9.0.1" }))).status,
     ).toBe(200);
     expect(
-      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.1" }))).status,
+      (await proxy(makeRequest(path, { ip: "10.9.0.1" }))).status,
     ).toBe(429);
 
     // Une IP encore vierge n'hérite pas du blocage des autres.
     expect(
-      (await proxy(makeRequest("/api/auth/sign-in/email", { ip: "10.9.0.4" }))).status,
+      (await proxy(makeRequest(path, { ip: "10.9.0.4" }))).status,
     ).toBe(200);
   });
 
   it("le spoofing de x-forwarded-for ne crée pas de nouveau budget", async () => {
     memoryFallbackLimits.authEndpoint = { max: 2, windowMs: 60_000 };
-    await proxy(makeRequest("/api/auth/sign-in/email", { ip: "1.1.1.1, 203.0.113.7" }));
-    await proxy(makeRequest("/api/auth/sign-in/email", { ip: "2.2.2.2, 203.0.113.7" }));
+    const path = "/api/auth/request-password-reset";
+    await proxy(makeRequest(path, { ip: "1.1.1.1, 203.0.113.7" }));
+    await proxy(makeRequest(path, { ip: "2.2.2.2, 203.0.113.7" }));
     const blocked = await proxy(
-      makeRequest("/api/auth/sign-in/email", { ip: "3.3.3.3, 203.0.113.7" }),
+      makeRequest(path, { ip: "3.3.3.3, 203.0.113.7" }),
     );
     expect(blocked.status).toBe(429);
   });
