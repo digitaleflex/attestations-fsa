@@ -60,7 +60,7 @@ describe("lib/api-client", () => {
     fetchMock.mockResolvedValue(
       jsonResponse({ message: "Interdit", code: "FORBIDDEN", details: { a: 1 } }, 403),
     );
-    const err = await apiFetch("/api/x").catch((e: unknown) => e as ApiError);
+    const err = (await apiFetch("/api/x").catch((e: unknown) => e)) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(403);
     expect(err.message).toBe("Interdit");
@@ -80,7 +80,7 @@ describe("lib/api-client", () => {
 
   it("convertit une erreur réseau en ApiError 500", async () => {
     fetchMock.mockRejectedValue(new Error("réseau coupé"));
-    const err = await apiFetch("/api/x").catch((e: unknown) => e as ApiError);
+    const err = (await apiFetch("/api/x").catch((e: unknown) => e)) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(500);
     expect(err.message).toBe("réseau coupé");
