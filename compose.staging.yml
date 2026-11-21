@@ -7,7 +7,9 @@
 # =================================================================
 services:
   fsa-app-staging:
-    image: ghcr.io/digitaleflex/attestations-fsa:staging
+    # Tag poussé par deploy.yml (sha court du commit), comme en prod. Le tag
+    # fixe `:staging` n'était publié par aucun job -> `manifest ... not found`.
+    image: ghcr.io/digitaleflex/attestations-fsa:${IMAGE_TAG:-latest}
     container_name: attestations-fsa-staging
     hostname: fsa-app-staging
     volumes:
