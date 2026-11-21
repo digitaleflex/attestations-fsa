@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Phone, MapPin } from "lucide-react";
 
@@ -10,9 +11,18 @@ export function Footer() {
   if (usePathname() === "/inscription") {
     return (
       <footer className="w-full border-t border-brand-line bg-white">
-        <p className="mx-auto max-w-7xl px-5 py-4 text-center text-xs font-medium text-slate-500">
-          Ferme Agro-Piscicole Saint-André · Bénin
-        </p>
+        <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-5 py-4">
+          <Image
+            src="/logo-fsa.png"
+            alt=""
+            width={24}
+            height={24}
+            className="h-6 w-6 shrink-0 object-contain"
+          />
+          <p className="text-center text-xs font-medium text-slate-500">
+            Ferme Agro-Piscicole Saint-André · Bénin
+          </p>
+        </div>
       </footer>
     );
   }
@@ -26,9 +36,15 @@ export function Footer() {
         <div className="mb-8 grid grid-cols-2 gap-x-6 gap-y-8 md:mb-12 lg:grid-cols-12 lg:gap-10">
           <div className="col-span-2 lg:col-span-4">
             <div className="inline-flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand font-extrabold text-sm tracking-tight text-white shadow-md shadow-brand/20">
-                FSA
-              </div>
+              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-md shadow-brand/10 ring-1 ring-brand/10">
+                <Image
+                  src="/logo-fsa.png"
+                  alt="Logo Ferme Agro-piscicole Saint André"
+                  fill
+                  sizes="44px"
+                  className="object-contain p-0.5"
+                />
+              </span>
               <div>
                 <h2 className="text-sm font-extrabold leading-tight tracking-tight text-brand-ink">
                   Ferme Agro-piscicole

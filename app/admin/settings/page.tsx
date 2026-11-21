@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 
 type Settings = {
   id: string;
@@ -53,6 +54,7 @@ type Settings = {
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
+  const push = usePushNotifications();
   const [formData, setFormData] = useState<Partial<Settings>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -160,6 +162,24 @@ export default function SettingsPage() {
             </Button>
         </div>
       </div>
+
+      {/* Notifications push (Web Push) */}
+      <Card className="p-6 border-slate-200 shadow-sm rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Notifications push</h2>
+          <p className="text-sm text-slate-500">
+            Activez les notifications push dans ce navigateur (admins).
+          </p>
+        </div>
+        <Button
+          type="button"
+          onClick={() => push.subscribe()}
+          disabled={push.loading || !push.isSupported}
+          className="bg-slate-900 hover:bg-slate-800 text-white"
+        >
+          {push.loading ? "Activation..." : push.isSubscribed ? "Activées" : "Activer les notifications push"}
+        </Button>
+      </Card>
 
       {/* Mode Aperçu Dynamique */}
       {showPreview && (

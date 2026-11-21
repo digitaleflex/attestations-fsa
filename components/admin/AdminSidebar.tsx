@@ -31,6 +31,7 @@ import {
   Bell,
   Mail,
   User,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -67,6 +68,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Administration",
     links: [
       { href: "/admin/attestations", label: "Attestations", icon: FileText },
+      { href: "/admin/analytics", label: "Analytique", icon: BarChart3 },
       { href: "/admin/reclamations", label: "Réclamations", icon: AlertCircle },
       { href: "/admin/contacts", label: "Messages", icon: Mail },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
@@ -96,15 +98,15 @@ function NavItem({ item, pathname }: { item: NavLink; pathname: string | null })
         asChild
         isActive={isActive}
         tooltip={item.label}
-        className={`transition-all duration-200 ${
+        className={`transition-all duration-200 border-l-2 ${
           isActive
-            ? "bg-brand text-white shadow-md shadow-brand/30 hover:bg-brand-dark hover:text-white"
-            : "text-slate-600 hover:bg-slate-100"
+            ? "bg-brand/10 text-brand border-brand hover:bg-brand/15"
+            : "text-slate-600 border-transparent hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
         }`}
       >
         <Link href={item.href} aria-current={isActive ? "page" : undefined}>
-          <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
-          <span className="font-medium text-sm">{item.label}</span>
+          <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-brand" : "text-slate-400 dark:text-slate-500"}`} />
+          <span className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>{item.label}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -129,7 +131,7 @@ export function AdminSidebar({ admin }: { admin: any }) {
 
   return (
     <Sidebar collapsible="icon" className="border-r shadow-sm">
-      <SidebarHeader className="h-16 flex flex-row items-center border-b border-slate-100 px-4 py-0 shrink-0">
+      <SidebarHeader className="h-16 flex flex-row items-center border-b border-slate-100 px-4 py-0 shrink-0 dark:border-slate-800">
         <SidebarHeaderContent state={state} />
       </SidebarHeader>
 
@@ -150,7 +152,7 @@ export function AdminSidebar({ admin }: { admin: any }) {
         ))}
       </SidebarContent>
 
-      <SidebarSeparator className="mx-4 bg-slate-100" />
+      <SidebarSeparator className="mx-4 bg-slate-100 dark:bg-slate-800" />
 
       <SidebarFooter className="p-4 space-y-4">
         <SidebarMenu className="space-y-1">
@@ -164,7 +166,7 @@ export function AdminSidebar({ admin }: { admin: any }) {
             <SidebarMenuButton
               onClick={handleLogout}
               tooltip="Déconnexion"
-              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors dark:hover:bg-rose-950/30"
             >
               <LogOut className="w-4 h-4 shrink-0" />
               <span className="font-medium text-sm">Déconnexion</span>
@@ -173,11 +175,11 @@ export function AdminSidebar({ admin }: { admin: any }) {
         </SidebarMenu>
 
         {admin && state === "expanded" && (
-          <div className="mt-2 rounded-xl bg-slate-50 p-3 animate-in fade-in slide-in-from-bottom-2 duration-500 border border-slate-100">
+          <div className="mt-2 rounded-xl bg-slate-50 p-3 animate-in fade-in slide-in-from-bottom-2 duration-500 border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">
               Session active
             </p>
-            <p className="font-medium text-slate-700 truncate text-xs">
+            <p className="font-medium text-slate-700 truncate text-xs dark:text-slate-200">
               {admin.name || admin.email}
             </p>
           </div>
@@ -197,10 +199,10 @@ function SidebarHeaderContent({ state }: { state: string }) {
       </div>
       {isExpanded && (
         <div className="flex flex-col min-w-0 animate-in fade-in duration-200">
-          <span className="text-sm font-bold text-slate-800 truncate leading-none mb-1">
+          <span className="text-sm font-bold text-slate-800 truncate leading-none mb-1 dark:text-slate-100">
             Admin FSA
           </span>
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold truncate leading-none">
+          <span className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold truncate leading-none dark:text-slate-500">
             Gestion Centrale
           </span>
         </div>

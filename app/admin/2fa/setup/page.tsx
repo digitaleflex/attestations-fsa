@@ -9,12 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
-  Shield,
   ShieldCheck,
   Copy,
   CheckCircle,
   AlertTriangle,
-  QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
@@ -29,7 +27,6 @@ export default function Admin2FASetupPage() {
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [verificationCode, setVerificationCode] = useState("");
   const [password, setPassword] = useState("");
-  const [method, setMethod] = useState<"totp" | "email">("totp");
 
   // Enable 2FA
   const handleEnable2FA = async () => {
@@ -52,10 +49,14 @@ export default function Admin2FASetupPage() {
       }
 
       if (data) {
-        if (data.method === "totp") {
-          setTotpURI(data.totpURI);
-          setBackupCodes(data.backupCodes || []);
+        if (data.method !== "totp" || !data.totpURI) {
+          setError(
+            "L'activation TOTP n'a pas renvoyé de QR code. Réessayez ou contactez le support.",
+          );
+          return;
         }
+        setTotpURI(data.totpURI);
+        setBackupCodes(data.backupCodes || []);
         setStep("verify");
         toast.success("2FA activée ! Vérifiez le code.");
       }
@@ -193,25 +194,21 @@ export default function Admin2FASetupPage() {
               />
             </div>
 
-            {/* Method Selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Button
-                variant={method === "totp" ? "default" : "outline"}
-                onClick={() => setMethod("totp")}
-                className="h-20 flex flex-col items-center gap-2"
-              >
-                <QrCode className="w-6 h-6" />
-                <span>Application Authenticator</span>
-              </Button>
-              <Button
-                variant={method === "email" ? "default" : "outline"}
-                onClick={() => setMethod("email")}
-                className="h-20 flex flex-col items-center gap-2"
-              >
-                <Shield className="w-6 h-6" />
-                <span>Code par Email</span>
-              </Button>
-            </div>
+            {/* Méthode d'enrôlement : TOTP uniquement (Better Auth n'expose
+                pas d'enrôlement « e-mail seul »). L'OTP e-mail reste une
+                méthode de secours à la connexion, pas à l'activation. */}
+            <Alert className="bg-slate-50 border-slate-200">
+              <ShieldCheck className="h-4 w-4 text-brand" />
+              <AlertTitle className="text-slate-900">
+                Application d&apos;authentification (TOTP)
+              </AlertTitle>
+              <AlertDescription className="text-slate-700">
+                L&apos;activation se fait avec une application TOTP (Google
+                Authenticator, Authy…). Une fois la 2FA active, un code par
+                e-mail reste disponible comme méthode de secours sur la page de
+                vérification.
+              </AlertDescription>
+            </Alert>
 
             <Alert className="bg-amber-50 border-amber-200">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -246,7 +243,7 @@ export default function Admin2FASetupPage() {
         {step === "verify" && (
           <div className="space-y-6">
             {/* QR Code */}
-            {method === "totp" && totpURI && (
+            {totpURI && (
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-4">
                   Scannez ce QR Code
@@ -256,7 +253,8 @@ export default function Admin2FASetupPage() {
                 </div>
                 <p className="text-sm text-slate-600">
                   Ouvrez Google Authenticator, Authy ou une application
-                  similaire et scannez le code
+                  similaire et scannez le code. À la connexion, un code par
+                  e-mail restera disponible comme méthode de secours.
                 </p>
               </div>
             )}

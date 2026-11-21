@@ -2,6 +2,8 @@
 
 @plugin "tailwindcss-animate";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -244,6 +246,67 @@
     --sidebar-accent-foreground: 353 100% 45%;
     --sidebar-border: 60 4% 90%;
     --sidebar-ring: 353 100% 45%;
+
+    /* Palette institutionnelle admin (modernisation admin · Série 2) */
+    --admin-bg: #F8FAFC;
+    --admin-surface: #FFFFFF;
+    --admin-text: #172033;
+    --admin-text-secondary: #64748B;
+    --admin-primary: #DC2626;
+    --admin-success: #059669;
+    --admin-warning: #D97706;
+    --admin-error: #DC2626;
+    --admin-border: #E5E7EB;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 8%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 353 100% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 20 97% 58%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 353 100% 55%;
+
+    --sidebar-background: 222.2 84% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 353 100% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 353 100% 15%;
+    --sidebar-accent-foreground: 353 100% 75%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 353 100% 55%;
+
+    --admin-bg: #0F172A;
+    --admin-surface: #1E293B;
+    --admin-text: #F1F5F9;
+    --admin-text-secondary: #94A3B8;
+    --admin-primary: #EF4444;
+    --admin-success: #10B981;
+    --admin-warning: #F59E0B;
+    --admin-error: #EF4444;
+    --admin-border: #334155;
   }
 }
 

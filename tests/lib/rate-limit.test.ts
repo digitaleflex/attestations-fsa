@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => null),
   isRedisReady: vi.fn(() => false),
+  reportRedisUnavailable: vi.fn(),
 }));
 
 import {
@@ -149,5 +150,29 @@ describe("rate-limit du flux examen (#256)", () => {
       "examDraft",
     );
     expect(draft.allowed).toBe(true);
+  });
+});
+
+describe("bypass E2E (#385)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    __resetInMemoryRateLimitsForTests();
+  });
+
+  it("autorise tout hors production quand RATE_LIMIT_BYPASS=true", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("RATE_LIMIT_BYPASS", "true");
+
+    const result = await applyRateLimit(makeRequest("7.7.7.7"), "login");
+    expect(result.allowed).toBe(true);
+  });
+
+  it("refuse le bypass en production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_BYPASS", "true");
+    vi.stubEnv("RATE_LIMIT_FAIL_OPEN", "");
+
+    const result = await applyRateLimit(makeRequest("7.7.7.8"), "login");
+    expect(result.allowed).toBe(false);
   });
 });

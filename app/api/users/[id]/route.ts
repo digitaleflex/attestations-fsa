@@ -365,10 +365,16 @@ export async function PATCH(
     //    couper la session de l'attaquant, pas seulement changer le secret ;
     //  - email : une session ouverte sur l'ancienne adresse n'est plus légitime ;
     //  - rôle : une élévation/révocation de privilèges doit être immédiate.
-    if (data.status || data.password || data.email || data.role) {
+    if (
+      data.status ||
+      data.password ||
+      data.email ||
+      data.role ||
+      data.resetPasswordRequired === true
+    ) {
       const revoked = await revokeUserSessions(id);
       console.log(
-        `[ADMIN] Modification sensible appliquée à ${id} (status=${data.status ?? "-"}, password=${Boolean(data.password)}, email=${Boolean(data.email)}, role=${data.role ?? "-"}) — ${revoked} session(s) révoquée(s)`,
+        `[ADMIN] Modification sensible appliquée à ${id} (status=${data.status ?? "-"}, password=${Boolean(data.password)}, email=${Boolean(data.email)}, role=${data.role ?? "-"}, resetPasswordRequired=${data.resetPasswordRequired ?? "-"}) — ${revoked} session(s) révoquée(s)`,
       );
     }
 

@@ -33,6 +33,7 @@ interface PaletteEntry {
   hint?: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
+  avatar?: string;
 }
 
 const NAV_ENTRIES: PaletteEntry[] = [
@@ -60,6 +61,15 @@ interface FoundUser {
   id: string;
   name: string | null;
   email: string | null;
+}
+
+function userInitials(u: FoundUser): string {
+  const base = (u.name || u.email || "?").trim();
+  const parts = base.split(/\s+/).filter(Boolean);
+  if (parts.length > 1) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return base.slice(0, 2).toUpperCase();
 }
 
 function matches(entry: PaletteEntry, q: string): boolean {
@@ -153,7 +163,8 @@ export function AdminCommandPalette() {
         label: u.name || u.email || "Sans nom",
         hint: u.email || undefined,
         icon: Users,
-        href: `/admin/users?q=${encodeURIComponent(u.email || u.name || "")}`,
+        avatar: userInitials(u),
+        href: `/admin/users/${u.id}`,
       })),
     [found],
   );
@@ -288,11 +299,11 @@ export function AdminCommandPalette() {
                       <span
                         aria-hidden="true"
                         className={cn(
-                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black",
                           active ? "bg-brand text-white" : "bg-slate-100 text-slate-500",
                         )}
                       >
-                        <Icon className="h-4 w-4" />
+                        {entry.avatar ? entry.avatar : <Icon className="h-4 w-4" />}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold text-slate-800">
