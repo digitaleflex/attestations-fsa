@@ -51,6 +51,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { StatCard, PageHeader } from "@/components/admin/";
 import { StatusBadge, RoleBadge, VerifiedBadge } from "@/components/admin/users/UserBadges";
+import { VirtualUserTable } from "@/components/admin/users/VirtualUserTable";
 import { UserActionsMenu } from "@/components/admin/users/UserActionsMenu";
 import { UserDetailDialog } from "@/components/admin/users/UserDetailDialog";
 import { UserAssignDialog } from "@/components/admin/users/UserAssignDialog";
@@ -69,6 +70,7 @@ import { UsersBulkBar, type BulkKind } from "@/components/admin/users/UsersBulkB
 import { TableCaption } from "@/components/ui/table";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 // ... (icons)
 import {
   Loader2,
@@ -746,6 +748,92 @@ export default function AdminUsersPage() {
     doc.save(`apprenants-${new Date().toISOString().slice(0, 10)}.pdf`);
     toast.success("Export PDF généré");
   };
+
+  const handleExportExcel = () => {
+    // Feuille 1 : Apprenants
+    const rows = displayUsers.map((u) => ({
+      Nom: u.name || "-",
+      Email: u.email || "-",
+      Statut: u.status,
+      Rôle: u.role,
+      Vérifié: u.emailVerified ? "Oui" : "Non",
+      "Date d'inscription": formatDate(u.createdAt),
+      "Dernière activité": formatDate(u.updatedAt),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Largeurs automatiques
+    const headers = Object.keys(rows[0] || {
+      Nom: "", Email: "", Statut: "", Rôle: "", Vérifié: "",
+      "Date d'inscription": "", "Dernière activité": "",
+    });
+    const colWidths = headers.map((h) => {
+      const maxLen = Math.max(
+        h.length,
+        ...rows.map((r) => String((r as any)[h] ?? "").length),
+      );
+      return { wch: Math.min(Math.max(maxLen + 2, 10), 45) };
+    });
+    ws["!cols"] = colWidths;
+
+    // Filtres automatiques
+    const range = XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: rows.length, c: headers.length - 1 },
+    });
+    ws["!autofilter"] = { ref: range };
+
+    // En-têtes en gras (best effort avec SheetJS)
+    headers.forEach((_, c) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[cellRef]) {
+        (ws[cellRef] as any).s = { font: { bold: true } };
+      }
+    });
+
+    // Feuille 2 : Statistiques
+    const adminCount = displayUsers.filter((u) => u.role === "admin").length;
+    const userCount = displayUsers.filter((u) => u.role === "user").length;
+    const suspendedCount = displayUsers.filter((u) => u.status === "SUSPENDED").length;
+    const blockedCount = displayUsers.filter((u) => u.status === "BLOCKED").length;
+    const statsRows: (string | number)[][] = [
+      ["Indicateur", "Valeur"],
+      ["Total apprenants", stats.total],
+      ["Comptes actifs", stats.active],
+      ["Comptes vérifiés", stats.verified],
+      ["Non vérifiés", stats.unverified],
+      [],
+      ["Par catégorie (page affichée)", ""],
+      ["Administrateurs", adminCount],
+      ["Apprenants", userCount],
+      ["Suspendus", suspendedCount],
+      ["Bloqués", blockedCount],
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(statsRows);
+    ws2["!cols"] = [{ wch: 34 }, { wch: 14 }];
+    // gras en-tête
+    const h1 = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    const h2 = XLSX.utils.encode_cell({ r: 0, c: 1 });
+    if (ws2[h1]) (ws2[h1] as any).s = { font: { bold: true } };
+    if (ws2[h2]) (ws2[h2] as any).s = { font: { bold: true } };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Apprenants");
+    XLSX.utils.book_append_sheet(wb, ws2, "Statistiques");
+
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `apprenants-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Export Excel généré");
+  };
   const hasActiveFilters = hasActiveUsersFilters({
     q: filters.q,
     status: filters.status,
@@ -981,6 +1069,9 @@ export default function AdminUsersPage() {
           <Button variant="outline" onClick={handleExportCSV} className="gap-2">
             Exporter CSV
           </Button>
+          <Button variant="outline" onClick={handleExportExcel} className="gap-2">
+            Exporter Excel
+          </Button>
           <Button variant="outline" onClick={handleExportPDF} className="gap-2">
             Exporter PDF
           </Button>
@@ -989,6 +1080,43 @@ export default function AdminUsersPage() {
 
       {/* Vue Bureau (Tableau) — à partir de lg : en md les 9 colonnes
           écrasent Rôle/Statut et donnent l'impression d'un contenu masqué. */}
+      {users.length > 50 ? (
+        <>
+          <VirtualUserTable
+            users={displayUsers}
+            selectedIds={selectedIds}
+            onToggleOne={toggleOne}
+            onToggleAll={toggleAllVisible}
+            allVisibleSelected={allVisibleSelected}
+            someVisibleSelected={someVisibleSelected}
+            sort={filters.sort}
+            direction={filters.direction}
+            onToggleSort={handleToggleSort}
+            onView={(u) => router.push(`/admin/users/${u.id}`)}
+            onEdit={handleOpenDialog}
+            onAssign={handleOpenAssignDialog}
+            onResetAccess={handleResetPassword}
+            onToggleStatus={handleUpdateStatus}
+            onDelete={handleDeleteRequest}
+          />
+          <div className="p-4 border-t flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-slate-50/50">
+            <p className="text-xs text-slate-500">
+              Affichage de <span className="font-bold text-slate-700">{users.length}</span> sur <span className="font-bold text-slate-700">{meta.total}</span> utilisateurs
+            </p>
+            <nav aria-label="Pagination des apprenants" className="flex items-center gap-2">
+              <Button variant="outline" disabled={meta.page <= 1 || loading} onClick={() => updateFilters({ page: meta.page - 1 })} aria-label="Page précédente" className="min-h-[44px] gap-1">
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" /> Précédent
+              </Button>
+              <div className="flex items-center gap-1 mx-2">
+                <span className="text-xs font-medium text-slate-600" aria-live="polite">Page {meta.page} sur {meta.totalPages}</span>
+              </div>
+              <Button variant="outline" disabled={meta.page >= meta.totalPages || loading} onClick={() => updateFilters({ page: meta.page + 1 })} aria-label="Page suivante" className="min-h-[44px] gap-1">
+                Suivant <ChevronRight className="w-4 h-4" aria-hidden="true" />
+              </Button>
+            </nav>
+          </div>
+        </>
+      ) : (
       <Card className="bg-white hidden lg:block overflow-hidden">
         <div className="overflow-x-auto">
           <Table className="min-w-[1080px]">
@@ -1128,7 +1256,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
-                          onClick={() => handleViewDetails(u)}
+                          onClick={() => router.push(`/admin/users/${u.id}`)}
                           aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
                           className="h-11 gap-2 px-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                         >
@@ -1137,7 +1265,7 @@ export default function AdminUsersPage() {
                         </Button>
                         <UserActionsMenu
                           user={u}
-                          onView={handleViewDetails}
+                          onView={(user) => router.push(`/admin/users/${user.id}`)}
                           onEdit={handleOpenDialog}
                           onAssign={handleOpenAssignDialog}
                           onResetAccess={handleResetPassword}
@@ -1183,6 +1311,7 @@ export default function AdminUsersPage() {
           </nav>
         </div>
       </Card>
+      )}
 
       {/* Vue Mobile / Tablette (Cartes) */}
       <div className="space-y-4 lg:hidden">
@@ -1254,7 +1383,7 @@ export default function AdminUsersPage() {
                   </div>
                   <UserActionsMenu
                     user={u}
-                    onView={handleViewDetails}
+                    onView={(user) => router.push(`/admin/users/${user.id}`)}
                     onEdit={handleOpenDialog}
                     onAssign={handleOpenAssignDialog}
                     onResetAccess={handleResetPassword}
@@ -1299,7 +1428,7 @@ export default function AdminUsersPage() {
                 </div>
 
                 <Button
-                  onClick={() => handleViewDetails(u)}
+                  onClick={() => router.push(`/admin/users/${u.id}`)}
                   aria-label={`Voir ${u.name || u.email || "cet utilisateur"}`}
                   className="w-full min-h-[44px] gap-2 font-bold shadow-md"
                 >

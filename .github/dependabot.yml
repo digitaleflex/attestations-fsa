@@ -7,6 +7,12 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Les montées de version MAJEURE (Prisma 7, Zod 4, TypeScript 7, ESLint 10,
+    # Vitest 5…) cassent le build/les tests et exigent une migration planifiée :
+    # elles ne doivent pas arriver en PR auto-fusionnable. Mineures/patchs OK.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       production-dependencies:
         dependency-type: "production"
