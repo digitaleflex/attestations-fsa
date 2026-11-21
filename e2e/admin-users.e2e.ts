@@ -11,7 +11,7 @@ test("admin users: navigation, filtres, tri, pagination, CRUD", async ({ page })
 
   // 2. Recherche par nom (filtrer les résultats)
   await page.locator("#users-search").fill("Jean Koffi");
-  await expect(page.getByText("Jean Koffi")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("row", { name: /Jean Koffi/ })).toBeVisible({ timeout: 10_000 });
 
   await page.locator("#users-search").fill("");
   await page.waitForTimeout(600);
@@ -19,7 +19,7 @@ test("admin users: navigation, filtres, tri, pagination, CRUD", async ({ page })
   // 3. Filtre par statut (ACTIVE/BLOCKED)
   await page.getByLabel("Statut").click();
   await page.getByRole("option", { name: "Actif" }).click();
-  await expect(page.getByText("Jean Koffi")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("row", { name: /Jean Koffi/ })).toBeVisible({ timeout: 10_000 });
 
   await page.getByLabel("Statut").click();
   await page.getByRole("option", { name: "Tous" }).click();
@@ -35,7 +35,7 @@ test("admin users: navigation, filtres, tri, pagination, CRUD", async ({ page })
   // 5. Filtre par vérification (vérifié/non vérifié)
   await page.getByLabel("Vérification").click();
   await page.getByRole("option", { name: "Vérifié" }).click();
-  await expect(page.getByText("Jean Koffi")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("row", { name: /Jean Koffi/ })).toBeVisible({ timeout: 10_000 });
 
   await page.getByLabel("Vérification").click();
   await page.getByRole("option", { name: "Tous" }).click();
