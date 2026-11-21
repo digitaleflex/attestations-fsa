@@ -237,7 +237,8 @@ jobs:
 
             # ── 3. Déploiement de l'app staging ──
             echo "==> Deploying staging app..."
-            docker compose --env-file .env.staging -f compose.staging.yml up -d --wait
+            IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}" \
+              docker compose --env-file .env.staging -f compose.staging.yml up -d --wait
 
             echo "==> Container status:"
             docker compose --env-file .env.staging -f compose.staging.yml ps
