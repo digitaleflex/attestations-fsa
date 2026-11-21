@@ -189,7 +189,11 @@ services:
     profiles:
       - tools
     restart: "no"
-    command: ["prisma", "migrate", "deploy"]
+    # L'image migrator a déjà `ENTRYPOINT ["prisma"]` (Dockerfile.migrator) :
+    # n'y passer que les arguments. Avec ["prisma", "migrate", "deploy"], le
+    # conteneur exécutait `prisma prisma migrate deploy` -> `Unknown command
+    # "prisma"` et le déploiement staging (donc prod) échouait.
+    command: ["migrate", "deploy"]
 
 networks:
   proxy:
