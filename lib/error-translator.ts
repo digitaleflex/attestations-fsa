@@ -5,6 +5,14 @@
 export function translateAuthError(message: string): string {
     const msg = message.toLowerCase();
 
+    // #385 — Compte dont l'admin a exigé un nouveau mot de passe.
+    if (
+      msg.includes("changement de mot de passe est requis") ||
+      msg.includes("password reset required")
+    ) {
+      return "Un changement de mot de passe est requis. Utilisez « Mot de passe oublié » pour définir un nouveau mot de passe.";
+    }
+
     // Erreurs courantes Better Auth
     if (msg.includes("invalid email or password")) return "Email ou mot de passe incorrect.";
     if (msg.includes("user not found")) return "Compte introuvable.";

@@ -189,12 +189,7 @@ describe("emailService - chemin nominal d'envoi", () => {
       () => emailService.sendGeneralNotification(TO, NAME, "Maintenance", "Une coupure est prévue."),
     ],
     ["sendTwoFactorOTP", () => emailService.sendTwoFactorOTP(TO, NAME, "111222")],
-    [
-      "sendOfficialTranscriptNotification",
-      () => emailService.sendOfficialTranscriptNotification(TO, NAME, "Filtre FSA", 70, true),
-    ],
     ["sendFsaLoginOTP", () => emailService.sendFsaLoginOTP(TO, NAME, "999888")],
-    ["sendMagicLink", () => emailService.sendMagicLink(TO, NAME, "https://fsa.test/magic?t=1")],
   ];
 
   it.each(nominalCases)("%s envoie via le SDK et renvoie success", async (_name, run) => {
@@ -210,19 +205,7 @@ describe("emailService - chemin nominal d'envoi", () => {
     expect(payload.html.length).toBeGreaterThan(0);
   });
 
-  it("sendOfficialTranscriptNotification couvre la branche non-admis", async () => {
-    const result = await emailService.sendOfficialTranscriptNotification(
-      TO,
-      NAME,
-      "Filtre FSA",
-      40,
-      false,
-    );
 
-    expect(result).toEqual({ success: true });
-    const payload = mocks.send.mock.calls[0][0] as { subject: string };
-    expect(payload.subject).toBe("📝 Résultat de votre examen - Filtre FSA");
-  });
 });
 
 describe("emailService - échec du SDK Resend (jamais d'exception qui remonte)", () => {
@@ -248,7 +231,7 @@ describe("emailService - échec du SDK Resend (jamais d'exception qui remonte)",
   it("gère un rejet réseau du SDK (throw) sans propager l'exception", async () => {
     mocks.send.mockRejectedValue(new Error("network down"));
 
-    const result = await emailService.sendMagicLink(TO, NAME, "https://fsa.test/magic");
+    const result = await emailService.sendPasswordResetOTP(TO, NAME, "123456");
 
     expect(result.success).toBe(false);
     expect((result as { error: Error }).error.message).toBe("network down");

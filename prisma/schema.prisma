@@ -96,6 +96,7 @@ model User {
   twoFactor             TwoFactor[]
   storedObjects         StoredObject[]
   consents              Consent[]
+  pushSubscriptions     PushSubscription[]
   exam                  Exam?               @relation(fields: [examId], references: [id])
   formation             Formation?          @relation(fields: [formationId], references: [id])
 
@@ -667,4 +668,18 @@ enum NotificationType {
   CORRECTION_REJECTED
   SUPPORT_REPLY
   GENERAL
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String?
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

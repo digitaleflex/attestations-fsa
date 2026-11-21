@@ -1,0 +1,95 @@
+name: VPS reset admin password
+
+# Réinitialisation ciblée d'un compte administrateur, à la demande.
+# Le hash est fourni par le secret éphémère ADMIN_RESET_HASH ; le mot de passe
+# en clair ne transite jamais par GitHub.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Reset admin password in Postgres
+        uses: appleboy/ssh-action@v1
+        env:
+          ADMIN_RESET_HASH: ${{ secrets.ADMIN_RESET_HASH }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          command_timeout: 5m
+          envs: ADMIN_RESET_HASH
+          script: |
+            set -e
+            umask 077
+            ADMIN_EMAIL="admin@fermestandre.com"
+
+            if [ -z "${ADMIN_RESET_HASH:-}" ]; then
+              echo "ERREUR: ADMIN_RESET_HASH absent"; exit 1
+            fi
+
+            cat > /tmp/admin-reset.sql <<'SQL'
+            INSERT INTO "User" (
+              id, email, name, role, "emailVerified", "createdAt", "updatedAt",
+              password, status, "resetPasswordRequired", "twoFactorEnabled",
+              banned, "banReason", "banExpires"
+            )
+            VALUES (
+              gen_random_uuid()::text, :'email', 'Administrateur FSA', 'admin',
+              NOW(), NOW(), NOW(), :'hash', 'ACTIVE'::"UserStatus", false, false,
+              false, NULL, NULL
+            )
+            ON CONFLICT (email) DO UPDATE SET
+              password = EXCLUDED.password,
+              role = 'admin',
+              "emailVerified" = NOW(),
+              "resetPasswordRequired" = false,
+              "twoFactorEnabled" = false,
+              banned = false,
+              "banReason" = NULL,
+              "banExpires" = NULL,
+              status = 'ACTIVE'::"UserStatus";
+
+            DELETE FROM "TwoFactor" t
+            USING "User" u
+            WHERE t."userId" = u.id AND u.email = :'email';
+
+            DELETE FROM "Account" a
+            USING "User" u
+            WHERE a."userId" = u.id
+              AND a."providerId" = 'credential'
+              AND u.email = :'email';
+
+            INSERT INTO "Account" (
+              "id", "userId", "providerId", "accountId", "password",
+              "createdAt", "updatedAt"
+            )
+            SELECT
+              md5(random()::text || clock_timestamp()::text),
+              u.id, 'credential', u.id, :'hash', NOW(), NOW()
+            FROM "User" u
+            WHERE u.email = :'email';
+            SQL
+
+            docker exec -i attestations-fsa-postgres-prod \
+              psql -U attestation_fsa_user -d attestation_fsa \
+              -v ON_ERROR_STOP=1 \
+              -v email="$ADMIN_EMAIL" \
+              -v hash="$ADMIN_RESET_HASH" \
+              < /tmp/admin-reset.sql
+
+            rm -f /tmp/admin-reset.sql
+
+            echo "==> Vérification (sans mot de passe)"
+            docker exec -i attestations-fsa-postgres-prod \
+              psql -U attestation_fsa_user -d attestation_fsa \
+              -v ON_ERROR_STOP=1 \
+              -c "SELECT email, role, status, \"twoFactorEnabled\", \"resetPasswordRequired\" FROM \"User\" WHERE email = '$ADMIN_EMAIL';"
+
+            echo "==> ✅ Mot de passe admin réinitialisé"

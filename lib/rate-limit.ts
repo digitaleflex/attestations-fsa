@@ -138,13 +138,25 @@ export const rateLimits = {
       })
     : null,
 
-  // Inscription
+  // Inscription (proxy : /api/auth/sign-up/*)
   register: redis
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(3, "1 h"), // 3 inscriptions / heure
         analytics: false,
         prefix: "ratelimit:register",
+      })
+    : null,
+
+  // Création d'un utilisateur par un administrateur (#385). Seau distinct de
+  // `register` : un admin qui crée des comptes ne doit pas consommer le quota
+  // d'inscription publique de la même IP.
+  adminUserCreate: redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, "1 h"), // 10 créations / heure
+        analytics: false,
+        prefix: "ratelimit:admin-user-create",
       })
     : null,
 
@@ -402,15 +414,6 @@ export const rateLimits = {
       })
     : null,
 
-  // Admin login (spécifique, plus restrictif que login user)
-  adminLogin: redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(5, "15 m"), // 5 essais / 15min
-        analytics: false,
-        prefix: "ratelimit:admin-login",
-      })
-    : null,
 };
 
 // ============================================================================
@@ -452,7 +455,7 @@ export const memoryFallbackLimits: Record<
   adminBulk: { max: 10, windowMs: 5 * MINUTE },
   adminNotifications: { max: 5, windowMs: 10 * MINUTE },
   adminSettings: { max: 20, windowMs: 60 * MINUTE },
-  adminLogin: { max: 5, windowMs: 15 * MINUTE },
+  adminUserCreate: { max: 10, windowMs: 60 * MINUTE },
 };
 
 // ============================================================================
@@ -471,7 +474,7 @@ const FAIL_CLOSED_LIMIT_TYPES = new Set<string>([
   // Authentification
   "login",
   "register",
-  "adminLogin",
+  "adminUserCreate",
   "passwordReset",
   "fsaOtpRequest",
   "fsaOtpVerify",
@@ -742,11 +745,26 @@ function resolveRedisUnavailable(
   return { allowed: false, response: buildRateLimitUnavailableResponse(limitType) };
 }
 
+/**
+ * Échappatoire réservée aux tests E2E : le serveur Playwright enchaîne
+ * plusieurs connexions depuis la même IP (même budget `login` 5/15 min), ce
+ * qui ferait échouer la suite pour une raison sans rapport avec le produit.
+ * Refusée en production, même si la variable est posée par erreur.
+ */
+function isRateLimitBypassedForTests(): boolean {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.RATE_LIMIT_BYPASS === "true"
+  );
+}
+
 // ✅ FIX: Accept Request instead of NextRequest
 export async function applyRateLimit(
   request: Request,
   limitType: keyof typeof rateLimits,
 ): Promise<RateLimitDecision> {
+  if (isRateLimitBypassedForTests()) return { allowed: true, headers: {} };
+
   // #287 — identité via le proxy de confiance, jamais `x-forwarded-for` brut.
   const ip = getClientIp(request);
   const limit = rateLimits[limitType];
@@ -788,6 +806,8 @@ export async function applyRateLimitByUser(
   userId: string,
   limitType: keyof typeof rateLimits,
 ): Promise<RateLimitDecision> {
+  if (isRateLimitBypassedForTests()) return { allowed: true, headers: {} };
+
   const ip = getClientIp(request);
   const limit = rateLimits[limitType];
   const userIdentifiers = [`ip:${ip}`, `user:${userId}`];
@@ -890,6 +910,8 @@ export async function applyByteQuotaByUser(
   bytes: number,
   limitType: "uploadBytes",
 ): Promise<RateLimitDecision> {
+  if (isRateLimitBypassedForTests()) return { allowed: true, headers: {} };
+
   const ip = getClientIp(request);
   const config = memoryFallbackLimits[limitType];
   const windowMs = config?.windowMs ?? 60 * MINUTE;

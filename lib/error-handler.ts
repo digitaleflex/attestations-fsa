@@ -69,16 +69,19 @@ export function handleApiError(
   context?: ErrorContext,
 ): NextResponse {
   // Logger l'erreur complète (côté serveur uniquement) pour le debugging
+  const isProduction = process.env.NODE_ENV === "production";
   const errorDetails = {
     timestamp: new Date().toISOString(),
     route: context?.route,
     operation: context?.operation,
-    userId: context?.userId,
-    ip: context?.ip,
+    // En production, on masque les identifiants potentiellement sensibles.
+    userId: isProduction ? undefined : context?.userId,
+    ip: isProduction ? undefined : context?.ip,
     error: {
       message: error instanceof Error ? error.message : "Unknown error",
       name: error instanceof Error ? error.name : "Unknown",
-      stack: error instanceof Error ? error.stack : undefined,
+      // Masque les stack traces en production.
+      stack: isProduction ? undefined : (error instanceof Error ? error.stack : undefined),
     },
   };
 
