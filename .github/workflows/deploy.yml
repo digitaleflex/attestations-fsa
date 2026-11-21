@@ -237,8 +237,20 @@ jobs:
 
             # ── 3. Déploiement de l'app staging ──
             echo "==> Deploying staging app..."
-            IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}" \
-              docker compose --env-file .env.staging -f compose.staging.yml up -d --wait
+            if ! IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}" \
+              docker compose --env-file .env.staging -f compose.staging.yml up -d --wait; then
+              # Diagnostic : sans ceci le log CI n'affiche que « unhealthy ».
+              echo "==> ❌ Staging non sain — diagnostic"
+              docker compose --env-file .env.staging -f compose.staging.yml ps || true
+              echo "--- /api/ready (corps de la réponse) ---"
+              docker exec attestations-fsa-staging wget -qO- --tries=1 \
+                "http://127.0.0.1:3000/api/ready" 2>&1 | head -c 2000 || true
+              echo
+              echo "--- logs fsa-app-staging (80 dernières lignes) ---"
+              docker compose --env-file .env.staging -f compose.staging.yml \
+                logs --no-color --tail=80 fsa-app-staging 2>&1 || true
+              exit 1
+            fi
 
             echo "==> Container status:"
             docker compose --env-file .env.staging -f compose.staging.yml ps
@@ -395,8 +407,19 @@ jobs:
 
             # ── 4. Déploiement de l'app (image GHCR, pas de build local) ──
             echo "==> Deploying app from GHCR image..."
-            IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}" \
-              docker compose --env-file .env.production -f compose.prod.yml up -d --wait
+            if ! IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}" \
+              docker compose --env-file .env.production -f compose.prod.yml up -d --wait; then
+              echo "==> ❌ Production non saine — diagnostic"
+              docker compose --env-file .env.production -f compose.prod.yml ps || true
+              echo "--- /api/ready (corps de la réponse) ---"
+              docker exec attestations-fsa-prod wget -qO- --tries=1 \
+                "http://127.0.0.1:3000/api/ready" 2>&1 | head -c 2000 || true
+              echo
+              echo "--- logs fsa-app (80 dernières lignes) ---"
+              docker compose --env-file .env.production -f compose.prod.yml \
+                logs --no-color --tail=80 fsa-app 2>&1 || true
+              exit 1
+            fi
 
             echo "==> Container status:"
             docker compose --env-file .env.production -f compose.prod.yml ps
